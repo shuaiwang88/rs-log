@@ -1,0 +1,9 @@
+{
+  "total_records": 369709,
+  "unique_dates": 63,
+  "unique_stocks": 6291,
+  "date_min": "2026-02-28 00:00:00",
+  "date_max": "2026-05-26 00:00:00",
+  "files_processed": 126,
+  "last_updated": "2026-05-26T16:36:56.196522"
+}
