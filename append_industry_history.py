@@ -9,12 +9,13 @@ import pandas as pd
 import json
 from pathlib import Path
 from datetime import datetime
+from rs_pipeline_utils import REPO_DIR, get_file_from_commit, save_metadata, now_iso
 
 def get_last_date_in_history():
     """Get the last date from the historical file"""
     try:
-        df = pd.read_csv('/Users/sw/Desktop/stock/rs-log/output/rs_industries_historical.csv', 
-                        usecols=['date'], nrows=1)
+        historical_path = REPO_DIR / 'output' / 'rs_industries_historical.csv'
+        df = pd.read_csv(historical_path, usecols=['date'], nrows=1)
         if 'date' in df.columns and not df['date'].isna().all():
             return pd.to_datetime(df['date'].iloc[0])
     except:
@@ -26,7 +27,7 @@ def get_commits_after_date(cutoff_date=None):
     try:
         result = subprocess.run(
             ["git", "log", "--all", "--format=%H|%ad|%s", "--date=short"],
-            cwd="/Users/sw/Desktop/stock/rs-log",
+            cwd=str(REPO_DIR),
             capture_output=True,
             text=True
         )
@@ -47,27 +48,13 @@ def get_commits_after_date(cutoff_date=None):
         print(f"Error getting commits: {e}")
         return []
 
-def get_file_from_commit(commit_hash, file_path):
-    """Get file content from a specific commit"""
-    try:
-        result = subprocess.run(
-            ["git", "show", f"{commit_hash}:{file_path}"],
-            cwd="/Users/sw/Desktop/stock/rs-log",
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            return result.stdout
-        return None
-    except Exception as e:
-        print(f"Error getting file from commit {commit_hash}: {e}")
-        return None
+# use shared `get_file_from_commit` from `rs_pipeline_utils`
 
 def append_new_data():
     """Append new data from recent commits"""
     print("🔄 Checking for new rs_industries.csv commits...")
     
-    historical_path = Path('/Users/sw/Desktop/stock/rs-log/output/rs_industries_historical.csv')
+    historical_path = REPO_DIR / 'output' / 'rs_industries_historical.csv'
     
     if not historical_path.exists():
         print("❌ Historical file not found. Run build_industry_history.py first.")
@@ -94,7 +81,7 @@ def append_new_data():
         commit_hash = commit['hash']
         commit_date = commit['date']
         
-        file_content = get_file_from_commit(commit_hash, 'output/rs_industries.csv')
+        file_content = get_file_from_commit(commit_hash, 'output/rs_industries.csv', repo_dir=REPO_DIR)
         
         if file_content:
             try:
@@ -155,9 +142,8 @@ def append_new_data():
             'last_updated': datetime.now().isoformat()
         }
         
-        metadata_path = Path('/Users/sw/Desktop/stock/rs-log/output/rs_industries_metadata.json')
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
+        metadata_path = REPO_DIR / 'output' / 'rs_industries_metadata.json'
+        save_metadata(metadata_path, metadata)
         
         return True
     else:

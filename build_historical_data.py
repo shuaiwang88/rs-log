@@ -10,15 +10,11 @@ import json
 from pathlib import Path
 from datetime import datetime
 import io
+from rs_pipeline_utils import REPO_DIR, get_file_from_commit, run_git_command, save_metadata, now_iso
 
 def get_all_commits():
     """Get all commits with their hashes and dates"""
-    result = subprocess.run(
-        ['git', 'log', '--format=%H%n%ai', '--all'],
-        cwd='/Users/sw/Desktop/stock/rs-log',
-        capture_output=True,
-        text=True
-    )
+    result = run_git_command(['git', 'log', '--format=%H%n%ai', '--all'], cwd=REPO_DIR)
     
     commits = []
     lines = result.stdout.strip().split('\n')
@@ -37,17 +33,7 @@ def get_all_commits():
 def get_csv_from_commit(commit_hash, filename):
     """Extract a specific CSV file from a git commit"""
     try:
-        result = subprocess.run(
-            ['git', 'show', f'{commit_hash}:output/{filename}'],
-            cwd='/Users/sw/Desktop/stock/rs-log',
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        
-        if result.returncode == 0:
-            return result.stdout
-        return None
+        return get_file_from_commit(commit_hash, f'output/{filename}', repo_dir=REPO_DIR)
     except Exception as e:
         print(f"Error getting {filename} from {commit_hash}: {e}")
         return None
@@ -97,7 +83,8 @@ def build_historical_data():
         historical_df = historical_df.sort_values('date').reset_index(drop=True)
         
         # Save to CSV
-        output_path = Path('/Users/sw/Desktop/stock/rs-log/output/rs_historical_all.csv')
+        output_path = REPO_DIR / 'output' / 'rs_historical_all.csv'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         historical_df.to_csv(output_path, index=False)
         
         print(f"\n✅ Successfully created historical dataset!")

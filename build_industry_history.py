@@ -10,16 +10,12 @@ import json
 from pathlib import Path
 from datetime import datetime
 import os
+from rs_pipeline_utils import REPO_DIR, get_file_from_commit, run_git_command, save_metadata, now_iso
 
 def get_all_commits():
     """Get all commits with dates"""
     try:
-        result = subprocess.run(
-            ["git", "log", "--all", "--format=%H|%ad|%s", "--date=short"],
-            cwd="/Users/sw/Desktop/stock/rs-log",
-            capture_output=True,
-            text=True
-        )
+        result = run_git_command(["git", "log", "--all", "--format=%H|%ad|%s", "--date=short"], cwd=REPO_DIR)
         commits = []
         for line in result.stdout.strip().split('\n'):
             if line:
@@ -38,15 +34,7 @@ def get_all_commits():
 def get_file_from_commit(commit_hash, file_path):
     """Get file content from a specific commit"""
     try:
-        result = subprocess.run(
-            ["git", "show", f"{commit_hash}:{file_path}"],
-            cwd="/Users/sw/Desktop/stock/rs-log",
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            return result.stdout
-        return None
+        return get_file_from_commit(commit_hash, file_path, repo_dir=REPO_DIR)
     except Exception as e:
         print(f"Error getting file from commit {commit_hash}: {e}")
         return None
@@ -115,9 +103,9 @@ def build_historical_industry_data():
         df_combined = df_combined.sort_values('date', ascending=False)
         
         # Save combined dataset
-        output_path = Path('/Users/sw/Desktop/stock/rs-log/output/rs_industries_historical.csv')
+        output_path = REPO_DIR / 'output' / 'rs_industries_historical.csv'
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         df_combined.to_csv(output_path, index=False)
         print(f"\n✅ Saved historical data: {len(df_combined)} records to {output_path}")
         print(f"   Date range: {df_combined['date'].min()} to {df_combined['date'].max()}")
@@ -132,9 +120,8 @@ def build_historical_industry_data():
             'last_updated': datetime.now().isoformat()
         }
         
-        metadata_path = Path('/Users/sw/Desktop/stock/rs-log/output/rs_industries_metadata.json')
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
+        metadata_path = REPO_DIR / 'output' / 'rs_industries_metadata.json'
+        save_metadata(metadata_path, metadata)
         
         print(f"\n📊 Dataset Summary:")
         print(f"   Total records: {metadata['total_records']:,}")

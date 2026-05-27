@@ -42,8 +42,10 @@ def remote_ahead(branch):
 
 def run_append_scripts():
     print("Running append scripts...")
-    run_cmd(["/usr/bin/python3", "append_industry_history.py"], cwd=REPO_DIR)
-    run_cmd(["/usr/bin/python3", "append_stocks_history.py"], cwd=REPO_DIR)
+    import sys
+    py = sys.executable
+    run_cmd([py, str(REPO_DIR / 'append_industry_history.py')], cwd=REPO_DIR)
+    run_cmd([py, str(REPO_DIR / 'append_stocks_history.py')], cwd=REPO_DIR)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

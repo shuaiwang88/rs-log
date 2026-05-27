@@ -6,8 +6,7 @@ import plotly.graph_objects as go
 from pathlib import Path
 import glob
 from datetime import datetime, timedelta
-import requests
-import json
+
 
 # Page configuration
 st.set_page_config(
@@ -20,9 +19,30 @@ st.set_page_config(
 st.title("📊 Relative Strength Analysis Dashboard")
 st.markdown("Daily RS Calculation Logs Analysis and Insights | Historical Data from Oct 2021 to Present")
 
+# Button to force-reload cached data (useful after git-updated CSVs)
+if st.button("🔁 Reload data from disk"):
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    st.experimental_rerun()
+
 # Load data
+def compute_output_signature():
+    output_dir = Path(__file__).parent / "output"
+    if not output_dir.exists():
+        return ""
+    parts = []
+    for fp in sorted(output_dir.glob('*.csv')):
+        try:
+            parts.append(f"{fp.name}:{int(fp.stat().st_mtime)}")
+        except Exception:
+            pass
+    return '|'.join(parts)
+
+
 @st.cache_data
-def load_csv_files():
+def load_csv_files(reload_sig: str):
     """Load historical CSV file if available, otherwise load current files"""
     output_dir = Path(__file__).parent / "output"
     
@@ -70,61 +90,11 @@ def load_csv_files():
     return None
 
 # Financial Modeling Prep API Functions
-@st.cache_data
-def get_company_profile(ticker, api_key):
-    """Fetch company profile from Financial Modeling Prep API"""
-    try:
-        url = f"https://financialmodelingprep.com/api/v3/profile/{ticker}?apikey={api_key}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return data[0] if data else None
-    except Exception as e:
-        st.error(f"Error fetching profile for {ticker}: {e}")
-    return None
 
-@st.cache_data
-def get_company_key_metrics(ticker, api_key):
-    """Fetch key metrics from Financial Modeling Prep API"""
-    try:
-        url = f"https://financialmodelingprep.com/api/v3/key-metrics/{ticker}?limit=1&apikey={api_key}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return data[0] if data else None
-    except Exception as e:
-        st.error(f"Error fetching metrics for {ticker}: {e}")
-    return None
-
-@st.cache_data
-def get_financial_ratios(ticker, api_key):
-    """Fetch financial ratios from Financial Modeling Prep API"""
-    try:
-        url = f"https://financialmodelingprep.com/api/v3/ratios/{ticker}?limit=1&apikey={api_key}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return data[0] if data else None
-    except Exception as e:
-        st.error(f"Error fetching ratios for {ticker}: {e}")
-    return None
-
-@st.cache_data
-def get_earnings_dates(ticker, api_key):
-    """Fetch upcoming earnings dates from Financial Modeling Prep API"""
-    try:
-        url = f"https://financialmodelingprep.com/api/v4/earning_calendar?symbol={ticker}&apikey={api_key}"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return data if isinstance(data, list) else []
-    except Exception as e:
-        st.error(f"Error fetching earnings for {ticker}: {e}")
-    return []
 
 # Load industry data
 @st.cache_data
-def load_industry_data():
+def load_industry_data(reload_sig: str):
     """Load industry RS data from rs_industries_historical.csv (latest snapshot) or rs_industries.csv"""
     output_dir = Path(__file__).parent / "output"
     
@@ -166,9 +136,10 @@ def load_industry_data():
             st.warning(f"Error loading industry data: {e}")
     return None
 
-# Load data
-df = load_csv_files()
-df_industry = load_industry_data()
+# Load data (signature forces reload when output CSVs change)
+output_sig = compute_output_signature()
+df = load_csv_files(output_sig)
+df_industry = load_industry_data(output_sig)
 
 if df is None or df.empty:
     st.error("No data found. Please check the CSV files in the output directory.")
@@ -187,13 +158,7 @@ for col in numeric_cols:
 # Sidebar filters
 st.sidebar.header("🔍 Filters")
 
-# API Key Configuration
-st.sidebar.subheader("🔑 API Configuration")
-fmp_api_key = st.sidebar.text_input(
-    "Financial Modeling Prep API Key",
-    type="password",
-    help="Get your free API key from https://financialmodelingprep.com/"
-)
+# (No external API required — data comes from git-tracked CSV snapshots)
 
 # Check if we have historical data
 has_historical = 'date' in df.columns
@@ -752,102 +717,50 @@ with tab6 if has_historical else tab5:
     else:
         st.warning("Industry RS data not found. Please check rs_industries.csv file.")
 
-# TAB 7 (or 6 if no historical): Company Details
+# TAB 7 (or 6 if no historical): Company Details (local-only)
 with tab7 if has_historical else tab6:
-    st.subheader("💼 Company Details & Fundamentals")
-    
-    if not fmp_api_key:
-        st.info("📌 Enter your Financial Modeling Prep API key in the sidebar to access company details and fundamentals.")
-        st.markdown("""
-        Get your free API key at: https://financialmodelingprep.com/
-        """)
+    st.subheader("💼 Company Details")
+
+    selected_ticker_company = st.selectbox(
+        "Select ticker to view company details",
+        sorted(filtered_df['Ticker'].dropna().unique()),
+        key="company_details_ticker"
+    )
+
+    ticker_rows = filtered_df[filtered_df['Ticker'] == selected_ticker_company]
+    if ticker_rows.empty:
+        st.warning(f"No data found for {selected_ticker_company}")
     else:
-        selected_ticker_company = st.selectbox(
-            "Select ticker to view company details",
-            sorted(filtered_df['Ticker'].dropna().unique()),
-            key="company_details_ticker"
-        )
-        
+        if 'date' in ticker_rows.columns:
+            latest_row = ticker_rows.sort_values('date').iloc[-1]
+        else:
+            latest_row = ticker_rows.iloc[0]
+
         col1, col2 = st.columns(2)
-        
         with col1:
-            st.subheader(f"📊 Company Profile - {selected_ticker_company}")
-            profile = get_company_profile(selected_ticker_company, fmp_api_key)
-            
-            if profile:
-                profile_data = {
-                    'Company Name': profile.get('companyName', 'N/A'),
-                    'Sector': profile.get('sector', 'N/A'),
-                    'Industry': profile.get('industry', 'N/A'),
-                    'Market Cap': f"${profile.get('mktCap', 0)/1e9:.2f}B" if profile.get('mktCap') else 'N/A',
-                    'Price': f"${profile.get('price', 0):.2f}",
-                    'Exchange': profile.get('exchangeShortName', 'N/A'),
-                    'Website': profile.get('website', 'N/A'),
-                }
-                
-                for key, value in profile_data.items():
-                    st.write(f"**{key}:** {value}")
-                
-                if profile.get('description'):
-                    st.write(f"**Description:** {profile.get('description')[:300]}...")
-            else:
-                st.warning(f"Could not fetch profile for {selected_ticker_company}")
-        
+            st.subheader(f"📊 Snapshot - {selected_ticker_company}")
+            keys = [
+                'Sector', 'Industry', 'Price', 'MarketCap', 'AvgVol30',
+                'PctFrom52WkHigh', 'Relative Strength', 'Percentile',
+                '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile'
+            ]
+            for k in keys:
+                if k in latest_row.index:
+                    val = latest_row[k]
+                    if pd.isna(val):
+                        val = 'N/A'
+                    elif k == 'MarketCap' and pd.notna(val):
+                        try:
+                            val = f"${float(val)/1e9:.2f}B"
+                        except Exception:
+                            pass
+                    st.write(f"**{k}:** {val}")
+
         with col2:
-            st.subheader(f"📈 Key Metrics - {selected_ticker_company}")
-            metrics = get_company_key_metrics(selected_ticker_company, fmp_api_key)
-            
-            if metrics:
-                metrics_display = {
-                    'PE Ratio': f"{metrics.get('peRatio', 'N/A')}",
-                    'ROE': f"{metrics.get('roe', 'N/A')*100:.2f}%" if metrics.get('roe') else 'N/A',
-                    'Debt-to-Equity': f"{metrics.get('debtToEquity', 'N/A')}",
-                    'Current Ratio': f"{metrics.get('currentRatio', 'N/A')}",
-                    'Quick Ratio': f"{metrics.get('quickRatio', 'N/A')}",
-                    'PB Ratio': f"{metrics.get('pbRatio', 'N/A')}",
-                }
-                
-                for key, value in metrics_display.items():
-                    st.write(f"**{key}:** {value}")
-            else:
-                st.warning(f"Could not fetch metrics for {selected_ticker_company}")
-        
-        st.divider()
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader(f"📊 Financial Ratios - {selected_ticker_company}")
-            ratios = get_financial_ratios(selected_ticker_company, fmp_api_key)
-            
-            if ratios:
-                ratios_display = {
-                    'Gross Profit Margin': f"{ratios.get('grossProfitMargin', 'N/A')*100:.2f}%" if ratios.get('grossProfitMargin') else 'N/A',
-                    'Operating Profit Margin': f"{ratios.get('operatingProfitMargin', 'N/A')*100:.2f}%" if ratios.get('operatingProfitMargin') else 'N/A',
-                    'Net Profit Margin': f"{ratios.get('netProfitMargin', 'N/A')*100:.2f}%" if ratios.get('netProfitMargin') else 'N/A',
-                    'Asset Turnover': f"{ratios.get('assetTurnover', 'N/A')}",
-                    'Debt-to-Assets': f"{ratios.get('debtToAssets', 'N/A')}",
-                }
-                
-                for key, value in ratios_display.items():
-                    st.write(f"**{key}:** {value}")
-            else:
-                st.warning(f"Could not fetch ratios for {selected_ticker_company}")
-        
-        with col2:
-            st.subheader(f"📅 Earnings Information - {selected_ticker_company}")
-            earnings = get_earnings_dates(selected_ticker_company, fmp_api_key)
-            
-            if earnings:
-                earnings_df = pd.DataFrame(earnings[:10])  # Show next 10 earnings dates
-                if 'date' in earnings_df.columns:
-                    st.dataframe(
-                        earnings_df[['date', 'epsEstimated', 'epsActual']].head(10),
-                        width='stretch',
-                        hide_index=True
-                    )
-            else:
-                st.info("No earnings data available for this ticker")
+            st.subheader("Recent History")
+            hist = ticker_rows.sort_values('date') if 'date' in ticker_rows.columns else ticker_rows
+            cols = [c for c in ['date', 'Price', 'Relative Strength', 'Percentile'] if c in hist.columns]
+            st.dataframe(hist[cols].tail(10) if len(cols) else hist.head(10), width='stretch', hide_index=True)
 
 # TAB 8 (or 7 if no historical): Data Table
 with tab8 if has_historical else tab7:
