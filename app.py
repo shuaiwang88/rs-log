@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 import glob
+import subprocess
 from datetime import datetime, timedelta
 
 
@@ -20,12 +21,29 @@ st.title("📊 Relative Strength Analysis Dashboard")
 st.markdown("Daily RS Calculation Logs Analysis and Insights | Historical Data from Oct 2021 to Present")
 
 # Button to force-reload cached data (useful after git-updated CSVs)
-if st.button("🔁 Reload data from disk"):
-    try:
-        st.cache_data.clear()
-    except Exception:
-        pass
-    st.experimental_rerun()
+col1, col2 = st.columns([2, 8])
+with col1:
+    if st.button("🔁 Reload data from disk"):
+        try:
+            st.cache_data.clear()
+        except Exception:
+            pass
+        st.rerun()
+
+with col2:
+    if st.button("⬇️ Pull Latest Data & Update"):
+        with st.spinner("Pulling latest data from upstream and updating pipeline..."):
+            try:
+                repo_dir = "/Users/sw/Desktop/stock/rs-log"
+                pull_res = subprocess.run(["git", "pull"], cwd=repo_dir, capture_output=True, text=True)
+                if pull_res.returncode != 0:
+                    st.error(f"Git pull failed:\n{pull_res.stderr}")
+                else:
+                    subprocess.run(["python3", "check_remote_and_append.py", "--force"], cwd=repo_dir, capture_output=True, text=True)
+                    st.cache_data.clear()
+                    st.rerun()
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
 # Load data
 def compute_output_signature():
