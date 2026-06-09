@@ -1,8 +1,8 @@
 {
-  "total_records": 422683,
-  "unique_dates": 72,
+  "total_records": 428573,
+  "unique_dates": 73,
   "unique_stocks": 6322,
   "date_min": "2026-02-28 00:00:00",
-  "date_max": "2026-06-06 00:00:00",
-  "last_updated": "2026-06-05T21:44:11.546309"
+  "date_max": "2026-06-07 00:00:00",
+  "last_updated": "2026-06-07T22:31:02.764556"
 }

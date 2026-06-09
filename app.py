@@ -378,11 +378,39 @@ def load_industry_data(reload_sig: str):
         try:
             df_hist = pd.read_csv(historical_file)
             if 'date' in df_hist.columns:
-                latest_date = pd.to_datetime(df_hist['date']).max()
-                df_industry = df_hist[pd.to_datetime(df_hist['date']) == latest_date].copy()
+                df_hist['date'] = pd.to_datetime(df_hist['date'])
+                latest_date = df_hist['date'].max()
+                df_industry = df_hist[df_hist['date'] == latest_date].copy()
+                
+                # Get unique dates in ascending order
+                unique_dates = pd.Series(sorted(df_hist['date'].unique()))
+                
+                # Find the last date of the previous calendar ISO week
+                latest_year = latest_date.isocalendar().year
+                latest_week = latest_date.isocalendar().week
+                
+                past_weeks_dates = unique_dates[
+                    (unique_dates.dt.isocalendar().year < latest_year) |
+                    ((unique_dates.dt.isocalendar().year == latest_year) & (unique_dates.dt.isocalendar().week < latest_week))
+                ]
+                
+                prev_week_last_date = None
+                if not past_weeks_dates.empty:
+                    prev_week_last_date = past_weeks_dates.max()
+                else:
+                    # Fallback to date closest to 7 days ago
+                    target_date_1w = latest_date - pd.Timedelta(days=7)
+                    past_dates = unique_dates[unique_dates < latest_date]
+                    if not past_dates.empty:
+                        prev_week_last_date = past_dates.iloc[(past_dates - target_date_1w).abs().argsort()[:1]].values[0]
+                
+                if prev_week_last_date is not None:
+                    df_prev = df_hist[df_hist['date'] == prev_week_last_date][['Industry', 'Rank']].rename(columns={'Rank': '1W_RS_Rank'})
+                    df_prev['1W_RS_Rank'] = pd.to_numeric(df_prev['1W_RS_Rank'], errors='coerce')
+                    df_industry = df_industry.merge(df_prev, on='Industry', how='left')
             else:
                 df_industry = df_hist.head(len(df_hist.groupby('Industry')))
-            numeric_cols = ['Rank', 'Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile', '1M_RS_Rank', '3M_RS_Rank', '6M_RS_Rank']
+            numeric_cols = ['Rank', 'Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile', '1W_RS_Rank', '1M_RS_Rank', '3M_RS_Rank', '6M_RS_Rank']
             for col in numeric_cols:
                 if col in df_industry.columns:
                     df_industry[col] = pd.to_numeric(df_industry[col], errors='coerce')
@@ -467,7 +495,7 @@ def get_all_tickers_sorted_by_industry(filtered_df, industry_df):
         industry_rs_map = {}
     latest_snapshot['Industry_RS'] = latest_snapshot['Industry'].map(industry_rs_map).fillna(0)
     sorted_df = latest_snapshot.sort_values(['Industry_RS', 'Relative Strength'], ascending=[False, False])
-    return sorted_df['Ticker'].tolist()
+    return sorted_df['Ticker'].dropna().astype(str).tolist()
 
 all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry)
 
@@ -652,14 +680,28 @@ with (tab6 if has_historical else tab5):
 
         if has_ranks and 'Rank' in ind_display.columns:
             # Deltas: positive = improvement (current rank better, i.e., lower number)
+            if '1W_RS_Rank' in ind_display.columns:
+                ind_display['Delta Rank-1W'] = ind_display['1W_RS_Rank'] - ind_display['Rank']
             ind_display['Delta Rank-1M'] = ind_display['1M_RS_Rank'] - ind_display['Rank']
             ind_display['Delta Rank-3M'] = ind_display['3M_RS_Rank'] - ind_display['Rank']
             ind_display['Delta Rank-6M'] = ind_display['6M_RS_Rank'] - ind_display['Rank']
+            
+            if '1W_RS_Rank' in ind_display.columns:
+                ind_display = ind_display.rename(columns={'1W_RS_Rank': '1W'})
             ind_display = ind_display.rename(columns={'1M_RS_Rank': '1M', '3M_RS_Rank': '3M', '6M_RS_Rank': '6M'})
-            for c in ['Rank', '1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M']:
+            
+            convert_cols = ['Rank', '1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M']
+            if '1W' in ind_display.columns:
+                convert_cols.extend(['1W', 'Delta Rank-1W'])
+                
+            for c in convert_cols:
                 if c in ind_display.columns:
                     ind_display[c] = pd.to_numeric(ind_display[c], errors='coerce').round().astype('Int64')
-            cols_to_show = ['Rank', 'Industry', '1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M', 'Top 10 Tickers']
+            
+            cols_to_show = ['Rank', 'Industry']
+            if '1W' in ind_display.columns:
+                cols_to_show.extend(['1W', 'Delta Rank-1W'])
+            cols_to_show.extend(['1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M', 'Top 10 Tickers'])
         elif has_percentiles and 'Rank' in ind_display.columns:
             # For percentiles, we cannot do rank comparison – skip deltas or compute differently
             ind_display = ind_display.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
@@ -685,6 +727,39 @@ with (tab6 if has_historical else tab5):
             ind_display = ind_display.sort_values('Rank', ascending=True)
         display_data = ind_display[available_cols].reset_index(drop=True)
 
+        # ----------------- Filter & Sort Controls -----------------
+        st.markdown("### 🔍 Filter & Sort Industries")
+        
+        numerical_cols = [c for c in available_cols if c not in ['Industry', 'Top 10 Tickers']]
+        
+        # Expander for specific range filters on each numeric column
+        with st.expander("🎯 Filter by Numerical Column Ranges"):
+            cols_f = st.columns(3)
+            filtered_data = display_data.copy()
+            for idx, c in enumerate(numerical_cols):
+                col_ui = cols_f[idx % 3]
+                with col_ui:
+                    series_clean = display_data[c].dropna()
+                    if not series_clean.empty:
+                        min_val = int(series_clean.min())
+                        max_val = int(series_clean.max())
+                        if min_val < max_val:
+                            val_range = st.slider(f"{c} Range", min_val, max_val, (min_val, max_val), key=f"filter_slider_{c}")
+                            filtered_data = filtered_data[(filtered_data[c] >= val_range[0]) & (filtered_data[c] <= val_range[1])]
+                        else:
+                            st.write(f"{c}: {min_val} (single value)")
+        
+        col_top_1, col_top_2 = st.columns(2)
+        with col_top_1:
+            top_x = st.number_input("Show Top X Rows", min_value=1, value=len(filtered_data), key="top_x_industries_filter")
+        with col_top_2:
+            sort_col = st.selectbox("Sort by Column for Top X", options=numerical_cols, index=0, key="top_x_sort_col")
+            default_asc = not ("Delta" in sort_col)
+            ascending = st.checkbox("Sort Ascending (uncheck for Descending)", value=default_asc, key="top_x_ascending")
+            
+        filtered_data = filtered_data.sort_values(by=sort_col, ascending=ascending)
+        filtered_data = filtered_data.head(top_x).reset_index(drop=True)
+
         def color_delta(val):
             if pd.isna(val): return ''
             try:
@@ -692,11 +767,47 @@ with (tab6 if has_historical else tab5):
                 return f'color: {"green" if v > 0 else "red" if v < 0 else "gray"}'
             except: return ''
 
-        styled_df    = display_data.style
-        delta_cols   = [c for c in ['Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M'] if c in available_cols]
+        styled_df    = filtered_data.style
+        delta_cols   = [c for c in ['Delta Rank-1W', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M'] if c in available_cols]
         if delta_cols:
-            styled_df = styled_df.map(color_delta, subset=delta_cols)
+            if hasattr(styled_df, 'map'):
+                styled_df = styled_df.map(color_delta, subset=delta_cols)
+            else:
+                styled_df = styled_df.applymap(color_delta, subset=delta_cols)
         st.dataframe(styled_df, hide_index=True)
+
+        # ----------------- Combined Copy/Paste Ticker List -----------------
+        st.divider()
+        st.subheader("📋 Tickers from Selected Industries")
+        
+        max_tickers_per_ind = st.number_input(
+            "Max tickers per industry in list", 
+            min_value=1, 
+            max_value=100, 
+            value=10, 
+            key="ind_rot_max_tickers_per_ind"
+        )
+        
+        combined_tickers = []
+        for industry in filtered_data['Industry']:
+            tickers_df = latest_snapshot[latest_snapshot['Industry'] == industry][['Ticker', 'Relative Strength']].dropna()
+            top_tickers = tickers_df.sort_values('Relative Strength', ascending=False).head(max_tickers_per_ind)['Ticker'].tolist()
+            combined_tickers.extend(top_tickers)
+            
+        combined_tickers_str = ','.join(combined_tickers)
+        
+        st.write(f"**Industries Combined (Sorted by Table Order First, then by Strongest Ticker)** ({len(combined_tickers)} tickers)")
+        col1_cp, col2_cp = st.columns([4, 1])
+        with col1_cp:
+            st.code(combined_tickers_str, language="text")
+        with col2_cp:
+            st.download_button(
+                "Copy/Download All", 
+                combined_tickers_str,
+                "selected_industries_tickers.txt", 
+                "text/plain",
+                key="download_selected_ind_tickers"
+            )
     else:
         st.warning("Industry RS data not found.")
 
@@ -714,7 +825,10 @@ def load_or_fetch_ticker(ticker, interval="1d", period="2y"):
         try:
             df = pd.read_parquet(cache_path)
             df.index = pd.to_datetime(df.index)
-            last_date = df.index.max().normalize()
+            last_date = df.index.max()
+            if hasattr(last_date, 'tz_localize') and last_date.tzinfo is not None:
+                last_date = last_date.tz_localize(None)
+            last_date = last_date.normalize()
             if (today - last_date).days <= 2:
                 return df
             start    = last_date + pd.Timedelta(days=1)
@@ -792,7 +906,7 @@ with (tab7 if has_historical else tab6):
     st.markdown("### 📋 Select a Ticker")
     search_term = st.text_input("🔍 Search ticker", key="company_search_input").strip().upper()
     if search_term:
-        filtered_tickers = [t for t in all_sorted_tickers if search_term in t]
+        filtered_tickers = [t for t in all_sorted_tickers if isinstance(t, str) and search_term in t]
     else:
         filtered_tickers = all_sorted_tickers
 

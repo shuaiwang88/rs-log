@@ -8,16 +8,18 @@ import subprocess
 import os
 from pathlib import Path
 
+REPO_DIR = Path(__file__).resolve().parent
+
 def setup_launchagent_macos():
     """Setup LaunchAgent for macOS daily execution"""
     # We'll create two LaunchAgents:
-    # 1) Scheduled run at 17:00 Mon-Fri (forced run)
+    # 1) Scheduled run at 17:00 Daily (forced run)
     # 2) Polling agent that runs every 30 minutes to check upstream and append if new commits exist
 
     la_dir = Path.home() / "Library/LaunchAgents"
     la_dir.mkdir(parents=True, exist_ok=True)
 
-    # Scheduled plist (5:00 PM Mon-Fri) - forces append
+    # Scheduled plist (5:00 PM Daily) - forces append
     scheduled_plist = f'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -27,7 +29,7 @@ def setup_launchagent_macos():
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/sw/Desktop/stock/rs-log/check_remote_and_append.py</string>
+        <string>{REPO_DIR}/check_remote_and_append.py</string>
         <string>--force</string>
     </array>
     <key>StartCalendarInterval</key>
@@ -37,11 +39,13 @@ def setup_launchagent_macos():
         <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer><key>Weekday</key><integer>3</integer></dict>
         <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer><key>Weekday</key><integer>4</integer></dict>
         <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer><key>Weekday</key><integer>5</integer></dict>
+        <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer><key>Weekday</key><integer>6</integer></dict>
+        <dict><key>Hour</key><integer>17</integer><key>Minute</key><integer>0</integer><key>Weekday</key><integer>7</integer></dict>
     </array>
     <key>StandardErrorPath</key>
-    <string>/Users/sw/Desktop/stock/rs-log/logs/append_rs_error.log</string>
+    <string>{REPO_DIR}/logs/append_rs_error.log</string>
     <key>StandardOutPath</key>
-    <string>/Users/sw/Desktop/stock/rs-log/logs/append_rs_out.log</string>
+    <string>{REPO_DIR}/logs/append_rs_out.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
@@ -64,14 +68,14 @@ def setup_launchagent_macos():
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/sw/Desktop/stock/rs-log/check_remote_and_append.py</string>
+        <string>{REPO_DIR}/check_remote_and_append.py</string>
     </array>
     <key>StartInterval</key>
     <integer>1800</integer>
     <key>StandardErrorPath</key>
-    <string>/Users/sw/Desktop/stock/rs-log/logs/append_rs_error.log</string>
+    <string>{REPO_DIR}/logs/append_rs_error.log</string>
     <key>StandardOutPath</key>
-    <string>/Users/sw/Desktop/stock/rs-log/logs/append_rs_out.log</string>
+    <string>{REPO_DIR}/logs/append_rs_out.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
@@ -94,21 +98,21 @@ def setup_launchagent_macos():
 def setup_crontab_linux():
     """Setup crontab for Linux/Unix execution"""
     # Two cron entries suggested:
-    # 1) Poll every 30 minutes Mon-Fri to check remote and append only if new commits exist
-    # 2) Forced run at 17:00 Mon-Fri
-    cron_poll = "*/30 * * * 1-5 bash -c 'cd /Users/sw/Desktop/stock/rs-log && /usr/bin/python3 check_remote_and_append.py >> /Users/sw/Desktop/stock/rs-log/logs/append_rs.log 2>&1'"
-    cron_forced = "0 17 * * 1-5 bash -c 'cd /Users/sw/Desktop/stock/rs-log && /usr/bin/python3 check_remote_and_append.py --force >> /Users/sw/Desktop/stock/rs-log/logs/append_rs.log 2>&1'"
+    # 1) Poll every 30 minutes (Daily) to check remote and append only if new commits exist
+    # 2) Forced run at 17:00 (Daily)
+    cron_poll = f"*/30 * * * * bash -c 'cd {REPO_DIR} && /usr/bin/python3 check_remote_and_append.py >> {REPO_DIR}/logs/append_rs.log 2>&1'"
+    cron_forced = f"0 17 * * * bash -c 'cd {REPO_DIR} && /usr/bin/python3 check_remote_and_append.py --force >> {REPO_DIR}/logs/append_rs.log 2>&1'"
 
     print(f"✅ To setup crontab, run:")
     print(f"  crontab -e")
     print(f"\nThen add these lines:")
     print(f"  {cron_poll}")
     print(f"  {cron_forced}")
-    print(f"\nThis will poll every 30 minutes and force a run at 17:00 Mon-Fri")
+    print(f"\nThis will poll every 30 minutes and force a run at 17:00 Daily")
 
 def create_log_directory():
     """Create logs directory"""
-    log_dir = Path('/Users/sw/Desktop/stock/rs-log/logs')
+    log_dir = REPO_DIR / 'logs'
     log_dir.mkdir(parents=True, exist_ok=True)
     print(f"✅ Created log directory: {log_dir}")
 
@@ -134,11 +138,11 @@ def main():
     print("\n" + "=" * 60)
     print("✨ Setup complete!")
     print("\nThe historical datasets will be automatically updated:")
-    print("  • Polling every 30 minutes Mon-Fri to check upstream")
-    print("  • Forced run at Monday-Friday 17:00 (5PM)")
+    print("  • Polling every 30 minutes Daily to check upstream")
+    print("  • Forced run at Daily 17:00 (5PM)")
     print("  • Industry Rotation & Stock RS data")
     print("  • Appends only new commits when detected (or forced)")
-    print("  • Logs saved to: /Users/sw/Desktop/stock/rs-log/logs/")
+    print(f"  • Logs saved to: {REPO_DIR}/logs/")
 
 if __name__ == "__main__":
     main()
