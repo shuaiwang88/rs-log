@@ -1,0 +1,719 @@
+declare upper;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COMBINED: BASE LOCATOR + CUP DETECTOR + CUP‑WITH‑HANDLE DETECTOR
+# ══════════════════════════════════════════════════════════════════════════════
+
+DefineGlobalColor("CompBase", Color.CYAN);
+DefineGlobalColor("PartBase", Color.MAGENTA);
+DefineGlobalColor("HalfBase", Color.YELLOW);
+DefineGlobalColor("Cup",      CreateColor(146, 193, 131));
+DefineGlobalColor("Entry",    CreateColor(0, 0, 255));
+DefineGlobalColor("Stop",     CreateColor(255, 0, 0));
+DefineGlobalColor("Tgt",      CreateColor(60, 243, 4));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── SECTION 1: BASE LOCATOR INPUTS ──────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+input basePeriodD     = 3;
+input maxBarsD        = 99;
+input basePeriodW     = 5;
+input maxBarsW        = 24;
+input showBases       = yes;
+input showBaseCount   = yes;
+input showHalfBase    = no;
+input showBaseIncCorr = no;
+
+input MergeAdjacentBases     = yes;
+input MergeTopBottomTolPct   = 3.0;
+input ShowPartialBase        = no;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── SECTION 2: CUP & HANDLE INPUTS ──────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+input ShowCupPattern      = yes;
+input ShowHighLine        = yes;
+input ShowLowLine         = yes;
+input ShowCupCurve        = yes;
+input ShowTradeBoxes      = yes;
+input ShowDetectionLabel  = yes;
+input ShowStatusLabels    = yes;
+
+input MaxBaseDepthPct     = 50.0;
+input MinBaseDepthPct     = 15.0;
+input MaxBaseLengthBars   = 325;
+input MinBaseLengthBars   = 35;
+input MinLegUpPct         = 30.0;
+input MaxLegUpPct         = 200.0;
+input LookbackBars        = 25;
+input LegUpLookback       = 0;
+input RequireLegUpVolume  = no;
+input MidTierBelowPct     = 65.0;
+input OuterTierAbovePct   = 50.0;
+input MaxSymmetryRatio    = 2.5;
+
+# ── SECTION 3: CUP‑WITH‑HANDLE INPUTS ────────────────────────────────────────
+input ShowCupHandle       = yes;
+input HandleMinBars       = 5;
+input HandleMaxBars       = 20;
+input HandleMaxDeclinePct = 15.0;
+input HandleUpperHalf     = yes;
+input HandleVolumeDryUp   = no;
+input HandlePeakTolPct    = 5.0;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── BASE LOCATOR: TIMEFRAME & MA ────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def isWeekly = GetAggregationPeriod() >= AggregationPeriod.WEEK;
+def bp       = if isWeekly then basePeriodW else basePeriodD;
+def bMax     = if isWeekly then maxBarsW    else maxBarsD;
+def ma200    = Average(close, 200);
+def bn       = BarNumber();
+
+# ── BASE LOCATOR: STATE VARIABLES ───────────────────────────────────────────
+rec state;
+rec rTop;
+rec topBar;
+rec tHeld;
+rec lowestSinceTop;
+rec rBot;
+rec bHeld;
+rec prevTop;
+rec prevBot;
+rec baseNum;
+rec bobNum;
+
+# ── BASE LOCATOR: SAFE HISTORY REFERENCES ───────────────────────────────────
+def s_prev     = if IsNaN(state[1])          then 1    else state[1];
+def rTop_prev  = if IsNaN(rTop[1])           then high else rTop[1];
+def tBar_prev  = if IsNaN(topBar[1])         then bn   else topBar[1];
+def tHeld_prev = if IsNaN(tHeld[1])          then 0    else tHeld[1];
+def lst_prev   = if IsNaN(lowestSinceTop[1]) then low  else lowestSinceTop[1];
+def rBot_prev  = if IsNaN(rBot[1])           then low  else rBot[1];
+def bHeld_prev = if IsNaN(bHeld[1])          then 0    else bHeld[1];
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── BASE LOCATOR: CORE STATE ENGINE (MODIFIED) ──────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def distFromTop = bn - tBar_prev;
+def isTooWide   = distFromTop > bMax;
+def cutBaseHigh = high > rTop_prev;
+
+def topValid  = rTop_prev > 0 and ((rTop_prev - low) / rTop_prev * 100) < 80;
+def go1to2    = s_prev == 1 and tHeld_prev >= bp and topValid;
+
+def reset2to1 = s_prev == 2 and (cutBaseHigh or isTooWide);
+def botValid  = (IsNaN(ma200) or rBot_prev >= ma200 * 0.95)
+                and ((rTop_prev - rBot_prev) / rTop_prev * 100) <= 50;
+def go2to3    = s_prev == 2 and bHeld_prev >= bp and botValid and !reset2to1;
+
+def reset3to1 = s_prev == 3 and (cutBaseHigh or close < rBot_prev);
+
+state =
+    if bn == 1 then 1
+    else if s_prev == 1 then (if go1to2 then 2 else 1)
+    else if s_prev == 2 then (if reset2to1 then 1 else if go2to3 then 3 else 2)
+    else if s_prev == 3 then (if reset3to1 then 1 else 3)
+    else 1;
+
+def inBaseActive = state == 3;
+def newBase      = s_prev == 2 and state == 3;
+
+# ── BASE LOCATOR: LEVEL TRACKERS ────────────────────────────────────────────
+rTop =
+    if bn == 1 then high
+    else if state == 1 then (if high >= rTop_prev then high else rTop_prev)
+    else rTop_prev;
+
+topBar =
+    if bn == 1 then bn
+    else if state == 1 then (if high >= rTop_prev then bn else tBar_prev)
+    else tBar_prev;
+
+tHeld =
+    if bn == 1 then 0
+    else if state == 1 then (if high >= rTop_prev then 0 else tHeld_prev + 1)
+    else 0;
+
+lowestSinceTop =
+    if bn == 1 then low
+    else if state == 1 and high >= rTop_prev then low
+    else if state == 1 then Min(lst_prev, low)
+    else lst_prev;
+
+rBot =
+    if bn == 1 then low
+    else if state == 2 and s_prev == 1 then lowestSinceTop
+    else if state == 2 then Min(rBot_prev, low)
+    else if state == 3 then Min(rBot_prev, low)
+    else rBot_prev;
+
+bHeld =
+    if bn == 1 then 0
+    else if state == 2 and s_prev == 1 then 0
+    else if state == 2 then (if low <= rBot_prev then 0 else bHeld_prev + 1)
+    else 0;
+
+def boxMid   = rBot + (rTop - rBot) * 0.50;
+def boxPivot = rBot + (rTop - rBot) * 0.75;
+
+# ── BASE LOCATOR: COMPLEX BASE COUNTER & RESET LOGIC ────────────────────────
+def depth   = if rTop > 0 then (rTop - rBot) / rTop * 100 else 0;
+def advance = if IsNaN(prevTop[1]) or prevTop[1] == 0 or baseNum[1] == 0
+              then 0
+              else (rTop - prevTop[1]) / prevTop[1] * 100;
+
+def doReset = newBase and (
+    (!IsNaN(ma200) and rBot < ma200) or
+    depth > 50 or
+    (prevBot[1] > 0 and rBot < prevBot[1])
+);
+
+prevTop =
+    if bn == 1 then Double.NaN
+    else if newBase then
+        if doReset or advance > 20 or advance <= 0 then rTop
+        else prevTop[1]
+    else prevTop[1];
+
+prevBot =
+    if bn == 1 then Double.NaN
+    else if newBase then
+        if doReset or advance > 20 or advance <= 0 then rBot
+        else prevBot[1]
+    else prevBot[1];
+
+baseNum =
+    if bn == 1 then 0
+    else if newBase then
+        if baseNum[1] == 0 or doReset then 1
+        else if advance > 20 then baseNum[1] + 1
+        else baseNum[1]
+    else baseNum[1];
+
+bobNum =
+    if bn == 1 then 0
+    else if newBase then
+        if doReset then 0
+        else if advance > 20 then 0
+        else if advance > 0 then bobNum[1] + 1
+        else 0
+    else bobNum[1];
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── ADJACENT BASE MERGER ────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def mergeTol = MergeTopBottomTolPct / 100;
+
+rec mergeTop;
+rec mergeBot;
+rec mergeActive;
+rec mergeBaseNum;
+
+if bn == 1 {
+    mergeTop     = Double.NaN;
+    mergeBot     = Double.NaN;
+    mergeActive  = 0;
+    mergeBaseNum = 0;
+} else if newBase {
+    if MergeAdjacentBases and mergeActive[1] and
+       !IsNaN(mergeTop[1]) and
+       AbsValue(rTop - mergeTop[1]) / mergeTop[1] <= mergeTol
+    then {
+        mergeTop    = Max(rTop, mergeTop[1]);
+        mergeBot    = Min(rBot, mergeBot[1]);
+        mergeActive = 1;
+        mergeBaseNum = mergeBaseNum[1];
+    } else {
+        mergeTop    = rTop;
+        mergeBot    = rBot;
+        mergeActive = 1;
+        mergeBaseNum = if mergeBaseNum[1] == 0 then 1 else mergeBaseNum[1] + 1;
+    }
+} else if mergeActive[1] and !inBaseActive {
+    mergeTop     = mergeTop[1];
+    mergeBot     = mergeBot[1];
+    mergeActive  = 0;
+    mergeBaseNum = mergeBaseNum[1];
+} else {
+    mergeTop     = mergeTop[1];
+    mergeBot     = mergeBot[1];
+    mergeActive  = mergeActive[1];
+    mergeBaseNum = mergeBaseNum[1];
+}
+
+def inMergedBase = mergeActive and inBaseActive;
+
+def dispTop = if MergeAdjacentBases then mergeTop else rTop;
+def dispBot = if MergeAdjacentBases then mergeBot else rBot;
+def dispMid = dispBot + (dispTop - dispBot) * 0.50;
+def dispPivot = dispBot + (dispTop - dispBot) * 0.75;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── CUP & HANDLE: DERIVED VALUES ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def maxDepth = MaxBaseDepthPct / 100;
+def minDepth = MinBaseDepthPct / 100;
+
+def candHigh   = high[LookbackBars];
+def lowestWin  = Lowest(low, LookbackBars);
+def highestWin = Highest(high, LookbackBars);
+
+def freshHighBars = if isWeekly then 13 else 65;
+def highestCmp    = Highest(high[LookbackBars], freshHighBars);
+
+def legUpBars = if LegUpLookback > 0 then LegUpLookback
+                else if isWeekly then 13 else 65;
+def lowestLeg = Lowest(low[LookbackBars], legUpBars);
+
+def minLegUp   = MinLegUpPct  / 100;
+def maxLegUpR  = MaxLegUpPct  / 100;
+def c_legUp    = candHigh >= lowestLeg * (1 + minLegUp);
+def c_maxLegUp = candHigh <= lowestLeg * (1 + maxLegUpR);
+
+def volBaseline = Average(volume, 50);
+def legVolUp = fold iv = 0 to 65 with accV = 0 do
+    accV + (if iv < legUpBars
+            and GetValue(close, LookbackBars + iv) > GetValue(open, LookbackBars + iv)
+            and GetValue(volume, LookbackBars + iv) > volBaseline
+            then 1 else 0);
+def legUpDays = fold iv2 = 0 to 65 with accD = 0 do
+    accD + (if iv2 < legUpBars
+            and GetValue(close, LookbackBars + iv2) > GetValue(open, LookbackBars + iv2)
+            then 1 else 0);
+def c_legUpVol = !RequireLegUpVolume
+                 or legUpDays == 0
+                 or legVolUp / legUpDays >= 0.50;
+
+def c_depthOK  = candHigh * (1 - maxDepth) <= lowestWin;
+def c_noBigger = highestWin <= candHigh;
+def c_isHigh   = candHigh >= highestCmp;
+
+def newCupBase = c_legUp and c_maxLegUp and c_legUpVol
+                 and c_depthOK and c_noBigger and c_isHigh;
+
+# ── CUP & HANDLE: STATE TRACKING ─────────────────────────────────────────────
+def baseAge = CompoundValue(1,
+    if newCupBase then LookbackBars
+    else baseAge[1] + 1,
+    0);
+
+def basePrice = CompoundValue(1,
+    if newCupBase then candHigh
+    else if basePrice[1] == 0 then 0
+    else if high > basePrice[1] then 0
+    else if low < basePrice[1] * (1 - maxDepth) then 0
+    else if baseAge >= MaxBaseLengthBars then 0
+    else basePrice[1],
+    0);
+
+def baseCount = if basePrice > 0 then baseAge else 0;
+
+def baseLowVal = CompoundValue(1,
+    if newCupBase then lowestWin
+    else if basePrice == 0 then 0
+    else if low < baseLowVal[1] then low
+    else baseLowVal[1],
+    0);
+
+def baseLowPos = CompoundValue(1,
+    if newCupBase then LookbackBars - GetMinValueOffset(low, LookbackBars)
+    else if basePrice == 0 then 0
+    else if low <= baseLowVal[1] then baseCount
+    else baseLowPos[1],
+    0);
+
+def inCupBase = basePrice > 0;
+
+def legUpOK = CompoundValue(1,
+    if newCupBase  then (c_legUp and c_maxLegUp and c_legUpVol)
+    else if basePrice == 0 then 0
+    else legUpOK[1],
+    0);
+
+# ── CUP & HANDLE: CUP CONDITIONS ─────────────────────────────────────────────
+def cupDepth  = if basePrice > 0 then (basePrice - baseLowVal) / basePrice else 0;
+def lowPosPct = if baseCount > 0 then baseLowPos / baseCount else 0;
+def midPrice  = (basePrice + baseLowVal) / 2;
+
+def k_depthMax  = cupDepth <= maxDepth;
+def k_depthMin  = cupDepth >= minDepth;
+def k_lenMax    = baseCount <= MaxBaseLengthBars;
+def k_lenMin    = baseCount >= MinBaseLengthBars;
+def k_upperHalf = high >= midPrice;
+
+def leftSideBars  = baseLowPos;
+def rightSideBars = baseCount - baseLowPos;
+
+def k_symmetry =
+    leftSideBars  > 0 and
+    rightSideBars > 0 and
+    rightSideBars <= leftSideBars  * MaxSymmetryRatio and
+    leftSideBars  <= rightSideBars * MaxSymmetryRatio;
+
+def baseTier   = Max(1, Floor(baseCount / 3));
+def baseFourth = Max(1, Floor(baseCount / 4));
+
+def midThirdCount =
+    fold i1 = 0 to MaxBaseLengthBars with c1 = 0 do
+        c1 + (if GetValue(close, i1) <= midPrice
+              and i1 >= baseTier
+              and i1 <= baseCount - baseTier
+              then 1 else 0);
+
+def condThird =
+    if baseTier > 0 then midThirdCount / baseTier >= MidTierBelowPct / 100 else 0;
+
+def outerLeftCount =
+    fold i2 = 0 to MaxBaseLengthBars with c2 = 0 do
+        c2 + (if GetValue(close, i2) >= midPrice
+              and i2 >= 3 * baseFourth
+              and i2 <= baseCount
+              then 1 else 0);
+
+def condThirdTwo =
+    if baseFourth > 0 then outerLeftCount / baseFourth >= OuterTierAbovePct / 100 else 0;
+
+def k_cupForm =
+    condThird and condThird[1] and condThirdTwo and condThirdTwo[1];
+
+def isCup =
+    inCupBase   and
+    legUpOK     and
+    k_depthMax  and k_depthMin  and
+    k_lenMax    and k_lenMin    and
+    k_upperHalf and
+    k_cupForm   and
+    k_symmetry;
+
+def cupDetected = isCup and !isCup[1];
+def cupBreakout = inCupBase[1] and isCup[1] and high > basePrice[1];
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── CUP‑WITH‑HANDLE DETECTION ────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def handleDeclineLimit = 1 - HandleMaxDeclinePct / 100;
+
+def cupConfirmedThisBase = CompoundValue(1,
+    if basePrice == 0 then 0
+    else if isCup      then 1
+    else cupConfirmedThisBase[1],
+    0);
+
+def rightSide = inCupBase and baseCount > baseLowPos;
+
+rec rightSideHighClose;
+if !rightSide {
+    rightSideHighClose = 0;
+} else {
+    rightSideHighClose =
+        if close > rightSideHighClose[1] and close <= basePrice
+        then close
+        else rightSideHighClose[1];
+}
+
+def handlePeakTol = 1 + HandlePeakTolPct / 100;
+
+rec handlePeakBar;
+if !rightSide or rightSideHighClose == 0 {
+    handlePeakBar = 0;
+} else {
+    handlePeakBar =
+        if close > rightSideHighClose[1] * handlePeakTol and close <= basePrice
+        then bn
+        else handlePeakBar[1];
+}
+
+def handleBarCount =
+    if rightSide and handlePeakBar > 0 then bn - handlePeakBar else 0;
+
+rec handlePeakLocked;
+if !rightSide or rightSideHighClose == 0 {
+    handlePeakLocked = 0;
+} else if handleBarCount == 0 {
+    handlePeakLocked = rightSideHighClose;
+} else {
+    handlePeakLocked = handlePeakLocked[1];
+}
+
+rec handleLowPoint;
+if !rightSide or handlePeakLocked == 0 {
+    handleLowPoint = 0;
+} else {
+    handleLowPoint =
+        if low < handleLowPoint[1] or handleLowPoint[1] == 0
+        then low
+        else handleLowPoint[1];
+}
+
+# ── HANDLE CONDITIONS ────────────────────────────────────────────────────────
+def handleDepthOK = handleLowPoint >= handlePeakLocked * handleDeclineLimit;
+def handleMidOK   = !HandleUpperHalf or handleLowPoint > midPrice;
+def handleAvgVol  = Average(volume, HandleMinBars);
+def priorAvgVol   = Average(volume[HandleMinBars], HandleMinBars);
+def volContracts  = handleAvgVol < priorAvgVol * 0.85;
+
+def handleForming =
+    rightSide                        and
+    cupConfirmedThisBase             and
+    legUpOK                          and
+    k_lenMin                         and
+    k_lenMax                         and
+    handlePeakLocked > 0             and
+    handleBarCount >= HandleMinBars  and
+    handleBarCount <= HandleMaxBars  and
+    handleDepthOK                    and
+    handleMidOK                      and
+    (!HandleVolumeDryUp or volContracts);
+
+def handleBreakout = handleForming and close > handlePeakLocked;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── FIRST PATTERN LOCK (only show one entry level per base) ─────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+rec firstPatternFired;
+if bn == 1 {
+    firstPatternFired = 0;
+} else if !inCupBase {
+    firstPatternFired = 0;
+} else if firstPatternFired[1] == 0 and (cupBreakout or handleBreakout) {
+    firstPatternFired = 1;
+} else {
+    firstPatternFired = firstPatternFired[1];
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── TRADE BOXES: CUP BREAKOUT ──────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def cupPivotPx = CompoundValue(1,
+    if cupBreakout and !firstPatternFired[1] then basePrice[1]
+    else if cupPivotPx[1] > 0
+         and high <= cupPivotPx[1] * 1.25
+         and low  >= cupPivotPx[1] * 0.92
+    then cupPivotPx[1]
+    else 0,
+    0);
+
+def cupTradeOn = cupPivotPx > 0;
+
+# ── CUP‑WITH‑HANDLE TRADE BOX ────────────────────────────────────────────────
+def handlePivotPx = CompoundValue(1,
+    if handleBreakout and !firstPatternFired[1] then handlePeakLocked
+    else if handlePivotPx[1] > 0
+         and high  <= handlePivotPx[1] * 1.25
+         and low   >= handlePivotPx[1] * 0.92
+    then handlePivotPx[1]
+    else 0,
+    0);
+
+def handleTradeOn = handlePivotPx > 0;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── CUP-ONLY SUPPRESSION ─────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def hasCupHandle = ShowCupHandle and (handleForming or handleTradeOn);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── BASE SUPPRESSION ─────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def suppressBase = inCupBase or isCup or handleForming or cupTradeOn or handleTradeOn;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── PLOTS: BASE LOCATOR LEVELS ──────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+plot CompBaseTop = if showBases and inBaseActive and !suppressBase then dispTop else Double.NaN;
+CompBaseTop.SetDefaultColor(GlobalColor("CompBase"));
+CompBaseTop.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+plot CompBaseBot = if showBases and inBaseActive and !suppressBase then dispBot else Double.NaN;
+CompBaseBot.SetDefaultColor(GlobalColor("CompBase"));
+CompBaseBot.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+plot HalfLine = if showBases and showHalfBase and inBaseActive and !suppressBase then dispMid else Double.NaN;
+HalfLine.SetDefaultColor(GlobalColor("HalfBase"));
+HalfLine.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+HalfLine.SetStyle(Curve.SHORT_DASH);
+
+plot PivotLine = if showBases and showHalfBase and inBaseActive and !suppressBase then dispPivot else Double.NaN;
+PivotLine.SetDefaultColor(GlobalColor("HalfBase"));
+PivotLine.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+PivotLine.SetStyle(Curve.LONG_DASH);
+
+plot PartBaseTop = if showBases and ShowPartialBase and state == 2 and !suppressBase then dispTop else Double.NaN;
+PartBaseTop.SetDefaultColor(GlobalColor("PartBase"));
+PartBaseTop.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+plot PartBaseBot = if showBases and ShowPartialBase and state == 2 and !suppressBase then dispBot else Double.NaN;
+PartBaseBot.SetDefaultColor(GlobalColor("PartBase"));
+PartBaseBot.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── PLOTS: CUP LEVELS ────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+plot HighLine =
+    if ShowCupPattern and ShowHighLine and inCupBase and !hasCupHandle then basePrice else Double.NaN;
+HighLine.SetDefaultColor(GlobalColor("Cup"));
+HighLine.SetStyle(Curve.SHORT_DASH);
+HighLine.SetLineWeight(3);
+HighLine.HideBubble();
+HighLine.HideTitle();
+
+plot LowLine =
+    if ShowCupPattern and ShowLowLine and inCupBase and !hasCupHandle then baseLowVal else Double.NaN;
+LowLine.SetDefaultColor(GlobalColor("Cup"));
+LowLine.SetStyle(Curve.FIRM);
+LowLine.SetLineWeight(2);
+LowLine.HideBubble();
+LowLine.HideTitle();
+
+plot CupBowl =
+    if ShowCupPattern and ShowCupCurve and inCupBase then
+        if baseCount <= baseLowPos then
+            baseLowVal +
+                Sqr((baseLowPos - baseCount) / Max(1, baseLowPos)) *
+                (basePrice - baseLowVal)
+        else
+            baseLowVal +
+                Min(1, Sqr((baseCount - baseLowPos) / Max(1, baseLowPos))) *
+                (basePrice - baseLowVal)
+    else Double.NaN;
+CupBowl.SetDefaultColor(GlobalColor("Cup"));
+CupBowl.SetLineWeight(2);
+CupBowl.HideBubble();
+CupBowl.HideTitle();
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── PLOTS: CUP BREAKOUT TRADE BOXES ─────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+plot Cup_EntryHi = if ShowCupPattern and ShowTradeBoxes and cupTradeOn and !hasCupHandle then cupPivotPx * 1.05 else Double.NaN;
+plot Cup_EntryLo = if ShowCupPattern and ShowTradeBoxes and cupTradeOn and !hasCupHandle then cupPivotPx        else Double.NaN;
+plot Cup_StopHi  = if ShowCupPattern and ShowTradeBoxes and cupTradeOn and !hasCupHandle then cupPivotPx * 0.95 else Double.NaN;
+plot Cup_StopLo  = if ShowCupPattern and ShowTradeBoxes and cupTradeOn and !hasCupHandle then cupPivotPx * 0.92 else Double.NaN;
+plot Cup_TgtHi   = if ShowCupPattern and ShowTradeBoxes and cupTradeOn and !hasCupHandle then cupPivotPx * 1.25 else Double.NaN;
+plot Cup_TgtLo   = if ShowCupPattern and ShowTradeBoxes and cupTradeOn and !hasCupHandle then cupPivotPx * 1.20 else Double.NaN;
+
+Cup_EntryHi.Hide();
+Cup_EntryLo.Hide();
+Cup_StopHi.Hide();
+Cup_StopLo.Hide();
+Cup_TgtHi.Hide();
+Cup_TgtLo.Hide();
+
+AddCloud(Cup_EntryHi, Cup_EntryLo, GlobalColor("Entry"), GlobalColor("Entry"));
+AddCloud(Cup_StopHi,  Cup_StopLo,  GlobalColor("Stop"),  GlobalColor("Stop"));
+AddCloud(Cup_TgtHi,   Cup_TgtLo,   GlobalColor("Tgt"),   GlobalColor("Tgt"));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── PLOTS: CUP‑WITH‑HANDLE BREAKOUT TRADE BOXES ──────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+plot Handle_EntryHi = if ShowCupHandle and ShowTradeBoxes and handleTradeOn then handlePivotPx * 1.05 else Double.NaN;
+plot Handle_EntryLo = if ShowCupHandle and ShowTradeBoxes and handleTradeOn then handlePivotPx        else Double.NaN;
+plot Handle_StopHi  = if ShowCupHandle and ShowTradeBoxes and handleTradeOn then handlePivotPx * 0.95 else Double.NaN;
+plot Handle_StopLo  = if ShowCupHandle and ShowTradeBoxes and handleTradeOn then handlePivotPx * 0.92 else Double.NaN;
+plot Handle_TgtHi   = if ShowCupHandle and ShowTradeBoxes and handleTradeOn then handlePivotPx * 1.25 else Double.NaN;
+plot Handle_TgtLo   = if ShowCupHandle and ShowTradeBoxes and handleTradeOn then handlePivotPx * 1.20 else Double.NaN;
+
+Handle_EntryHi.Hide();
+Handle_EntryLo.Hide();
+Handle_StopHi.Hide();
+Handle_StopLo.Hide();
+Handle_TgtHi.Hide();
+Handle_TgtLo.Hide();
+
+AddCloud(Handle_EntryHi, Handle_EntryLo, GlobalColor("Entry"), GlobalColor("Entry"));
+AddCloud(Handle_StopHi,  Handle_StopLo,  GlobalColor("Stop"),  GlobalColor("Stop"));
+AddCloud(Handle_TgtHi,   Handle_TgtLo,   GlobalColor("Tgt"),   GlobalColor("Tgt"));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── BUBBLES: BASE LOCATOR ────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+def isBob = bobNum > 0;
+
+def dispBaseNum = if MergeAdjacentBases then mergeBaseNum else baseNum;
+def dispBobNum  = bobNum;
+
+def dispAdv  = Round(advance, 0);
+def dispDep  = Round(depth, 0);
+
+AddChartBubble(showBases and showBaseCount and newBase and showBaseIncCorr
+               and !doReset and !isBob and !suppressBase,
+    dispTop, dispBaseNum + " ^" + dispAdv + "% v" + dispDep + "%", Color.CYAN, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and showBaseIncCorr
+               and !doReset and isBob and !suppressBase,
+    dispTop, dispBaseNum + "." + dispBobNum + " ^" + dispAdv + "% v" + dispDep + "%", Color.YELLOW, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and showBaseIncCorr
+               and doReset and !isBob and !suppressBase,
+    dispTop, dispBaseNum + " R ^" + dispAdv + "% v" + dispDep + "%", Color.LIGHT_RED, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and showBaseIncCorr
+               and doReset and isBob and !suppressBase,
+    dispTop, dispBaseNum + "." + dispBobNum + " R ^" + dispAdv + "% v" + dispDep + "%", Color.LIGHT_RED, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and !showBaseIncCorr
+               and !doReset and !isBob and !suppressBase,
+    dispTop, dispBaseNum + "", Color.CYAN, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and !showBaseIncCorr
+               and !doReset and isBob and !suppressBase,
+    dispTop, dispBaseNum + "." + dispBobNum, Color.YELLOW, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and !showBaseIncCorr
+               and doReset and !isBob and !suppressBase,
+    dispTop, dispBaseNum + " R", Color.LIGHT_RED, no);
+
+AddChartBubble(showBases and showBaseCount and newBase and !showBaseIncCorr
+               and doReset and isBob and !suppressBase,
+    dispTop, dispBaseNum + "." + dispBobNum + " R", Color.LIGHT_RED, no);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── BUBBLES: CUP & HANDLE ────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+AddChartBubble(
+    ShowCupPattern and ShowDetectionLabel and cupDetected and !hasCupHandle,
+    baseLowVal * 0.985,
+    "Cup",
+    GlobalColor("Cup"),
+    no
+);
+
+AddChartBubble(
+    ShowCupHandle and ShowDetectionLabel and handleBreakout and !handleBreakout[1],
+    high,
+    "Handle BO",
+    GlobalColor("Entry"),
+    yes
+);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── STATUS LABELS ─────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+AddLabel(ShowCupPattern and ShowStatusLabels and inCupBase,
+    "BASE | Depth " + AsPercent(cupDepth)
+    + " | Bars " + baseCount
+    + " | Pivot " + Round(basePrice, 2),
+    GlobalColor("Cup"));
+
+AddLabel(ShowCupPattern and ShowStatusLabels and isCup and !hasCupHandle,
+    "CUP DETECTED",
+    GlobalColor("Cup"));
+
+AddLabel(ShowCupHandle and ShowStatusLabels and handleForming,
+    "HANDLE FORMING | Bars " + handleBarCount
+    + " | Peak "  + Round(handlePeakLocked, 2)
+    + " | Low "   + Round(handleLowPoint, 2),
+    GlobalColor("Entry"));
+
+AddLabel(ShowCupHandle and ShowStatusLabels and handleTradeOn,
+    "HANDLE BREAKOUT | Pivot " + Round(handlePivotPx, 2),
+    GlobalColor("Entry"));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── ALERTS ───────────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+Alert(newBase,                                           "Base Confirmed", Alert.BAR, Sound.Bell);
+Alert(s_prev == 3 and state == 1 and cutBaseHigh,        "Base Breakout",  Alert.BAR, Sound.Ding);
+Alert(s_prev == 3 and state == 1 and close < rBot_prev,  "Base Breakdown", Alert.BAR, Sound.Ring);
+Alert(cupDetected,    "Cup Detected",    Alert.BAR, Sound.Bell);
+Alert(handleBreakout, "Handle Breakout", Alert.BAR, Sound.Ding);
