@@ -305,7 +305,16 @@ with col2:
                 branch = branch_proc.stdout.strip() if branch_proc.returncode == 0 else "main"
                 subprocess.run(["git", "fetch", "upstream"], cwd=repo_dir, capture_output=True)
                 subprocess.run(["git", "merge", f"upstream/{branch}"], cwd=repo_dir, capture_output=True)
+                # Stash unstaged changes if any, to avoid git pull failing
+                status_res = subprocess.run(["git", "status", "--porcelain"], cwd=repo_dir, capture_output=True, text=True)
+                has_changes = bool(status_res.stdout.strip())
+                if has_changes:
+                    subprocess.run(["git", "stash"], cwd=repo_dir, capture_output=True)
+                
                 pull_res = subprocess.run(["git", "pull"], cwd=repo_dir, capture_output=True, text=True)
+                
+                if has_changes:
+                    subprocess.run(["git", "stash", "pop"], cwd=repo_dir, capture_output=True)
                 subprocess.run(["git", "push", "origin", branch], cwd=repo_dir, capture_output=True)
                 if pull_res.returncode != 0:
                     st.error(f"Git pull failed:\n{pull_res.stderr}")

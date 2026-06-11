@@ -1,7 +1,7 @@
 {
-  "total_records": 194095,
-  "unique_dates": 1251,
+  "total_records": 194384,
+  "unique_dates": 1253,
   "date_min": "2021-10-20 00:00:00",
-  "date_max": "2026-06-09 00:00:00",
-  "last_updated": "2026-06-09T12:37:07.910382"
+  "date_max": "2026-06-11 00:00:00",
+  "last_updated": "2026-06-11T00:23:02.447608"
 }
