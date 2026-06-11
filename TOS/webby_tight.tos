@@ -1,0 +1,91 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Webby's Tight Indicator
+# Converted from Pine Script to ThinkScript
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This indicator measures the ratio between long-term ATR and short-term ATR,
+#   plotting positive ratios (blue) and negative ratios (red) as a histogram.
+#   It also plots the EMA of the ratio and highlights the 251-period highest 
+#   and lowest ratio points when enabled.
+# ══════════════════════════════════════════════════════════════════════════════
+
+declare lower;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+input showEma = yes;
+input showHiLo = no;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COLORS (Customizable via the Globals tab in Study Settings)
+# ─────────────────────────────────────────────────────────────────────────────
+DefineGlobalColor("PositiveRatioColor", Color.BLUE);
+DefineGlobalColor("NegativeRatioColor", Color.RED);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ATR CALCULATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+# Short ATRs (lengths: 3, 5, 8)
+def short1 = WildersAverage(TrueRange(high, close, low), 3);
+def short2 = WildersAverage(TrueRange(high, close, low), 5);
+def short3 = WildersAverage(TrueRange(high, close, low), 8);
+def shortAvg = (short1 + short2 + short3) / 3;
+
+# Long ATRs (lengths: 55, 89, 144)
+def long1 = WildersAverage(TrueRange(high, close, low), 55);
+def long2 = WildersAverage(TrueRange(high, close, low), 89);
+def long3 = WildersAverage(TrueRange(high, close, low), 144);
+def longAvg = (long1 + long2 + long3) / 3;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RATIO AND EMA CALCULATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+def ratio = (longAvg - shortAvg) / Max(longAvg, shortAvg);
+def ema = ExpAverage(ratio, 5);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLOTS
+# ─────────────────────────────────────────────────────────────────────────────
+# Ratio Histogram
+plot RatioPlot = ratio;
+RatioPlot.SetPaintingStrategy(PaintingStrategy.HISTOGRAM);
+RatioPlot.AssignValueColor(if ratio > 0 then GlobalColor("PositiveRatioColor") else GlobalColor("NegativeRatioColor"));
+RatioPlot.SetLineWeight(3);
+
+# EMA of Ratio Line
+plot EmaPlot = if showEma then ema else Double.NaN;
+EmaPlot.SetPaintingStrategy(PaintingStrategy.LINE);
+EmaPlot.AssignValueColor(if ema > ema[1] then Color.GREEN else Color.RED);
+EmaPlot.SetLineWeight(2);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HIGHEST / LOWEST RATIO MARKERS
+# ─────────────────────────────────────────────────────────────────────────────
+# Find the rolling 251-bar highest and lowest ratio values (inclusive of current bar)
+def highestVal = Highest(ratio, 251);
+def lowestVal = Lowest(ratio, 251);
+
+# Identify if the current bar is the highest or lowest in the window
+def isHighest = ratio == highestVal;
+def isLowest = ratio == lowestVal;
+
+# Track the bar numbers of these occurrences
+def highestBar = if isHighest then BarNumber() else Double.NaN;
+def lowestBar = if isLowest then BarNumber() else Double.NaN;
+
+# Find the most recent bar index where highest/lowest occurred
+def lastHighestBar = HighestAll(highestBar);
+def lastLowestBar = HighestAll(lowestBar);
+
+# Plot the markers on the single most recent bar (matching label.delete() behavior)
+plot HighestMark = if showHiLo and BarNumber() == lastHighestBar then ratio else Double.NaN;
+HighestMark.SetPaintingStrategy(PaintingStrategy.POINTS);
+HighestMark.SetDefaultColor(Color.GREEN);
+HighestMark.SetLineWeight(5);
+
+plot LowestMark = if showHiLo and BarNumber() == lastLowestBar then ratio else Double.NaN;
+LowestMark.SetPaintingStrategy(PaintingStrategy.POINTS);
+LowestMark.SetDefaultColor(Color.GREEN);
+LowestMark.SetLineWeight(5);
+

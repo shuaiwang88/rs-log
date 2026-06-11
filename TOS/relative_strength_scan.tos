@@ -1,0 +1,76 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Raw RS New High Scan Script
+# Converted from Pine Script (iArpanK method) to ThinkScript for Scanning
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This is a dedicated scanning script to find stocks hitting new highs in Raw RS.
+#   It supports scanning for:
+#     1. Any RS New High (1Y, 6M, or 3M)
+#     2. RS Leads Price High (RS hits new high, but Price has NOT hit a new high)
+#     3. Specific lookback period new highs (1Y, 6M, or 3M)
+#
+# HOW TO USE IN THINKORSWIM SCANNER:
+#   1. Create a new custom Scan study.
+#   2. Paste this code.
+#   3. Select the desired "scanMode" option in the script inputs.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+input indexSymbol      = "SPX";
+input sc_factor        = 7.0;
+input highPeriod       = 250; # 1Y Lookback
+input sixMBars         = 126; # 6M Lookback
+input threeMBars       = 63;  # 3M Lookback
+
+input scanMode = {default "Any RS New High", "RS Leads Price High", "1Y RS New High", "6M RS New High", "3M RS New High"};
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INDEX CLOSE & RAW RS
+# ─────────────────────────────────────────────────────────────────────────────
+def idxClose = close(indexSymbol);
+def rs_raw = if !IsNaN(idxClose) and idxClose != 0
+             then close * sc_factor * 1000 / idxClose
+             else Double.NaN;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW HIGH DETECTION
+# ─────────────────────────────────────────────────────────────────────────────
+# 1-Year Lookbacks
+def rs_highest_1y    = Highest(rs_raw, highPeriod + 1)[1];
+def price_highest_1y = Highest(high,   highPeriod + 1)[1];
+def rs_nh_1y    = rs_raw > rs_highest_1y;
+def price_nh_1y = high  > price_highest_1y;
+
+# 6-Month Lookbacks
+def rs_highest_6m    = Highest(rs_raw, sixMBars + 1)[1];
+def price_highest_6m = Highest(high,   sixMBars + 1)[1];
+def rs_nh_6m    = rs_raw > rs_highest_6m;
+def price_nh_6m = high  > price_highest_6m;
+
+# 3-Month Lookbacks
+def rs_highest_3m    = Highest(rs_raw, threeMBars + 1)[1];
+def price_highest_3m = Highest(high,   threeMBars + 1)[1];
+def rs_nh_3m    = rs_raw > rs_highest_3m;
+def price_nh_3m = high  > price_highest_3m;
+
+# Aggregated States
+def rs_nh_any = rs_nh_1y or rs_nh_6m or rs_nh_3m;
+
+def price_nh_matching = if rs_nh_1y then price_nh_1y
+                        else if rs_nh_6m then price_nh_6m
+                        else price_nh_3m;
+
+# RS new high before price new high (RS Leads Price)
+def rs_leads_price = rs_nh_any and !price_nh_matching;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCAN TRIGGER
+# ─────────────────────────────────────────────────────────────────────────────
+plot scan = if scanMode == scanMode."Any RS New High" then rs_nh_any
+            else if scanMode == scanMode."RS Leads Price High" then rs_leads_price
+            else if scanMode == scanMode."1Y RS New High" then rs_nh_1y
+            else if scanMode == scanMode."6M RS New High" then rs_nh_6m
+            else if scanMode == scanMode."3M RS New High" then rs_nh_3m
+            else no;

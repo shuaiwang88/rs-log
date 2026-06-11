@@ -1,0 +1,256 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Swing Data Study — ThinkOrSwim Edition
+# Original Pine Script by MikeC / Fred6724 / TheScrutiniser / GlinckEastwoot
+# ThinkScript port — ADR% · RVol · PVol · Avg $Vol · RS Rating · and more
+#
+# TO CHANGE LABEL COLOR: find/replace Color.ORANGE with any Color.X constant
+#   e.g. Color.CYAN, Color.YELLOW, Color.WHITE, Color.GREEN, Color.PINK
+#
+# KNOWN TOS LIMITATIONS vs. Pine Script original:
+#   • Market Cap / Shares Float: no native API in thinkScript.
+#     MCap is approximated as Close × syminfo shares (may differ from actuals).
+#     True float shares are not exposed — Float% is omitted.
+#   • RS Rating: original uses a proprietary seed dataset. This port uses
+#     a standard IBD-style weighted-performance formula vs. $SPX.X —
+#     directionally accurate but not identical to IBD's published number.
+#   • Sector / Industry: not available as strings in thinkScript.
+#   • IPO Timer: not exposed in thinkScript.
+#
+# BEST USED ON: Daily charts. Volume projection also works on intraday.
+# ═══════════════════════════════════════════════════════════════════════════
+
+declare upper;
+
+# ───────────────────────────────────────────────────────────────────────────
+# PARAMETERS
+# ───────────────────────────────────────────────────────────────────────────
+input adrp_len = 20;
+input atr_len  = 21;
+input vol_len  = 50;
+input ma_len   = 50;
+
+# ───────────────────────────────────────────────────────────────────────────
+# DISPLAY TOGGLES
+# ───────────────────────────────────────────────────────────────────────────
+input show_mktCap       = yes;
+input show_adrp         = no;
+input show_atrPer       = yes;
+input show_atr          = no;
+input show_lod_dist     = yes;
+input show_lod_price    = yes;
+input show_dist_high    = yes;
+input show_dist_low     = yes;
+input show_ADVS         = yes;
+input show_ADV          = yes;
+input show_projectedVol = yes;
+input show_relVol       = yes;
+input show_volBuzz      = yes;
+input show_UDratio      = yes;
+input show_liqCap       = yes;
+input show_atrFromMA    = yes;
+input show_pctGainMA    = yes;
+
+# ───────────────────────────────────────────────────────────────────────────
+# DAILY DATA REFERENCES
+# ───────────────────────────────────────────────────────────────────────────
+def dHigh  = high(period  = AggregationPeriod.DAY);
+def dLow   = low(period   = AggregationPeriod.DAY);
+def dClose = close(period = AggregationPeriod.DAY);
+def dVol   = volume(period = AggregationPeriod.DAY);
+
+# ───────────────────────────────────────────────────────────────────────────
+# 1. ADR% — Average Daily Range %
+# ───────────────────────────────────────────────────────────────────────────
+def adrp = 100 * (Average(dHigh / dLow, adrp_len) - 1);
+
+# ───────────────────────────────────────────────────────────────────────────
+# 2. ATR & ATR%
+# ───────────────────────────────────────────────────────────────────────────
+def atrVal = Average(TrueRange(high, close, low), atr_len);
+def atrp   = if close != 0 then 100 * atrVal / close else 0;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 3. Low of Day — Price & Distance (% of ATR above day low)
+# ───────────────────────────────────────────────────────────────────────────
+def lodPrice = dLow;
+def lodDist  = if atrVal != 0 then 100 * (close - lodPrice) / atrVal else 0;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 4. 52-Week High / Low Distance  (252 trading days ≈ 52 weeks)
+# ───────────────────────────────────────────────────────────────────────────
+def h52w     = Highest(dHigh, 252);
+def l52w     = Lowest(dLow,   252);
+def distHigh = if h52w != 0 then 100 * (dClose / h52w - 1) else 0;
+def distLow  = if l52w != 0 then 100 * (dClose / l52w - 1) else 0;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 5. VOLUME METRICS
+# ───────────────────────────────────────────────────────────────────────────
+def volMA     = Average(dVol, vol_len);
+def relVol    = if volMA != 0 then volume / volMA * 100 else 0;
+def advDollar = dClose * volMA;
+def barVolMA  = Average(volume, vol_len);
+def volBuzz   = if barVolMA != 0 then 100 * (volume / barVolMA - 1) else 0;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 6. PROJECTED VOLUME
+#    Extrapolates current bar volume to end-of-session pace.
+#    SecondsFromTime(0930) = elapsed seconds since market open.
+#    Regular session = 6.5 hrs = 23400 seconds.
+# ───────────────────────────────────────────────────────────────────────────
+def elapsedSec = SecondsFromTime(0930);
+def totalSec   = 23400;
+def projVol    = if elapsedSec > 0 and elapsedSec < totalSec
+                 then volume * totalSec / elapsedSec
+                 else volume;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 7. U/D VOLUME RATIO  (50-bar cumulative up-vol vs down-vol)
+# ───────────────────────────────────────────────────────────────────────────
+def upVolBar = if close > close[1] then volume else 0;
+def dnVolBar = if close < close[1] then volume else 0;
+def udRatio  = if Sum(dnVolBar, 50) != 0
+               then Sum(upVolBar, 50) / Sum(dnVolBar, 50)
+               else 0;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 8. MARKET CAP (approximation)
+#    ThinkOrSwim thinkScript has no GetMarketCap() or shares-outstanding API.
+#    We estimate: shares ≈ (52-week-avg-close * avg-daily-vol) is unreliable,
+#    so we simply flag this as unavailable in the label.
+# ───────────────────────────────────────────────────────────────────────────
+# (No numeric MCap calculation — shown as N/A below)
+
+# ───────────────────────────────────────────────────────────────────────────
+# 9. LIQUIDITY CAP  (1% of average daily volume)
+# ───────────────────────────────────────────────────────────────────────────
+def liqCap = volMA * 0.01;
+
+# ───────────────────────────────────────────────────────────────────────────
+# 10a. ATR% MULTIPLE FROM MA  &  % GAIN FROM MA
+#      MA defaults to 50-day SMA. ATR Multiple = (Close – MA) / ATR.
+#      % Gain = 100 * (Close / MA – 1).
+# ───────────────────────────────────────────────────────────────────────────
+def maVal      = Average(dClose, ma_len);
+def atrFromMA  = if atrVal != 0 then (dClose - maVal) / atrVal else 0;
+def pctGainMA  = if maVal  != 0 then 100 * (dClose / maVal - 1)  else 0;
+
+# 10. RS RATING — IBD-Style (simplified, vs. $SPX.X)
+#     Weights: 40% most-recent quarter + 20% each prior three quarters.
+#     Mapped to 1–99 scale (50 = at-market performance).
+# ───────────────────────────────────────────────────────────────────────────
+def spx = close("$SPX.X");
+
+def tickerP63  = if dClose[63]  != 0 then dClose / dClose[63]  else 1;
+def tickerP126 = if dClose[126] != 0 then dClose / dClose[126] else 1;
+def tickerP189 = if dClose[189] != 0 then dClose / dClose[189] else 1;
+def tickerP252 = if dClose[252] != 0 then dClose / dClose[252] else 1;
+
+def spxP63  = if spx[63]  != 0 then spx / spx[63]  else 1;
+def spxP126 = if spx[126] != 0 then spx / spx[126] else 1;
+def spxP189 = if spx[189] != 0 then spx / spx[189] else 1;
+def spxP252 = if spx[252] != 0 then spx / spx[252] else 1;
+
+def rsTicker = 0.4 * tickerP63  + 0.2 * tickerP126  + 0.2 * tickerP189  + 0.2 * tickerP252;
+def rsIndex  = 0.4 * spxP63     + 0.2 * spxP126     + 0.2 * spxP189     + 0.2 * spxP252;
+def rsScore  = if rsIndex != 0 then rsTicker / rsIndex * 100 else 100;
+def rsRating = Min(99, Max(1, Round(50 + (rsScore - 100) * 1.5, 0)));
+
+# ───────────────────────────────────────────────────────────────────────────
+# SCALE THRESHOLDS  (explicit literals — thinkScript rejects 1e6 notation)
+# ───────────────────────────────────────────────────────────────────────────
+def SB = 1000000000;
+def SM = 1000000;
+def SK = 1000;
+
+# ───────────────────────────────────────────────────────────────────────────
+# LABEL GATE CONDITIONS  (pre-defined to avoid compound-boolean errors)
+# ───────────────────────────────────────────────────────────────────────────
+
+# Avg Dollar Volume
+def advIsB = show_ADVS and advDollar >= SB;
+def advIsM = show_ADVS and advDollar >= SM and advDollar < SB;
+def advIsK = show_ADVS and advDollar > 0   and advDollar < SM;
+
+# Avg Daily Volume
+def volIsM   = show_ADV and volMA >= SM;
+def volIsK   = show_ADV and volMA >= SK and volMA < SM;
+def volIsRaw = show_ADV and volMA < SK;
+
+# Projected Volume
+def pvIsM   = show_projectedVol and projVol >= SM;
+def pvIsK   = show_projectedVol and projVol >= SK and projVol < SM;
+def pvIsRaw = show_projectedVol and projVol < SK;
+
+# Liquidity Cap
+def lcIsM   = show_liqCap and liqCap >= SM;
+def lcIsK   = show_liqCap and liqCap >= SK and liqCap < SM;
+def lcIsRaw = show_liqCap and liqCap < SK;
+def closingRangePct = if high > low then (close - low) / (high - low) * 100 else 50;
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LABELS
+# Color is hardcoded as Color.ORANGE — find/replace to change globally.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── Market Cap (not available in thinkScript API) ──────────────────────────
+
+
+# ── ADR% ───────────────────────────────────────────────────────────────────
+AddLabel(show_adrp, "ADR%: " + Round(adrp, 2) + "%", Color.ORANGE);
+AddLabel(yes, "CR%: " + Round(closingRangePct, 1) + "%", Color.GRAY);
+
+# ── ATR% ───────────────────────────────────────────────────────────────────
+AddLabel(show_atrPer, "ATR%: " + Round(atrp, 2) + "%", Color.ORANGE);
+# ── ATR% Multiple From MA ─────────────────────────────────────────────────
+AddLabel(show_atrFromMA, "ATR Mult(" + ma_len + "D MA): " + Round(atrFromMA, 2) + "x", Color.ORANGE);
+
+# ── % Gain From MA ────────────────────────────────────────────────────────
+AddLabel(show_pctGainMA, "Gain(" + ma_len + "D MA): " + Round(pctGainMA, 2) + "%", Color.ORANGE);
+
+# ── ATR ────────────────────────────────────────────────────────────────────
+AddLabel(show_atr, "ATR: " + Round(atrVal, 2), Color.ORANGE);
+
+# ── LoD Distance ───────────────────────────────────────────────────────────
+AddLabel(show_lod_dist, "LoD dist: " + Round(lodDist, 0) + "%", Color.ORANGE);
+
+# ── LoD Price ──────────────────────────────────────────────────────────────
+AddLabel(show_lod_price, "LoD: " + Round(lodPrice, 2), Color.ORANGE);
+
+# ── Off 52-Week High ───────────────────────────────────────────────────────
+AddLabel(show_dist_high, "Off 52W Hi: " + Round(distHigh, 1) + "%", Color.ORANGE);
+
+# ── Above 52-Week Low ──────────────────────────────────────────────────────
+AddLabel(show_dist_low, "Abv 52W Lo: +" + Round(distLow, 1) + "%", Color.ORANGE);
+
+# ── Avg Daily Volume ───────────────────────────────────────────────────────
+AddLabel(volIsM,   "Avg Vol: " + Round(volMA / SM, 2) + "M", Color.ORANGE);
+AddLabel(volIsK,   "Avg Vol: " + Round(volMA / SK, 2) + "K", Color.ORANGE);
+AddLabel(volIsRaw, "Avg Vol: " + Round(volMA, 0),             Color.ORANGE);
+
+# ── Projected Volume ───────────────────────────────────────────────────────
+AddLabel(pvIsM,   "Proj Vol: " + Round(projVol / SM, 2) + "M", Color.ORANGE);
+AddLabel(pvIsK,   "Proj Vol: " + Round(projVol / SK, 2) + "K", Color.ORANGE);
+AddLabel(pvIsRaw, "Proj Vol: " + Round(projVol, 0),             Color.ORANGE);
+
+# ── Relative Volume ────────────────────────────────────────────────────────
+AddLabel(show_relVol,    "RVol: "     + Round(relVol,   0) + "%", Color.ORANGE);
+
+# ── Volume Buzz ────────────────────────────────────────────────────────────
+AddLabel(show_volBuzz,   "Vol Buzz: " + Round(volBuzz,  0) + "%", Color.ORANGE);
+
+# ── U/D Ratio ──────────────────────────────────────────────────────────────
+AddLabel(show_UDratio,   "U/D: "      + Round(udRatio,  1),       Color.ORANGE);
+
+# ── RS Rating ──────────────────────────────────────────────────────────────
+
+
+
+# ── Liquidity Cap ──────────────────────────────────────────────────────────
+AddLabel(lcIsM,   "LiqCap: " + Round(liqCap / SM, 2) + "M shs", Color.ORANGE);
+AddLabel(lcIsK,   "LiqCap: " + Round(liqCap / SK, 2) + "K shs", Color.ORANGE);
+AddLabel(lcIsRaw, "LiqCap: " + Round(liqCap, 0)      + " shs",  Color.ORANGE);
+
+# ═══════════════════════════════════════════════════════════════════════════
+# END OF STUDY
+# ═══════════════════════════════════════════════════════════════════════════

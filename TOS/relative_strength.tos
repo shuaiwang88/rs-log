@@ -1,0 +1,409 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Raw RS + Quick & Grateful Dead RS
+# Converted from Pine Script (iArpanK method) to ThinkScript
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   The RS line, Fast MA, Slow MA, and all signal arrows/dots now plot on a
+#   fixed 1–99 normalized scale.  All signal logic (crosses, new-high/low
+#   detection, Quicksand state machine) continues to run on the raw rs_raw
+#   value so trigger accuracy is unchanged.
+#
+#   displayScale / yAxisOffset inputs are retained for reference but no
+#   longer affect the panel — the axis is now always 1–99.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# declare lower;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+input indexSymbol      = "SPX";
+input sc_factor        = 7.0;
+input highPeriod       = 250;
+input sixMBars         = 126;
+input threeMBars       = 63;
+input displayScale     = 1.0;   # legacy – not used in normalized mode
+input yAxisOffset      = 100.0; # legacy – not used in normalized mode
+
+input plotRsMA         = no;
+input typeMA           = {default "Exponential", "Simple", "Weighted"};
+input periodMA         = 21;
+
+input rsFastLen        = 50;
+input rsSlowLen        = 21;
+
+# QGDRS EMA lengths — timeframe-adaptive (Daily / Weekly / Monthly)
+# Quick:        21D /  8W /  5M  (light blue)
+# QuickSand:    34D / 13W /  8M  (orange)
+# Grateful Dead: 50D / 21W / 13M  (red)
+input quickLen_D       = 21;
+input quickLen_W       = 8;
+input quickLen_M       = 5;
+input quickSandLen_D   = 34;
+input quickSandLen_W   = 13;
+input quickSandLen_M   = 8;
+input gdLen_D          = 50;
+input gdLen_W          = 21;
+input gdLen_M          = 13;
+
+input showRawRS            = yes;
+input showRsNewHighMark    = yes;
+input showRsLeadHighMark   = yes;
+input showRsNewLowMark     = yes;
+input showQGDRS            = yes;
+input showRSMAs            = yes;
+input showQGDRS_MAs        = yes;  # Show Quick / QuickSand / Grateful Dead EMAs
+
+input RS_Rating_ChartBubble = yes;
+def isLastBar = BarNumber() == HighestAll(if !IsNaN(close) then BarNumber() else Double.NaN);
+# ─────────────────────────────────────────────────────────────────────────────
+# COLORS
+# ─────────────────────────────────────────────────────────────────────────────
+DefineGlobalColor("RsMaLine",    CreateColor(149, 152, 161));
+DefineGlobalColor("FastMA",      Color.RED);
+DefineGlobalColor("SlowMA",      Color.YELLOW);
+DefineGlobalColor("QuickBreak",  CreateColor(248, 211,   5));
+DefineGlobalColor("Quicksand",   CreateColor(255,  77,   0));
+DefineGlobalColor("GratefulDead",CreateColor(245,   2,   2));
+DefineGlobalColor("RsReclaim",   Color.LIGHT_GREEN);
+
+# QGDRS EMA colors (matching Pine Script reference)
+DefineGlobalColor("QuickEMA",     CreateColor( 86, 184, 230));  # light blue  #56b8e6
+DefineGlobalColor("QuickSandEMA", CreateColor(255, 140,   0));  # orange      #ff8c00
+DefineGlobalColor("GratefulDeadEMA", CreateColor(245, 2,   2)); # red         #f50202
+
+DefineGlobalColor("Blue_12M", CreateColor(  0,  80, 255)); # Deepest vibrant blue
+DefineGlobalColor("Blue_6M",  CreateColor(100, 170, 255)); # Medium vibrant blue
+DefineGlobalColor("Blue_3M",  CreateColor(180, 220, 255)); # Light sky blue
+
+DefineGlobalColor("Green_12M", CreateColor(  0, 180,   0)); # Deepest vibrant green
+DefineGlobalColor("Green_6M",  CreateColor(  0, 255, 128)); # Medium vibrant green
+DefineGlobalColor("Green_3M",  CreateColor(150, 255, 150)); # Light mint green
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INDEX CLOSE
+# ─────────────────────────────────────────────────────────────────────────────
+def idxClose = close(indexSymbol);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RAW RS  (iArpanK formula — drives ALL signal logic, unchanged)
+# ─────────────────────────────────────────────────────────────────────────────
+def rs_raw = if !IsNaN(idxClose) and idxClose != 0
+             then close * sc_factor * 1000 / idxClose
+             else Double.NaN;
+
+# MAs computed on rs_raw for signal accuracy
+def rs_ma_iarpank =
+    if typeMA == typeMA."Exponential" then ExpAverage(rs_raw, periodMA)
+    else if typeMA == typeMA."Weighted" then WMA(rs_raw, periodMA)
+    else Average(rs_raw, periodMA);
+
+def rs_ma_fast = Average(rs_raw, rsFastLen);
+def rs_ma_slow = Average(rs_raw, rsSlowLen);
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIMEFRAME-ADAPTIVE QGDRS EMAs
+#   Quick:        21D /  8W /  5M  (light blue)
+#   QuickSand:    34D / 13W /  8M  (orange)
+#   Grateful Dead: 50D / 21W / 13M  (red)
+# ─────────────────────────────────────────────────────────────────────────────
+def aggPeriod = GetAggregationPeriod();
+def isWeekly  = aggPeriod >= AggregationPeriod.WEEK  and aggPeriod < AggregationPeriod.MONTH;
+def isMonthly = aggPeriod >= AggregationPeriod.MONTH;
+
+def quickLen     = if isMonthly then quickLen_M  else if isWeekly then quickLen_W  else quickLen_D;
+def quickSandLen = if isMonthly then quickSandLen_M else if isWeekly then quickSandLen_W else quickSandLen_D;
+def gdLen        = if isMonthly then gdLen_M     else if isWeekly then gdLen_W     else gdLen_D;
+
+# EMA of Raw RS for each QGDRS line
+# ThinkScript doesn't allow variable-length EMA, so we compute all three
+# fixed-length EMAs and select based on timeframe
+def rs_ema_quick_D = ExpAverage(rs_raw, quickLen_D);
+def rs_ema_quick_W = ExpAverage(rs_raw, quickLen_W);
+def rs_ema_quick_M = ExpAverage(rs_raw, quickLen_M);
+def rs_ema_quick   = if isMonthly then rs_ema_quick_M else if isWeekly then rs_ema_quick_W else rs_ema_quick_D;
+
+def rs_ema_qs_D    = ExpAverage(rs_raw, quickSandLen_D);
+def rs_ema_qs_W    = ExpAverage(rs_raw, quickSandLen_W);
+def rs_ema_qs_M    = ExpAverage(rs_raw, quickSandLen_M);
+def rs_ema_quicksand = if isMonthly then rs_ema_qs_M else if isWeekly then rs_ema_qs_W else rs_ema_qs_D;
+
+def rs_ema_gd_D    = ExpAverage(rs_raw, gdLen_D);
+def rs_ema_gd_W    = ExpAverage(rs_raw, gdLen_W);
+def rs_ema_gd_M    = ExpAverage(rs_raw, gdLen_M);
+def rs_ema_gd      = if isMonthly then rs_ema_gd_M else if isWeekly then rs_ema_gd_W else rs_ema_gd_D;
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NORMALIZE to 1–99
+#   Uses HighestAll / LowestAll on rs_raw — same method as TraderLion.
+#   All display values (RS line and MAs) share the same HH/LL reference
+#   so they remain correctly scaled relative to one another.
+# ─────────────────────────────────────────────────────────────────────────────
+def _rsRngMax = 99;
+def _rsRngMin = 1;
+def _rsHH     = HighestAll(rs_raw);
+def _rsLL     = LowestAll(rs_raw);
+
+def normalizeRS = if (_rsHH - _rsLL) != 0
+                  then ((_rsRngMax - _rsRngMin) * (rs_raw - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                  else _rsRngMin;
+
+# rs_disp is now the 1–99 normalized RS value (replaces old scale/offset)
+def rs_disp = normalizeRS;
+
+# Normalize MAs using the same HH/LL so they sit on the same 1–99 axis
+def rs_ma_fast_norm = if (_rsHH - _rsLL) != 0
+                      then ((_rsRngMax - _rsRngMin) * (rs_ma_fast - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                      else _rsRngMin;
+
+def rs_ma_slow_norm = if (_rsHH - _rsLL) != 0
+                      then ((_rsRngMax - _rsRngMin) * (rs_ma_slow - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                      else _rsRngMin;
+
+def rs_ma_iarpank_norm = if (_rsHH - _rsLL) != 0
+                         then ((_rsRngMax - _rsRngMin) * (rs_ma_iarpank - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                         else _rsRngMin;
+
+# Normalize QGDRS EMAs to the same 1–99 axis
+def rs_ema_quick_norm = if (_rsHH - _rsLL) != 0
+                        then ((_rsRngMax - _rsRngMin) * (rs_ema_quick - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                        else _rsRngMin;
+
+def rs_ema_qs_norm    = if (_rsHH - _rsLL) != 0
+                        then ((_rsRngMax - _rsRngMin) * (rs_ema_quicksand - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                        else _rsRngMin;
+
+def rs_ema_gd_norm    = if (_rsHH - _rsLL) != 0
+                        then ((_rsRngMax - _rsRngMin) * (rs_ema_gd - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                        else _rsRngMin;
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLOTS  (all display values now 1–99)
+# ─────────────────────────────────────────────────────────────────────────────
+plot RawRS = if showRawRS then rs_disp else Double.NaN;
+RawRS.SetLineWeight(2);
+RawRS.SetDefaultColor(Color.WHITE);
+RawRS.SetPaintingStrategy(PaintingStrategy.LINE);
+
+plot RsMA_iArpanK = if showRawRS and plotRsMA then rs_ma_iarpank_norm else Double.NaN;
+RsMA_iArpanK.SetDefaultColor(GlobalColor("RsMaLine"));
+RsMA_iArpanK.SetLineWeight(2);
+
+plot FastMA = if showQGDRS and showRSMAs then rs_ma_fast_norm else Double.NaN;
+FastMA.SetDefaultColor(GlobalColor("FastMA"));
+FastMA.SetLineWeight(2);
+
+plot SlowMA = if showQGDRS and showRSMAs then rs_ma_slow_norm else Double.NaN;
+SlowMA.SetDefaultColor(GlobalColor("SlowMA"));
+SlowMA.SetLineWeight(2);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# QGDRS EMAs  (Quick / QuickSand / Grateful Dead)
+# ─────────────────────────────────────────────────────────────────────────────
+plot QuickEMA = if showQGDRS_MAs then rs_ema_quick_norm else Double.NaN;
+QuickEMA.SetDefaultColor(GlobalColor("QuickEMA"));
+QuickEMA.SetLineWeight(2);
+
+plot QuickSandEMA = if showQGDRS_MAs then rs_ema_qs_norm else Double.NaN;
+QuickSandEMA.SetDefaultColor(GlobalColor("QuickSandEMA"));
+QuickSandEMA.SetLineWeight(2);
+
+plot GratefulDeadEMA = if showQGDRS_MAs then rs_ema_gd_norm else Double.NaN;
+GratefulDeadEMA.SetDefaultColor(GlobalColor("GratefulDeadEMA"));
+GratefulDeadEMA.SetLineWeight(2);
+
+# AREA FILL between RS line and Quick EMA
+plot QuickEMA_Cloud = if !IsNaN(rs_ema_quick_norm) then rs_ema_quick_norm else Double.NaN;
+QuickEMA_Cloud.SetPaintingStrategy(PaintingStrategy.LINE);
+QuickEMA_Cloud.SetHiding(!showRawRS);
+AddCloud(RawRS, QuickEMA_Cloud, Color.LIGHT_GREEN, Color.LIGHT_RED);
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW HIGH / NEW LOW DETECTION  (all on rs_raw — unchanged)
+# ─────────────────────────────────────────────────────────────────────────────
+def rs_highest_1y    = Highest(rs_raw, highPeriod + 1)[1];
+def rs_lowest_1y     = Lowest(rs_raw,  highPeriod + 1)[1];
+def price_highest_1y = Highest(high,   highPeriod + 1)[1];
+def rs_nh_1y    = rs_raw > rs_highest_1y;
+def rs_nl_1y    = rs_raw < rs_lowest_1y;
+def price_nh_1y = high  > price_highest_1y;
+
+def rs_highest_6m    = Highest(rs_raw, sixMBars + 1)[1];
+def price_highest_6m = Highest(high,   sixMBars + 1)[1];
+def rs_nh_6m    = rs_raw > rs_highest_6m;
+def price_nh_6m = high  > price_highest_6m;
+
+def rs_highest_3m    = Highest(rs_raw, threeMBars + 1)[1];
+def price_highest_3m = Highest(high,   threeMBars + 1)[1];
+def rs_nh_3m    = rs_raw > rs_highest_3m;
+def price_nh_3m = high  > price_highest_3m;
+
+def rs_nh_any = rs_nh_1y or rs_nh_6m or rs_nh_3m;
+def price_nh_matching = if rs_nh_1y then price_nh_1y
+                        else if rs_nh_6m then price_nh_6m
+                        else price_nh_3m;
+
+def rs_raw_new_high = rs_nh_1y;
+def rs_raw_new_low  = rs_nl_1y;
+def price_new_high  = price_nh_1y;
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RS NEW HIGH DOT  (plotted at rs_disp = normalized position)
+# ─────────────────────────────────────────────────────────────────────────────
+plot RsNewHighDot = if showRawRS and showRsNewHighMark and rs_nh_any then rs_disp else Double.NaN;
+RsNewHighDot.SetPaintingStrategy(PaintingStrategy.SQUARES);
+RsNewHighDot.SetLineWeight(5);
+RsNewHighDot.AssignValueColor(
+    if rs_nh_any and !price_nh_matching and showRsLeadHighMark then
+        if rs_nh_1y then GlobalColor("Green_12M")
+        else if rs_nh_6m then GlobalColor("Green_6M")
+        else GlobalColor("Green_3M")
+    else
+        if rs_nh_1y then GlobalColor("Blue_12M")
+        else if rs_nh_6m then GlobalColor("Blue_6M")
+        else GlobalColor("Blue_3M")
+);
+
+# RS NEW LOW DOT
+plot RsNewLowDot = if showRawRS and showRsNewLowMark and rs_raw_new_low then rs_disp else Double.NaN;
+RsNewLowDot.SetPaintingStrategy(PaintingStrategy.SQUARES);
+RsNewLowDot.SetDefaultColor(CreateColor(255, 50, 50));
+RsNewLowDot.SetLineWeight(5);
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# QUICK & GRATEFUL DEAD RS SIGNAL LOGIC
+#   Now uses the QGDRS EMAs (Quick / Grateful Dead) for signal crosses,
+#   matching the Pine Script reference.
+#   Quick EMA  → Quick Break + Quicksand + RS Reclaim
+#   Grateful Dead EMA → Grateful Dead Break
+# ─────────────────────────────────────────────────────────────────────────────
+def crossUnderQuickEMA = Crosses(rs_raw, rs_ema_quick, CrossingDirection.BELOW);
+def crossUnderGD_EMA   = Crosses(rs_raw, rs_ema_gd,    CrossingDirection.BELOW);
+def crossOverQuickEMA  = Crosses(rs_raw, rs_ema_quick, CrossingDirection.ABOVE);
+
+def quickBreak_cond = !IsNaN(rs_raw) and !IsNaN(rs_ema_quick) and crossUnderQuickEMA;
+def rsReset_cond    = !IsNaN(rs_raw) and !IsNaN(rs_ema_quick) and crossOverQuickEMA;
+def gdbCross_cond   = !IsNaN(rs_raw) and !IsNaN(rs_ema_gd)    and crossUnderGD_EMA;
+
+def qsLev = if quickBreak_cond       then rs_raw
+            else if rsReset_cond     then Double.NaN
+            else if IsNaN(qsLev[1])  then Double.NaN
+            else qsLev[1];
+
+def qsBool = if rsReset_cond                        then 0
+             else if IsNaN(qsBool[1])               then 0
+             else if !IsNaN(qsLev[1])
+                  and rs_raw < qsLev[1]
+                  and rs_raw < rs_ema_quick
+                  and !quickBreak_cond
+                  and qsBool[1] == 0                then 1
+             else qsBool[1];
+
+def quickSand_cond = !IsNaN(rs_raw)
+                     and !IsNaN(rs_ema_quick)
+                     and !quickBreak_cond
+                     and !rsReset_cond
+                     and !IsNaN(qsLev[1])
+                     and rs_raw < qsLev[1]
+                     and rs_raw < rs_ema_quick
+                     and qsBool[1] == 0;
+
+def quickBreak_raw = showQGDRS and quickBreak_cond;
+def quickSand_raw  = showQGDRS and quickSand_cond;
+def gdbCross_raw   = showQGDRS and gdbCross_cond;
+def rsReset        = showQGDRS and rsReset_cond;
+
+# SIGNAL PLOTS  (arrows/dots positioned at normalized rs_disp)
+plot QuickBreakPlot = if quickBreak_raw then rs_disp else Double.NaN;
+QuickBreakPlot.SetPaintingStrategy(PaintingStrategy.ARROW_DOWN);
+QuickBreakPlot.SetDefaultColor(GlobalColor("QuickBreak"));
+QuickBreakPlot.SetLineWeight(3);
+
+plot QuickSandPlot = if quickSand_raw then rs_disp else Double.NaN;
+QuickSandPlot.SetPaintingStrategy(PaintingStrategy.ARROW_DOWN);
+QuickSandPlot.SetDefaultColor(GlobalColor("Quicksand"));
+QuickSandPlot.SetLineWeight(2);
+
+plot GratefulDeadPlot = if gdbCross_raw then rs_disp else Double.NaN;
+GratefulDeadPlot.SetPaintingStrategy(PaintingStrategy.ARROW_DOWN);
+GratefulDeadPlot.SetDefaultColor(GlobalColor("GratefulDead"));
+GratefulDeadPlot.SetLineWeight(3);
+
+plot RsReclaimPlot = if rsReset then rs_disp else Double.NaN;
+RsReclaimPlot.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+RsReclaimPlot.SetDefaultColor(GlobalColor("RsReclaim"));
+RsReclaimPlot.SetLineWeight(3);
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALERTS  (unchanged)
+# ─────────────────────────────────────────────────────────────────────────────
+Alert(quickBreak_raw, "QUICK BREAK — RS crossed under Fast MA", Alert.BAR, Sound.Ding);
+Alert(gdbCross_raw,   "GRATEFUL DEAD BREAK — RS crossed under Slow MA", Alert.BAR, Sound.Ring);
+Alert(quickSand_raw,  "QUICKSAND — RS falling below Quick Break level", Alert.BAR, Sound.Ding);
+Alert(rsReset,        "RS RECLAIM — Raw RS back above Fast MA", Alert.BAR, Sound.Bell);
+Alert(rs_nh_1y and !rs_nh_6m, "Raw RS New High 1Y", Alert.BAR, Sound.Ding);
+Alert(rs_nh_6m and !rs_nh_1y, "Raw RS New High 6M", Alert.BAR, Sound.Ding);
+Alert(rs_nh_3m and !rs_nh_6m and !rs_nh_1y, "Raw RS New High 3M", Alert.BAR, Sound.Ding);
+Alert(rs_nh_any and !price_nh_matching, "RS LEADS PRICE — RS new high before price new high", Alert.BAR, Sound.Bell);
+Alert(rs_raw_new_low, "RS NEW LOW — Relative weakness", Alert.BAR, Sound.Ding);
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LABELS  (normalized values shown where panel values are referenced)
+# ─────────────────────────────────────────────────────────────────────────────
+AddLabel(showRawRS,
+         "RS: " + AsText(normalizeRS, NumberFormat.TWO_DECIMAL_PLACES) +
+         (if rs_raw > rs_raw[1] then "  ↑ Growing" else "  ↓ Falling"),
+         if rs_raw < rs_ema_quick or rs_raw < rs_ema_gd then Color.RED else Color.LIGHT_GREEN);
+
+AddLabel(showQGDRS,
+         if rs_raw < rs_ema_gd then "☠ Dead Zone"
+         else if rs_raw < rs_ema_quick then "↓ Quicksand"
+         else "✓ Above MAs",
+         if rs_raw < rs_ema_gd then Color.RED
+         else if rs_raw < rs_ema_quick then Color.ORANGE
+         else Color.GREEN);
+
+AddLabel(showRawRS,
+         if rs_raw_new_high and !price_new_high then "NH-Lead ✓"
+         else if rs_raw_new_high then "New High"
+         else if rs_raw_new_low  then "New Low ⚠"
+         else "—",
+         if rs_raw_new_high and !price_new_high then Color.CYAN
+         else if rs_raw_new_high then Color.BLUE
+         else if rs_raw_new_low  then Color.RED
+         else Color.GRAY);
+
+AddLabel(showQGDRS_MAs,
+         "Q: " + AsText(rs_ema_quick_norm, NumberFormat.TWO_DECIMAL_PLACES) +
+         "  |  QS: " + AsText(rs_ema_qs_norm, NumberFormat.TWO_DECIMAL_PLACES) +
+         "  |  GD: " + AsText(rs_ema_gd_norm, NumberFormat.TWO_DECIMAL_PLACES),
+         Color.WHITE);
+
+AddLabel(showQGDRS and showRSMAs,
+         "Fast MA: " + AsText(rs_ma_fast_norm, NumberFormat.TWO_DECIMAL_PLACES) +
+         "  |  Slow MA: " + AsText(rs_ma_slow_norm, NumberFormat.TWO_DECIMAL_PLACES),
+         Color.WHITE);
+
+# Normalized RS Rating (1–99)
+
+AddChartBubble(RS_Rating_ChartBubble and isLastBar, normalizeRS, " " + Round(normalizeRS, 0),  Color.WHITE, no);
+
+def signalCount = (if quickBreak_raw then 1 else 0) +
+                  (if gdbCross_raw   then 1 else 0) +
+                  (if quickSand_raw  then 1 else 0) +
+                  (if rsReset        then 1 else 0) +
+                  (if rs_raw_new_high and !price_new_high then 1 else 0);
+AddLabel(signalCount > 0, "Active Signals: " + signalCount, Color.ORANGE);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# END OF SCRIPT
+# ══════════════════════════════════════════════════════════════════════════════
