@@ -1,0 +1,39 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Webby Tight Ratio Scan Script
+# Converted from TOS/webby_tight.tos for Dedicated Scanning
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This is a dedicated scanning script to find stocks where the Webby Tight
+#   ratio is above 0 (indicating that the long-term ATR average exceeds the
+#   short-term ATR average, implying price tightening/consolidation).
+#
+# HOW TO USE IN THINKORSWIM SCANNER:
+#   1. Create a new custom Scan study named "webby_tight_scan".
+#   2. Paste this code.
+#   3. Select the `scan` plot is true.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ATR CALCULATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+# Short ATRs (lengths: 3, 5, 8)
+def short1 = WildersAverage(TrueRange(high, close, low), 3);
+def short2 = WildersAverage(TrueRange(high, close, low), 5);
+def short3 = WildersAverage(TrueRange(high, close, low), 8);
+def shortAvg = (short1 + short2 + short3) / 3;
+
+# Long ATRs (lengths: 55, 89, 144)
+def long1 = WildersAverage(TrueRange(high, close, low), 55);
+def long2 = WildersAverage(TrueRange(high, close, low), 89);
+def long3 = WildersAverage(TrueRange(high, close, low), 144);
+def longAvg = (long1 + long2 + long3) / 3;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RATIO CALCULATION
+# ─────────────────────────────────────────────────────────────────────────────
+def ratio = (longAvg - shortAvg) / Max(longAvg, shortAvg);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCAN TRIGGER
+# ─────────────────────────────────────────────────────────────────────────────
+plot scan = ratio > 0;

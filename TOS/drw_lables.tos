@@ -28,6 +28,7 @@ input adrp_len = 20;
 input atr_len  = 21;
 input vol_len  = 50;
 input ma_len   = 50;
+input ma21_len = 21;
 
 # ───────────────────────────────────────────────────────────────────────────
 # DISPLAY TOGGLES
@@ -49,6 +50,7 @@ input show_UDratio      = yes;
 input show_liqCap       = yes;
 input show_atrFromMA    = yes;
 input show_pctGainMA    = yes;
+input show_pctGainMA21  = yes;
 
 # ───────────────────────────────────────────────────────────────────────────
 # DAILY DATA REFERENCES
@@ -135,6 +137,9 @@ def maVal      = Average(dClose, ma_len);
 def atrFromMA  = if atrVal != 0 then (dClose - maVal) / atrVal else 0;
 def pctGainMA  = if maVal  != 0 then 100 * (dClose / maVal - 1)  else 0;
 
+def ma21Val    = Average(dClose, ma21_len);
+def pctGainMA21 = if ma21Val != 0 then 100 * (dClose / ma21Val - 1) else 0;
+
 # 10. RS RATING — IBD-Style (simplified, vs. $SPX.X)
 #     Weights: 40% most-recent quarter + 20% each prior three quarters.
 #     Mapped to 1–99 scale (50 = at-market performance).
@@ -206,7 +211,8 @@ AddLabel(show_atrPer, "ATR%: " + Round(atrp, 2) + "%", Color.ORANGE);
 AddLabel(show_atrFromMA, "ATR Mult(" + ma_len + "D MA): " + Round(atrFromMA, 2) + "x", Color.ORANGE);
 
 # ── % Gain From MA ────────────────────────────────────────────────────────
-AddLabel(show_pctGainMA, "Gain(" + ma_len + "D MA): " + Round(pctGainMA, 2) + "%", Color.ORANGE);
+AddLabel(show_pctGainMA, "Gain (" + ma_len + "D MA): " + Round(pctGainMA, 2) + "%", Color.ORANGE);
+AddLabel(show_pctGainMA21, "Gain (" + ma21_len + "D MA): " + Round(pctGainMA21, 2) + "%", Color.ORANGE);
 
 # ── ATR ────────────────────────────────────────────────────────────────────
 AddLabel(show_atr, "ATR: " + Round(atrVal, 2), Color.ORANGE);

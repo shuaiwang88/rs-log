@@ -1,0 +1,251 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# IBD Pattern Scan Script (Plug-and-Play Version)
+# References "drw_pattern" without requiring any modifications to it
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This is a dedicated scanning script to find stocks meeting pattern-based
+#   breakout conditions or setups. It references standard plots from the
+#   existing "drw_pattern" study.
+#
+#   It supports scanning for:
+#     1. Any Scan Condition (either Close to Pivot or After Breakout)
+#     2. Close to Pivot (price is within X% below pivot before breakout)
+#     3. After Breakout (breakout occurred within the last Y bars)
+#
+# HOW TO USE IN THINKORSWIM SCANNER:
+#   1. Create a new custom Scan study named "drw_pattern_scan".
+#   2. Paste this code.
+#   3. Select the desired "scanMode" option in the script inputs.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+input scanMode = {default "Any Scan Condition", "Close to Pivot (< 10%)", "After Breakout (< 15 bars)"};
+input pivotDistPct = 10.0;
+input maxBarsAfterBreakout = 15;
+
+# Pattern Toggles (Passed directly to referenced study)
+input ShowCupPattern        = yes;
+input ShowCupHandle         = yes;
+input ShowDoubleBottom      = yes;
+input ShowFlatBase          = yes;
+input ShowHighTightFlag     = yes;
+input RequireBreakoutVolume = no;
+input BreakoutVolMultiple   = 1.4;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STUDY REFERENCES — PATTERN ACTIVE STATES
+# ─────────────────────────────────────────────────────────────────────────────
+# We reference the ScanCup, ScanFlatBase, etc. plots to detect which pattern is active.
+def isCupActive = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).ScanCup);
+
+def isFlatActive = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).ScanFlatBase);
+
+def isDBActive = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).ScanDoubleBottom);
+
+def isCHActive = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).ScanCupHandle);
+
+def isHTFActive = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).ScanHTF);
+
+def isPatternActive = isCupActive or isFlatActive or isDBActive or isCHActive or isHTFActive;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STUDY REFERENCES — PIVOT PRICES
+# ─────────────────────────────────────────────────────────────────────────────
+# Fetch the pivot level plots. We pass ShowHighLine = yes to ensure we get the levels.
+def cupPivot = reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowHighLine = yes
+).HighLine;
+
+def flatPivot = reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowHighLine = yes
+).FlatHighLine;
+
+def dbPivot = reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).DBPivotLine;
+
+def handlePivot = reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).HandlePivLine;
+
+def htfPivot = reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).HTFTopLine;
+
+def patternPivot = 
+    if isCHActive then handlePivot
+    else if isCupActive then cupPivot
+    else if isFlatActive then flatPivot
+    else if isDBActive then dbPivot
+    else if isHTFActive then htfPivot
+    else Double.NaN;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STUDY REFERENCES — ACTIVE TRADES & BREAKOUTS
+# ─────────────────────────────────────────────────────────────────────────────
+# Detect if a trade is currently active by reading the breakout trade boxes (we pass ShowTradeBoxes = yes).
+def cupTrade = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowTradeBoxes = yes
+).Cup_EntryHi);
+
+def handleTrade = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowTradeBoxes = yes
+).Handle_EntryHi);
+
+def dbTrade = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowTradeBoxes = yes
+).DB_EntryHi);
+
+def flatTrade = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowTradeBoxes = yes
+).Flat_EntryHi);
+
+def htfTrade = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple,
+    ShowTradeBoxes = yes
+).HTF_EntryHi);
+
+def isTradeActive = cupTrade or handleTrade or dbTrade or flatTrade or htfTrade;
+
+# Breakout signals
+def breakoutRaw = !IsNaN(reference drw_pattern(
+    ShowCupPattern = ShowCupPattern,
+    ShowCupHandle = ShowCupHandle,
+    ShowDoubleBottom = ShowDoubleBottom,
+    ShowFlatBase = ShowFlatBase,
+    ShowHighTightFlag = ShowHighTightFlag,
+    RequireBreakoutVolume = RequireBreakoutVolume,
+    BreakoutVolMultiple = BreakoutVolMultiple
+).ScanBreakout);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FILTERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Filter 1: Close to Pivot (< X% below pivot before breakout)
+def pctToPivot = if !IsNaN(patternPivot) and patternPivot > 0 then (patternPivot - close) / patternPivot else Double.NaN;
+def closeToPivot = isPatternActive and !isTradeActive and pctToPivot >= 0 and pctToPivot <= (pivotDistPct / 100);
+
+# Filter 2: Less than Y bars after breakout
+# Use recursion to capture only the initial breakout of the base
+rec inTrade = if breakoutRaw then 1 else if !isPatternActive and !isTradeActive then 0 else inTrade[1];
+def breakoutOccurred = breakoutRaw and inTrade[1] == 0;
+
+rec barsSinceBO = if breakoutOccurred then 0 else if IsNaN(barsSinceBO[1]) then 9999 else barsSinceBO[1] + 1;
+def afterBreakout = barsSinceBO >= 0 and barsSinceBO < maxBarsAfterBreakout;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCAN OUTPUT
+# ─────────────────────────────────────────────────────────────────────────────
+plot scan = if scanMode == scanMode."Any Scan Condition" then (closeToPivot or afterBreakout)
+            else if scanMode == scanMode."Close to Pivot (< 10%)" then closeToPivot
+            else if scanMode == scanMode."After Breakout (< 15 bars)" then afterBreakout
+            else no;

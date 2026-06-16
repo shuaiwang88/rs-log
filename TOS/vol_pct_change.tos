@@ -1,0 +1,24 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Volume % Change vs Moving Average (Watchlist Column / Sorting Study)
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This study is optimized for use as a custom Watchlist Column in ThinkOrSwim.
+#   It outputs the percentage volume change compared to the 50-day average.
+#   
+#   Since it defines exactly one plot (as required by TOS Custom Quotes),
+#   you can add this column to your Watchlist and click the header to sort 
+#   your watchlist by volume spikes.
+# ══════════════════════════════════════════════════════════════════════════════
+
+input maLength = 50;
+
+def avgVol = Average(volume, maLength);
+
+# The single plot allowed for custom Watchlist columns (rounded to 1 decimal place)
+plot VolPctChange = if avgVol != 0 then Round(100 * (volume - avgVol) / avgVol, 1) else 0;
+
+# Dynamic text color (Green for positive, Red for negative)
+VolPctChange.AssignValueColor(if VolPctChange >= 0 then Color.GREEN else Color.RED);
+
+# Optional: Dark green background for spikes >= 100% (double average volume)
+AssignBackgroundColor(if VolPctChange >= 100 then CreateColor(0, 50, 0) else Color.CURRENT);

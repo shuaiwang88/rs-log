@@ -1,0 +1,86 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Volume Screen / Scan Script
+# Converted from Pine Script to ThinkScript for Scanning
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This is a dedicated scanning script to find stocks meeting volume-based
+#   conditions, including Pocket Pivots, Skyscrapers, and historical highs.
+#
+#   It supports scanning for:
+#     1. Any of the below conditions (Pocket Pivot 10D, 2-of-3 PP, Skyscraper, HVE, or HVY)
+#     2. Pocket Pivot (10-Day)
+#     3. Pocket Pivot (2-of-3)
+#     4. Volume Skyscraper (Pivot High)
+#     5. Highest Volume Ever (HVE)
+#     6. Highest Volume in a Year (HVY)
+#
+# HOW TO USE IN THINKORSWIM SCANNER:
+#   1. Create a new custom Scan study.
+#   2. Paste this code.
+#   3. Select the desired "scanMode" option in the script inputs.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+input maLength = 50;
+input scanMode = {default "Any of These", "Pocket Pivot 10D", "Pocket Pivot 2-of-3", "Volume Skyscraper", "Highest Volume Ever", "Highest Volume in a Year"};
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CORE CALCULATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+def avgVol = Average(volume, maLength);
+def upDay  = close > close[1];
+def downDay = close < close[1];
+
+# ── Pocket Pivots ────────────────────────────────────────────
+# Prior 10 bars: volume only counted on down days
+def dn1  = if close[1]  < close[2]  then volume[1]  else 0;
+def dn2  = if close[2]  < close[3]  then volume[2]  else 0;
+def dn3  = if close[3]  < close[4]  then volume[3]  else 0;
+def dn4  = if close[4]  < close[5]  then volume[4]  else 0;
+def dn5  = if close[5]  < close[6]  then volume[5]  else 0;
+def dn6  = if close[6]  < close[7]  then volume[6]  else 0;
+def dn7  = if close[7]  < close[8]  then volume[7]  else 0;
+def dn8  = if close[8]  < close[9]  then volume[8]  else 0;
+def dn9  = if close[9]  < close[10] then volume[9]  else 0;
+def dn10 = if close[10] < close[11] then volume[10] else 0;
+
+def maxDnVol10 = Max(dn1, Max(dn2, Max(dn3, Max(dn4,
+                 Max(dn5, Max(dn6, Max(dn7, Max(dn8,
+                 Max(dn9, dn10)))))))));
+def maxDnVol5  = Max(dn1, Max(dn2, Max(dn3, Max(dn4, dn5))));
+
+def pocketPivot10 = upDay and volume > maxDnVol10;
+def pocketPivot5  = upDay and volume > maxDnVol5;
+
+# ── 2-of-3 Pocket Pivot Signal ─────────────────────────────
+def ppAny  = pocketPivot10 or pocketPivot5;
+def pp2of3 = (if ppAny    then 1 else 0) +
+             (if ppAny[1] then 1 else 0) +
+             (if ppAny[2] then 1 else 0) >= 2;
+
+# ── Volume Skyscraper (Pivot High — 13-bar each side) ──────
+def isSkyscraper = volume[13] >= Highest(volume, 27)
+               and volume[13] >  Highest(volume[14], 13);
+
+# ── Highest Volume Ever ────────────────────────────────────
+def hve    = if IsNaN(hve[1]) then volume else Max(hve[1], volume);
+def isHVE  = volume == hve and (IsNaN(hve[1]) or volume > hve[1]);
+
+# ── Highest Volume in a Year ───────────────────────────────
+def highVolYear = Highest(volume, 252);
+def isHVY       = !isHVE and volume == highVolYear;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCAN TRIGGER
+# ─────────────────────────────────────────────────────────────────────────────
+def anyCondition = pocketPivot10 or pp2of3 or isSkyscraper or isHVE or isHVY;
+
+plot scan = if scanMode == scanMode."Any of These" then anyCondition
+            else if scanMode == scanMode."Pocket Pivot 10D" then pocketPivot10
+            else if scanMode == scanMode."Pocket Pivot 2-of-3" then pp2of3
+            else if scanMode == scanMode."Volume Skyscraper" then isSkyscraper
+            else if scanMode == scanMode."Highest Volume Ever" then isHVE
+            else if scanMode == scanMode."Highest Volume in a Year" then isHVY
+            else no;

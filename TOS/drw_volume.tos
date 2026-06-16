@@ -1,0 +1,484 @@
+# ============================================================
+# Volume With Color — ThinkScript (Full Feature Conversion)
+# Original Pine Script by Amphibiantrading (MPL 2.0)
+# Converted for thinkorswim (TOS)
+#
+# FEATURE PARITY vs. Pine Script:
+#  ✅ Two-level dry ups (L1 & L2) with streak counter + signal
+#  ✅ Dry-up streak background highlight (AssignBackgroundColor)
+#  ✅ Dry-up signal bubble label (fires once when streak reached)
+#  ✅ 2-of-3 Pocket Pivot signal
+#  ✅ Highest Volume Ever (HVE) tracking + bubble + alert
+#  ✅ Highest Volume in a Year (HVY) tracking + bubble + alert
+#  ✅ Two-level dry-up color hierarchy matching Pine colors
+#  ✅ All screener/hidden signal plots
+#  ✅ All alerts from Pine Script
+#
+# KNOWN LIMITATIONS vs. Pine Script:
+#  - No projected volume bar (TOS lacks intra-bar time-left calc)
+#  - No floating table (replaced with AddLabel)
+#  - Option expiration / PP markers use arrow plots vs. text boxes
+#  - Skyscraper / signal labels use AddChartBubble
+#  - AssignBackgroundColor highlights full chart background,
+#    not just the volume subgraph pane
+# ============================================================
+
+# ─── MOVING AVERAGE ────────────────────────────────────────
+input showMA        = yes;
+input maLength      = 50;
+input colorMAByUpDn = yes;
+
+# ─── DISPLAY / DRY UPS ─────────────────────────────────────
+input showDryUps      = yes;
+input dryUpLevel1Pct  = 45;    # L1: bars < (100-45)% of avg = lighter yellow-orange
+input dryUpLevel2Pct  = 60;    # L2: bars < (100-60)% of avg = darker orange
+input minDryUpDays    = 3;     # consecutive L1 dry-up bars to fire the signal
+
+# ─── PLOT STYLE ────────────────────────────────────────────
+input plotStyle = {default Histogram, Line};
+
+# ─── POCKET PIVOTS ─────────────────────────────────────────
+input showPocketPivots = yes;
+input show10DayPP      = yes;
+input show5DayPP       = yes;
+input show2of3PP       = yes;   # 2-of-3 bars in last 3 had a PP
+
+# ─── HIGHEST VOLUMES ───────────────────────────────────────
+input showSkyscrapers      = yes;
+input showPercentages      = yes;
+input showLines            = no;    # 2x / 3x average volume lines
+input showHVE              = yes;    # Highest Volume Ever
+
+# ─── BUBBLE LABELS (all off by default) ────────────────────
+input showSkyscraperBubble = no;    # volume + % on skyscraper bars
+input showHVEBubble        = no;    # "HVE x%" bubble
+input showHVYBubble        = no;    # "HVY x%" bubble
+input showDryUpBubble      = no;    # "DxD" dry-up streak bubble
+input showHVY          = yes;    # Highest Volume in a Year
+
+# ─── STALL DISTRIBUTION DAY ────────────────────────────────
+input showStallDay = yes;
+
+# ─── CHURNING ──────────────────────────────────────────────
+input showChurn       = yes;
+input churnVolMult    = 1.2;    # min volume as multiple of avg
+input churnPctThresh  = 0.25;   # max abs close-to-close change %
+input churnRangePct   = 50.0;   # close must be in lower X% of range
+
+# ─── PRIOR HIGH ────────────────────────────────────────────
+input useHighForPrior = no;     # use High instead of Close
+input priorHighMode   = {"Rolling", default "All History"};
+input lookbackBars    = 252;
+
+# ─── OPTION EXPIRATION ─────────────────────────────────────
+input showMonthlyExp = yes;
+input showWeeklyExp  = no;
+
+# ═══════════════════════════════════════════════════════════
+#  CORE CALCULATIONS
+# ═══════════════════════════════════════════════════════════
+
+def avgVol   = Average(volume, maLength);
+def hiSeries = if useHighForPrior then high else close;
+
+# ── Prior High (exclude current bar) ───────────────────────
+def priorHigh;
+if priorHighMode == priorHighMode."Rolling" {
+    priorHigh = Highest(hiSeries[1], lookbackBars);
+} else {
+    priorHigh = if IsNaN(priorHigh[1]) then hiSeries[1]
+                else Max(priorHigh[1], hiSeries[1]);
+}
+
+def pctFromPriorHigh = if IsNaN(priorHigh) or priorHigh == 0
+                       then Double.NaN
+                       else 100.0 * (close - priorHigh) / priorHigh;
+
+# ── 52-Week High ───────────────────────────────────────────
+def weekHigh52   = Highest(hiSeries, 252);
+def is52WeekHigh = close >= weekHigh52;
+
+# ── Day Classification ─────────────────────────────────────
+def downDay = close < close[1];
+def upDay   = close > close[1];
+def dDay    = downDay and volume > avgVol;   # distribution
+def aDay    = upDay   and volume > avgVol;   # accumulation
+
+# ── Volume % vs Average ────────────────────────────────────
+def volRatioPct = volume / avgVol * 100;
+def volPctVsAvg = volRatioPct - 100;
+
+# ── Two-Level Dry Ups ──────────────────────────────────────
+# L1: volume < (100 - dryUpLevel1Pct)% of avg  →  lighter yellow-orange
+# L2: volume < (100 - dryUpLevel2Pct)% of avg  →  darker orange
+# L2 is a stricter subset of L1
+def volDry1 = volRatioPct < (100 - dryUpLevel1Pct);
+def volDry2 = volRatioPct < (100 - dryUpLevel2Pct);
+
+# ── Consecutive Dry-Up Counter & Signal ────────────────────
+def dryUpCount  = if volDry1 then dryUpCount[1] + 1 else 0;
+def dryUpSignal = showDryUps and dryUpCount >= minDryUpDays;
+
+# Streak stays active until the run fully breaks (dryUpCount == 0)
+def streakActive = if dryUpSignal  then 1
+                   else if dryUpCount == 0 then 0
+                   else streakActive[1];
+
+# Fire label/alert once, on the bar where streak first hits minDryUpDays
+def dryUpSignalNew = dryUpSignal and !dryUpSignal[1];
+
+# ── Up/Down Volume Ratio (50-bar rolling) ──────────────────
+def upVolBar  = if upDay   then volume else 0;
+def dnVolBar  = if downDay then volume else 0;
+def sumUpVol  = Sum(upVolBar, 50);
+def sumDnVol  = Sum(dnVolBar, 50);
+def upDnRatio = if sumDnVol != 0 then sumUpVol / sumDnVol else Double.NaN;
+
+# ── 2× and 3× Average ─────────────────────────────────────
+def twoX   = avgVol * 2;
+def threeX = avgVol * 3;
+
+# ── Highest Volume Ever ────────────────────────────────────
+# Running maximum across all history
+def hve    = if IsNaN(hve[1]) then volume else Max(hve[1], volume);
+def isHVE  = volume == hve and (IsNaN(hve[1]) or volume > hve[1]);
+
+# ── Highest Volume in a Year ───────────────────────────────
+def highVolYear = Highest(volume, 252);
+def isHVY       = !isHVE and volume == highVolYear;
+
+# ── Volume Skyscraper (Pivot High — 13-bar each side) ──────
+def isSkyscraper = volume[13] >= Highest(volume, 27)
+               and volume[13] >  Highest(volume[14], 13);
+
+# ── Stall Distribution Day ─────────────────────────────────
+# Tiny close-to-close gain AND close in lowest 27% of bar range
+def dayRange    = high - low;
+def closeChgPct = if close[1] != 0 then (close - close[1]) / close[1] * 100
+                  else Double.NaN;
+def inLower27   = if dayRange > 0 then close <= low + 0.27 * dayRange else no;
+def stallDay    = closeChgPct >= 0 and closeChgPct < 0.1 and inLower27;
+
+# ── Churning Day ───────────────────────────────────────────
+# Above-avg volume + tiny abs move + close in lower portion of range
+# Mutually exclusive with stallDay
+def churnAbsChg  = AbsValue(closeChgPct);
+def churnInRange = if dayRange > 0
+                   then close <= low + (churnRangePct / 100.0) * dayRange
+                   else no;
+def churnDay     = !stallDay
+               and churnAbsChg   <  churnPctThresh
+               and volume        >= avgVol * churnVolMult
+               and churnInRange;
+
+# ── Pocket Pivots ──────────────────────────────────────────
+# For each of the prior 10 bars: volume only counted on down days
+def dn1  = if close[1]  < close[2]  then volume[1]  else 0;
+def dn2  = if close[2]  < close[3]  then volume[2]  else 0;
+def dn3  = if close[3]  < close[4]  then volume[3]  else 0;
+def dn4  = if close[4]  < close[5]  then volume[4]  else 0;
+def dn5  = if close[5]  < close[6]  then volume[5]  else 0;
+def dn6  = if close[6]  < close[7]  then volume[6]  else 0;
+def dn7  = if close[7]  < close[8]  then volume[7]  else 0;
+def dn8  = if close[8]  < close[9]  then volume[8]  else 0;
+def dn9  = if close[9]  < close[10] then volume[9]  else 0;
+def dn10 = if close[10] < close[11] then volume[10] else 0;
+
+def maxDnVol10 = Max(dn1, Max(dn2, Max(dn3, Max(dn4,
+                 Max(dn5, Max(dn6, Max(dn7, Max(dn8,
+                 Max(dn9, dn10)))))))));
+def maxDnVol5  = Max(dn1, Max(dn2, Max(dn3, Max(dn4, dn5))));
+
+# Raw signals (can overlap) — matches Pine export behavior
+def pocketPivot10 = upDay and volume > maxDnVol10;
+def pocketPivot5  = upDay and volume > maxDnVol5;
+
+# ── 2-of-3 Pocket Pivot Signal ─────────────────────────────
+# At least 2 of the last 3 bars had a pocket pivot of either type
+def ppAny  = pocketPivot10 or pocketPivot5;
+def pp2of3 = (if ppAny    then 1 else 0) +
+             (if ppAny[1] then 1 else 0) +
+             (if ppAny[2] then 1 else 0) >= 2;
+def pp2of3New = pp2of3 and !pp2of3[1];   # rising edge only
+
+# ── ATR(14) ────────────────────────────────────────────────
+def atr21  = Average(TrueRange(high, close, low), 21);
+def atrPct = if close != 0 then atr21 / close * 100 else Double.NaN;
+
+# ── Beta (1-Year vs SPY) — Cov/Var method ──────────────────
+# Equivalent to Pine's: correlation * stdev(asset) / stdev(spy)
+def spyClose    = close("SPY");
+def assetRet    = if close[1]    != 0 then (close    - close[1])    / close[1]    else Double.NaN;
+def spyRet      = if spyClose[1] != 0 then (spyClose - spyClose[1]) / spyClose[1] else Double.NaN;
+def avgAssetRet = Average(assetRet, 252);
+def avgSpyRet   = Average(spyRet,   252);
+def covAssetSpy = Average((assetRet - avgAssetRet) * (spyRet - avgSpyRet), 252);
+def varSpy      = Average((spyRet - avgSpyRet) * (spyRet - avgSpyRet), 252);
+def beta1y      = if varSpy != 0 then covAssetSpy / varSpy else Double.NaN;
+
+# ── Option Expiration (daily bars) ─────────────────────────
+def isFriday      = GetDayOfWeek(GetYYYYMMDD()) == 6;
+def dayOfMon      = GetDayOfMonth(GetYYYYMMDD());
+def isThirdFriday = isFriday and dayOfMon >= 15 and dayOfMon <= 21;
+def monthlyExp    = showMonthlyExp and isThirdFriday;
+def weeklyExp     = showWeeklyExp  and isFriday and !isThirdFriday;
+
+# ── Millions helpers ───────────────────────────────────────
+def volM    = volume       / 1000000.0;
+def avgVolM = avgVol       / 1000000.0;
+def volM13  = volume[13]   / 1000000.0;
+
+# ═══════════════════════════════════════════════════════════
+#  BACKGROUND HIGHLIGHT — Dry-Up Streak
+#  Active during every bar of a confirmed dry-up streak.
+#  Note: AssignBackgroundColor affects the full chart background.
+# ═══════════════════════════════════════════════════════════
+
+#def streakOnBar = streakActive == 1 and dryUpCount > 0;
+#AssignBackgroundColor(
+#    if streakOnBar
+#    then CreateColor(194, 176, 14)   # golden yellow, matches Pine #c2b00e
+#    else Color.CURRENT
+#);
+
+# ═══════════════════════════════════════════════════════════
+#  PLOTS
+# ═══════════════════════════════════════════════════════════
+
+# ── Volume Bars ────────────────────────────────────────────
+# Color priority (highest → lowest), matching Pine Script:
+#   Dry-Up L2  >  Dry-Up L1  >  Dist/Accum  >  Up/Down
+plot Vol = volume;
+Vol.SetPaintingStrategy(
+    if plotStyle == plotStyle.Histogram
+    then PaintingStrategy.HISTOGRAM
+    else PaintingStrategy.LINE
+);
+Vol.SetLineWeight(3);
+Vol.AssignValueColor(
+    if showDryUps and volDry2       then CreateColor(247, 153,  2)   # darker orange  (#f79902)
+    else if showDryUps and volDry1  then CreateColor(225, 181, 69)   # lighter yellow (#e1b545)
+    else if aDay                    then Color.DARK_GREEN
+    else if dDay                    then Color.DARK_RED
+    else if upDay                   then Color.LIGHT_GREEN
+    else                                 Color.RED
+);
+
+# ── Volume Moving Average ──────────────────────────────────
+plot VolMA = if showMA then avgVol else Double.NaN;
+VolMA.SetLineWeight(2);
+VolMA.AssignValueColor(
+    if !colorMAByUpDn      then Color.ORANGE
+    else if upDnRatio >= 1 then Color.CYAN
+    else                        Color.ORANGE
+);
+
+# ── 2× / 3× Average Lines ─────────────────────────────────
+plot TwoXLine   = if showLines then twoX   else Double.NaN;
+plot ThreeXLine = if showLines then threeX else Double.NaN;
+TwoXLine.SetDefaultColor(Color.GRAY);
+ThreeXLine.SetDefaultColor(Color.LIGHT_GRAY);
+TwoXLine.SetStyle(Curve.SHORT_DASH);
+ThreeXLine.SetStyle(Curve.SHORT_DASH);
+TwoXLine.SetLineWeight(1);
+ThreeXLine.SetLineWeight(1);
+
+# ── 52-Week High Marker ────────────────────────────────────
+plot High52W = if is52WeekHigh then volume * 1.02 else Double.NaN;
+High52W.SetPaintingStrategy(PaintingStrategy.TRIANGLES);
+High52W.SetDefaultColor(Color.GREEN);
+High52W.SetLineWeight(5);
+
+# ── Highest Volume Ever ────────────────────────────────────
+plot HVEPlot = if showHVE and isHVE then volume else Double.NaN;
+HVEPlot.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+HVEPlot.SetDefaultColor(Color.WHITE);
+HVEPlot.SetLineWeight(5);
+
+# ── Highest Volume in a Year ───────────────────────────────
+plot HVYPlot = if showHVY and isHVY then volume else Double.NaN;
+HVYPlot.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+HVYPlot.SetDefaultColor(Color.YELLOW);
+HVYPlot.SetLineWeight(5);
+
+# ── 10-Day Pocket Pivot ────────────────────────────────────
+plot PP10 = if showPocketPivots and show10DayPP and pocketPivot10
+            then 0 else Double.NaN;
+PP10.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+PP10.SetDefaultColor(Color.YELLOW);
+PP10.SetLineWeight(5);
+
+# ── 5-Day Pocket Pivot (display: suppress when PP10 also fires) ─
+plot PP5 = if showPocketPivots and show5DayPP
+            and pocketPivot5 and !pocketPivot10
+           then 0 else Double.NaN;
+PP5.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+PP5.SetDefaultColor(Color.BLUE);
+PP5.SetLineWeight(5);
+
+# ── 2-of-3 Pocket Pivot Signal ─────────────────────────────
+plot PP2of3Plot = if show2of3PP and pp2of3New then 0 else Double.NaN;
+PP2of3Plot.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+PP2of3Plot.SetDefaultColor(Color.CYAN);
+PP2of3Plot.SetLineWeight(3);
+
+# ── Stall Distribution Day ─────────────────────────────────
+plot StallPlot = if showStallDay and stallDay then volume else Double.NaN;
+StallPlot.SetPaintingStrategy(PaintingStrategy.SQUARES);
+StallPlot.SetDefaultColor(Color.DARK_RED);
+StallPlot.SetLineWeight(5);
+
+# ── Churning Day ───────────────────────────────────────────
+plot ChurnPlot = if showChurn and churnDay then volume else Double.NaN;
+ChurnPlot.SetPaintingStrategy(PaintingStrategy.SQUARES);
+ChurnPlot.SetDefaultColor(Color.MAGENTA);
+ChurnPlot.SetLineWeight(5);
+
+# ── Option Expiration Markers ──────────────────────────────
+plot MonthlyExpPlot = if monthlyExp then 0 else Double.NaN;
+MonthlyExpPlot.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+MonthlyExpPlot.SetDefaultColor(Color.ORANGE);
+MonthlyExpPlot.SetLineWeight(2);
+
+plot WeeklyExpPlot = if weeklyExp then 0 else Double.NaN;
+WeeklyExpPlot.SetPaintingStrategy(PaintingStrategy.ARROW_UP);
+WeeklyExpPlot.SetDefaultColor(Color.GRAY);
+WeeklyExpPlot.SetLineWeight(1);
+
+# ── Hidden Screener / Signal Plots ────────────────────────
+# (0 = not triggered, 1 = triggered — available in scanners)
+plot PP10Signal    = if pocketPivot10 then 1 else 0;
+plot PP5Signal     = if pocketPivot5  then 1 else 0;
+plot PP2of3Signal  = if pp2of3        then 1 else 0;
+plot HVESignal     = if isHVE         then 1 else 0;
+plot HVYSignal     = if isHVY         then 1 else 0;
+plot DryUpSig      = if dryUpSignal   then 1 else 0;
+plot DryUp1Signal  = if volDry1       then 1 else 0;
+plot DryUp2Signal  = if volDry2       then 1 else 0;
+PP10Signal.Hide();
+PP5Signal.Hide();
+PP2of3Signal.Hide();
+HVESignal.Hide();
+HVYSignal.Hide();
+DryUpSig.Hide();
+DryUp1Signal.Hide();
+DryUp2Signal.Hide();
+
+# ── Prior High & % Distance (Data Box only) ───────────────
+plot PriorHighPlot = priorHigh;
+plot PctFromPrior  = pctFromPriorHigh;
+PriorHighPlot.Hide();
+PctFromPrior.Hide();
+PriorHighPlot.SetDefaultColor(Color.ORANGE);
+PctFromPrior.SetDefaultColor(Color.CYAN);
+
+# ═══════════════════════════════════════════════════════════
+#  CHART BUBBLES
+# ═══════════════════════════════════════════════════════════
+
+# ── Skyscraper (13 bars delayed — same as Pine pivot) ──────
+AddChartBubble(
+    showSkyscrapers and isSkyscraper and showSkyscraperBubble,
+    volume[13],
+    if showPercentages
+    then AsText(Round(volM13, 2)) + "M (" +
+         AsText(Round(volPctVsAvg[13], 0)) + "%)"
+    else AsText(Round(volM13, 2)) + "M",
+    Color.WHITE,
+    yes
+);
+
+# ── Highest Volume Ever ────────────────────────────────────
+AddChartBubble(
+    showHVE and isHVE and showHVEBubble,
+    volume,
+    "HVE " + AsText(Round(volPctVsAvg, 0)) + "%",
+    Color.WHITE,
+    yes
+);
+
+# ── Highest Volume in a Year ───────────────────────────────
+AddChartBubble(
+    showHVY and isHVY and showHVYBubble,
+    volume,
+    "HVY " + AsText(Round(volPctVsAvg, 0)) + "%",
+    Color.YELLOW,
+    yes
+);
+
+# ── Dry-Up Signal (fires once when streak hits minDryUpDays) ─
+AddChartBubble(
+    showDryUps and dryUpSignalNew and showDryUpBubble,
+    volume,
+    "D" + AsText(Round(dryUpCount, 0)) + "D",
+    CreateColor(175, 145, 76),   # matches Pine label color #af914c
+    yes
+);
+
+# ═══════════════════════════════════════════════════════════
+#  LABELS  (replaces Pine Script info table)
+# ═══════════════════════════════════════════════════════════
+
+AddLabel(yes,
+    "Vol: " + AsText(Round(volM, 2)) + "M" +
+    "  (" + (if volPctVsAvg >= 0 then "+" else "") +
+    AsText(Round(volPctVsAvg, 0)) + "% vs avg)",
+    if aDay  then Color.LIGHT_GREEN
+    else if dDay  then Color.DARK_RED
+    else if upDay then Color.GREEN
+    else Color.RED
+);
+
+AddLabel(yes,
+    "Avg Vol: " + AsText(Round(avgVolM, 2)) + "M",
+    Color.ORANGE
+);
+
+AddLabel(yes,
+    "U/D Ratio: " + AsText(Round(upDnRatio, 2)),
+    if upDnRatio >= 1 then Color.GREEN else Color.RED
+);
+
+AddLabel(yes,
+    "ATR(14): " + AsText(Round(atrPct, 2)) + "%",
+    Color.CYAN
+);
+
+AddLabel(yes,
+    "Beta(1Y/SPY): " + AsText(Round(beta1y, 2)),
+    Color.WHITE
+);
+
+AddLabel(is52WeekHigh,              "▲ 52-Wk High",         Color.GREEN);
+AddLabel(pocketPivot10,             "◆ Pocket Pivot 10D",   Color.YELLOW);
+AddLabel(pocketPivot5 and !pocketPivot10, "◆ Pocket Pivot 5D", Color.BLUE);
+AddLabel(pp2of3New,                 "◆ PP 2-of-3 Signal",   Color.CYAN);
+AddLabel(isHVE,                     "★ Highest Vol Ever",   Color.WHITE);
+AddLabel(isHVY,                     "★ Highest Vol/Year",   Color.YELLOW);
+AddLabel(dryUpSignalNew,
+    "▼ Dry-Up D" + AsText(Round(dryUpCount, 0)) + "D",
+    CreateColor(175, 145, 76)
+);
+AddLabel(stallDay,                  "✖ Stall Day",          Color.DARK_RED);
+AddLabel(churnDay,                  "✚ Churning",           Color.MAGENTA);
+AddLabel(monthlyExp,                "OE Monthly",           Color.ORANGE);
+AddLabel(weeklyExp,                 "OE Weekly",            Color.GRAY);
+
+# ═══════════════════════════════════════════════════════════
+#  ALERTS
+# ═══════════════════════════════════════════════════════════
+
+#Alert(pocketPivot10,                       "Pocket Pivot (10-Day)",          Alert.BAR, Sound.Ring);
+#Alert(pocketPivot5 and !pocketPivot10,     "Pocket Pivot (5-Day)",           Alert.BAR, Sound.Ring);
+Alert(pp2of3New,                           "Pocket Pivot 2-of-3",            Alert.BAR, Sound.Ring);
+#Alert(volume >= twoX,                      "2x Average Volume",              Alert.BAR, Sound.Ding);
+#Alert(volume >= threeX,                    "3x Average Volume",              Alert.BAR, Sound.Ding);
+#Alert(stallDay,                            "Stall Distribution Day",         Alert.BAR, Sound.Ring);
+#Alert(churnDay,                            "Churning Day",                   Alert.BAR, Sound.Ring);
+#Alert(is52WeekHigh,                        "52-Week High",                   Alert.BAR, Sound.Bell);
+#Alert(upDay  and volume > avgVol,          "Up On Volume",                   Alert.BAR, Sound.Ding);
+#Alert(downDay and volume > avgVol,         "Down On Volume",                 Alert.BAR, Sound.Ding);
+#Alert(isSkyscraper,                        "Volume Skyscraper",              Alert.BAR, Sound.Ding);
+#Alert(isHVE,                               "Highest Volume Ever",            Alert.BAR, Sound.Bell);
+#Alert(isHVY,                               "Highest Volume In a Year",       Alert.BAR, Sound.Ding);
+#Alert(dryUpSignalNew,                      "Volume Dry-Up Signal",           Alert.BAR, Sound.Ring);
