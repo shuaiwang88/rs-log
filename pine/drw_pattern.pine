@@ -746,6 +746,14 @@ i_handleMinBars = input(5, title = 'Handle: Min Bars', group = 'Chart Pattern Re
 i_handleMaxBars = input(25, title = 'Handle: Max Bars', group = 'Chart Pattern Recognition')
 i_handleMaxDecline = input(12.0, title = 'Handle: Max Decline (%)', group = 'Chart Pattern Recognition')
 i_handleMinHeightPct = input(60.0, title = 'Handle: Min Peak Height (%)', group = 'Chart Pattern Recognition')
+// ── NEW: Volume Confirmation Inputs ──
+i_useVolHandle       = input.bool(true,   'Use Volume Confirmation for Handle', group = 'Chart Pattern Recognition', tooltip = 'Require volume contraction during handle & expansion on breakout')
+i_requireCupForHandle = input.bool(true,   'Require Cup Base for Handle',       group = 'Chart Pattern Recognition', tooltip = 'Handle must form in a detected cup pattern (not just any base)')
+i_volMaLengthHandle  = input.int(50,      'Volume MA Length',                   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'Lookback for average volume')
+i_volContractionMax  = input.float(50.0,  'Max Avg Vol % in Handle',            group = 'Chart Pattern Recognition', minval = 0, step = 1, tooltip = 'Average handle volume must be below this % of the volume MA')
+i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         group = 'Chart Pattern Recognition', minval = 1, step = 0.1, tooltip = 'Breakout bar volume must be ≥ this times volume MA')
+
+
 // FUTURE PART TO HANDLE WE TF
 i_baseDepth := i_baseDepth / 100
 i_dbDepth := i_dbDepth / 100
@@ -1090,8 +1098,19 @@ float _baseLow = array.size(lowBasePrice) > 0 ? array.get(lowBasePrice, 0) : na
 float _baseTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
 bool handleMidOKSep   = not na(_baseTop) and not na(_baseLow) and handleLowPointSep > (_baseTop + _baseLow) * 0.5
 
-bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep
-bool handleBreakoutSep = handleFormingSep and close > handlePeakLockedSep
+// ── NEW: Volume calculations for handle contraction ──
+float volMaHandle  = ta.sma(volume, i_volMaLengthHandle)    // moving average of volume
+float volAvgHandle = na
+if rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep > 0
+    volAvgHandle := math.sum(volume, handleBarCountSep) / handleBarCountSep
+
+bool volContractionOK = not i_useVolHandle or (handleBarCountSep > 0 and volAvgHandle <= volMaHandle * i_volContractionMax / 100)
+bool requireCupOK     = not i_requireCupForHandle or isCup
+
+bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK
+
+bool volBreakoutOK    = not i_useVolHandle or volume >= i_volBreakoutMult * volMaHandle
+bool handleBreakoutSep = handleFormingSep and close > handlePeakLockedSep and volBreakoutOK
 
 // CUP MAINTENANCE
 // plot (condThirdTwo ? 15:13, color=color.red)
@@ -1110,6 +1129,7 @@ var line cupLineRight = na
 var line cupLineLeftLive = na
 var line cupLineRightLive = na
 var line handleSepLine = na
+var box  handleBox = na
 var float activePivot = 0.0
 
 // Box for Entry/Take Profit/ SL
@@ -1292,6 +1312,9 @@ if (low < line.get_y1(highLine) * (1 - i_baseDepth) or baseCount > i_baseLength)
     line.delete(lowLine)
     line.delete(handleSepLine)
     handleSepLine := na
+    if not na(handleBox)
+        box.delete(handleBox)
+        handleBox := na
     isBase := false
     isBase
     // Check Depth of base to adjust style of line (Depth above 15% = Dashed Line, defined as flat base by IBD)
@@ -1307,15 +1330,27 @@ if high <= line.get_y1(highLine) and low >= line.get_y1(lowLine) and isBase
         line.set_x2(lowLine, bar_index)
     if handleFormingSep and timeframe.isdaily and i_displayPattern
         if na(handleSepLine)
-            handleSepLine := line.new(x1 = handlePeakBarSep, y1 = handlePeakLockedSep, x2 = bar_index, y2 = handlePeakLockedSep, width = 2, style = line.style_dashed, color = color.orange)
+            handleSepLine := line.new(x1 = handlePeakBarSep, y1 = handlePeakLockedSep, x2 = bar_index, y2 = handlePeakLockedSep, width = 2, style = line.style_dotted, color = color.orange)
         else
             line.set_x2(handleSepLine, bar_index)
             line.set_y1(handleSepLine, handlePeakLockedSep)
             line.set_y2(handleSepLine, handlePeakLockedSep)
+        if na(handleBox)
+            handleBox := box.new(handlePeakBarSep, handlePeakLockedSep, bar_index, handleLowPointSep,
+                 border_color = color.new(color.blue, 50),
+                 border_width = 1,
+                 border_style = line.style_dashed,
+                 bgcolor = color.new(color.blue, 90))
+        else
+            box.set_lefttop(handleBox, handlePeakBarSep, handlePeakLockedSep)
+            box.set_rightbottom(handleBox, bar_index, handleLowPointSep)
     else
         if not na(handleSepLine)
             line.delete(handleSepLine)
             handleSepLine := na
+        if not na(handleBox)
+            box.delete(handleBox)
+            handleBox := na
 
 
 
@@ -1325,6 +1360,9 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
     isBase := false
     line.delete(handleSepLine)
     handleSepLine := na
+    if not na(handleBox)
+        box.delete(handleBox)
+        handleBox := na
     if isDoubleBottom
         isDoubleBottom := false
         isDoubleBottom
