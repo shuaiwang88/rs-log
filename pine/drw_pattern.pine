@@ -1,23 +1,6 @@
-// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 //@version=6
-indicator('MarketSmith Indicator', overlay = true, max_bars_back = 500, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500) // chg visual
+indicator('MarketSmith Indicator', overlay = true, max_bars_back = 500, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
 
-//------------------  BARS ---------------------//
-// Color of bars
-// prevClose = input(true, title = 'Color Based On Previous Close', group = '----------BARS----------', inline = 'x')
-// i_posColor = input(color.rgb(39, 54, 233, 0), title = 'Candle Color Positive', group = '----------BARS----------', inline = '1')
-// i_negColor = input(color.rgb(222, 50, 174, 0), title = 'Negative', group = '----------BARS----------', inline = '1')
-// colorCandle = close >= open ? i_posColor : i_negColor
-// if prevClose
-//     colorCandle := close >= close[1] ? i_posColor : i_negColor
-//     colorCandle
-//     // Full Body (without border without wick)
-// plotcandle(low, high, low, high, title = 'MarketSmith Bars', color = colorCandle, wickcolor = color.rgb(255, 255, 255, 100), bordercolor = color.rgb(255, 255, 255, 100), editable = true)
-// // PlotChar - on close
-// plotchar(close, char = '-', location = location.absolute, size = size.small, color = colorCandle, editable = true)
-
-//------------------  SMA's ---------------------//
-// Input SMA for Daily TF and others
 iSma10 = input(true, title = 'MA 1', group = '----------SMAs----------', inline = 'sma10')
 iSmaV10 = input(10, title = 'Lenght', group = '----------SMAs----------', inline = 'sma10')
 iExp10 = input(true, title = 'Exponential', group = '----------SMAs----------', inline = 'sma10')
@@ -35,7 +18,6 @@ iSmaV200 = input(200, title = 'Lenght', group = '----------SMAs----------', inli
 iExp200 = input(false, title = 'Exponential', group = '----------SMAs----------', inline = 'sma200')
 iCol200 = input(color.rgb(0, 0, 0, 0), title = '', group = '----------SMAs----------', inline = 'sma200')
 
-// Input SMA for Weekly TimeFrame
 iSma10We = input(true, title = 'SMA 1', group = '----------SMAs We----------', inline = 'sma10We')
 iSmaV10We = input(10, title = 'Lenght', group = '----------SMAs We----------', inline = 'sma10We')
 iExp10We = input(false, title = 'Exponential', group = '----------SMAs We----------', inline = 'sma10We')
@@ -53,59 +35,36 @@ iSmaV40We = input(40, title = 'Lenght', group = '----------SMAs We----------', i
 iExp40We = input(false, title = 'Exponential', group = '----------SMAs We----------', inline = 'sma40We')
 iCol40We = input(color.rgb(0, 0, 0, 0), title = '', group = '----------SMAs We----------', inline = 'sma40We')
 
-
-// SMA calculation Daily & others TF
 sma10 = iExp10 ? ta.ema(close, iSmaV10) : ta.sma(close, iSmaV10)
 sma21 = iExp21 ? ta.ema(close, iSmaV21) : ta.sma(close, iSmaV21)
 sma50 = iExp50 ? ta.ema(close, iSmaV50) : ta.sma(close, iSmaV50)
 sma200 = iExp200 ? ta.ema(close, iSmaV200) : ta.sma(close, iSmaV200)
 
-// SMA calculation We
 sma10We = iExp10We ? ta.ema(close, iSmaV10We) : ta.sma(close, iSmaV10We)
 ema20We = iExp20We ? ta.ema(close, iSmaV20We) : ta.sma(close, iSmaV20We)
 sma30We = iExp30We ? ta.ema(close, iSmaV30We) : ta.sma(close, iSmaV30We)
 sma40We = iExp40We ? ta.ema(close, iSmaV40We) : ta.sma(close, iSmaV40We)
 
-// Ploting SMA/EMA Daily and other TF
 tfWeekly = timeframe.isweekly
 psma10 = plot(iSma10 and not tfWeekly ? sma10 : na, linewidth = 1, color = iCol10, title='EMA 10')
 pema21 = plot(iSma21 and not tfWeekly ? sma21 : na, linewidth = 1, color = iCol21, title='EMA 21')
 psma50 = plot(iSma50 and not tfWeekly ? sma50 : na, linewidth = 1, color = iCol50 , title='SMA 50')
 psma200 = plot(iSma200 and not tfWeekly ? sma200 : na, linewidth = 1, color = iCol200,  title='SMA 200')
 
-// Ploting SMA/EMA We
 psma10We = plot(iSma10We and tfWeekly ? sma10We : na, linewidth = 1, color = iCol10We)
 pema20We = plot(iEma20We and tfWeekly ? ema20We : na, linewidth = 1, color = iCol20We)
 psma30We = plot(iSma30We and tfWeekly ? sma30We : na, linewidth = 1, color = iCol30We)
 psma40We = plot(iSma40We and tfWeekly ? sma40We : na, linewidth = 1, color = iCol40We)
 
-//------------------  RS Rating  ---------------------// and // SP500 -> 0S&P5 //
-
-//Relative Price Strength (RS) Rating or Relative Strenght.
-//This is a measure of a stock's price performance over the last
-//twelve months, compared to all stocks in IBD's Database.
-//The rating scale ranges frome 1 (lowest) to 99 (highest)
-//At least this is the IBD proprietary rating's defintion.
-//Let's create an equivalent here for TradingView!
-//
-// © RaviYendru thanks for providing the intial script
-// Fred6724 - Let's see if it is possible to get better results
-
-// Constant Value
-comparativeTickerId = 'SP:SPX' // For RS Score Calculation, the SPX Value only makes sens because of the GitHub project
-
+comparativeTickerId = 'SP:SPX'
 
 hideRSLine = input(false, title = 'Hide RS Line', group = '----------RS Rating----------', inline = '0')
 hideRSRat = input(false, title = 'Hide Rating', group = '----------RS Rating----------', inline = '0')
-//seedetail   = input(false, title='Display the 3 results', group = 'Parameters', inline='0')
 ratingOnly = input(false, title = 'Rating Only', group = '----------RS Rating----------')
 lineTicker = input('SP:SPX', title = 'Comparative Symbol for Line', group = '----------RS Rating----------', tooltip = 'Reference ticker used for calculation of the RS Line.')
 SpxValue = input(4200, title = 'Value of Comparative Symbol', group = '----------RS Rating----------', tooltip = 'Used to gather a constant value')
 offset = input.int(80, minval = 0, maxval = 300, title = 'Offset (%)', group = '----------RS Rating----------', tooltip = 'Used to display the RS Line under the price.')
 colorRS = input(color.rgb(24, 140, 202), title = 'Color of RS Line & Rating', group = '----------RS Rating----------')
-// plotNewHigh = input(true, title = 'Plot RS New Highs', group = '----------RS Rating----------')
-// rsNewHigh = input.string('RS New Highs', title = 'Type', options = ['RS New Highs', 'RS New Highs Before Price', 'Historical RS New Highs', 'Historical RS New Highs  Before Price'], group = '----------RS Rating----------')
-// blueDotCol = input(color.rgb(121, 213, 242, 62), title = 'Color of Dots', group = '----------RS Rating----------')
 plotNewHigh = input(true, title = 'Plot RS New Highs', group = '----------RS Rating----------')
 rsNewHigh   = input.string('Historical RS New Highs', title = 'Type',
               options = ['RS New Highs', 'RS New Highs Before Price',
@@ -116,22 +75,19 @@ col_nh6M    = input(color.new(#1E90FF, 25), title = '6M NH',         group = '--
 col_nh3M    = input(color.new(#00BFFF, 30), title = '3M NH',         group = '----------RS Rating----------', inline = 'nhcols')
 col_nhLP    = input(color.new(#00ffd9,  0), title = 'Leads Price',   group = '----------RS Rating----------', inline = 'nhcols')
 lookback = input.int(250, title = 'Look-back', minval = 1, maxval = 252, group = '----------RS Rating----------', tooltip = 'The lookback for calculation of price and RS New Highs.')
-sizeLabHigh = input.string('Tiny', title = 'Size', options = ['Tiny', 'Small', 'Normal', 'Large'], group = '----------RS Rating----------')
+sizeLabHigh = input.string('Tiny', title = 'RS New Highs Circle Size', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge', 'Auto'], group = '----------RS Rating----------')
 plotNewLow = input(false, title = 'Plot RS New Lows', group = '----------RS Rating----------')
 rsNewLow = input.string('Historical RS New Lows', title = 'Type', options = ['RS New Lows', 'RS New Lows Before Price', 'Historical RS New Lows', 'Historical RS New Lows  Before Price'], group = '----------RS Rating----------')
 redDotCol = input(color.rgb(255, 82, 82, 62), title = 'Color', group = '----------RS Rating----------')
 lookback2 = input.int(250, title = 'Look-back', minval = 1, maxval = 252, group = '----------RS Rating----------', tooltip = 'The lookback for calculation of price and RS New Lows.')
-sizeLabLow = input.string('Tiny', title = 'Size', options = ['Tiny', 'Small', 'Normal', 'Large'], group = '----------RS Rating----------')
+sizeLabLow = input.string('Tiny', title = 'RS New Lows Circle Size', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge', 'Auto'], group = '----------RS Rating----------')
 
-// ─── Quick (1st RS moving average) ───────────────────────────────────
 showQuick    = input(true, title='Quick', inline='quick', group='RS Moving Averages')
-colQuick     = input(color.rgb(0, 255, 255, 0), title='', inline='quick', group='RS Moving Averages')  // light blue
-// ─── QuickSand (2nd RS moving average) ────────────────────────────────
+colQuick     = input(color.rgb(0, 255, 255, 0), title='', inline='quick', group='RS Moving Averages')
 showQuickSand = input(true, title='QuickSand', inline='qs', group='RS Moving Averages')
 colQuickSand  = input(color.orange, title='', inline='qs', group='RS Moving Averages')
-// ─── Grateful Dead (3rd RS moving average) ────────────────────────────
 showGD       = input(true, title='Grateful Dead', inline='gd', group='RS Moving Averages')
-colGD        = input(color.rgb(128, 0, 128), title='', inline='gd', group='RS Moving Averages')   // purple
+colGD        = input(color.rgb(128, 0, 128), title='', inline='gd', group='RS Moving Averages')
 
 allowReplay = input(false, title = 'Use fix values for replay mode', group = 'RS Replay mode (Approximate Method)', tooltip = 'Here we use constant values in order to provide the environment regardless of the date. See RSRATING ticker and report close values to have the last data.')
 first2 = input(195.93, title = 'For 99 stocks', group = 'RS Replay mode (Approximate Method)')
@@ -142,8 +98,6 @@ ffth2 = input(80.96, title = 'For 30+ stocks', group = 'RS Replay mode (Approxim
 sxth2 = input(53.64, title = 'For 10+ stocks', group = 'RS Replay mode (Approximate Method)')
 svth2 = input(24.86, title = 'For 1- stocks', group = 'RS Replay mode (Approximate Method)')
 
-// Blue Dot
-// If Blue Dot is ste to 250 Da, than we want it to be set on 52 We on the Weekly TimeFrame
 if lookback == 250 and timeframe.isweekly
     lookback := 52
     lookback
@@ -151,65 +105,54 @@ if lookback2 == 250 and timeframe.isweekly
     lookback2 := 52
     lookback2
 
-// Switch Label Size
 highLabel = switch sizeLabHigh
+    'Auto'   => size.auto
+    'Tiny'   => size.tiny
+    'Small'  => size.small
     'Normal' => size.normal
-    'Tiny' => size.tiny
-    'Small' => size.small
-    'Large' => size.large
+    'Large'  => size.large
+    'Huge'   => size.huge
 
 lowLabel = switch sizeLabLow
+    'Auto'   => size.auto
+    'Tiny'   => size.tiny
+    'Small'  => size.small
     'Normal' => size.normal
-    'Tiny' => size.tiny
-    'Small' => size.small
-    'Large' => size.large
+    'Large'  => size.large
+    'Huge'   => size.huge
 
-// Using bar index in case of IPO to avoid NaN results
-// Added max_bars_max = 253 to improve display speed
 n63 = bar_index < 63 ? bar_index : 63
 n126 = bar_index < 126 ? bar_index : 126
 n189 = bar_index < 189 ? bar_index : 189
 n252 = bar_index < 252 ? bar_index : 252
 
-
-// Comparative Ticker for RS Line
 comparativeSymbol = request.security(lineTicker, timeframe.period, close)
-// RS Line but multiplied by a little bit less than the constant value of the comparative ticker for correct display
 rsCurve = close / comparativeSymbol
-// Adapt Ratio for Sectors and Indices
 if syminfo.industry == 'Investment Trusts/Mutual Funds'
     offset := 90
     offset
-    // We use a wider offset for Weekly timeframe for a smoother display
 rsRatio = timeframe.isweekly ? SpxValue * (offset - 10) / 100 : SpxValue * offset / 100
 rs = rsCurve * rsRatio
 prevlookback = lookback
-prevlookback2 = lookback2 // For RS New Lows
+prevlookback2 = lookback2
 lookback := math.min(lookback - 1, bar_index)
 rsPlot = plot(hideRSLine ? na : rs, title = 'RS Line', style = plot.style_line, linewidth = 1, color = colorRS)
 
-// Timeframe-adaptive EMA lengths
 isWeekly  = timeframe.isweekly
 isMonthly = timeframe.ismonthly
 
-// Quick:        21D / 8W / 5M
 quickLen      = isMonthly ? 5  : isWeekly ? 8  : 21
-// QuickSand:    34D / 13W / 8M
 quickSandLen  = isMonthly ? 8  : isWeekly ? 13 : 34
-// Grateful Dead: 50D / 21W / 13M
 gdLen         = isMonthly ? 13 : isWeekly ? 21 : 50
 
-// Calculate the three EMAs
 emaQuick      = showQuick      ? ta.ema(rs, quickLen)     : na
 emaQuickSand  = showQuickSand  ? ta.ema(rs, quickSandLen) : na
 emaGrateful   = showGD         ? ta.ema(rs, gdLen)        : na
 
-// Plot them on the RS line
 plot(emaQuick,     color=colQuick,     linewidth=1, title='Quick')
 plot(emaQuickSand, color=colQuickSand, linewidth=1, title='QuickSand')
 plot(emaGrateful,  color=colGD,        linewidth=1, title='Grateful Dead')
 
-// ── Helper functions ───────────────────────────────────────────────────────
 f_rrs_highest(src, len) =>
     h = src
     for i = 1 to len - 1
@@ -224,12 +167,10 @@ f_rrs_lowest(src, len) =>
             l := src[i]
     l
 
-// Lookback periods — auto-adjusted for weekly timeframe
 int lb1Y = timeframe.isweekly ? 52  : 250
 int lb6M = timeframe.isweekly ? 24  : 126
 int lb3M = timeframe.isweekly ? 12  : 63
 
-// RS new highs — strict > against [1]-shifted window
 _rsH1Y = f_rrs_highest(rsCurve, lb1Y)[1]
 _rsH6M = f_rrs_highest(rsCurve, lb6M)[1]
 _rsH3M = f_rrs_highest(rsCurve, lb3M)[1]
@@ -239,7 +180,6 @@ rs_nh6M = not na(rsCurve) and not na(_rsH6M) and rsCurve > _rsH6M and not rs_nh1
 rs_nh3M = not na(rsCurve) and not na(_rsH3M) and rsCurve > _rsH3M and not rs_nh1Y and not rs_nh6M
 rs_nh_any = rs_nh1Y or rs_nh6M or rs_nh3M
 
-// Price new highs — matching periods
 _prH1Y = f_rrs_highest(high, lb1Y)[1]
 _prH6M = f_rrs_highest(high, lb6M)[1]
 _prH3M = f_rrs_highest(high, lb3M)[1]
@@ -248,52 +188,42 @@ price_nh1Y = not na(_prH1Y) and high > _prH1Y
 price_nh6M = not na(_prH6M) and high > _prH6M
 price_nh3M = not na(_prH3M) and high > _prH3M
 
-// Dominant period label and matching price NH (1Y wins over 6M wins over 3M)
 rs_nh_period      = rs_nh1Y ? "1Y" : rs_nh6M ? "6M" : "3M"
 price_nh_matching = rs_nh1Y ? price_nh1Y : rs_nh6M ? price_nh6M : price_nh3M
 
-// Pick dot color — leads-price overrides period color
 f_nhColor() =>
     leadsPrice = not price_nh_matching
     leadsPrice ? col_nhLP : rs_nh1Y ? col_nh1Y : rs_nh6M ? col_nh6M : col_nh3M
 
-// RS new low
 _rsL  = f_rrs_lowest(rsCurve, prevlookback2)[1]
 _prL  = f_rrs_lowest(low,     prevlookback2)[1]
 rs_nl    = not na(rsCurve) and not na(_rsL) and rsCurve < _rsL
 price_nl = not na(low)     and not na(_prL) and low     < _prL
 
-
-// ── New Highs ──────────────────────────────────────────────────────────────
 var label newHigh = na
 
-// Historical RS New High
 if rsNewHigh == 'Historical RS New Highs' and plotNewHigh and rs_nh_any
     newHigh := label.new(x = bar_index, y = rs, color = f_nhColor(),
                          style = label.style_circle, size = highLabel)
     newHigh
 
-// Historical RS New High Before Price
 if rsNewHigh == 'Historical RS New Highs  Before Price' and plotNewHigh and rs_nh_any and not price_nh_matching
     newHigh := label.new(x = bar_index, y = rs, color = col_nhLP,
                          style = label.style_circle, size = highLabel)
     newHigh
 
-// RS New High (last bar only)
 if barstate.islast and rsNewHigh == 'RS New Highs' and plotNewHigh and rs_nh_any
     label.delete(newHigh)
     newHigh := label.new(x = bar_index, y = rs, color = f_nhColor(),
                          style = label.style_circle, size = highLabel)
     newHigh
 
-// RS New High Before Price (last bar only)
 if barstate.islast and rsNewHigh == 'RS New Highs Before Price' and plotNewHigh and rs_nh_any and not price_nh_matching
     label.delete(newHigh)
     newHigh := label.new(x = bar_index, y = rs, color = col_nhLP,
                          style = label.style_circle, size = highLabel)
     newHigh
 
-// Hover tooltips — New Highs
 if plotNewHigh and rs_nh_any
     _leadsPrice = not price_nh_matching
     _ttNH = _leadsPrice
@@ -303,133 +233,67 @@ if plotNewHigh and rs_nh_any
               style     = label.style_circle,
               color     = color.new(color.white, 100),
               textcolor = color.new(color.white, 100),
-              size      = size.tiny,
+              size      = highLabel,
               tooltip   = _ttNH)
 
-
-// ── New Lows ───────────────────────────────────────────────────────────────
 var label newLow = na
 
-// Historical RS New Low
 if rsNewLow == 'Historical RS New Lows' and plotNewLow and rs_nl
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-// Historical RS New Low Before Price
 if rsNewLow == 'Historical RS New Lows  Before Price' and plotNewLow and rs_nl and not price_nl
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-// RS New Low (last bar only)
 if barstate.islast and rsNewLow == 'RS New Lows' and plotNewLow and rs_nl
     label.delete(newLow)
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-// RS New Low Before Price (last bar only)
 if barstate.islast and rsNewLow == 'RS New Lows Before Price' and plotNewLow and rs_nl and not price_nl
     label.delete(newLow)
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-// Hover tooltips — New Lows
 if plotNewLow and rs_nl
     label.new(bar_index, rs, "",
               style     = label.style_circle,
               color     = color.new(color.white, 100),
               textcolor = color.new(color.white, 100),
-              size      = size.tiny,
+              size      = lowLabel,
               tooltip   = "🔴 RS NEW LOW\nRS at a " + str.tostring(prevlookback2) + "-bar low\nRelative weakness — avoid or reduce")
-// Calculation of the RS Rating
-// Getting ticker and reference ticker daily data
 closeDa = request.security(syminfo.tickerid, 'D', close)
 spxCloseDa = request.security(comparativeTickerId, 'D', close)
 
-// Calculation of the performance from 1 to 4 last quarters
-// Ticker
 perfTicker63 = closeDa / closeDa[n63]
 perfTicker126 = closeDa / closeDa[n126]
 perfTicker189 = closeDa / closeDa[n189]
 perfTicker252 = closeDa / closeDa[n252]
 
-// SP500 of reference ticker
 perfComp63 = spxCloseDa / spxCloseDa[n63]
 perfComp126 = spxCloseDa / spxCloseDa[n126]
 perfComp189 = spxCloseDa / spxCloseDa[n189]
 perfComp252 = spxCloseDa / spxCloseDa[n252]
 
-// Using Formula to calculate a relative score of the ticker and the SP500 with the last quarter weighted double
 float rs_stock = 0.4 * perfTicker63 + 0.2 * perfTicker126 + 0.2 * perfTicker189 + 0.2 * perfTicker252
 float rs_ref = 0.4 * perfComp63 + 0.2 * perfComp126 + 0.2 * perfComp189 + 0.2 * perfComp252
 
-// Calculation of the total relative score or rs performance
 float totalRsScore = rs_stock / rs_ref * 100
 float totalRsRating = -1
 
-// Here we calculated the relative score of the stock. The goal is now to assign the percentile correctly
-// For this I took the curve given by my fork repo of Skyte on Rs Log and tried to calibrate the better possible
-// the output curve of the relative performance of the 6,6xx stocks.
-// Link: https://github.com/Fred6725/rs-log/blob/main/output/rs_stocks.csv
-// Here is the curve in ASCII Art; on the x-axis, the Rs Rating and on the y-axis, the calculated performance.
-
-//                      
-//                                                                                        /                               
-//                                                                                        /                               
-//                                                                                        /                               
-//                                                                                        /                               
-//,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/,,,,,,,,,,,,,,,,,              
-//                                                                                        /                               
-//                                                                                        /                               
-//                                                                                        /                               
-//                                                                                        /                               
-//                                                                                       |                               
-//                                                                                       /                               
-//                                                                                      ‾                                 
-//                                                                                     ‾                                   
-//                                                                                   -‾                                    
-//                                                                           _____, ‾                                     
-//                                         _____----------------‾‾‾‾‾‾‾‾‾‾‾‾‾                                                   
-//                        __ */‾‾‾‾‾‾‾‾‾‾‾‾                                                                                       
-//             __ ,,----‾‾                                                                                                 
-//          _/                                                                                                           
-//        /                                                                                                               
-//       |                                                                                                     
-// ______|________________ _______________________________ _____________________________________            
-//       |0               |20             |40             |60             |80              |100   
-//
-// I decided to cut this curve in 7 different levels that needs to be entered each day.
-// These are relative strength scores corresponding to percentiles 98, 89, 69, 49, 29, 9 and 1.
-// Finally I used the request.seed() function to auto update these levels automatically on a daily basis.
-// Everything is managed in this repo if you're curious:
-// https://github.com/Fred6725/relative-strength/tree/main    (Fork from Skyte)
-// More precisly in rs_ranking.py for extracting what I needed and in workflows/output.yml for the auto update.
-// The update is done in the private fork of the seed tradingview original repo, checked and synchronised automatically
-// I tried to uplad the full 6,6xx list of relative strength score and rs rating but the display speed was too long.
-
-
-// Use the request.seed() function to access the RS Score environment of all the market
 curveRsPerf = request.seed('seed_fred6725_rs_rating', 'RSRATING', close)
 
-// To prevent loosing data because of week-ends and public holidays I decided to send the value 5 times in a row.
-// Which gives 5*7 = 35 bars.
-// Depending of the day we look at the graph we will have a variable amount of bars. 
-// The goal is to get these 7 numbers anyway.
-
-// In case the graph is not updated, we count the number of bars since we have the first data.
-// Calculation of the number of bar since we have the first data
 delta = ta.barssince(na(curveRsPerf) != true)
 
-// Table to store the different values
 var array<float> different_values = array.new_float(7)
 
-// Counter for stored values
 var int counter = 0
 
-// Variable for storage of the environment
 float first = 0
 float scnd = 0
 float thrd = 0
@@ -438,7 +302,6 @@ float ffth = 0
 float sxth = 0
 float svth = 0
 
-// Browse seed's values and store the first 7 different values
 if not allowReplay
     for i = delta to 34 + delta by 1
         close_value = nz(curveRsPerf[i])
@@ -447,7 +310,6 @@ if not allowReplay
             counter := counter + 1
             counter
 
-    // Assign stored values to variables
     first := array.get(different_values, 0)
     scnd := array.get(different_values, 1)
     thrd := array.get(different_values, 2)
@@ -457,7 +319,6 @@ if not allowReplay
     svth := array.get(different_values, 6)
     svth
 
-// Replay mode
 if allowReplay
     first := first2
     scnd := scnd2
@@ -468,7 +329,6 @@ if allowReplay
     svth := svth2
     svth
 
-// Now that we've recovered the environment, we can assign a percentile using a simple linear approximation of the curve (+ adjustment).
 if totalRsScore >= first
     totalRsRating := 99
     totalRsRating
@@ -476,9 +336,8 @@ if totalRsScore <= svth
     totalRsRating := 1
     totalRsRating
 
-// Function to attribute the percentile with a simple linear approximation
 f_attributePercentile(totalRsScore, tallerPerf, smallerPerf, rangeUp, rangeDn, weight) =>
-    sum = totalRsScore + (totalRsScore - smallerPerf) * weight // weight is used for manual calibration
+    sum = totalRsScore + (totalRsScore - smallerPerf) * weight
     if sum > tallerPerf - 1
         sum := tallerPerf - 1
         sum
@@ -494,79 +353,56 @@ f_attributePercentile(totalRsScore, tallerPerf, smallerPerf, rangeUp, rangeDn, w
         RsRating
     RsRating
 
-// Between 199 & 120 the score where approx 98 to 90.
 if totalRsScore < first and totalRsScore >= scnd
     totalRsRating := f_attributePercentile(totalRsScore, first, scnd, 98, 90, 0.33)
     totalRsRating
-    // Between 119 and 100 we ave scores between 89 and 70.
 if totalRsScore < scnd and totalRsScore >= thrd
     totalRsRating := f_attributePercentile(totalRsScore, scnd, thrd, 89, 70, 2.1)
     totalRsRating
-    // Between 100 and 91 we ave scores between 69 and 50.
 if totalRsScore < thrd and totalRsScore >= frth
     totalRsRating := f_attributePercentile(totalRsScore, thrd, frth, 69, 50, 0)
     totalRsRating
-    // Between 90 and 82 we ave scores between 49 and 30.
 if totalRsScore < frth and totalRsScore >= ffth
     totalRsRating := f_attributePercentile(totalRsScore, frth, ffth, 49, 30, 0)
     totalRsRating
-    // Between 81 and 56 we ave scores between 29 and 10.
 if totalRsScore < ffth and totalRsScore >= sxth
     totalRsRating := f_attributePercentile(totalRsScore, ffth, sxth, 29, 10, 0)
     totalRsRating
-    // Between 55 and 28 we ave scores between 9 and 2.
 if totalRsScore < sxth and totalRsScore >= svth
     totalRsRating := f_attributePercentile(totalRsScore, sxth, svth, 9, 2, 0)
     totalRsRating
 
-
-// Check if one of this value is empty for replay mode
 for i = 0 to 6 by 1
     if nz(array.get(different_values, i)) == 0 and not allowReplay
         totalRsRating := -1
         totalRsRating
 
-
-// Display the RS Rating
-// The results can only be used in Daily TimeFrame
 isDaily = timeframe.isdaily
 labelText1 = ''
 labelText2 = ''
-// Here we want to display 'RS' without value if one of the constants is missing
 if isDaily and totalRsRating != -1
     labelText2 := '\n\n       ' + str.tostring(totalRsRating, '#0')
     labelText2
-    // Rating Only
 if ratingOnly
     labelText1 := ''
     labelText2 := '\n    ' + str.tostring(totalRsRating, '#0')
     labelText2
-    // Display the labels
 label1 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
 label2 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
 
-// Delete previous Labels (When new candle opens or when replay mode, the labels were piling on)
 label.delete(label1[1])
 label.delete(label2[1])
 
-
-// ── 3‑Month & 6‑Month RS Rating (approximate) ──────────────────────────
-// Relative performance vs. SPX over 63 and 126 trading days
 rsScore3m = perfTicker63  / perfComp63  * 100
 rsScore6m = perfTicker126 / perfComp126 * 100
 
-// Map the scores to the 1‑99 scale using the same seed‑based distribution
-// (Note: the seed values are calibrated for the 12‑month weighted score;
-//  short‑term percentiles are only approximate.)
 float rsRating3m = -1
 float rsRating6m = -1
 
 if not allowReplay
-    // Same loop as used for totalRsScore, but applied to rsScore3m / rsScore6m
     for i = delta to 34 + delta by 1
-        continue   // already stored in different_values[] earlier
+        continue
 
-// 3‑Month rating mapping
 if rsScore3m >= first
     rsRating3m := 99
 else if rsScore3m <= svth
@@ -584,7 +420,6 @@ else if rsScore3m < ffth and rsScore3m >= sxth
 else if rsScore3m < sxth and rsScore3m >= svth
     rsRating3m := f_attributePercentile(rsScore3m, sxth, svth, 9, 2, 0)
 
-// 6‑Month rating mapping
 if rsScore6m >= first
     rsRating6m := 99
 else if rsScore6m <= svth
@@ -602,108 +437,68 @@ else if rsScore6m < ffth and rsScore6m >= sxth
 else if rsScore6m < sxth and rsScore6m >= svth
     rsRating6m := f_attributePercentile(rsScore6m, sxth, svth, 9, 2, 0)
 
-// If seed data is missing, keep rating = -1
 for i = 0 to 6 by 1
     if nz(array.get(different_values, i)) == 0 and not allowReplay
         rsRating3m := -1
         rsRating6m := -1
 
-
-
-
-
-
-// Weekly Tight Closes Detector
-//input
 WtClose = input(false, title = 'Weekly Tight Closes Detector', group = 'TIGHT CLOSES DETECTOR')
 colorTightCloses = input(color.aqua, title = 'Color of Tight Closes Boxes', group = 'TIGHT CLOSES DETECTOR')
-// Calculation
 if tfWeekly
-    // Open
     WkO2 = open[2]
-    //Closes
     WkC = close
     WkC1 = close[1]
     WkC2 = close[2]
-    // Highs
     WkH = high
     WkH1 = high[1]
     WkH2 = high[2]
-    // Lows
     WkL = low
     WkL1 = low[1]
     WkL2 = low[2]
-    // WEMA
     Wema10 = ta.ema(close, 10)
     Wema20 = ta.ema(close, 20)
-    // ATR Weekly (Used to have an auto-adaptive tight closes detector. Formula = Averages High-Low of the 14 previous bars. (Volatility measurement)
-    atr = ta.atr(14)
-    // Conditions (I like to have 3 tiny candle with tight closes so I add High and Low cond as well)
-    condTightClose = WkC < WkC1 + WkC1 * atr / (close * 2) and WkC > WkC1 - WkC1 * atr / (close * 2) and WkC1 < WkC2 + WkC2 * atr / (close * 2) and WkC1 > WkC2 - WkC2 * atr / (close * 2) and WkC < WkC2 + WkC2 * atr / (close * 2) and WkC > WkC2 - WkC2 * atr / (close * 2)
-    condTightHigh = WkH < WkH1 + WkH1 * atr / (close * 2) and WkH > WkH1 - WkH1 * atr / (close * 2) and WkH1 < WkH2 + WkH2 * atr / (close * 2) and WkH1 > WkH2 - WkH2 * atr / (close * 2)
-    condTightLow = WkL < WkL1 + WkL1 * atr / (close * 2) and WkL > WkL1 - WkL1 * atr / (close * 2) and WkL1 < WkL2 + WkL2 * atr / (close * 2) and WkL1 > WkL2 - WkL2 * atr / (close * 2)
-    //condNotLowerLows  = WkL2 > WkL1 and WkL1 > WkL
-    // I would like the script not to show me 3 tight candles when the first candle of the three is nearly full and big
-    // For that I wrote that the total size of the weekly wick of the candle must be 2 times bigger than the body
-    // But I noticed somtimes very small candle with little or no wick are still valide so added an exception ! (Yes it is far-fetched)
+    threshold = 0.015
+    condTightClose = WkC < WkC1 + WkC1 * threshold and WkC > WkC1 - WkC1 * threshold and WkC1 < WkC2 + WkC2 * threshold and WkC1 > WkC2 - WkC2 * threshold and WkC < WkC2 + WkC2 * threshold and WkC > WkC2 - WkC2 * threshold
+    condTightHigh = WkH < WkH1 + WkH1 * threshold and WkH > WkH1 - WkH1 * threshold and WkH1 < WkH2 + WkH2 * threshold and WkH1 > WkH2 - WkH2 * threshold
+    condTightLow = WkL < WkL1 + WkL1 * threshold and WkL > WkL1 - WkL1 * threshold and WkL1 < WkL2 + WkL2 * threshold and WkL1 > WkL2 - WkL2 * threshold
     condFirstCandle = false
-    // For positive bars
     if WkC2 >= WkO2
         condFirstCandle := WkH2 - WkC2 + WkO2 - WkL2 > 2 * (WkC2 - WkO2) or WkH2 - WkL2 < WkH1 - WkL1
         condFirstCandle
-    // For negative bars
     if WkC2 < WkO2
         condFirstCandle := WkH2 - WkO2 + WkC2 - WkL2 > 2 * (WkO2 - WkC2) or WkH2 - WkL2 < WkH1 - WkL1
         condFirstCandle
-    // All condition together
-    condTot3WTight = condTightClose and (condTightHigh or condTightLow) and condFirstCandle //and not condNotLowerLows
+    condTot3WTight = condTightClose and (condTightHigh or condTightLow) and condFirstCandle
 
-
-    //Plot Boxes Arround Weekly Tight Closes
     highestW = ta.highest(WkH, 3)
     lowestW = ta.lowest(WkL, 3)
     if condTot3WTight and WtClose
         box.new(bar_index[2], highestW, bar_index, lowestW, border_color = color.new(colorTightCloses, 20), border_width = 1, border_style = line.style_dotted, bgcolor = color.new(colorTightCloses, 85))
 
-
-
-//------------------  Marked Highs and Lows  ---------------------//
-
-// Price Peak/Valley Points
-// Highlights exact price at high or low points over a 19-period interval.
-// For example, on a Daily chart, a High Price point is marked on the date
-// where there has been no higher price the 9 days prior to that date and
-// the 9 days following that date.
-
-// Inputs
 i_displayHL = input(true, title = 'Display H/L Points', group = 'High/Low Price Points')
 i_colorHL = input(color.rgb(180, 158, 48), title = 'Labels Color', group = 'High/Low Price Points')
 i_displayPc = input(false, title = '%Change', group = 'High/Low Price Points')
 i_colorPctP = input(color.rgb(0, 0, 255), title = 'Positive % Color', group = 'High/Low Price Points', inline = 'z')
 i_colorPctN = input(color.rgb(181, 49, 144), title = 'Negative %', group = 'High/Low Price Points', inline = 'z')
 i_pivot = input(9, title = 'Length for peak/valey points', group = 'High/Low Price Points')
+i_pivot := timeframe.isweekly ? 2 : i_pivot
 
-// Definr arrays to store pivot values
 var pivotHighValues = array.new_float(0)
 var pivotLowValues = array.new_float(0)
 
 if i_displayHL and not tfWeekly
-    // Use the function ta.pivothigh/low()
     pivotHigh = ta.pivothigh(high, i_pivot, i_pivot)
     pivotLow = ta.pivotlow(low, i_pivot, i_pivot)
-    // High Price Point
     if bool(pivotHigh)
         array.unshift(pivotHighValues, high[i_pivot])
         textHigh9 = i_displayPc ? str.tostring(high[i_pivot], '0.00') + '\n' : str.tostring(high[i_pivot], '0.00')
         highestHigh = label.new(bar_index - i_pivot, array.get(pivotHighValues, 0), xloc = xloc.bar_index, yloc = yloc.price, style = label.style_none, text = textHigh9, textcolor = i_colorHL)
         highestHigh
-    // Low Price Point
     if bool(pivotLow)
-        array.unshift(pivotLowValues, low[i_pivot]) //low[i_pivot]
+        array.unshift(pivotLowValues, low[i_pivot])
         textLow9 = '\n' + str.tostring(low[i_pivot], '0.00')
         lowestLow = label.new(bar_index - i_pivot, array.get(pivotLowValues, 0), xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_center, text = textLow9, textcolor = i_colorHL, color = color.rgb(0, 0, 0, 100))
         lowestLow
-    // Percentage Variation
     float pHigh = na
     float pLow = na
     if array.size(pivotHighValues) > 0
@@ -713,12 +508,11 @@ if i_displayHL and not tfWeekly
         pLow := array.get(pivotLowValues, 0)
         pLow
     prcVarHigh = (pHigh - pLow) / pLow * 100
-    prcVarLow = (pLow / pHigh - 1) * 100 // Formula to calculate percentage decline
+    prcVarLow = (pLow / pHigh - 1) * 100
     prcVarHighText = prcVarHigh >= 0 ? '+' + str.tostring(prcVarHigh, '0.0') + '%' : str.tostring(prcVarHigh, '0.0') + '%'
     prcVarLowText = prcVarLow >= 0 ? '+' + str.tostring(prcVarLow, '0.0') + '%' : str.tostring(prcVarLow, '0.0') + '%'
     colorPctUp = prcVarHigh >= 0 ? i_colorPctP : i_colorPctN
     colorPctDn = prcVarLow >= 0 ? i_colorPctP : i_colorPctN
-    // High Price Point Percent Variation 
     if bool(pivotHigh) and i_displayPc
         pctPivotHigh = na(prcVarHigh) == true ? na : label.new(bar_index - i_pivot, array.get(pivotHighValues, 0), xloc = xloc.bar_index, yloc = yloc.price, style = label.style_none, text = prcVarHighText, textcolor = colorPctUp)
         pctPivotHigh
@@ -726,13 +520,6 @@ if i_displayHL and not tfWeekly
         pctPivotLow = na(prcVarLow) == true ? na : label.new(bar_index - i_pivot, array.get(pivotLowValues, 0), xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_center, text = '\n\n\n' + prcVarLowText, textcolor = colorPctDn, color = color.rgb(0, 0, 0, 100))
         pctPivotLow
 
-
-
-
-//------------------  Chart Pattern Recognition  ---------------------//
-
-
-// INPUTS
 i_displayPattern = input(true, title = 'Display Pattern', group = 'Chart Pattern Recognition')
 i_displayBoxes = input(true, title = 'Display Trade Boxes', group = 'Chart Pattern Recognition')
 i_displayHistoricalBoxes = input(true, title = 'Display Historical Trade Boxes', group = 'Chart Pattern Recognition')
@@ -746,55 +533,51 @@ i_handleMinBars = input(5, title = 'Handle: Min Bars', group = 'Chart Pattern Re
 i_handleMaxBars = input(25, title = 'Handle: Max Bars', group = 'Chart Pattern Recognition')
 i_handleMaxDecline = input(12.0, title = 'Handle: Max Decline (%)', group = 'Chart Pattern Recognition')
 i_handleMinHeightPct = input(60.0, title = 'Handle: Min Peak Height (%)', group = 'Chart Pattern Recognition')
-// ── NEW: Volume Confirmation Inputs ──
-i_useVolHandle       = input.bool(true,   'Use Volume Confirmation for Handle', group = 'Chart Pattern Recognition', tooltip = 'Require volume contraction during handle & expansion on breakout')
-i_requireCupForHandle = input.bool(true,   'Require Cup Base for Handle',       group = 'Chart Pattern Recognition', tooltip = 'Handle must form in a detected cup pattern (not just any base)')
+i_useVolHandle       = input.bool(false,  'Use Volume Confirmation for Handle', group = 'Chart Pattern Recognition', tooltip = 'Optional: require volume contraction in the handle & expansion on breakout. OFF by default — the separate Cup-with-Handle is a no-volume, early-detection pattern.')
+i_requireCupForHandle = input.bool(false,  'Require Cup Base for Handle',       group = 'Chart Pattern Recognition', tooltip = 'Optional: require a fully detected cup before flagging a handle. OFF by default — the handle may form on the right side of the base before the full cup completes (early handle).')
 i_volMaLengthHandle  = input.int(50,      'Volume MA Length',                   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'Lookback for average volume')
 i_volContractionMax  = input.float(50.0,  'Max Avg Vol % in Handle',            group = 'Chart Pattern Recognition', minval = 0, step = 1, tooltip = 'Average handle volume must be below this % of the volume MA')
 i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         group = 'Chart Pattern Recognition', minval = 1, step = 0.1, tooltip = 'Breakout bar volume must be ≥ this times volume MA')
+i_lockFirstHandle    = input.bool(true,   'Lock First Valid Handle (no shift)', group = 'Chart Pattern Recognition', tooltip = 'IBD update #2: lock the FIRST valid handle/pivot instead of shifting to a later or higher one. Gives a consistent pivot point. Turn OFF for the legacy "best handle" behavior.')
+i_requirePriorUptrend = input.bool(true,  'Require Prior Uptrend for Base',     group = 'Chart Pattern Recognition', tooltip = 'Legacy filter: base must sit ~20% above its prior ~20-week low. ON preserves current behavior. Turn OFF to match the new IBD left-side rule (13-week high OR prior-base breakout only) — flags more bases, including some in downtrends.')
+i_htfOn   = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
+i_htfPole = input.float(100.0, 'HTF: Min Pole Gain %',               group = 'Chart Pattern Recognition', step = 5.0, tooltip = 'Minimum advance of the pole (low → peak). Classic high tight flag ≈ 90–120%; default 100%.')
+i_htfPB   = input.int(20,      'HTF: Max Pole Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Pole must run from its low to its peak within this many bars.')
+i_htfFMin = input.int(3,       'HTF: Min Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Minimum bars in the flag.')
+i_htfFMax = input.int(10,      'HTF: Max Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Maximum bars in the flag.')
+i_htfRet  = input.float(38.2,  'HTF: Max Flag Retrace %',            group = 'Chart Pattern Recognition', tooltip = 'Maximum pullback of the flag below the pole high.')
+i_htfVol  = input.float(1.2,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
 
-
-// FUTURE PART TO HANDLE WE TF
 i_baseDepth := i_baseDepth / 100
 i_dbDepth := i_dbDepth / 100
-// if (timeframe.isdaily)
-i_baseLength := i_baseLength * 5
-i_dbLength := i_dbLength * 5
-// if (timeframe.isweekly)
-// i_pivot := 2
+int barsPerWeek = timeframe.isweekly ? 1 : 5
+i_baseLength := i_baseLength * barsPerWeek
+i_dbLength   := i_dbLength   * barsPerWeek
+int pivLag     = 5  * barsPerWeek
+int win13wk    = 13 * barsPerWeek
+int win20wk    = 20 * barsPerWeek
+int win10wk    = 10 * barsPerWeek
+int minBaseLen = 6  * barsPerWeek
+bool tfDraw = timeframe.isdaily or timeframe.isweekly
 
-
-// ARRAYS
-// PIVOTS
 var pivotHighPrices = array.new_float(0)
 var pivotLowPrices = array.new_float(0)
-// BASE PATTERN
-// Prices
 var startBasePrice = array.new_float(0)
 var lowBasePrice = array.new_float(0)
 var lowOfpivotHighPrices = array.new_float(0)
 var float lowOfBaseHigh = 0
-// Bars
 var int startBaseBar = 0
 var int lowerBaseBar = 0
 var pivotHighBars = array.new_int(0)
 var pivotLowBars = array.new_int(0)
-// DOUBLE BOTTOM PATTERN
-// Prices
 var topDBPrice = array.new_float(0)
 var bottomDBPrice = array.new_float(0)
-// Bars
 var int topDBBar = 0
 var int bottomDBBar = 0
-// CUP PATTERN
 var baseCloses = array.new_float(0)
 
-
-// PIVOTS HIGH/LOW
-// Use the function ta.pivothigh/low()
 pivotHigh = ta.pivothigh(high, i_pivot, i_pivot)
 pivotLow = ta.pivotlow(low, i_pivot, i_pivot)
-// When it occurs, store key points values in arrays
 if bool(pivotHigh)
     array.unshift(pivotHighPrices, high[i_pivot])
     array.unshift(lowOfpivotHighPrices, low[i_pivot])
@@ -803,80 +586,62 @@ if bool(pivotLow)
     array.unshift(pivotLowPrices, low[i_pivot])
     array.unshift(pivotLowBars, bar_index[i_pivot])
 
-
-// Calculation for the conditions of base detection (out of scope)
 boolHighbase = false
 boolHigherPiv = false
-highestOfBase = ta.highest(high, 25)
-highestOfComp = ta.highest(high, 50)
-lowestBaseLow = ta.lowest(low, 25)
-lowestPointLeg = ta.lowest(low, 103)
+htfAvgVol = ta.sma(volume, 20)
+highestOfBase = ta.highest(high, pivLag)
+highestOfComp = ta.highest(high, win10wk)
+lowestBaseLow = ta.lowest(low, pivLag)
+lowestPointLeg = ta.lowest(low, win20wk)
 var baseCond = false
 isBase = false
 
-
-// CONDITIONS FOR BASE DETECTION (Consolidation: (6 to 65 weeks)(8% to 50%)  Flat Base: (5 to 65 week) (0% with a maximum of 15%)
-// Pre-compute 13-week lookback unconditionally (avoids scoped ta.* call)
-_highest65shifted = ta.highest(high, 65)[26]
+_highest65shifted = ta.highest(high, win13wk)[pivLag + 1]
 
 if array.size(pivotHighPrices) > 2
-    // In case the base is made of multiple Pivots High without Pivot Low
-    boolHighbase := high[25] == array.get(pivotHighPrices, 0) or high[25] == array.get(pivotHighPrices, 1) or high[25] == array.get(pivotHighPrices, 2)
-    // 13-week high OR prior base breakout
-    bool13wkHigh    = high[25] > _highest65shifted
+    boolHighbase := high[pivLag] == array.get(pivotHighPrices, 0) or high[pivLag] == array.get(pivotHighPrices, 1) or high[pivLag] == array.get(pivotHighPrices, 2)
+    bool13wkHigh    = high[pivLag] > _highest65shifted
     float _priorTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
-    boolPriorBaseBO = not na(_priorTop) and high[25] > _priorTop
+    float _priorLow = array.size(lowBasePrice)  > 0 ? array.get(lowBasePrice, 0)  : na
+    bool priorBaseNotReset = na(_priorLow) or lowestPointLeg >= _priorLow * 0.85
+    boolPriorBaseBO = not na(_priorTop) and high[pivLag] > _priorTop and priorBaseNotReset
     boolHigherPiv  := bool13wkHigh or boolPriorBaseBO
-    // Minimal Leg Up Calculation
-    legUp = lowestPointLeg * 1.20 // 20%
-    legUpCond = high[25] >= legUp
-    // Maximal Base Depth
-    firstBaseDepth = high[25] * (1 - i_baseDepth) <= lowestBaseLow
-    // No candle is above high[25]
-    noCandleAbove = highestOfBase <= high[25]
-    // The candle of the begining of the base isn't in a previous base
-    noBaseInBase = isBase[25] == false
-    // Every Conditions with spikes for detection
+    legUp = lowestPointLeg * 1.20
+    legUpCond = not i_requirePriorUptrend or high[pivLag] >= legUp
+    firstBaseDepth = high[pivLag] * (1 - i_baseDepth) <= lowestBaseLow
+    noCandleAbove = highestOfBase <= high[pivLag]
+    noBaseInBase = isBase[pivLag] == false
     baseCond := boolHighbase and boolHigherPiv and legUpCond and firstBaseDepth and noCandleAbove and noBaseInBase
     baseCond
-    // If Base Detected we store key points
 lowestBar = ta.barssince(low == lowestBaseLow)
 if baseCond and not isBase[1]
-    array.unshift(startBasePrice, high[25])
-    startBaseBar := bar_index[25]
-    array.unshift(lowOfpivotHighPrices, low[25])
-    lowOfBaseHigh := low[25]
+    array.unshift(startBasePrice, high[pivLag])
+    startBaseBar := bar_index[pivLag]
+    array.unshift(lowOfpivotHighPrices, low[pivLag])
+    lowOfBaseHigh := low[pivLag]
     array.unshift(lowBasePrice, lowestBaseLow)
-    lowerBaseBar := bar_index[lowestBar] // Needs to be incremented and reset when base is over
-    // Get every close of the Base for Cup Detection
-    for i = 0 to 25 by 1
+    lowerBaseBar := bar_index[lowestBar]
+    for i = 0 to pivLag by 1
         array.unshift(baseCloses, close[i])
 
-
-// Bool for base that is true while the base is still valid
 if baseCond or isBase[1]
     isBase := true
     isBase
 
-// Candle Base Counter
 var int baseCount = 0
-// When a base is detected, reset the bar count
 if baseCond and not isBase[1]
     baseCount := bar_index - startBaseBar
     baseCount
-    // Increment the bar count if we are in a base
 if isBase
     baseCount := baseCount + 1
     baseCount
 
-// Boolean for Trades Box Gestion
 isBox = false
 boxOver = true
 if isBox[1] and not boxOver[1]
     isBox := true
     isBox
 
-/// CONDITIONS FOR DOUBLE BOTTOM DETECTION
 detectDoubleBottom = false
 _highSinceTopFull = ta.highest(high, 500)
 _priorLowFull = ta.lowest(low, math.max(1, math.min(bar_index, 250)))
@@ -887,39 +652,27 @@ if isBase
         firstPivLow  = array.get(pivotLowPrices,  1)
         scndPivLow   = array.get(pivotLowPrices,  0)
 
-        // ── Prior Uptrend ──────────────────────────────────────────────────
-        // Stock must have advanced at least 20% before forming the pattern
         priorLow      = _priorLowFull
         condPriorTrend = firstPivHigh >= priorLow * 1.20
 
-        // ── Price Conditions ───────────────────────────────────────────────
-        // First high is the base start pivot
         condPricesH = true
         if array.size(startBasePrice) > 0
             condPricesH := firstPivHigh == array.get(startBasePrice, 0)
 
-        // Second low is lower than or near the first low (classic W)
-        // Allow up to 3% higher — handles near-equal bottoms
         condPricesA = scndPivLow <= firstPivLow * 1.03
 
-        // Both lows within the allowed base depth from the first high
         condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh
 
-        // Pattern deep enough — second low at least 10% below first high
         condPricesC = scndPivLow <= firstPivHigh * 0.90
 
-        // Middle peak above 35% retracement — confirms the middle bounce
         condPricesD = scndPivHigh >= scndPivLow +
           (firstPivHigh - scndPivLow) * 0.35
 
-        // Middle peak below first high — still inside the base
         condPricesE = scndPivHigh < firstPivHigh * 1.01
 
-        // First V retraces at least 40% back up — confirms first recovery
         condPricesF = scndPivHigh >= firstPivLow +
           (firstPivHigh - firstPivLow) * 0.40
 
-        // Leg depth symmetry — neither leg more than 3x the other
         firstLegDepth = firstPivHigh - firstPivLow
         scndLegDepth  = scndPivHigh  - scndPivLow
         condPricesG   = firstLegDepth > 0 and
@@ -927,44 +680,34 @@ if isBase
           firstLegDepth / scndLegDepth <= 3.0 and
           scndLegDepth  / firstLegDepth <= 3.0
 
-        // ── Time Conditions ────────────────────────────────────────────────
         firstPivTime = array.get(pivotHighBars, 1)
         scndPivTime  = array.get(pivotLowBars,  1)
         thrdPivTime  = array.get(pivotHighBars, 0)
         frthPivTime  = array.get(pivotLowBars,  0)
 
-        // Points must appear in correct W order: H L H L
         condTimeA = firstPivTime < scndPivTime and
           scndPivTime  < thrdPivTime  and
           thrdPivTime  < frthPivTime
 
-        // Total pattern within allowed window
         condTimeB = frthPivTime - firstPivTime <= i_dbLength
 
-        // Minimum total length — 10 bars
         condTimeC = frthPivTime - firstPivTime >= 10
 
-        // Each leg at least 3 bars — filters spikes
         condTimeD = (scndPivTime - firstPivTime) >= 3 and
           (thrdPivTime - scndPivTime)  >= 3 and
           (frthPivTime - thrdPivTime)  >= 3
 
-        // Two halves of W proportional — neither more than 4x the other
         firstHalf = thrdPivTime - firstPivTime
         scndHalf  = bar_index   - thrdPivTime
         condTimeE = firstHalf > 0 and scndHalf > 0 and
           firstHalf / scndHalf <= 4.0 and
           scndHalf  / firstHalf <= 4.0
 
-        // Right side still actively forming
         condTimeF = bar_index - frthPivTime <=
           (thrdPivTime - firstPivTime) * 2
 
-        // ── Shape Condition ────────────────────────────────────────────────
-        // No bar since second bottom exceeds the middle peak
         condBothA = _highSinceTopFull <= scndPivHigh
 
-        // ── All Conditions ─────────────────────────────────────────────────
         if condPriorTrend and condPricesA and condPricesB and condPricesC and
           condPricesD and condPricesE and condPricesF and condPricesG and
           condPricesH and condTimeA   and condTimeB   and condTimeC   and
@@ -974,29 +717,22 @@ if isBase
             array.unshift(topDBPrice,    firstPivHigh)
             topDBBar := array.get(pivotHighBars, 1)
             topDBBar
-// Boolean to store the information of a current Double Bottom
 isDoubleBottom = false
 if detectDoubleBottom or isDoubleBottom[1]
     isDoubleBottom := true
     isDoubleBottom
 
-// For every bar in the base we store the closes in an array in order to compare
 if isBase
     array.unshift(baseCloses, close)
 
-// CONDITIONS FOR CUP DETECTION (6 to 65 weeks) (8% to 50% depth)
 detectCup = false
 isCup = false
-// Depth
 float highCup = 0
 float lowCup = 0
-//Condition Cup
 condThird = false
 condFourth = false
 condThirdTwo = false
 condFourthTwo = false
-// condPartThree     = false
-// Reference points
 float middleOfCup = 0
 baseTier = baseCount / 3
 baseFourth = baseCount / 4
@@ -1008,15 +744,11 @@ if isBase
         lowCup := array.get(lowBasePrice, 0)
         lowCup
     middleOfCup := lowCup + (highCup - lowCup) * 0.5
-    // Depth
     condMaxDepth = lowCup >= (1 - i_baseDepth) * highCup
     condMinDepth = lowCup <= 0.92 * highCup
-    // Length
     condMaxLength = bar_index - startBaseBar <= i_baseLength
-    condMinLength = bar_index - startBaseBar >= 30
-    // Asolute Position against the Cup (50%)
+    condMinLength = bar_index - startBaseBar >= minBaseLen
     condAbsolutePos = (highCup - lowCup) * 0.5 + lowCup <= high
-    // Technical (80% of closes above 40% of base in the first tier, 80% under in the second.)
     for i = baseCount to 2 * baseTier by 1
         if close[i] >= middleOfCup
             numberOfValidCl1 := numberOfValidCl1 + 1
@@ -1026,8 +758,7 @@ if isBase
         if close[i] <= middleOfCup
             numberOfValidCl2 := numberOfValidCl2 + 1
             numberOfValidCl2
-    condThird := numberOfValidCl2 / baseTier >= 0.90 // 85% of closes must be contained in the middle thrid of the cup
-    // Technical 2 (Same with 2*Fourth (half))
+    condThird := numberOfValidCl2 / baseTier >= 0.90
     numberOfValidCl1 := 0
     numberOfValidCl2 := 0
     for i = baseCount to 3 * baseFourth by 1
@@ -1039,18 +770,15 @@ if isBase
         if close[i] <= middleOfCup
             numberOfValidCl2 := numberOfValidCl2 + 1
             numberOfValidCl2
-    condFourth := numberOfValidCl2 / (2 * baseFourth) >= 0.90 // or 85% of the closes must be contained in the middle half of the cup
+    condFourth := numberOfValidCl2 / (2 * baseFourth) >= 0.90
     cupForm = condThird and condThird[1] and condThirdTwo and condThirdTwo[1] or condFourth and condFourth[1] and condFourthTwo and condFourthTwo[1]
     detectCup := condMaxDepth and condMinDepth and condMaxLength and condMinLength and condAbsolutePos and cupForm
     detectCup
 
-
-// Boolean to store the information
 if detectCup or isCup[1]
     isCup := true
     isCup
 
-// Separate Cup with Handle (Early Handle / No Volume Confirmation)
 bool rightSide = isBase and bar_index > lowerBaseBar
 
 var float rightSideHighCloseSep = 0.0
@@ -1063,12 +791,15 @@ else
         rightSideHighCloseSep := nz(rightSideHighCloseSep[1], rightSideHighCloseSep)
 
 var int handlePeakBarSep = 0
+var bool handleLockedFlagSep = false
 if not rightSide or rightSideHighCloseSep == 0.0
     handlePeakBarSep := 0
+    handleLockedFlagSep := false
 else
     float _leftTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
     float minHeightVal = not na(_leftTop) ? _leftTop * (i_handleMinHeightPct / 100.0) : 0.0
-    if close > nz(rightSideHighCloseSep[1], rightSideHighCloseSep) * 1.05 and close <= _leftTop and close >= minHeightVal
+    bool canMovePeak = not i_lockFirstHandle or not handleLockedFlagSep
+    if canMovePeak and close > nz(rightSideHighCloseSep[1], rightSideHighCloseSep) * 1.05 and close <= _leftTop and close >= minHeightVal
         handlePeakBarSep := bar_index
     else
         handlePeakBarSep := nz(handlePeakBarSep[1], handlePeakBarSep)
@@ -1098,8 +829,7 @@ float _baseLow = array.size(lowBasePrice) > 0 ? array.get(lowBasePrice, 0) : na
 float _baseTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
 bool handleMidOKSep   = not na(_baseTop) and not na(_baseLow) and handleLowPointSep > (_baseTop + _baseLow) * 0.5
 
-// ── NEW: Volume calculations for handle contraction ──
-float volMaHandle  = ta.sma(volume, i_volMaLengthHandle)    // moving average of volume
+float volMaHandle  = ta.sma(volume, i_volMaLengthHandle)
 float volAvgHandle = na
 if rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep > 0
     volAvgHandle := math.sum(volume, handleBarCountSep) / handleBarCountSep
@@ -1109,16 +839,75 @@ bool requireCupOK     = not i_requireCupForHandle or isCup
 
 bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK
 
+if handleFormingSep and i_lockFirstHandle
+    handleLockedFlagSep := true
+
 bool volBreakoutOK    = not i_useVolHandle or volume >= i_volBreakoutMult * volMaHandle
 bool handleBreakoutSep = handleFormingSep and close > handlePeakLockedSep and volBreakoutOK
 
-// CUP MAINTENANCE
-// plot (condThirdTwo ? 15:13, color=color.red)
-// plot (condFourthTwo ? 12:9,  color=color.orange)
-// plot (detectCup   ? 25:20, color=color.lime)
+var bool detectHTF = false
+var int htfPoleLowBar = na
+var float htfPoleLowPrice = na
+var int htfPoleHighBar = na
+var float htfPoleHighPrice = na
+var float htfFlagHighPrice = na
+var float htfFlagLowPrice = na
+var int htfBaseLowAgo = na
 
-// Graphical Objects Declaration
-// Horizontal Lines
+if i_htfOn and bar_index > 30
+    bool found = false
+    for fLen = i_htfFMin to i_htfFMax
+        if not found
+            int   pHi = fLen + 1
+            float pH2 = high[pHi]
+            for k = fLen to math.min(fLen + 5, bar_index - 1)
+                if high[k] > pH2
+                    pH2 := high[k]
+                    pHi := k
+
+            float pL2 = low[pHi + 1]
+            int   pLi = pHi + 1
+            for k = 1 to i_htfPB
+                if pHi + k < bar_index
+                    if low[pHi + k] < pL2
+                        pL2 := low[pHi + k]
+                        pLi := pHi + k
+
+            float poleGain = pL2 > 0 ? (pH2 / pL2 - 1) * 100 : 0.0
+            int   poleBars = pLi - pHi
+
+            if poleGain >= i_htfPole and poleBars <= i_htfPB and pLi > pHi
+                float fH2 = high[1]
+                float fL2 = low[1]
+                if pHi > 1
+                    for m = 1 to pHi - 1
+                        if high[m] > fH2
+                            fH2 := high[m]
+                        if low[m] < fL2
+                            fL2 := low[m]
+
+                float maxRet = pH2 - (i_htfRet / 100) * (pH2 - pL2)
+                bool  flagOk = fH2 <= pH2 * 1.01 and fL2 >= maxRet
+                bool  bo     = close > fH2 and volume > htfAvgVol * i_htfVol
+
+                if flagOk and bo
+                    found := true
+                    htfPoleLowBar := bar_index - pLi
+                    htfPoleLowPrice := pL2
+                    htfPoleHighBar := bar_index - pHi
+                    htfPoleHighPrice := pH2
+                    htfFlagHighPrice := fH2
+                    htfFlagLowPrice := fL2
+                    htfBaseLowAgo := pLi
+
+    detectHTF := found
+
+if detectHTF and not detectHTF[1] and timeframe.isdaily and i_displayPattern
+    line.new(x1 = htfPoleLowBar, y1 = htfPoleLowPrice, x2 = htfPoleHighBar, y2 = htfPoleHighPrice, width = 3, color = color.green)
+    line.new(x1 = htfPoleHighBar, y1 = htfFlagHighPrice, x2 = bar_index - 1, y2 = htfFlagHighPrice, width = 2, style = line.style_dashed, color = color.green)
+    line.new(x1 = htfPoleHighBar, y1 = htfFlagLowPrice, x2 = bar_index - 1, y2 = htfFlagLowPrice, width = 2, style = line.style_dashed, color = color.green)
+    label.new(x = htfPoleHighBar, y = htfPoleHighPrice, text = "HTF +" + str.tostring((htfPoleHighPrice / htfPoleLowPrice - 1) * 100, "0") + "%", style = label.style_label_down, color = color.green, textcolor = color.white, size = size.small)
+
 var line highLine = na
 var line lowLine = na
 var line dbLine1 = na
@@ -1132,18 +921,14 @@ var line handleSepLine = na
 var box  handleBox = na
 var float activePivot = 0.0
 
-// Box for Entry/Take Profit/ SL
 var box entryBox = na
 var box slBox = na
 var box tpBox = na
 
-
-// DRAWING BASE ON CHART IF DETECTION
-if baseCond and not isBase[1] and timeframe.isdaily and i_displayPattern
+if baseCond and not isBase[1] and tfDraw and i_displayPattern
     highLine := line.new(x1 = startBaseBar, y1 = array.get(startBasePrice, 0), x2 = bar_index, y2 = array.get(startBasePrice, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
     lowLine := line.new(x1 = startBaseBar, y1 = array.get(lowBasePrice, 0), x2 = bar_index, y2 = array.get(lowBasePrice, 0), width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     select = i_displayHistoricalBoxes ? false : boxOver
-    // Optional Trade Boxes
     if select
         box.delete(entryBox)
         box.delete(slBox)
@@ -1152,10 +937,8 @@ if baseCond and not isBase[1] and timeframe.isdaily and i_displayPattern
         boxOver := true
         boxOver
 
-// // // DRAWING CURRENT CUP IF DETECTED
 var array<line> linesLeft = array.new_line(na)
 var array<line> linesRight = array.new_line(na)
-// Exception with ta.lowest() series not equal to lower low (eg IOT)
 if lowerBaseBar - startBaseBar <= 0
     lowValue = low
     for i = baseCount to 0 by 1
@@ -1165,8 +948,7 @@ if lowerBaseBar - startBaseBar <= 0
             lowValue
 lengthLeft = lowerBaseBar - startBaseBar
 lengthRight = bar_index - lowerBaseBar
-if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDoubleBottom[1] and barstate.islast
-    // Draw Current Cup
+if detectCup and isBase and tfDraw and i_displayPattern and not isDoubleBottom[1] and barstate.islast
     if array.size(linesRight) > lengthRight - 1
         for i = 0 to lengthRight - 1 by 1
             line.delete(array.get(linesRight, i))
@@ -1175,82 +957,53 @@ if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDou
     var float y1 = na
     var int x2 = 0
     var float y2 = na
-    // Some Reference Points
     var float startUpPrice = 0
     var float bottomPrice = 0
-    // Drawing Informations
     isLeftDrawn = false
-    // Out of scope calculation
-    if array.size(lowBasePrice) > 0 // array.size(lowOfpivotHighPrices) > 0 and 
+    if array.size(lowBasePrice) > 0
         startUpPrice := lowOfBaseHigh * (1 - 0.01)
         bottomPrice := array.get(lowBasePrice, 0) * (1 - 0.01)
         bottomPrice
     endUpPrice = low[1] * (1 - 0.01)
-    // We want a curve with an exp(x) form
-    if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice // and array.size(lowOfpivotHighPrices) > 0
-        // First Part
+    if tfDraw and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
         for i = 0 to lengthLeft - 1 by 1
             float k = 1 / math.exp(0) / (startUpPrice - bottomPrice)
             x1 := bar_index[lengthLeft - 1 - (i - 1)]
             x2 := bar_index[lengthLeft - 1 - i]
             y1 := bottomPrice + 1 / math.exp(i * 6 / lengthLeft) / k
             y2 := bottomPrice + 1 / math.exp((i + 1) * 6 / lengthLeft) / k
-            // Remove spread at the bottom of the cup
             if i == lengthLeft - 1
                 y2 := bottomPrice
                 y2
-            // Magical Drawing Left Part
             cupLineLeftLive := line.new(x1 = x1 - lengthRight, y1 = y1, x2 = x2 - lengthRight, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
             array.unshift(linesLeft, cupLineLeftLive)
             isLeftDrawn := true
             isLeftDrawn
-        // Second Part
         if isLeftDrawn
-            for i = 0 to lengthRight - 1 by 1 // 1 to 6 is the sample from e^1 to e^6 for the part of the curve I've selected
+            for i = 0 to lengthRight - 1 by 1
                 float k = math.exp(6) / (endUpPrice - bottomPrice)
                 x1 := bar_index[lengthRight - 1 - (i - 1)]
                 x2 := bar_index[lengthRight - 1 - i]
                 y1 := bottomPrice + (math.exp(i * 6 / lengthRight) - 1) / k
-                // Remove spread at the bottom of the cup
                 if i == 0
                     y1 := bottomPrice
                     y1
                 y2 := bottomPrice + (math.exp((i + 1) * 6 / lengthRight) - 1) / k
-                // Magical Drawing Right Part
                 cupLineRightLive := line.new(x1 = x1, y1 = y1, x2 = x2, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 array.unshift(linesRight, cupLineRightLive)
-                // Deletes Current cup if not a cup anymore
-                // if (not isCup and array.size(linesLeft) > (lengthLeft-1))
-                //     for i = 0 to (lengthLeft-1)
-                //         line.delete(array.get(linesLeft, i))
 
-// if (not isCup and array.size(linesRight) > (lengthRight-1))
-//     for i = 0 to (lengthRight-1)
-//         line.delete(array.get(linesRight, i))
-
-
-// DRAWING DOUBLE BOTTOM ON CHART IF DETECTION
-// lowCompare = bar_index - topDBBar > 0 ? ta.lowest(low, bar_index - topDBBar) : low
 _lowCompareFull = ta.lowest(low, math.max(1, bar_index - topDBBar))
 lowCompare = bar_index - topDBBar > 0 ? _lowCompareFull : low
-if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_displayPattern
+if detectDoubleBottom and not isDoubleBottom[1] and tfDraw and i_displayPattern
     line.delete(highLine)
     line.delete(lowLine)
     bottomDBBar := array.get(pivotLowBars, 0)
-    // If Lower Low But Double Bottom Still valid (CASY)
-    //if (array.size(bottomDBPrice) > 0)   // This part is generating Error on SPX ticker due to too much candle on study
-    // if (lowCompare < array.get(bottomDBPrice, 0))
-    //     array.unshift(bottomDBPrice, lowCompare)
-    // bottomDBBar := bar_index - ta.barssince(low==lowCompare)
-    // if (low[1] == array.get(bottomDBPrice, 0))
-    //     bottomDBBar := bar_index[1]
     highLine := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bar_index, y2 = array.get(pivotHighPrices, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
     dbLine1 := line.new(x1 = array.get(pivotHighBars, 1), y1 = array.get(lowOfpivotHighPrices, 1) * (100 - 1) / 100, x2 = array.get(pivotLowBars, 1), y2 = array.get(pivotLowPrices, 1) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     dbLine2 := line.new(x1 = array.get(pivotLowBars, 1), y1 = array.get(pivotLowPrices, 1) * (100 - 1) / 100, x2 = array.get(pivotHighBars, 0), y2 = array.get(lowOfpivotHighPrices, 0) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     dbLine3 := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(lowOfpivotHighPrices, 0) * (100 - 1) / 100, x2 = bottomDBBar, y2 = array.get(bottomDBPrice, 0) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     lowLine := line.new(x1 = bottomDBBar, y1 = array.get(bottomDBPrice, 0) * (100 - 1) / 100, x2 = bar_index, y2 = low * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     select = i_displayHistoricalBoxes ? false : boxOver
-    // Optional Trade Boxes
     if select
         box.delete(entryBox)
         box.delete(slBox)
@@ -1259,9 +1012,6 @@ if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_disp
         boxOver := true
         boxOver
 
-
-// Check Bottom Break
-// Adjust Double Bottom Base
 if array.size(bottomDBPrice) > 0
     if low < array.get(bottomDBPrice, 0) and isDoubleBottom
         line.delete(highLine)
@@ -1270,11 +1020,9 @@ if array.size(bottomDBPrice) > 0
         line.delete(dbLine2)
         line.delete(dbLine3)
         isDoubleBottom := false
-        // Redraw Original base if Double Bottom disabled
         highLine := line.new(x1 = startBaseBar, y1 = array.get(startBasePrice, 0), x2 = bar_index, y2 = array.get(startBasePrice, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
         lowLine := line.new(x1 = startBaseBar, y1 = array.get(lowBasePrice, 0), x2 = bar_index, y2 = array.get(lowBasePrice, 0), width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
         lowLine
-        // Check Double Bottom base Length
 if isDoubleBottom and bar_index - topDBBar > i_dbLength
     line.delete(highLine)
     line.delete(lowLine)
@@ -1283,7 +1031,6 @@ if isDoubleBottom and bar_index - topDBBar > i_dbLength
     line.delete(dbLine3)
     isDoubleBottom := false
     isDoubleBottom
-    // Check Double Bottom Pattern Propreties
 firstPivTime = line.get_x1(dbLine1)
 thrdPivTime = line.get_x2(dbLine2)
 if isDoubleBottom and (thrdPivTime - firstPivTime) * 2 <= bar_index - thrdPivTime or thrdPivTime - firstPivTime >= (bar_index - thrdPivTime) * 2
@@ -1293,20 +1040,16 @@ if isDoubleBottom and (thrdPivTime - firstPivTime) * 2 <= bar_index - thrdPivTim
     line.delete(dbLine2)
     line.delete(dbLine3)
     isDoubleBottom := false
-    // Redraw Original base if Double Bottom disabled
     highLine := line.new(x1 = startBaseBar, y1 = array.get(startBasePrice, 0), x2 = bar_index, y2 = array.get(startBasePrice, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
     lowLine := line.new(x1 = startBaseBar, y1 = array.get(lowBasePrice, 0), x2 = bar_index, y2 = array.get(lowBasePrice, 0), width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     lowLine
 
-
-// Adjust Base Bottom
 if low < line.get_y1(lowLine) and isBase and not isDoubleBottom
     line.set_y1(lowLine, low)
     line.set_y2(lowLine, low)
     lowerBaseBar := bar_index
     if array.size(lowBasePrice) > 0
         array.unshift(lowBasePrice, low)
-        // Check Base Max Depth and Max Length
 if (low < line.get_y1(highLine) * (1 - i_baseDepth) or baseCount > i_baseLength) and isBase[1] and not isDoubleBottom[1]
     line.delete(highLine)
     line.delete(lowLine)
@@ -1317,18 +1060,16 @@ if (low < line.get_y1(highLine) * (1 - i_baseDepth) or baseCount > i_baseLength)
         handleBox := na
     isBase := false
     isBase
-    // Check Depth of base to adjust style of line (Depth above 15% = Dashed Line, defined as flat base by IBD)
 if line.get_y1(highLine) * 0.85 >= line.get_y1(lowLine) and isBase and not isDoubleBottom
     line.set_style(lowLine, line.style_dotted)
     line.set_width(lowLine, 3)
-    // While the base is still valid, we extend lines
 if high <= line.get_y1(highLine) and low >= line.get_y1(lowLine) and isBase
     line.set_x2(highLine, bar_index)
     line.set_x2(lowLine, bar_index)
     if isDoubleBottom
         line.set_y2(lowLine, low * (100 - 1) / 100)
         line.set_x2(lowLine, bar_index)
-    if handleFormingSep and timeframe.isdaily and i_displayPattern
+    if handleFormingSep and tfDraw and i_displayPattern
         if na(handleSepLine)
             handleSepLine := line.new(x1 = handlePeakBarSep, y1 = handlePeakLockedSep, x2 = bar_index, y2 = handlePeakLockedSep, width = 2, style = line.style_dotted, color = color.orange)
         else
@@ -1352,9 +1093,6 @@ if high <= line.get_y1(highLine) and low >= line.get_y1(lowLine) and isBase
             box.delete(handleBox)
             handleBox := na
 
-
-
-// Check Top Break
 bool isHandleBreakoutSep = handleBreakoutSep and not isBox and isBase
 if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHandleBreakoutSep
     isBase := false
@@ -1367,26 +1105,20 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
         isDoubleBottom := false
         isDoubleBottom
     activePivot := isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
-    // Drawing historical cups if they are cups during the break out
-    if (detectCup or handleFormingSep or isHandleBreakoutSep) and timeframe.isdaily and i_displayPattern and not isDoubleBottom[1]
-        // Draw historical fix Cups
+    if (detectCup or handleFormingSep or isHandleBreakoutSep) and tfDraw and i_displayPattern and not isDoubleBottom[1]
         line.delete(lowLine)
         var int x1 = 0
         var float y1 = na
         var int x2 = 0
         var float y2 = na
-        // Some reference points
         var float startUpPrice = 0
         var float bottomPrice = 0
-        // Drawing Informations
         isLeftDrawn = false
-        // Out of scope calculation
-        if array.size(lowBasePrice) > 0 // array.size(lowOfpivotHighPrices) > 0 and 
+        if array.size(lowBasePrice) > 0
             startUpPrice := lowOfBaseHigh * (1 - 0.01)
             bottomPrice := array.get(lowBasePrice, 0) * (1 - 0.01)
             bottomPrice
         endUpPrice = low[1] * (1 - 0.01)
-        // Exception with ta.lowest() series not equal to lower low (eg IOT)
         if lowerBaseBar - startBaseBar <= 0
             lowValue = low
             for i = baseCount - 1 to 0 by 1
@@ -1394,41 +1126,33 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
                     lowerBaseBar := bar_index[i]
                     lowValue := low[i]
                     lowValue
-        lengthLeft := lowerBaseBar - startBaseBar // := au lieu de =
+        lengthLeft := lowerBaseBar - startBaseBar
         lengthRight := bar_index - lowerBaseBar
-        // We want a curve with an exp(x) form
-        if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice // and array.size(lowOfpivotHighPrices) > 0
-            // First Part
+        if tfDraw and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
             for i = 0 to lengthLeft - 1 by 1
                 float k = 1 / math.exp(0) / (startUpPrice - bottomPrice)
                 x1 := bar_index[lengthLeft - 1 - (i - 1)]
                 x2 := bar_index[lengthLeft - 1 - i]
                 y1 := bottomPrice + 1 / math.exp(i * 6 / lengthLeft) / k
                 y2 := bottomPrice + 1 / math.exp((i + 1) * 6 / lengthLeft) / k
-                // Remove spread at the bottom of the cup
                 if i == lengthLeft - 1
                     y2 := bottomPrice
                     y2
-                // Magical Drawing Left Part
                 cupLineLeft := line.new(x1 = x1 - lengthRight, y1 = y1, x2 = x2 - lengthRight, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 isLeftDrawn := true
                 isLeftDrawn
-            // Second Part
             if isLeftDrawn
-                for i = 0 to lengthRight - 1 by 1 // 1 to 6 is the sample from e^1 to e^6 for the part of the curve I've selected
+                for i = 0 to lengthRight - 1 by 1
                     float k = math.exp(6) / (endUpPrice - bottomPrice)
                     x1 := bar_index[lengthRight - 1 - (i - 1)]
                     x2 := bar_index[lengthRight - 1 - i]
                     y1 := bottomPrice + (math.exp(i * 6 / lengthRight) - 1) / k
-                    // Remove spread at the bottom of the cup
                     if i == 0
                         y1 := bottomPrice
                         y1
                     y2 := bottomPrice + (math.exp((i + 1) * 6 / lengthRight) - 1) / k
-                    // Magical Drawing Right Part
                     cupLineRight := line.new(x1 = x1, y1 = y1, x2 = x2, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                     cupLineRight
-    // END CUP DRAWING
     if i_displayBoxes
         topBase = activePivot
         entryBox := box.new(bar_index[1], topBase * (1 + 0.05), bar_index, topBase, border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(0, 0, 255, 63))
@@ -1438,9 +1162,6 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
         boxOver := false
         boxOver
 
-
-// TRADE BOX GESTION
-// Extend Boxes while the trade runs
 if high <= activePivot * (1 + 0.25) and low >= activePivot * (1 - 0.08) and isBox
     box.set_right(entryBox, bar_index)
     box.set_right(slBox, bar_index)
@@ -1449,1312 +1170,11 @@ if high <= activePivot * (1 + 0.25) and low >= activePivot * (1 - 0.08) and isBo
     boxOver := false
     boxOver
 
-// MEMORY LIMIT GESTION (ARRAY SIZE)
 if array.size(linesLeft) > 500
     line.delete(array.pop(linesLeft))
 if array.size(linesRight) > 500
     line.delete(array.pop(linesRight))
 
-
-
-// EPS & SALES INTEGRATION
-// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// © Fred6724
-
-// === USER INPUTS ====
-// ARROWS
-i_ArrowOnGraph = input(true, title = 'Displays Arrows', inline = '1', group = 'Arrows')
-i_TextOnly = input(false, title = 'Digits Only', inline = '2', group = 'Arrows')
-i_ArrowQoq = input(false, title = 'Arrow QoQ', inline = '2', group = 'Arrows')
-i_salesOnGraph = input(false, title = 'Sales', inline = '2', group = 'Arrows')
-i_arrowSize = input.string('Small', title = 'Arrow Size', options = ['Tiny', 'Small', 'Normal', 'Large'], inline = '3', group = 'Arrows')
-i_arrowColor = input(color.rgb(0, 0, 0, 0), title = 'Arrow Colors', inline = '4', group = 'Arrows')
-i_posArrowColor = input(color.rgb(13, 7, 201, 0), title = '%Pos', inline = '4', group = 'Arrows')
-i_negArrowColor = input(color.red, title = '%Neg', inline = '4', group = 'Arrows')
-// TABLE SETTINGS
-i_tableStyle = input.string('Table', title = 'Type of Table', options = ['Table', 'HeadBand'], group = 'Table Settings', inline = '0')
-i_tableSize = input.string('Tiny', title = 'Table Size   ', options = ['Tiny', 'Small', 'Normal', 'Large'], group = 'Table Settings', inline = '5')
-i_MarketSm = input.bool(false, title = 'MarketSmith Look', group = 'Table Settings', tooltip = 'Uncheck for customization')
-i_MarketSu = input.bool(true, title = 'MarketSurge Look', group = 'Table Settings', tooltip = 'Uncheck for customization')
-i_posTable = input.string(defval = position.bottom_left, title = 'Table Position', options = [position.top_left, position.top_center, position.top_right, position.middle_left, position.middle_center, position.middle_right, position.bottom_left, position.bottom_center, position.bottom_right], group = 'Table Settings', inline = '6', tooltip = 'Available in Weekly Table Only.')
-i_frameWidth = input.int(1, title = 'Frame Width', group = 'Table Settings', options = [0, 1, 2, 3, 4, 5], inline = '0.25')
-i_frameColor = input(color.rgb(0, 0, 0), title = 'Color', group = 'Table Settings', inline = '0.25')
-i_tableBorder = input(true, title = 'Table Border', group = 'Table Settings', inline = '0.5')
-i_borderColor = input(color.rgb(0, 0, 0), title = '| Color', group = 'Table Settings', inline = '0.5')
-i_resultBackgroundColorOdd = input(color.rgb(229, 234, 243), title = 'Odd Rows', group = 'Table Settings', inline = '7')
-i_resultBackgroundColorEven = input(color.rgb(255, 255, 255), title = 'Even Rows', group = 'Table Settings', inline = '7') // Previous Color version color.rgb(192,192,192,0)
-// DIGIT SETTINGS
-i_estimates = input(true, title = 'Estimates', group = 'Digit Settings', tooltip = 'Available in Weekly Table Only.')
-i_moreData = input(false, title = 'Less Quarters', group = 'Digit Settings', inline = '1', tooltip = 'Available in Weekly Table Only.')
-i_alwaysDispP = input(true, title = 'Avoid N/A', group = 'Digit Settings', inline = '1', tooltip = 'Available in Weekly Table Only.')
-i_hash = input(false, title = 'Remove #', group = 'Digit Settings', inline = '1', tooltip = 'Available in Weekly Table Only.')
-i_compare = input(false, title = 'Show VS YoY', group = 'Digit Settings', inline = '2', tooltip = 'Available in Weekly Table Only.')
-i_YoY = input(true, title = 'YoY', group = 'Digit Settings', inline = '2', tooltip = 'Available in Weekly Table Only.')
-i_QoQ = input(false, title = 'QoQ', group = 'Digit Settings', inline = '2', tooltip = 'Available in Weekly Table Only.')
-i_surprises = input(false, title = '% Surprise', group = 'Digit Settings', inline = '3', tooltip = 'Available in Weekly Table Only.')
-i_posSurp = input(color.rgb(56, 142, 60, 0), title = '%Pos', group = 'Digit Settings', inline = '3')
-i_negSurp = input(color.rgb(255, 0, 0, 0), title = '%Neg', group = 'Digit Settings', inline = '3')
-i_grossMargin = input(false, title = 'Gross Margin', group = 'Digit Settings', inline = '4')
-i_ROE = input(false, title = 'Return On Equity', group = 'Digit Settings', inline = '4')
-i_RowAndColumnTextColor = input(color.black, title = 'Row & Column Text Color', group = 'Digit Settings')
-i_posColor2 = input(color.rgb(0, 0, 255, 0), title = '% Positive', group = 'Digit Settings', inline = '8')
-i_negColor2 = input(color.rgb(255, 0, 0, 0), title = '% Negative', group = 'Digit Settings', inline = '8')
-// Not input
-datasize = 10
-blankUnderUp = i_moreData == false ? 3 : 6 // Because there is a blank between the top of the table and the second line but Tradingview doesn't display it.
-
-// Switch Table Size
-tableSize = switch i_tableSize
-    'Normal' => size.normal
-    'Tiny' => size.tiny
-    'Small' => size.small
-    'Large' => size.large
-
-// Switch Arrow Size
-arrowSize = switch i_arrowSize
-    'Normal' => size.normal
-    'Tiny' => size.tiny
-    'Small' => size.small
-    'Large' => size.large
-
-// Old MarketSmith Look
-if i_MarketSm
-    i_frameColor := color.rgb(0, 0, 0)
-    i_tableBorder := false
-    i_resultBackgroundColorOdd := color.rgb(255, 255, 255)
-    i_resultBackgroundColorEven := color.rgb(217, 217, 217)
-    i_resultBackgroundColorEven
-
-// New MarketSurge Look
-if i_MarketSu
-    i_frameColor := color.rgb(0, 0, 0)
-    i_borderColor := color.rgb(0, 0, 0)
-    i_resultBackgroundColorOdd := color.rgb(229, 234, 243)
-    i_resultBackgroundColorEven := color.rgb(255, 255, 255)
-    i_resultBackgroundColorEven
-
-// Declare tables
-// Weekly Table
-var table epsTable = table.new(i_posTable, 15, 15, frame_color = i_frameColor, frame_width = i_frameWidth, border_width = i_tableBorder ? 1 : 0, border_color = i_borderColor)
-// Daily Table
-var table epsTableDa = table.new(position.bottom_center, 17, 4, frame_color = i_frameColor, frame_width = i_frameWidth, border_width = i_tableBorder ? 1 : 0, border_color = i_borderColor)
-
-// === FUNCTIONS AND CALCULATIONS ===.
-// Current earnings per share
-// Modified line to get (actual) and (standard) earnings with 'request.earnings'. HUGE key point here to have closer results to IBD - MarketSmith
-EPS = request.earnings(syminfo.tickerid, earnings.actual, ignore_invalid_symbol = true, lookahead = barmerge.lookahead_on)
-EPS_Standard = request.earnings(syminfo.tickerid, earnings.standardized, ignore_invalid_symbol = true, lookahead = barmerge.lookahead_on)
-EPS_Estimate = request.earnings(syminfo.tickerid, earnings.estimate, ignore_invalid_symbol = true, lookahead = barmerge.lookahead_on) // To reduce the probability of not detecting a change if EPS are the same quarters over quarters
-SALES = request.financial(syminfo.tickerid, 'TOTAL_REVENUE', 'FQ', ignore_invalid_symbol = true)
-SALES_Estimate = request.financial(syminfo.tickerid, 'SALES_ESTIMATES', 'FQ', ignore_invalid_symbol = true)
-SALES_GROWTH = request.financial(syminfo.tickerid, 'REVENUE_ONE_YEAR_GROWTH', 'FQ', ignore_invalid_symbol = true)
-grossMargin = i_grossMargin ? request.financial(syminfo.tickerid, 'GROSS_MARGIN', 'FQ', ignore_invalid_symbol = true) : na
-ROE = request.financial(syminfo.tickerid, 'RETURN_ON_EQUITY', 'FQ', ignore_invalid_symbol = true)
-//Date
-rev = request.financial(syminfo.tickerid, 'TOTAL_REVENUE', 'FQ', barmerge.gaps_on, ignore_invalid_symbol = true)
-
-
-// GET EPS NUMBERS FROM TRADINGVIEW
-// Estimates Next Earning
-futureEPS = earnings.future_eps
-futureSales = earnings.future_revenue
-futureTime = earnings.future_time
-
-// EPS & SALES
-barSince = ta.barssince(EPS != EPS[1] or EPS_Standard != EPS_Standard[1] or EPS_Estimate != EPS_Estimate[1]) // To reduce the probability of not detecting a change if EPS are the same quarters over quarters
-EPSTime = barSince == 0
-// If the number of (bars since the value of EPS, is different, from previous EPS) equals 0, we are in an EPS event. (You can do it)
-// (Better method, using the time since the last public EPS/Sales (Before we were using default 3M that was causing errors in case of non-regular period publishing))
-
-// Actual EPS
-// Use if() function to get number before the first earning event - If return na we get the first EPS value except if the line before us already done it
-firstEPS = ta.valuewhen(bar_index == 0, EPS, 0)
-actualEPS = ta.valuewhen(EPSTime, EPS, 0)
-if na(actualEPS)
-    actualEPS := firstEPS
-    actualEPS
-actualEPS1 = ta.valuewhen(EPSTime, EPS, 1) // With '1' to search the previous EPS value, etc
-if na(actualEPS1) and actualEPS != firstEPS
-    actualEPS1 := firstEPS
-    actualEPS1
-actualEPS2 = ta.valuewhen(EPSTime, EPS, 2)
-if na(actualEPS2) and actualEPS1 != firstEPS
-    actualEPS2 := firstEPS
-    actualEPS2
-actualEPS3 = ta.valuewhen(EPSTime, EPS, 3)
-if na(actualEPS3) and actualEPS2 != firstEPS
-    actualEPS3 := firstEPS
-    actualEPS3
-actualEPS4 = ta.valuewhen(EPSTime, EPS, 4)
-if na(actualEPS4) and actualEPS3 != firstEPS
-    actualEPS4 := firstEPS
-    actualEPS4
-actualEPS5 = ta.valuewhen(EPSTime, EPS, 5)
-if na(actualEPS5) and actualEPS4 != firstEPS
-    actualEPS5 := firstEPS
-    actualEPS5
-actualEPS6 = ta.valuewhen(EPSTime, EPS, 6)
-if na(actualEPS6) and actualEPS5 != firstEPS
-    actualEPS6 := firstEPS
-    actualEPS6
-actualEPS7 = ta.valuewhen(EPSTime, EPS, 7)
-if na(actualEPS7) and actualEPS6 != firstEPS
-    actualEPS7 := firstEPS
-    actualEPS7
-actualEPS8 = ta.valuewhen(EPSTime, EPS, 8)
-if na(actualEPS8) and actualEPS7 != firstEPS
-    actualEPS8 := firstEPS
-    actualEPS8
-actualEPS9 = ta.valuewhen(EPSTime, EPS, 9)
-if na(actualEPS9) and actualEPS8 != firstEPS
-    actualEPS9 := firstEPS
-    actualEPS9
-actualEPS10 = ta.valuewhen(EPSTime, EPS, 10)
-if na(actualEPS10) and actualEPS9 != firstEPS
-    actualEPS10 := firstEPS
-    actualEPS10
-actualEPS11 = ta.valuewhen(EPSTime, EPS, 11)
-if na(actualEPS11) and actualEPS10 != firstEPS
-    actualEPS11 := firstEPS
-    actualEPS11
-    // Standard EPS
-standardEPS = ta.valuewhen(EPSTime, EPS_Standard, 0)
-standardEPS1 = ta.valuewhen(EPSTime, EPS_Standard, 1)
-standardEPS2 = ta.valuewhen(EPSTime, EPS_Standard, 2)
-standardEPS3 = ta.valuewhen(EPSTime, EPS_Standard, 3)
-standardEPS4 = ta.valuewhen(EPSTime, EPS_Standard, 4)
-standardEPS5 = ta.valuewhen(EPSTime, EPS_Standard, 5)
-standardEPS6 = ta.valuewhen(EPSTime, EPS_Standard, 6)
-standardEPS7 = ta.valuewhen(EPSTime, EPS_Standard, 7)
-standardEPS8 = ta.valuewhen(EPSTime, EPS_Standard, 8)
-standardEPS9 = ta.valuewhen(EPSTime, EPS_Standard, 9)
-standardEPS10 = ta.valuewhen(EPSTime, EPS_Standard, 10)
-standardEPS11 = ta.valuewhen(EPSTime, EPS_Standard, 11)
-// MarketSmith replace missing reporter EPS by Standard EPS when Available
-if na(actualEPS)
-    actualEPS := standardEPS
-    actualEPS
-if na(actualEPS1)
-    actualEPS1 := standardEPS1
-    actualEPS1
-if na(actualEPS2)
-    actualEPS2 := standardEPS2
-    actualEPS2
-if na(actualEPS3)
-    actualEPS3 := standardEPS3
-    actualEPS3
-if na(actualEPS4)
-    actualEPS4 := standardEPS4
-    actualEPS4
-if na(actualEPS5)
-    actualEPS5 := standardEPS5
-    actualEPS5
-if na(actualEPS6)
-    actualEPS6 := standardEPS6
-    actualEPS6
-if na(actualEPS7)
-    actualEPS7 := standardEPS7
-    actualEPS7
-if na(actualEPS8)
-    actualEPS8 := standardEPS8
-    actualEPS8
-if na(actualEPS9)
-    actualEPS9 := standardEPS9
-    actualEPS9
-if na(actualEPS10)
-    actualEPS10 := standardEPS10
-    actualEPS10
-if na(actualEPS11)
-    actualEPS11 := standardEPS11
-    actualEPS11
-    // Estimate EPS
-estimateEPS = ta.valuewhen(EPSTime, EPS_Estimate, 0)
-estimateEPS1 = ta.valuewhen(EPSTime, EPS_Estimate, 1)
-estimateEPS2 = ta.valuewhen(EPSTime, EPS_Estimate, 2)
-estimateEPS3 = ta.valuewhen(EPSTime, EPS_Estimate, 3)
-estimateEPS4 = ta.valuewhen(EPSTime, EPS_Estimate, 4)
-estimateEPS5 = ta.valuewhen(EPSTime, EPS_Estimate, 5)
-estimateEPS6 = ta.valuewhen(EPSTime, EPS_Estimate, 6)
-estimateEPS7 = ta.valuewhen(EPSTime, EPS_Estimate, 7)
-// EPS Surprise
-EpsSurprise0 = (actualEPS - estimateEPS) / math.abs(estimateEPS) * 100
-EpsSurprise1 = (actualEPS1 - estimateEPS1) / math.abs(estimateEPS1) * 100
-EpsSurprise2 = (actualEPS2 - estimateEPS2) / math.abs(estimateEPS2) * 100
-EpsSurprise3 = (actualEPS3 - estimateEPS3) / math.abs(estimateEPS3) * 100
-EpsSurprise4 = (actualEPS4 - estimateEPS4) / math.abs(estimateEPS4) * 100
-EpsSurprise5 = (actualEPS5 - estimateEPS5) / math.abs(estimateEPS5) * 100
-EpsSurprise6 = (actualEPS6 - estimateEPS6) / math.abs(estimateEPS6) * 100
-EpsSurprise7 = (actualEPS7 - estimateEPS7) / math.abs(estimateEPS7) * 100
-
-// Same with Sales 
-// Use if() function to get number before the first earning event - If return na we get the first sales value except if the line before us already done it
-firstSale = ta.valuewhen(bar_index == 0, SALES, 0)
-sales = ta.valuewhen(EPSTime, SALES, 0)
-if na(sales)
-    sales := firstSale
-    sales
-sales1 = ta.valuewhen(EPSTime, SALES, 1)
-if na(sales1) and sales != firstSale
-    sales1 := firstSale
-    sales1
-sales2 = ta.valuewhen(EPSTime, SALES, 2)
-if na(sales2) and sales1 != firstSale
-    sales2 := firstSale
-    sales2
-sales3 = ta.valuewhen(EPSTime, SALES, 3)
-if na(sales3) and sales2 != firstSale
-    sales3 := firstSale
-    sales3
-sales4 = ta.valuewhen(EPSTime, SALES, 4)
-if na(sales4) and sales3 != firstSale
-    sales4 := firstSale
-    sales4
-sales5 = ta.valuewhen(EPSTime, SALES, 5)
-if na(sales5) and sales4 != firstSale
-    sales5 := firstSale
-    sales5
-sales6 = ta.valuewhen(EPSTime, SALES, 6)
-if na(sales6) and sales5 != firstSale
-    sales6 := firstSale
-    sales6
-sales7 = ta.valuewhen(EPSTime, SALES, 7)
-if na(sales7) and sales6 != firstSale
-    sales7 := firstSale
-    sales7
-sales8 = ta.valuewhen(EPSTime, SALES, 8)
-if na(sales8) and sales7 != firstSale
-    sales8 := firstSale
-    sales8
-sales9 = ta.valuewhen(EPSTime, SALES, 9)
-if na(sales9) and sales8 != firstSale
-    sales9 := firstSale
-    sales9
-sales10 = ta.valuewhen(EPSTime, SALES, 10)
-if na(sales10) and sales9 != firstSale
-    sales10 := firstSale
-    sales10
-sales11 = ta.valuewhen(EPSTime, SALES, 11)
-if na(sales11) and sales10 != firstSale
-    sales11 := firstSale
-    sales11
-
-// Sales One Year Growth to get more Historical Data
-// We use if() condition to get one more line
-firstSaleGrowth = ta.valuewhen(bar_index == 0, SALES_GROWTH, 0)
-salesChange0 = ta.valuewhen(EPSTime, SALES_GROWTH, 0)
-if na(salesChange0)
-    salesChange0 := firstSaleGrowth
-    salesChange0
-salesChange1 = ta.valuewhen(EPSTime, SALES_GROWTH, 1)
-if na(salesChange1) and salesChange0 != firstSaleGrowth
-    salesChange1 := firstSaleGrowth
-    salesChange1
-salesChange2 = ta.valuewhen(EPSTime, SALES_GROWTH, 2)
-if na(salesChange2) and salesChange1 != firstSaleGrowth
-    salesChange2 := firstSaleGrowth
-    salesChange2
-salesChange3 = ta.valuewhen(EPSTime, SALES_GROWTH, 3)
-if na(salesChange3) and salesChange2 != firstSaleGrowth
-    salesChange3 := firstSaleGrowth
-    salesChange3
-salesChange4 = ta.valuewhen(EPSTime, SALES_GROWTH, 4)
-if na(salesChange4) and salesChange3 != firstSaleGrowth
-    salesChange4 := firstSaleGrowth
-    salesChange4
-salesChange5 = ta.valuewhen(EPSTime, SALES_GROWTH, 5)
-if na(salesChange5) and salesChange4 != firstSaleGrowth
-    salesChange5 := firstSaleGrowth
-    salesChange5
-salesChange6 = ta.valuewhen(EPSTime, SALES_GROWTH, 6)
-if na(salesChange6) and salesChange5 != firstSaleGrowth
-    salesChange6 := firstSaleGrowth
-    salesChange6
-salesChange7 = ta.valuewhen(EPSTime, SALES_GROWTH, 7)
-if na(salesChange7) and salesChange6 != firstSaleGrowth
-    salesChange7 := firstSaleGrowth
-    salesChange7
-
-// Sometimes the sales number is actualised but not the sales variation..
-if salesChange0 == salesChange1 and not(na(sales4) or sales4 == 0)
-    salesChange0 := (sales - sales4) / math.abs(sales4) * 100
-    salesChange0
-
-// Case where earning are very close, should check if the % variation is good (VRRM Mar-22 - Dec-21) -> 70 90 and not 90 90
-salesChangeF = (futureSales - sales3) / math.abs(sales3) * 100
-if salesChange1 == salesChange0 and sales1 == sales
-    salesChange1 := (sales1 - sales5) / math.abs(sales5) * 100
-    salesChange1
-if salesChange2 == salesChange1 and sales2 == sales1
-    salesChange2 := (sales2 - sales6) / math.abs(sales6) * 100
-    salesChange2
-if salesChange3 == salesChange2 and sales3 == sales2
-    salesChange3 := (sales3 - sales7) / math.abs(sales7) * 100
-    salesChange3
-if salesChange4 == salesChange3 and sales4 == sales3
-    salesChange4 := (sales4 - sales8) / math.abs(sales8) * 100
-    salesChange4
-if salesChange5 == salesChange4 and sales5 == sales4
-    salesChange5 := (sales5 - sales9) / math.abs(sales9) * 100
-    salesChange5
-if salesChange6 == salesChange5 and sales6 == sales5
-    salesChange6 := (sales6 - sales10) / math.abs(sales10) * 100
-    salesChange6
-if salesChange7 == salesChange6 and sales7 == sales6
-    salesChange7 := (sales7 - sales11) / math.abs(sales11) * 100
-    salesChange7
-
-// Sales Estimaate
-salesEstimate = ta.valuewhen(EPSTime, SALES_Estimate, 0)
-salesEstimate1 = ta.valuewhen(EPSTime, SALES_Estimate, 1)
-salesEstimate2 = ta.valuewhen(EPSTime, SALES_Estimate, 2)
-salesEstimate3 = ta.valuewhen(EPSTime, SALES_Estimate, 3)
-salesEstimate4 = ta.valuewhen(EPSTime, SALES_Estimate, 4)
-salesEstimate5 = ta.valuewhen(EPSTime, SALES_Estimate, 5)
-salesEstimate6 = ta.valuewhen(EPSTime, SALES_Estimate, 6)
-salesEstimate7 = ta.valuewhen(EPSTime, SALES_Estimate, 7)
-
-// Detect same sales for TradingView bug correction (Same sales than previous display)
-bool sameSales = SALES == sales1 and SALES_GROWTH == salesChange1
-bool recentEarn = ta.barssince(EPSTime) <= 6
-
-// Function to define previous quarters gross margin & roe (Less precise than EPS and Sales Data)
-f_grossMargin(i) =>
-    request.security(syminfo.tickerid, '3M', grossMargin[i])
-f_roe(i) =>
-    request.security(syminfo.tickerid, '3M', ROE[i])
-
-// Same with Gross Margin
-// Use if() function to get number before the first earning event - If return na we get the first sales value except if the line before us already done it
-firstGrossMargin = ta.valuewhen(bar_index == 0, grossMargin, 0)
-GM0 = ta.valuewhen(EPSTime, grossMargin, 0)
-if na(GM0)
-    GM0 := firstGrossMargin
-    GM0
-GM1 = ta.valuewhen(EPSTime, grossMargin, 1)
-if na(GM1) and GM0 != firstGrossMargin
-    GM1 := firstGrossMargin
-    GM1
-GM2 = ta.valuewhen(EPSTime, grossMargin, 2)
-if na(GM2) and GM1 != firstGrossMargin
-    GM2 := firstGrossMargin
-    GM2
-GM3 = ta.valuewhen(EPSTime, grossMargin, 3)
-if na(GM3) and GM2 != firstGrossMargin
-    GM3 := firstGrossMargin
-    GM3
-GM4 = ta.valuewhen(EPSTime, grossMargin, 4)
-if na(GM4) and GM3 != firstGrossMargin
-    GM4 := firstGrossMargin
-    GM4
-GM5 = ta.valuewhen(EPSTime, grossMargin, 5)
-if na(GM5) and GM4 != firstGrossMargin
-    GM5 := firstGrossMargin
-    GM5
-GM6 = ta.valuewhen(EPSTime, grossMargin, 6)
-if na(GM6) and GM5 != firstGrossMargin
-    GM6 := firstGrossMargin
-    GM6
-GM7 = ta.valuewhen(EPSTime, grossMargin, 7)
-if na(GM7) and GM6 != firstGrossMargin
-    GM7 := firstGrossMargin
-    GM7
-
-// Same with Return On Equity
-// Use if() function to get number before the first earning event - If return na we get the first sales value except if the line before us already done it
-firstReturnOnEquity = ta.valuewhen(bar_index == 0, ROE, 0)
-ROE0 = ta.valuewhen(EPSTime, ROE, 0)
-if na(ROE0)
-    ROE0 := firstReturnOnEquity
-    ROE0
-ROE1 = ta.valuewhen(EPSTime, ROE, 1)
-if na(ROE1) and ROE0 != firstReturnOnEquity
-    ROE1 := firstReturnOnEquity
-    ROE1
-ROE2 = ta.valuewhen(EPSTime, ROE, 2)
-if na(ROE2) and ROE1 != firstReturnOnEquity
-    ROE2 := firstReturnOnEquity
-    ROE2
-ROE3 = ta.valuewhen(EPSTime, ROE, 3)
-if na(ROE3) and ROE2 != firstReturnOnEquity
-    ROE3 := firstReturnOnEquity
-    ROE3
-ROE4 = ta.valuewhen(EPSTime, ROE, 4)
-if na(ROE4) and ROE3 != firstReturnOnEquity
-    ROE4 := firstReturnOnEquity
-    ROE4
-ROE5 = ta.valuewhen(EPSTime, ROE, 5)
-if na(ROE5) and ROE4 != firstReturnOnEquity
-    ROE5 := firstReturnOnEquity
-    ROE5
-ROE6 = ta.valuewhen(EPSTime, ROE, 6)
-if na(ROE6) and ROE5 != firstReturnOnEquity
-    ROE6 := firstReturnOnEquity
-    ROE6
-ROE7 = ta.valuewhen(EPSTime, ROE, 7)
-if na(ROE7) and ROE6 != firstReturnOnEquity
-    ROE7 := firstReturnOnEquity
-    ROE7
-
-
-// Calculation using IBD/MarketSmith principle : current quarter EPS vs the same quartar's EPS of previous year. (YoY) 
-EpsChangeF = actualEPS3 < 0 ? na : (futureEPS - actualEPS3) / math.abs(actualEPS3) * 100 // No N/A results for estimates on MarketSurge
-EpsChange0 = actualEPS < 0 ? na : actualEPS4 < 0 ? na : (EPS - actualEPS4) / math.abs(actualEPS4) * 100
-EpsChange1 = actualEPS1 < 0 ? na : actualEPS5 < 0 ? na : (actualEPS1 - actualEPS5) / math.abs(actualEPS5) * 100
-EpsChange2 = actualEPS2 < 0 ? na : actualEPS6 < 0 ? na : (actualEPS2 - actualEPS6) / math.abs(actualEPS6) * 100
-EpsChange3 = actualEPS3 < 0 ? na : actualEPS7 < 0 ? na : (actualEPS3 - actualEPS7) / math.abs(actualEPS7) * 100
-EpsChange4 = actualEPS4 < 0 ? na : actualEPS8 < 0 ? na : (actualEPS4 - actualEPS8) / math.abs(actualEPS8) * 100
-EpsChange5 = actualEPS5 < 0 ? na : actualEPS9 < 0 ? na : (actualEPS5 - actualEPS9) / math.abs(actualEPS9) * 100
-EpsChange6 = actualEPS6 < 0 ? na : actualEPS10 < 0 ? na : (actualEPS6 - actualEPS10) / math.abs(actualEPS10) * 100
-EpsChange7 = actualEPS7 < 0 ? na : actualEPS11 < 0 ? na : (actualEPS7 - actualEPS11) / math.abs(actualEPS11) * 100
-
-
-// We use another variable to recognize when the calculation has been done with a previous negative EPS (To display '#')                                                                                  // added this condition because 0.98 vs -0.16 = #712/713% not 999% APA
-EpsChangeHashF = futureEPS < 0 ? na : actualEPS3 >= 0 ? na : (futureEPS - actualEPS3) / math.abs(actualEPS3) * 100 // No N/A results for estimates on MarketSurge
-EpsChangeHash0 = actualEPS < 0 ? na : actualEPS4 >= 0 ? na : (EPS - actualEPS4) / math.abs(actualEPS4) * 100
-EpsChangeHash1 = actualEPS1 < 0 ? na : actualEPS5 >= 0 ? na : (actualEPS1 - actualEPS5) / math.abs(actualEPS5) * 100
-EpsChangeHash2 = actualEPS2 < 0 ? na : actualEPS6 >= 0 ? na : (actualEPS2 - actualEPS6) / math.abs(actualEPS6) * 100
-EpsChangeHash3 = actualEPS3 < 0 ? na : actualEPS7 >= 0 ? na : (actualEPS3 - actualEPS7) / math.abs(actualEPS7) * 100
-EpsChangeHash4 = actualEPS4 < 0 ? na : actualEPS8 >= 0 ? na : (actualEPS4 - actualEPS8) / math.abs(actualEPS8) * 100
-EpsChangeHash5 = actualEPS5 < 0 ? na : actualEPS9 >= 0 ? na : (actualEPS5 - actualEPS9) / math.abs(actualEPS9) * 100
-EpsChangeHash6 = actualEPS6 < 0 ? na : actualEPS10 >= 0 ? na : (actualEPS6 - actualEPS10) / math.abs(actualEPS10) * 100
-EpsChangeHash7 = actualEPS7 < 0 ? na : actualEPS11 >= 0 ? na : (actualEPS7 - actualEPS11) / math.abs(actualEPS11) * 100
-
-// Add the possibility to remove the # that indicates the calculation is made on a previous negative EPS report
-if i_hash
-    EpsChangeF := (futureEPS - actualEPS3) / math.abs(actualEPS3) * 100
-    EpsChange0 := actualEPS < 0 ? na : (EPS - actualEPS4) / math.abs(actualEPS4) * 100
-    EpsChange1 := actualEPS1 < 0 ? na : (actualEPS1 - actualEPS5) / math.abs(actualEPS5) * 100
-    EpsChange2 := actualEPS2 < 0 ? na : (actualEPS2 - actualEPS6) / math.abs(actualEPS6) * 100
-    EpsChange3 := actualEPS3 < 0 ? na : (actualEPS3 - actualEPS7) / math.abs(actualEPS7) * 100
-    EpsChange4 := actualEPS4 < 0 ? na : (actualEPS4 - actualEPS8) / math.abs(actualEPS8) * 100
-    EpsChange5 := actualEPS5 < 0 ? na : (actualEPS5 - actualEPS9) / math.abs(actualEPS9) * 100
-    EpsChange6 := actualEPS6 < 0 ? na : (actualEPS6 - actualEPS10) / math.abs(actualEPS10) * 100
-    EpsChange7 := actualEPS7 < 0 ? na : (actualEPS7 - actualEPS11) / math.abs(actualEPS11) * 100
-    EpsChangeHashF := na
-    EpsChangeHash0 := na
-    EpsChangeHash1 := na
-    EpsChangeHash2 := na
-    EpsChangeHash3 := na
-    EpsChangeHash4 := na
-    EpsChangeHash5 := na
-    EpsChangeHash6 := na
-    EpsChangeHash7 := na
-    EpsChangeHash7
-
-// Due to comments I add a possibility to display the % variation even if the company is not profitable
-if i_alwaysDispP
-    EpsChangeF := (futureEPS - actualEPS3) / math.abs(actualEPS3) * 100
-    EpsChange0 := (actualEPS - actualEPS4) / math.abs(actualEPS4) * 100
-    EpsChange1 := (actualEPS1 - actualEPS5) / math.abs(actualEPS5) * 100
-    EpsChange2 := (actualEPS2 - actualEPS6) / math.abs(actualEPS6) * 100
-    EpsChange3 := (actualEPS3 - actualEPS7) / math.abs(actualEPS7) * 100
-    EpsChange4 := (actualEPS4 - actualEPS8) / math.abs(actualEPS8) * 100
-    EpsChange5 := (actualEPS5 - actualEPS9) / math.abs(actualEPS9) * 100
-    EpsChange6 := (actualEPS6 - actualEPS10) / math.abs(actualEPS10) * 100
-    EpsChange7 := (actualEPS7 - actualEPS11) / math.abs(actualEPS11) * 100
-    EpsChange7
-
-// EPS QoQ (To prevent me from harassment in the comments :-) ... )
-EpsChangeQoQF = (futureEPS - actualEPS) / math.abs(actualEPS) * 100
-EpsChangeQoQ0 = (actualEPS - actualEPS1) / math.abs(actualEPS1) * 100
-EpsChangeQoQ1 = (actualEPS1 - actualEPS2) / math.abs(actualEPS2) * 100
-EpsChangeQoQ2 = (actualEPS2 - actualEPS3) / math.abs(actualEPS3) * 100
-EpsChangeQoQ3 = (actualEPS3 - actualEPS4) / math.abs(actualEPS4) * 100
-EpsChangeQoQ4 = (actualEPS4 - actualEPS5) / math.abs(actualEPS5) * 100
-EpsChangeQoQ5 = (actualEPS5 - actualEPS6) / math.abs(actualEPS6) * 100
-EpsChangeQoQ6 = (actualEPS6 - actualEPS7) / math.abs(actualEPS7) * 100
-EpsChangeQoQ7 = (actualEPS7 - actualEPS8) / math.abs(actualEPS8) * 100
-
-// Sales Surprise
-SalesSurprise0 = (sales - salesEstimate) / math.abs(salesEstimate) * 100
-SalesSurprise1 = (sales1 - salesEstimate1) / math.abs(salesEstimate1) * 100
-SalesSurprise2 = (sales2 - salesEstimate2) / math.abs(salesEstimate2) * 100
-SalesSurprise3 = (sales3 - salesEstimate3) / math.abs(salesEstimate3) * 100
-SalesSurprise4 = (sales4 - salesEstimate4) / math.abs(salesEstimate4) * 100
-SalesSurprise5 = (sales5 - salesEstimate5) / math.abs(salesEstimate5) * 100
-SalesSurprise6 = (sales6 - salesEstimate6) / math.abs(salesEstimate6) * 100
-SalesSurprise7 = (sales7 - salesEstimate7) / math.abs(salesEstimate7) * 100
-
-// Sales QoQ
-salesChangeQoQF = (futureSales - sales) / math.abs(sales) * 100
-salesChangeQoQ0 = (sales - sales1) / math.abs(sales1) * 100
-salesChangeQoQ1 = (sales1 - sales2) / math.abs(sales2) * 100
-salesChangeQoQ2 = (sales2 - sales3) / math.abs(sales3) * 100
-salesChangeQoQ3 = (sales3 - sales4) / math.abs(sales4) * 100
-salesChangeQoQ4 = (sales4 - sales5) / math.abs(sales5) * 100
-salesChangeQoQ5 = (sales5 - sales6) / math.abs(sales6) * 100
-salesChangeQoQ6 = (sales6 - sales7) / math.abs(sales7) * 100
-salesChangeQoQ7 = (sales7 - sales8) / math.abs(sales8) * 100
-
-
-//Adapting Format of Sales 98 000 000 to 98,0 M 
-futureS = futureSales / 1000000
-Sales0M = sales / 1000000
-Sales1M = sales1 / 1000000
-Sales2M = sales2 / 1000000
-Sales3M = sales3 / 1000000
-Sales4M = sales4 / 1000000
-Sales5M = sales5 / 1000000
-Sales6M = sales6 / 1000000
-Sales7M = sales7 / 1000000
-Sales8M = sales8 / 1000000
-Sales9M = sales9 / 1000000
-Sales10M = sales10 / 1000000
-Sales11M = sales11 / 1000000
-
-// If sales > 1000M we want it to be display in $Bil
-if sales >= 10000000000
-    futureS := futureSales / 1000000000
-    Sales0M := sales / 1000000000
-    Sales1M := sales1 / 1000000000
-    Sales2M := sales2 / 1000000000
-    Sales3M := sales3 / 1000000000
-    Sales4M := sales4 / 1000000000
-    Sales5M := sales5 / 1000000000
-    Sales6M := sales6 / 1000000000
-    Sales7M := sales7 / 1000000000
-    Sales8M := sales8 / 1000000000
-    Sales9M := sales9 / 1000000000
-    Sales10M := sales10 / 1000000000
-    Sales11M := sales11 / 1000000000
-    Sales11M
-
-
-// === TABLE FUNCTIONS === (Used for cells completion)
-// Each function changes the display format in the cells
-f_fillCell(_table, _column, _row, _value) =>
-    _c_color = i_posColor2
-    _transp = 0
-    _cellText = str.tostring(_value, '0.00')
-    if _cellText == 'NaN'
-        _cellText := 'N/A'
-        _cellText
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-// To have one digit after coma for sales    
-f_fillCell2(_table, _column, _row, _value) =>
-    _c_color = i_posColor2
-    _transp = 0
-    _cellText = str.tostring(_value, '0.0')
-    if _cellText == 'NaN'
-        _cellText := 'N/A'
-        _cellText
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-// For Sales comparison    
-f_fillCell2SALES(_table, _column, _row, _value, _value1) =>
-    _c_color = i_posColor2
-    _transp = 0
-    _cellText1 = str.tostring(_value, '0.0')
-    _cellText2 = str.tostring(_value1, '0.0')
-    if _cellText1 == 'NaN'
-        _cellText1 := 'N/A'
-        _cellText1
-    if _cellText2 == 'NaN'
-        _cellText2 := 'N/A'
-        _cellText2
-    _cellText = _cellText1 + ' vs ' + _cellText2
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-// EPS comparison (Only used to compare EPS for calculation with a 'if' further)
-f_fillCellEPS(_table, _column, _row, _value, _value1) =>
-    _c_color = i_posColor2
-    _transp = 0
-    _cellText1 = str.tostring(_value, '0.00')
-    _cellText2 = str.tostring(_value1, '0.00')
-    if _cellText1 == 'NaN'
-        _cellText1 := 'N/A'
-        _cellText1
-    if _cellText2 == 'NaN'
-        _cellText2 := 'N/A'
-        _cellText2
-    _cellText = _cellText1 + ' vs ' + _cellText2
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-f_fillCellComp(_table, _column, _row, _value) =>
-    _c_color = _value >= 0 ? i_posColor2 : i_negColor2
-    _transp = 0
-    // Recent modification made that I need to put the IBD/MarketSmith limitaton of +999% here
-    _cellText = _value > 999 ? '+999%' : _value < -999 ? '-999%' : _value > 0 ? '+' + str.tostring(_value, '0') + '%' : str.tostring(_value, '0') + '%'
-    if _cellText == 'NaN%'
-        _cellText := 'N/A'
-        _cellText
-    if _cellText == '+0%'
-        _cellText := '0%'
-        _cellText
-    if _value == EpsChangeHashF
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash0
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash1
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash2
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash3
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash4
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash5
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash6
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    if _value == EpsChangeHash7
-        _cellText := _value > 999 ? '#+999%' : _value < -999 ? '#-999%' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '%' : '#' + str.tostring(_value, '0') + '%'
-        _cellText
-    // Color for even or odd row
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = _cellText == '0%' or _cellText == 'N/A' ? i_RowAndColumnTextColor : _c_color, text_size = tableSize)
-
-// FOR %SURPRISES
-f_fillCellCompSurp(_table, _column, _row, _value) =>
-    _c_color = _value >= 0 ? i_posSurp : i_negSurp
-    _transp = 0
-    // Recent modification made that I need to put the IBD/MarketSmith limitaton of +999% here
-    _cellText = _value > 999 ? '+999%' : _value < -999 ? '-999%' : _value > 0 ? '+' + str.tostring(_value, '0') + '%' : str.tostring(_value, '0') + '%'
-    if _cellText == 'NaN%'
-        _cellText := 'N/A'
-        _cellText
-    if _cellText == '+0%'
-        _cellText := '0%'
-        _cellText
-    if _row == 11
-        _cellText := '-'
-        _cellText
-    // Color for even or odd row
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = _cellText == '0%' or _cellText == 'N/A' ? i_RowAndColumnTextColor : _c_color, text_size = tableSize)
-
-
-//For QoQ EPS%
-f_fillCellComp2(_table, _column, _row, _value) =>
-    _c_color = _value >= 0 ? i_posColor2 : i_negColor2
-    _transp = 0
-    // Recent modification made that I need to put the IBD/MarketSmith limitaton of +999% here
-    _cellText = _value > 999 ? '+999%' : _value < -999 ? '-999%' : _value > 0 ? '+' + str.tostring(_value, '0') + '%' : str.tostring(_value, '0') + '%'
-    if _cellText == 'NaN%'
-        _cellText := 'N/A'
-        _cellText
-    // Color for even or odd row
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = _cellText == 'N/A' ? i_RowAndColumnTextColor : _c_color, text_size = tableSize)
-
-// Function for Date
-f_array(arrayId, val) =>
-    array.unshift(arrayId, val) // append vale to an array
-    array.pop(arrayId)
-
-ftdate(_table, _column, _row, _value) =>
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(table_id = _table, column = _column, row = _row, text = _value, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    // For Date
-var date = array.new_int(datasize)
-if bool(rev)
-    f_array(date, time)
-
-
-// For Daily Table
-f_fillCellDa(_table, _column, _row, _value) =>
-    _c_color = i_posColor2
-    _transp = 0
-    _cellText = str.tostring(_value, '0.00') + ' |'
-    if _cellText == 'NaN'
-        _cellText := 'N/A |'
-        _cellText
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-// To have one digit after coma for sales    
-f_fillCell2Da(_table, _column, _row, _value) =>
-    _c_color = i_posColor2
-    _transp = 0
-    _cellText = str.tostring(_value, '0.0') + ' |'
-    if _cellText == 'NaN |'
-        _cellText := 'N/A |'
-        _cellText
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-f_fillCellCompDa(_table, _column, _row, _value) =>
-    _c_color = _value >= 0 ? i_posColor2 : i_negColor2
-    _transp = 0
-    // Recent modification made that I need to put the IBD/MarketSmith limitaton of +999% here
-    _cellText = _value > 999 ? '+999% |' : _value < -999 ? '-999% |' : _value > 0 ? '+' + str.tostring(_value, '0') + '% |' : str.tostring(_value, '0') + '% |'
-    if _cellText == 'NaN% |'
-        _cellText := 'N/A |'
-        _cellText
-    if _cellText == '+0% |'
-        _cellText := '0% |'
-        _cellText
-    if _value == EpsChangeHash0
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash1
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash2
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash3
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash4
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash5
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash6
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    if _value == EpsChangeHash7
-        _cellText := _value > 999 ? '#+999% |' : _value < -999 ? '#-999% |' : _value > 0 ? '#' + '+' + str.tostring(_value, '0') + '% |' : '#' + str.tostring(_value, '0') + '% |'
-        _cellText
-    // Color for even or odd row
-    myColor = _row == 10 or _row == 8 or _row == 6 or _row == 4 ? i_resultBackgroundColorOdd : i_resultBackgroundColorEven
-    if i_tableStyle == 'HeadBand'
-        myColor := i_resultBackgroundColorOdd
-        myColor
-    table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = _cellText == '0% |' or _cellText == 'N/A |' ? i_RowAndColumnTextColor : _c_color, text_size = tableSize)
-
-
-
-// Function used to master the fill of cells - Weekly Table
-condRepeatSameValueAtLastLine = actualEPS == actualEPS1 and standardEPS == standardEPS1 and EPS_Estimate == EPS_Estimate[1] // here I use 'and' instead of 'or' because we want to avoid the display bug of TradingView when the 2 last lines repeat themselves
-if barstate.islast and i_tableStyle == 'Table'
-    table.set_frame_color(epsTableDa, color.rgb(0, 0, 0, 100))
-    table.set_border_color(epsTableDa, color.rgb(0, 0, 0, 100))
-    // EPS DISPLAY
-    if i_compare == true
-        if i_estimates
-            f_fillCellEPS(epsTable, 1, 11, futureEPS, actualEPS3)
-        f_fillCellEPS(epsTable, 1, 10, condRepeatSameValueAtLastLine ? na : EPS, condRepeatSameValueAtLastLine ? na : actualEPS4)
-        f_fillCellEPS(epsTable, 1, 9, actualEPS1, actualEPS5)
-        f_fillCellEPS(epsTable, 1, 8, actualEPS2, actualEPS6)
-        f_fillCellEPS(epsTable, 1, 7, actualEPS3, actualEPS7)
-        f_fillCellEPS(epsTable, 1, 6, actualEPS4, actualEPS8)
-        if i_moreData == false
-            f_fillCellEPS(epsTable, 1, 5, actualEPS5, actualEPS9)
-            f_fillCellEPS(epsTable, 1, 4, actualEPS6, actualEPS10)
-            f_fillCellEPS(epsTable, 1, 3, actualEPS7, actualEPS11)
-    if i_compare == false
-        if i_estimates
-            f_fillCell(epsTable, 1, 11, futureEPS)
-        f_fillCell(epsTable, 1, 10, condRepeatSameValueAtLastLine ? na : actualEPS)
-        f_fillCell(epsTable, 1, 9, actualEPS1)
-        f_fillCell(epsTable, 1, 8, actualEPS2)
-        f_fillCell(epsTable, 1, 7, actualEPS3)
-        f_fillCell(epsTable, 1, 6, actualEPS4)
-        if i_moreData == false
-            f_fillCell(epsTable, 1, 5, actualEPS5)
-            f_fillCell(epsTable, 1, 4, actualEPS6)
-            f_fillCell(epsTable, 1, 3, actualEPS7)
-    // % CHANGE EPS
-    if i_YoY
-        if i_moreData == false
-            f_fillCellComp(epsTable, 2, 3, i_alwaysDispP ? EpsChange7 : na(EpsChange7) ? EpsChangeHash7 : EpsChange7)
-            f_fillCellComp(epsTable, 2, 4, i_alwaysDispP ? EpsChange6 : na(EpsChange6) ? EpsChangeHash6 : EpsChange6)
-            f_fillCellComp(epsTable, 2, 5, i_alwaysDispP ? EpsChange5 : na(EpsChange5) ? EpsChangeHash5 : EpsChange5)
-        f_fillCellComp(epsTable, 2, 6, i_alwaysDispP ? EpsChange4 : na(EpsChange4) ? EpsChangeHash4 : EpsChange4)
-        f_fillCellComp(epsTable, 2, 7, i_alwaysDispP ? EpsChange3 : na(EpsChange3) ? EpsChangeHash3 : EpsChange3)
-        f_fillCellComp(epsTable, 2, 8, i_alwaysDispP ? EpsChange2 : na(EpsChange2) ? EpsChangeHash2 : EpsChange2)
-        f_fillCellComp(epsTable, 2, 9, i_alwaysDispP ? EpsChange1 : na(EpsChange1) ? EpsChangeHash1 : EpsChange1)
-        f_fillCellComp(epsTable, 2, 10, condRepeatSameValueAtLastLine ? na : i_alwaysDispP ? EpsChange0 : na(EpsChange0) ? EpsChangeHash0 : EpsChange0)
-        if i_estimates
-            f_fillCellComp(epsTable, 2, 11, na(EpsChangeF) ? EpsChangeHashF : EpsChangeF)
-    // % CHANGE EPS QoQ
-    if i_QoQ == true
-        if i_moreData == false
-            f_fillCellComp2(epsTable, 3, 3, EpsChangeQoQ7)
-            f_fillCellComp2(epsTable, 3, 4, EpsChangeQoQ6)
-            f_fillCellComp2(epsTable, 3, 5, EpsChangeQoQ5)
-        f_fillCellComp2(epsTable, 3, 6, EpsChangeQoQ4)
-        f_fillCellComp2(epsTable, 3, 7, EpsChangeQoQ3)
-        f_fillCellComp2(epsTable, 3, 8, EpsChangeQoQ2)
-        f_fillCellComp2(epsTable, 3, 9, EpsChangeQoQ1)
-        f_fillCellComp2(epsTable, 3, 10, EpsChangeQoQ0)
-        if i_estimates
-            f_fillCellComp2(epsTable, 3, 11, EpsChangeQoQF)
-    // %SURPRISE EPS
-    if i_surprises
-        if i_moreData == false
-            f_fillCellCompSurp(epsTable, 4, 3, EpsSurprise7)
-            f_fillCellCompSurp(epsTable, 4, 4, EpsSurprise6)
-            f_fillCellCompSurp(epsTable, 4, 5, EpsSurprise5)
-        f_fillCellCompSurp(epsTable, 4, 6, EpsSurprise4)
-        f_fillCellCompSurp(epsTable, 4, 7, EpsSurprise3)
-        f_fillCellCompSurp(epsTable, 4, 8, EpsSurprise2)
-        f_fillCellCompSurp(epsTable, 4, 9, EpsSurprise1)
-        f_fillCellCompSurp(epsTable, 4, 10, EpsSurprise0)
-        if i_estimates
-            f_fillCellCompSurp(epsTable, 4, 11, 0)
-
-
-    //SALES DISPLAY
-    if i_compare == true
-        if i_estimates
-            f_fillCell2SALES(epsTable, 5, 11, futureS, Sales3M)
-        f_fillCell2SALES(epsTable, 5, 10, condRepeatSameValueAtLastLine ? na : recentEarn and sameSales ? na : Sales0M, condRepeatSameValueAtLastLine ? na : Sales4M)
-        f_fillCell2SALES(epsTable, 5, 9, Sales1M, Sales5M)
-        f_fillCell2SALES(epsTable, 5, 8, Sales2M, Sales6M)
-        f_fillCell2SALES(epsTable, 5, 7, Sales3M, Sales7M)
-        f_fillCell2SALES(epsTable, 5, 6, Sales4M, Sales8M)
-        if i_moreData == false
-            f_fillCell2SALES(epsTable, 5, 5, Sales5M, Sales9M)
-            f_fillCell2SALES(epsTable, 5, 4, Sales6M, Sales10M)
-            f_fillCell2SALES(epsTable, 5, 3, Sales7M, Sales11M)
-    // SALES Normal
-    if i_compare == false
-        if i_estimates
-            f_fillCell2(epsTable, 5, 11, futureS)
-        f_fillCell2(epsTable, 5, 10, condRepeatSameValueAtLastLine ? na : recentEarn and sameSales ? na : Sales0M)
-        f_fillCell2(epsTable, 5, 9, Sales1M)
-        f_fillCell2(epsTable, 5, 8, Sales2M)
-        f_fillCell2(epsTable, 5, 7, Sales3M)
-        f_fillCell2(epsTable, 5, 6, Sales4M)
-        if i_moreData == false
-            f_fillCell2(epsTable, 5, 5, Sales5M)
-            f_fillCell2(epsTable, 5, 4, Sales6M)
-            f_fillCell2(epsTable, 5, 3, Sales7M)
-    // % CHANGE SALES YOY
-    if i_YoY
-        if i_moreData == false
-            f_fillCellComp(epsTable, 6, 3, salesChange7)
-            f_fillCellComp(epsTable, 6, 4, salesChange6)
-            f_fillCellComp(epsTable, 6, 5, salesChange5)
-        f_fillCellComp(epsTable, 6, 6, salesChange4)
-        f_fillCellComp(epsTable, 6, 7, salesChange3)
-        f_fillCellComp(epsTable, 6, 8, salesChange2)
-        f_fillCellComp(epsTable, 6, 9, salesChange1)
-        f_fillCellComp(epsTable, 6, 10, condRepeatSameValueAtLastLine ? na : recentEarn and sameSales ? na : salesChange0)
-        if i_estimates
-            f_fillCellComp(epsTable, 6, 11, salesChangeF)
-    if i_QoQ == true
-        if i_moreData == false
-            f_fillCellComp(epsTable, 7, 3, salesChangeQoQ7)
-            f_fillCellComp(epsTable, 7, 4, salesChangeQoQ6)
-            f_fillCellComp(epsTable, 7, 5, salesChangeQoQ5)
-        f_fillCellComp(epsTable, 7, 6, salesChangeQoQ4)
-        f_fillCellComp(epsTable, 7, 7, salesChangeQoQ3)
-        f_fillCellComp(epsTable, 7, 8, salesChangeQoQ2)
-        f_fillCellComp(epsTable, 7, 9, salesChangeQoQ1)
-        f_fillCellComp(epsTable, 7, 10, condRepeatSameValueAtLastLine ? na : recentEarn and sameSales ? na : salesChangeQoQ0)
-        if i_estimates
-            f_fillCellComp(epsTable, 7, 11, salesChangeQoQF)
-    // %SURPRISE SALES
-    if i_surprises
-        if i_moreData == false
-            f_fillCellCompSurp(epsTable, 8, 3, SalesSurprise7)
-            f_fillCellCompSurp(epsTable, 8, 4, SalesSurprise6)
-            f_fillCellCompSurp(epsTable, 8, 5, SalesSurprise5)
-        f_fillCellCompSurp(epsTable, 8, 6, SalesSurprise4)
-        f_fillCellCompSurp(epsTable, 8, 7, SalesSurprise3)
-        f_fillCellCompSurp(epsTable, 8, 8, SalesSurprise2)
-        f_fillCellCompSurp(epsTable, 8, 9, SalesSurprise1)
-        f_fillCellCompSurp(epsTable, 8, 10, SalesSurprise0)
-        if i_estimates
-            f_fillCellCompSurp(epsTable, 8, 11, 0)
-    // GROSS MARGIN 
-    if i_grossMargin == true
-        if i_moreData == false
-            f_fillCellComp(epsTable, 9, 3, GM7)
-            f_fillCellComp(epsTable, 9, 4, GM6)
-            f_fillCellComp(epsTable, 9, 5, GM5)
-        f_fillCellComp(epsTable, 9, 6, GM4)
-        f_fillCellComp(epsTable, 9, 7, GM3)
-        f_fillCellComp(epsTable, 9, 8, GM2)
-        f_fillCellComp(epsTable, 9, 9, GM1)
-        f_fillCellComp(epsTable, 9, 10, GM0)
-    // ROE
-    if i_ROE == true
-        if i_moreData == false
-            f_fillCellComp(epsTable, 10, 3, ROE7)
-            f_fillCellComp(epsTable, 10, 4, ROE6)
-            f_fillCellComp(epsTable, 10, 5, ROE5)
-        f_fillCellComp(epsTable, 10, 6, ROE4)
-        f_fillCellComp(epsTable, 10, 7, ROE3)
-        f_fillCellComp(epsTable, 10, 8, ROE2)
-        f_fillCellComp(epsTable, 10, 9, ROE1)
-        f_fillCellComp(epsTable, 10, 10, ROE0)
-    // RS 3M & 6M Ratings
-    // RS 3M & 6M Ratings
-    table.cell(epsTable, 0, 12, "RS 3M",
-        bgcolor   = i_resultBackgroundColorOdd,
-        text_color = i_RowAndColumnTextColor,
-        text_size = tableSize)
-    table.cell(epsTable, 1, 12,
-        text      = isDaily and rsRating3m != -1 ? str.tostring(rsRating3m, '#0') : 'N/A',
-        bgcolor   = i_resultBackgroundColorOdd,
-        text_color = i_RowAndColumnTextColor,
-        text_size = tableSize)
-    table.cell_set_text_halign(epsTable, 1, 12, text_halign = text.align_right)
-
-    table.cell(epsTable, 0, 13, "RS 6M",
-        bgcolor   = i_resultBackgroundColorEven,
-        text_color = i_RowAndColumnTextColor,
-        text_size = tableSize)
-    table.cell(epsTable, 1, 13,
-        text      = isDaily and rsRating6m != -1 ? str.tostring(rsRating6m, '#0') : 'N/A',
-        bgcolor   = i_resultBackgroundColorEven,
-        text_color = i_RowAndColumnTextColor,
-        text_size = tableSize)
-    table.cell_set_text_halign(epsTable, 1, 13, text_halign = text.align_right)
-
-    // For Date MMM-yy
-    for i = 0 to datasize - blankUnderUp by 1
-        if barstate.islast
-            ftdate(epsTable, 0, datasize - i, str.format('{0, date, MMM-yy}', array.get(date, i)))
-    if i_estimates
-        ftdate(epsTable, 0, 11, str.format('{0, date, MMM-yy}', futureTime) + ' est')
-
-//Headings of Weekly Table
-
-    txt8 = 'Quarterly '
-    txt9 = '   EPS($)  '
-    txt6 = '   %Chg   '
-    txt10 = 'Sales($Mil)'
-    if sales >= 10000000000
-        txt10 := 'Sales($Bil)'
-        txt10
-    // txt11 = '     %Chg  '
-    txt12 = '   GM   '
-    txt13 = '  ROE  '
-    txt14 = '%Surp '
-    txtQE = ' QoQ '
-
-    // Table Heading
-    table.cell(epsTable, 0, 0, text = txt8, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTable, 1, 0, text = txt9, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_YoY
-        table.cell(epsTable, 2, 0, text = txt6, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_QoQ
-        table.cell(epsTable, 3, 0, text = txtQE, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_surprises
-        table.cell(epsTable, 4, 0, text = txt14, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTable, 5, 0, text = txt10, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_YoY
-        table.cell(epsTable, 6, 0, text = txt6, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_QoQ
-        table.cell(epsTable, 7, 0, text = txtQE, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_surprises
-        table.cell(epsTable, 8, 0, text = txt14, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_grossMargin == true
-        table.cell(epsTable, 9, 0, text = txt12, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-        if i_estimates
-            table.cell(epsTable, 9, 11, text = '-', bgcolor = i_resultBackgroundColorEven, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    if i_ROE == true
-        table.cell(epsTable, 10, 0, text = txt13, bgcolor = i_MarketSu ? color.white : i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-        if i_estimates
-            table.cell(epsTable, 10, 11, text = '-', bgcolor = i_resultBackgroundColorEven, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-
-
-// Align Text to Right For MarketSmith like design
-three = i_moreData ? 6 : 3 // Begins at 3 if 8 rows and 6 if 5 rows
-ten = i_estimates ? 11 : 10
-// Don't Aligne First Column anymore
-// if (i_estimates)
-//     table.cell_set_text_halign(epsTable, 0, 11, text_halign = text.align_right)
-for i = three to ten by 1 // Column 0, line 1 to 9 (With two empty Lines Under heading... So 3 to 10)   
-    table.cell_set_text_halign(epsTable, 1, i, text_halign = text.align_right)
-    if i_YoY
-        table.cell_set_text_halign(epsTable, 2, i, text_halign = text.align_right)
-    if i_QoQ
-        table.cell_set_text_halign(epsTable, 3, i, text_halign = text.align_right)
-    if i_surprises
-        table.cell_set_text_halign(epsTable, 4, i, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTable, 5, i, text_halign = text.align_right)
-    if i_YoY
-        table.cell_set_text_halign(epsTable, 6, i, text_halign = text.align_right)
-    if i_QoQ
-        table.cell_set_text_halign(epsTable, 7, i, text_halign = text.align_right)
-    if i_surprises
-        table.cell_set_text_halign(epsTable, 8, i, text_halign = text.align_right)
-    if i_grossMargin == true
-        table.cell_set_text_halign(epsTable, 9, i, text_halign = text.align_right)
-    if i_ROE == true
-        table.cell_set_text_halign(epsTable, 10, i, text_halign = text.align_right)
-
-
-// Daily Table
-if barstate.islast and i_tableStyle == 'HeadBand'
-    table.set_frame_color(epsTable, color.rgb(0, 0, 0, 100))
-    table.set_border_color(epsTable, color.rgb(0, 0, 0, 100))
-    // DISPLAY of the Daily Table **************************************************************************************
-    // Date
-    if not i_tableBorder
-        ftdate(epsTableDa, 12, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 0)) + '         │')
-        ftdate(epsTableDa, 8, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 1)) + '         │')
-        ftdate(epsTableDa, 4, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 2)) + '         │')
-        ftdate(epsTableDa, 0, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 3)) + '         │')
-    else
-        ftdate(epsTableDa, 12, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 0)) + '          ')
-        ftdate(epsTableDa, 8, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 1)) + '          ')
-        ftdate(epsTableDa, 4, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 2)) + '          ')
-        ftdate(epsTableDa, 0, 0, '         Qtr Ended ' + str.format('{0, date,MMMMMMMMM dd, yyyy}', array.get(date, 3)) + '          ')
-    table.cell(epsTableDa, 16, 0, text = 'EPS Due ' + str.format('{0, date,MM/dd}', futureTime), bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    // EPS 1 
-    f_fillCell(epsTableDa, 12, 1, condRepeatSameValueAtLastLine ? na : EPS)
-    f_fillCell(epsTableDa, 8, 1, actualEPS1)
-    f_fillCell(epsTableDa, 4, 1, actualEPS2)
-    f_fillCell(epsTableDa, 0, 1, actualEPS3)
-    // vs
-    table.cell(epsTableDa, 13, 1, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 9, 1, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 5, 1, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 1, 1, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    // EPS2
-    f_fillCell(epsTableDa, 14, 1, condRepeatSameValueAtLastLine ? na : actualEPS4)
-    f_fillCell(epsTableDa, 10, 1, actualEPS5)
-    f_fillCell(epsTableDa, 6, 1, actualEPS6)
-    f_fillCell(epsTableDa, 2, 1, actualEPS7)
-    // EPS%
-    if not i_tableBorder
-        f_fillCellCompDa(epsTableDa, 15, 1, condRepeatSameValueAtLastLine ? na : i_alwaysDispP ? EpsChange0 : EpsChangeHash0 > EpsChange0 ? EpsChangeHash0 : EpsChange0)
-        f_fillCellCompDa(epsTableDa, 11, 1, i_alwaysDispP ? EpsChange1 : EpsChangeHash1 > EpsChange1 ? EpsChangeHash1 : EpsChange1)
-        f_fillCellCompDa(epsTableDa, 7, 1, i_alwaysDispP ? EpsChange2 : EpsChangeHash2 > EpsChange2 ? EpsChangeHash2 : EpsChange2)
-        f_fillCellCompDa(epsTableDa, 3, 1, i_alwaysDispP ? EpsChange3 : EpsChangeHash3 > EpsChange3 ? EpsChangeHash3 : EpsChange3)
-    else
-        f_fillCellComp(epsTableDa, 15, 1, condRepeatSameValueAtLastLine ? na : i_alwaysDispP ? EpsChange0 : EpsChangeHash0 > EpsChange0 ? EpsChangeHash0 : EpsChange0)
-        f_fillCellComp(epsTableDa, 11, 1, i_alwaysDispP ? EpsChange1 : EpsChangeHash1 > EpsChange1 ? EpsChangeHash1 : EpsChange1)
-        f_fillCellComp(epsTableDa, 7, 1, i_alwaysDispP ? EpsChange2 : EpsChangeHash2 > EpsChange2 ? EpsChangeHash2 : EpsChange2)
-        f_fillCellComp(epsTableDa, 3, 1, i_alwaysDispP ? EpsChange3 : EpsChangeHash3 > EpsChange3 ? EpsChangeHash3 : EpsChange3)
-    // Sales 1
-    f_fillCell2(epsTableDa, 12, 2, condRepeatSameValueAtLastLine ? na : (EPSTime or EPSTime[1]) and sameSales ? na : Sales0M)
-    f_fillCell2(epsTableDa, 8, 2, Sales1M)
-    f_fillCell2(epsTableDa, 4, 2, Sales2M)
-    f_fillCell2(epsTableDa, 0, 2, Sales3M)
-    // vs
-    table.cell(epsTableDa, 13, 2, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 9, 2, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 5, 2, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 1, 2, text = '           vs      ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    // Sales 2
-    f_fillCell2(epsTableDa, 14, 2, condRepeatSameValueAtLastLine ? na : Sales4M)
-    f_fillCell2(epsTableDa, 10, 2, Sales5M)
-    f_fillCell2(epsTableDa, 6, 2, Sales6M)
-    f_fillCell2(epsTableDa, 2, 2, Sales7M)
-    // Sales%
-    if not i_tableBorder
-        f_fillCellCompDa(epsTableDa, 15, 2, condRepeatSameValueAtLastLine ? na : (EPSTime or EPSTime[1]) and sameSales ? na : salesChange0)
-        f_fillCellCompDa(epsTableDa, 11, 2, salesChange1)
-        f_fillCellCompDa(epsTableDa, 7, 2, salesChange2)
-        f_fillCellCompDa(epsTableDa, 3, 2, salesChange3)
-    else
-        f_fillCellComp(epsTableDa, 15, 2, condRepeatSameValueAtLastLine ? na : (EPSTime or EPSTime[1]) and sameSales ? na : salesChange0)
-        f_fillCellComp(epsTableDa, 11, 2, salesChange1)
-        f_fillCellComp(epsTableDa, 7, 2, salesChange2)
-        f_fillCellComp(epsTableDa, 3, 2, salesChange3)
-    // ROE
-    if i_ROE == true
-        if not i_tableBorder
-            f_fillCellCompDa(epsTableDa, 15, 3, ROE0)
-            f_fillCellCompDa(epsTableDa, 11, 3, ROE1)
-            f_fillCellCompDa(epsTableDa, 7, 3, ROE2)
-            f_fillCellCompDa(epsTableDa, 3, 3, ROE3)
-        else
-            f_fillCellComp(epsTableDa, 15, 3, ROE0)
-            f_fillCellComp(epsTableDa, 11, 3, ROE1)
-            f_fillCellComp(epsTableDa, 7, 3, ROE2)
-            f_fillCellComp(epsTableDa, 3, 3, ROE3)
-    if i_grossMargin
-        if not i_tableBorder
-            f_fillCellCompDa(epsTableDa, 15, 3, GM0)
-            f_fillCellCompDa(epsTableDa, 11, 3, GM1)
-            f_fillCellCompDa(epsTableDa, 7, 3, GM2)
-            f_fillCellCompDa(epsTableDa, 3, 3, GM3)
-        else
-            f_fillCellComp(epsTableDa, 15, 3, GM0)
-            f_fillCellComp(epsTableDa, 11, 3, GM1)
-            f_fillCellComp(epsTableDa, 7, 3, GM2)
-            f_fillCellComp(epsTableDa, 3, 3, GM3)
-    // Empty cells
-    if i_grossMargin == false and i_ROE == false
-        table.cell(epsTableDa, 3, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-        table.cell(epsTableDa, 7, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-        table.cell(epsTableDa, 11, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-        table.cell(epsTableDa, 15, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 0, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 1, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 2, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 4, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 5, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 6, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 8, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 9, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 10, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 12, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 13, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 14, 3, text = '', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-
-
-    // Headings For Daily Table
-    txt20 = 'Sales ($Mil)'
-    if sales >= 10000000000
-        txt20 := 'Sales ($Bil)'
-        txt20
-
-    txt21 = ''
-    if i_ROE
-        txt21 := 'Return on Equity'
-        txt21
-    if i_grossMargin
-        txt21 := 'Gross Margin'
-        txt21
-
-    // Data for Daily Table
-    table.cell(epsTableDa, 16, 1, text = 'Earnings ($)           ', bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 16, 2, text = txt20, bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    table.cell(epsTableDa, 16, 3, text = txt21, bgcolor = i_resultBackgroundColorOdd, text_color = i_RowAndColumnTextColor, text_size = tableSize)
-    // Text Align
-    // EPS and Sales at the left
-    table.cell_set_text_halign(epsTableDa, 0, 1, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 0, 2, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 4, 1, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 4, 2, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 8, 1, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 8, 2, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 12, 1, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 12, 2, text_halign = text.align_left)
-    // % figures
-    table.cell_set_text_halign(epsTableDa, 3, 1, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 3, 2, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 3, 3, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 7, 1, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 7, 2, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 7, 3, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 11, 1, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 11, 2, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 11, 3, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 15, 1, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 15, 2, text_halign = text.align_right)
-    table.cell_set_text_halign(epsTableDa, 15, 3, text_halign = text.align_right)
-    // Earnings info
-    table.cell_set_text_halign(epsTableDa, 16, 1, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 16, 2, text_halign = text.align_left)
-    table.cell_set_text_halign(epsTableDa, 16, 3, text_halign = text.align_left)
-    // Merge Cell
-    table.merge_cells(epsTableDa, 0, 0, 3, 0)
-    table.merge_cells(epsTableDa, 4, 0, 7, 0)
-    table.merge_cells(epsTableDa, 8, 0, 11, 0)
-    table.merge_cells(epsTableDa, 12, 0, 15, 0)
-    // RS 3M / 6M row
-    table.cell(epsTableDa, 16, 4, "RS 3M",
-        bgcolor   = i_resultBackgroundColorOdd,
-        text_color = i_RowAndColumnTextColor,
-        text_size = tableSize)
-    if not i_tableBorder
-        f_fillCellCompDa(epsTableDa, 15, 4, rsRating3m)
-        f_fillCellCompDa(epsTableDa, 11, 4, rsRating3m)
-        f_fillCellCompDa(epsTableDa,  7, 4, rsRating3m)
-        f_fillCellCompDa(epsTableDa,  3, 4, rsRating3m)
-    else
-        f_fillCellComp(epsTableDa, 15, 4, rsRating3m)
-        f_fillCellComp(epsTableDa, 11, 4, rsRating3m)
-        f_fillCellComp(epsTableDa,  7, 4, rsRating3m)
-        f_fillCellComp(epsTableDa,  3, 4, rsRating3m)
-
-    table.cell(epsTableDa, 16, 5, "RS 6M",
-        bgcolor   = i_resultBackgroundColorOdd,
-        text_color = i_RowAndColumnTextColor,
-        text_size = tableSize)
-    if not i_tableBorder
-        f_fillCellCompDa(epsTableDa, 15, 5, rsRating6m)
-        f_fillCellCompDa(epsTableDa, 11, 5, rsRating6m)
-        f_fillCellCompDa(epsTableDa,  7, 5, rsRating6m)
-        f_fillCellCompDa(epsTableDa,  3, 5, rsRating6m)
-    else
-        f_fillCellComp(epsTableDa, 15, 5, rsRating6m)
-        f_fillCellComp(epsTableDa, 11, 5, rsRating6m)
-        f_fillCellComp(epsTableDa,  7, 5, rsRating6m)
-        f_fillCellComp(epsTableDa,  3, 5, rsRating6m)
-
-
-
-// Diplay Arrow on the graph with % variation EPS
-selectEPS = ta.valuewhen(EPSTime, EpsChangeHash0, 0) > ta.valuewhen(EPSTime, EpsChange0, 0) // Time for Sales annoucement
-// EPSvalue = i_ArrowQoq ? EpsChangeQoQ0 : selectEPS ? ta.valuewhen(EPSTime, EpsChangeHash0, 0) : ta.valuewhen(EPSTime, EpsChange0, 0)
-_vwHash0 = ta.valuewhen(EPSTime, EpsChangeHash0, 0)
-_vw0     = ta.valuewhen(EPSTime, EpsChange0,     0)
-EPSvalue = i_ArrowQoq ? EpsChangeQoQ0 : selectEPS ? _vwHash0 : _vw0
-salesValue = i_ArrowQoq ? salesChangeQoQ0 : ta.valuewhen(EPSTime, salesChange0, 0) // Select the value of % sales change for the date of the arrow
-//plotshape(EPSTime, style=shape.triangleup, color=color.new(color.silver, 0), location=location.bottom, size=size.tiny, text='', textcolor = color.white)
-textLayout1 = i_salesOnGraph ? 'EPS & Sales' : 'EPS'
-textLayout2 = EPSvalue > 999 ? '\n+999%' : EPSvalue > 0 ? '\n+' + str.tostring(EPSvalue, '0') + '%' : '\n' + str.tostring(EPSvalue, '0') + '%'
-if textLayout2 == '\nNaN%'
-    textLayout2 := '\nN/A'
-    textLayout2
-if textLayout2 == '\n+0%'
-    textLayout2 := '\n0%'
-    textLayout2
-textLayout4 = (EPSTime or EPSTime[1]) and sameSales and barstate.islast ? 'NaN%' : salesValue > 999 ? '+999%' : salesValue > 0 ? '+' + str.tostring(salesValue, '0') + '%' : str.tostring(salesValue, '0') + '%' // For Sales
-if textLayout4 == 'NaN%'
-    textLayout4 := 'N/A'
-    textLayout4
-if textLayout4 == '+0%'
-    textLayout4 := '0%'
-    textLayout4
-    // Here we check if we have to plot sales or not, depending on the result we display appropriate variables
-if EPSTime and i_ArrowOnGraph
-    if not i_TextOnly
-        // Arrow Alone
-        arrowLabel0 = label.new(bar_index, bar_index, xloc = xloc.bar_index, yloc = yloc.belowbar, text = textLayout1, style = label.style_triangleup, color = i_arrowColor, textcolor = i_arrowColor, size = arrowSize)
-        arrowLabel0
-    // EPS or EPS & Sales Text
-    arrowLabel1 = label.new(bar_index, bar_index, xloc = xloc.bar_index, yloc = yloc.belowbar, text = textLayout1, style = label.style_triangleup, color = color.new(color.aqua, 100), textcolor = i_arrowColor, size = arrowSize)
-    if not i_salesOnGraph
-        // EPS Variation %
-        arrowLabel2 = label.new(bar_index, low, xloc = xloc.bar_index, yloc = yloc.belowbar, text = textLayout2, style = label.style_triangleup, color = color.new(color.aqua, 100), textcolor = textLayout2 == '\nN/A' or textLayout2 == '\n0%' ? i_arrowColor : EPSvalue > -1 ? i_posArrowColor : i_negArrowColor, size = arrowSize)
-        arrowLabel2
-    if i_salesOnGraph
-        // EPS and Sales Variation %
-        arrowLabel2 = label.new(bar_index, low, xloc = xloc.bar_index, yloc = yloc.belowbar, text = textLayout2 + ' | ' + textLayout4, style = label.style_triangleup, color = color.new(color.aqua, 100), textcolor = textLayout2 == '\nN/A' or textLayout2 == '\n0%' ? i_arrowColor : EPSvalue > -1 ? i_posArrowColor : i_negArrowColor, size = arrowSize)
-        arrowLabel2
-
-///------------------  SCREENER OUTPUTS  ---------------------//
-
-// ── Breakout tracking ───────────────────────────────────────────────────────
 var float breakoutPivotPrice = na
 var int   breakoutBarIdx     = na
 
@@ -2767,73 +1187,59 @@ if baseCond and not isBase[1]
     breakoutBarIdx     := na
 
 float currentPivot = na
-if handleFormingSep
+if detectHTF
+    currentPivot := htfFlagHighPrice
+else if handleFormingSep
     currentPivot := handlePeakLockedSep
 else if not na(highLine) and (isBase or isDoubleBottom or isCup)
     currentPivot := line.get_y1(highLine)
 else if not na(breakoutPivotPrice)
     currentPivot := breakoutPivotPrice
 
-// ── Calculated values ───────────────────────────────────────────────────────
-scrPatternType       = isDoubleBottom ? 3  : handleFormingSep ? 4 : isCup ? 2 : isBase ? 1 : 0          // 0=None 1=Base 2=Cup 3=DoubleBottom 4=CupWithHandleSep
+scrPatternType       = detectHTF ? 5 : isDoubleBottom ? 3  : handleFormingSep ? 4 : isCup ? 2 : isBase ? 1 : 0
 scrDistanceToPivot   = not na(currentPivot) and currentPivot != 0 ? (close - currentPivot) / currentPivot * 100 : na
 scrBarsSinceBreakout = not na(breakoutBarIdx) ? bar_index - breakoutBarIdx : na
 
-scrAbove50sma  = close > sma50  ? 1 : 0   // 1 = above,  0 = below
+scrAbove50sma  = close > sma50  ? 1 : 0
 scrAbove200sma = close > sma200 ? 1 : 0
-scrSma50vs200  = sma50  > sma200 ? 1 : 0   // 1 = uptrend structure
+scrSma50vs200  = sma50  > sma200 ? 1 : 0
 
-scrRsRating    = totalRsRating             // 1–99, daily only
-scrEpsChange   = EpsChange0                // YoY % most recent quarter
-scrSalesChange = salesChange0              // YoY % most recent quarter
-scrEpsQoQ      = EpsChangeQoQ0            // QoQ % most recent quarter
+scrRsRating    = totalRsRating
 
-
-// ── Pattern Tooltip Helpers ─────────────────────────────────────────────────
-// ── Stage Tracking ───────────────────────────────────────────────────────────
 var int   scrStage          = 1
 var float lastBreakoutPrice = na
-var float lowestSinceBO     = na  // tracks the lowest low reached since last breakout
+var float lowestSinceBO     = na
 
-// Track lowest low since last breakout on every bar
 if not na(lastBreakoutPrice)
     if na(lowestSinceBO) or low < lowestSinceBO
         lowestSinceBO := low
 
-// Capture breakout price when a base breaks out
 if (not na(highLine) and (isBase[1] or isDoubleBottom[1]) and high > line.get_y1(highLine)) or isHandleBreakoutSep
     lastBreakoutPrice := isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
-    lowestSinceBO     := low  // reset the low tracker from this breakout bar
+    lowestSinceBO     := low
 
-// On each new base detection decide whether to increment or reset
 if baseCond and not isBase[1]
     if na(lastBreakoutPrice) or lastBreakoutPrice <= 0
-        // Very first base ever — stay at 1
         scrStage := 1
     else
-        // How far did price advance from breakout to this new base high
-        advancePct = (high[25] - lastBreakoutPrice) / lastBreakoutPrice * 100
-        // How far did price drop from breakout at its worst point since
+        advancePct = (high[pivLag] - lastBreakoutPrice) / lastBreakoutPrice * 100
         correctionPct = not na(lowestSinceBO)
                       ? (lastBreakoutPrice - lowestSinceBO) / lastBreakoutPrice * 100
                       : 0.0
         if correctionPct >= 30
-            // Deep correction since last breakout — full reset
             scrStage := 1
         else if advancePct >= 20
-            // Clean advance with no deep correction — new stage
             scrStage := math.min(scrStage + 1, 9)
-        // else sideways churn — keep current stage number
 
-scrStageLetter = (isBase or isCup or isDoubleBottom or handleFormingSep) ? "a" : ""
+scrStageLetter = (isBase or isCup or isDoubleBottom or handleFormingSep or detectHTF) ? "a" : ""
 scrStageStr    = str.tostring(scrStage) + (scrStageLetter != "" ? "(" + scrStageLetter + ")" : "")
 
-scrPatternName = isDoubleBottom ? "Double Bottom" : handleFormingSep ? "Cup with Handle (Sep)" : isCup ? "Cup" : isBase ? "Base" : ""
+scrPatternName = detectHTF ? "High Tight Flag" : isDoubleBottom ? "Double Bottom" : handleFormingSep ? "Cup with Handle (Sep)" : isCup ? "Cup" : isBase ? "Base" : ""
 scrPivotPrice  = not na(currentPivot) ? currentPivot : 0.0
 scrDepthPct    = scrPivotPrice > 0 and array.size(lowBasePrice) > 0
               ? (scrPivotPrice - array.get(lowBasePrice, 0)) / scrPivotPrice * 100
               : 0.0
-scrLengthDays  = isBase or isCup or isDoubleBottom or handleFormingSep ? bar_index - startBaseBar : 0
+scrLengthDays  = detectHTF ? htfBaseLowAgo : (isBase or isCup or isDoubleBottom or handleFormingSep) ? bar_index - startBaseBar : 0
 scrAvgPrice    = scrPivotPrice > 0 and array.size(lowBasePrice) > 0
               ? (scrPivotPrice + array.get(lowBasePrice, 0)) / 2
               : 0.0
@@ -2846,14 +1252,24 @@ scrTooltip = scrPatternName != ""
           + "Length: " + str.tostring(scrLengthDays) + " bars\n"
           + "Avg Price: " + str.tostring(scrAvgPrice, "0.00")
           : ""
-// ── Pattern Hover Label (invisible — tooltip only, pinned to pattern start) ──
 var label patternTooltipLabel = na
 
-// Create a new label each time a pattern starts — never delete old ones (historical persist)
 if baseCond and not isBase[1] and not na(highLine) and i_showPatternTooltip
     patternTooltipLabel := label.new(
       x         = startBaseBar,
-      y         = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : high[25],
+      y         = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : high[pivLag],
+      text      = "",
+      tooltip   = scrTooltip,
+      style     = label.style_circle,
+      color     = color.new(color.white, 100),
+      textcolor = color.new(color.white, 100),
+      size      = size.normal,
+      xloc      = xloc.bar_index,
+      yloc      = yloc.price)
+else if detectHTF and not detectHTF[1] and i_showPatternTooltip
+    patternTooltipLabel := label.new(
+      x         = htfPoleHighBar,
+      y         = htfPoleHighPrice,
       text      = "",
       tooltip   = scrTooltip,
       style     = label.style_circle,
@@ -2863,88 +1279,61 @@ if baseCond and not isBase[1] and not na(highLine) and i_showPatternTooltip
       xloc      = xloc.bar_index,
       yloc      = yloc.price)
 
-// Update the current active label's tooltip as pattern evolves
-if (isBase or isCup or isDoubleBottom or handleFormingSep) and not na(patternTooltipLabel) and scrTooltip != "" and i_showPatternTooltip
+if (isBase or isCup or isDoubleBottom or handleFormingSep or detectHTF) and not na(patternTooltipLabel) and scrTooltip != "" and i_showPatternTooltip
     label.set_tooltip(patternTooltipLabel, scrTooltip)
 
-// Clean up only the current label if user disables the option
 if not i_showPatternTooltip and not na(patternTooltipLabel)
     label.delete(patternTooltipLabel)
     patternTooltipLabel := na
 
-
-
-
-/////// HVWPFP
-volMultiplier = input.float(1.1, "Volume Multiplier (vs Average)", minval=1.1, step=0.1, 
+volMultiplier = input.float(1.1, "Volume Multiplier (vs Average)", minval=1.1, step=0.1,
                             tooltip="Volume must be this many times higher than average to be considered 'heavy'")
-volMaLength = input.int(20, "Volume MA Length", minval=1, 
+volMaLength = input.int(20, "Volume MA Length", minval=1,
                         tooltip="Length for calculating average volume")
-priceProgressPct = input.float(0.9, "Max Price Progress %", minval=0.0, step=0.1, 
+priceProgressPct = input.float(0.9, "Max Price Progress %", minval=0.0, step=0.1,
                                tooltip="Maximum price gain % to be considered 'no progress'")
-lookbackBars = input.int(1, "Compare to bars ago", minval=1, 
+lookbackBars = input.int(1, "Compare to bars ago", minval=1,
                          tooltip="Compare current close to close N bars ago")
 showLabels = input.bool(false, "Show HVWPFP Labels")
 showBackground = input.bool(true, "Show Background Highlight")
 
-// ========== CALCULATIONS ==========
-// Calculate average volume
 avgVolume = ta.sma(volume, volMaLength)
 
-// Check if current volume is heavy
 isHeavyVolume = volume >= (avgVolume * volMultiplier)
 
-// Calculate price progress from N bars ago
 priceNBarsAgo = close[lookbackBars]
 priceChange = close - priceNBarsAgo
 priceChangePct = (priceChange / priceNBarsAgo) * 100
 
-// Check if price progress is minimal (within threshold)
 isMinimalProgress = math.abs(priceChangePct) <= priceProgressPct
 
-// Combined condition: Heavy volume WITHOUT significant price progress
 volumeNoProgress = isHeavyVolume and isMinimalProgress and barstate.isconfirmed
 
-// Additional context: Is this happening near highs?
 highLookback = input.int(20, "Recent High Lookback", minval=5)
 recentHigh = ta.highest(high, highLookback)
-nearHigh = close >= (recentHigh * 0.95) // Within 5% of recent high
+nearHigh = close >= (recentHigh * 0.95)
 
-// Enhanced signal: Heavy volume without progress near highs (stronger warning)
 strongSignal = volumeNoProgress and nearHigh
 
-// ========== PLOTTING ==========
-// Fill candlestick with yellow color
 barcolor(volumeNoProgress ? color.yellow : na, title="Heavy Volume No Progress Candle")
 
-// Labels with details
 if showLabels and volumeNoProgress and barstate.isconfirmed
     labelText = (strongSignal ?
                 "🚨 DISTRIBUTION?\nVol: " + str.tostring(volume/1000000, "#.##") + "M\nPrice: " + str.tostring(priceChangePct, "#.##") + "%" :
                 "⚠️ Heavy Vol\nVol: " + str.tostring(volume/1000000, "#.##") + "M\nPrice: " + str.tostring(priceChangePct, "#.##") + "%")
 
     label.new(
-        bar_index, 
-        high, 
-        labelText, 
-        color=strongSignal ? color.new(color.red, 10) : color.new(color.orange, 10), 
-        textcolor=color.white, 
-        style=label.style_label_down, 
+        bar_index,
+        high,
+        labelText,
+        color=strongSignal ? color.new(color.red, 10) : color.new(color.orange, 10),
+        textcolor=color.white,
+        style=label.style_label_down,
         size=size.small
     )
 
-
-
-////price label 
-// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// © amphibiantrading
-//constants
 ISDAILY = timeframe.isdaily
 ISWEEKLY = timeframe.isweekly
-
-//inputs
-use = input.string('%', 'Meassure in ATR or %', ['%', 'ATR'])
-atrLen = input.int(10, 'ATR Length')
 
 var g1 = 'Daily Moving Averages'
 ima1 = input.int(8, "Daily Moving Average 1", inline = "a1", group = g1)
@@ -2962,12 +1351,10 @@ ima6 = input.int(40, 'Weekly Moving Average 2', inline = '3', group = g2)
 maType5 = input.string("SMA", "", options = ["EMA", "SMA"],inline = "2", group = g2)
 maType6 = input.string("SMA", "", options = ["EMA", "SMA"],inline = "3", group = g2)
 
-// create labels
 var label dashboard = na
 float volSec = na
 projVol  = float(volume)
 
-//mas
 ma1 = maType1 == "EMA" ? ta.ema(close, ima1) : maType1 == "SMA" ? ta.sma(close, ima1) : na
 ma2 = maType2 == "EMA" ? ta.ema(close, ima2) : maType2 == "SMA" ? ta.sma(close, ima2) : na
 ma3 = maType3 == "EMA" ? ta.ema(close, ima3) : maType3 == "SMA" ? ta.sma(close, ima3) : na
@@ -2985,37 +1372,28 @@ spxVol = request.security('TVOL.NY', 'D', close)
 nasVolWk = request.security('TVOL.NQ', 'W', close)
 spxVolWk = request.security('TVOL.NY', 'W', close)
 
-//atr 
-atr = ta.atr(atrLen)
-atrPer = math.abs(math.round((close - open) / atr, 2) * 100)
-
-//projected volume
 timePassed = timenow - time
 timeLeft = time_close - timenow
 
-if timeLeft > 0 //and (syminfo.ticker != 'IXIC' or syminfo.ticker != 'SPX')
+if timeLeft > 0
     volSec := (volume / timePassed)
     projVol  := (volume + (volSec * timeLeft))
 
 projVolPer = (projVol / avgVol * 100) - 100
 projVolPerWk = (projVol / avgVolWk * 100) - 100
 
-
-//calculations
-distMa1 = use == '%' ? ((close / ma1) -1 ) *100 : (close - ma1) / atr
-distMa2 = use == '%' ? ((close / ma2) -1 ) *100 : (close - ma2) / atr
-distMa3 = use == '%' ? ((close / ma3) -1 ) *100 : (close - ma3) / atr
-distMa4 = use == '%' ? ((close / ma4) -1 ) *100 : (close - ma4) / atr
-distMa5 = use == '%' ? ((close / ma5) -1 ) *100 : (close - ma5) / atr
-distMa6 = use == '%' ? ((close / ma6) -1 ) *100 : (close - ma6) / atr
+distMa1 = ((close / ma1) - 1) * 100
+distMa2 = ((close / ma2) - 1) * 100
+distMa3 = ((close / ma3) - 1) * 100
+distMa4 = ((close / ma4) - 1) * 100
+distMa5 = ((close / ma5) - 1) * 100
+distMa6 = ((close / ma6) - 1) * 100
 dollarChng = ta.change(close,1)
 perChng = dollarChng / close[1] * 100
 closeRange = (close - low) / (high - low) *100
 runRate = syminfo.ticker == 'IXIC' ? 100 * (nasVol / nasVolAvg) - 100 : syminfo.ticker == 'SPX' ? 100 * (spxVol / spxVolAvg) - 100 : projVolPer
 runRateWk = syminfo.ticker == 'IXIC' ? 100 * (nasVolWk / nasVolAvgWk) - 100 : syminfo.ticker == 'SPX' ? 100 * (spxVolWk / spxVolAvgWk) - 100 : projVolPerWk
 
-
-//titles
 dateTitle = "Date:       "
 highTitle = "High:       "
 lowTitle = "Low:        "
@@ -3023,9 +1401,9 @@ closeTitle = "Close:      "
 perChangeTitle = "% Chg:      "
 clsrngTitle = "DCR:         "
 clsrngTitleWk = 'WCR:        '
-atrPerTitle = 'ATRP:       '
+
 volTitle = "Volume:    "
-volPercTitle = 'Vol %:       '  
+volPercTitle = 'Vol %:       '
 maTitle1 = maType1 + str.tostring(ima1) +  ":     "
 maTitle2 = maType2 + str.tostring(ima2) +  ":     "
 maTitle3 = maType3 + str.tostring(ima3) +  ":     "
@@ -3034,119 +1412,36 @@ maTitle5 = maType5 + str.tostring(ima5) +  ":     "
 maTitle6 = maType6 + str.tostring(ima6) +  ":     "
 nl = '\n'
 
-// plot the labels
 if ISDAILY and (barstate.isconfirmed or barstate.islast)
     label(dashboard)
-    dashboard := label.new(bar_index, high ,color = color.new(color.white,100), tooltip = dateTitle + str.format_time(time, 'MM-dd-yy', 'UTC-7') + nl + 
-         highTitle +  str.tostring(high, "##.##") +  nl + 
-         lowTitle + str.tostring(low, "##.##") + nl + 
-         closeTitle + str.tostring(close, "##.##") + ' (' + str.tostring(dollarChng, format.mintick) + ')' + nl + 
-         perChangeTitle + str.tostring(perChng, "##.##") + nl + 
-         clsrngTitle + str.tostring(closeRange, "#") + "%" +  nl + 
-         atrPerTitle + str.tostring(atrPer) + '%'  + nl + 
-         volTitle + (syminfo.ticker == 'IXIC' ? str.tostring(nasVol, "#,###,###,###") : 
+    dashboard := label.new(bar_index, high ,color = color.new(color.white,100), tooltip = dateTitle + str.format_time(time, 'MM-dd-yy', 'UTC-7') + nl +
+         highTitle +  str.tostring(high, "##.##") +  nl +
+         lowTitle + str.tostring(low, "##.##") + nl +
+         closeTitle + str.tostring(close, "##.##") + ' (' + str.tostring(dollarChng, format.mintick) + ')' + nl +
+         perChangeTitle + str.tostring(perChng, "##.##") + nl +
+         clsrngTitle + str.tostring(closeRange, "#") + "%" +  nl +
+
+         volTitle + (syminfo.ticker == 'IXIC' ? str.tostring(nasVol, "#,###,###,###") :
          syminfo.ticker == 'SPX' ? str.tostring(spxVol, "#,###,###,###") : str.tostring(volume, "#,###,###,###")) + nl +
          volPercTitle + str.tostring(runRate, "#") + '%' +  nl +
-         maTitle1 + str.tostring(ma1, format.mintick) + ' (' + str.tostring(distMa1, "#.#") + (use == '%' ? "%" : '') + ')' + nl + 
-         maTitle2 + str.tostring(ma2, format.mintick) + ' (' + str.tostring(distMa2, "#.#") + (use == '%' ? "%" : '') + ')' + nl + 
-         maTitle3 + str.tostring(ma3, format.mintick) + ' (' + str.tostring(distMa3, "#.#") + (use == '%' ? "%" : '') + ')' + nl + 
-         maTitle4 + str.tostring(ma4, format.mintick) + ' (' + str.tostring(distMa4, "#.#") + (use == '%' ? "%" : '') + ')'
-         ) 
+         maTitle1 + str.tostring(ma1, format.mintick) + ' (' + str.tostring(distMa1, "#.#") + '%)' + nl +
+         maTitle2 + str.tostring(ma2, format.mintick) + ' (' + str.tostring(distMa2, "#.#") + '%)' + nl +
+         maTitle3 + str.tostring(ma3, format.mintick) + ' (' + str.tostring(distMa3, "#.#") + '%)' + nl +
+         maTitle4 + str.tostring(ma4, format.mintick) + ' (' + str.tostring(distMa4, "#.#") + '%)'
+         )
 
 if ISWEEKLY and (barstate.isconfirmed or barstate.islast)
     label(dashboard)
-    dashboard := label.new(bar_index, high ,color = color.new(color.white,100), tooltip = dateTitle + str.format_time(time, 'MM-dd-yy', 'UTC-7') + nl + 
-         highTitle +  str.tostring(high, "##.##") +  nl + 
-         lowTitle + str.tostring(low, "##.##") + nl + 
-         closeTitle + str.tostring(close, "##.##") + ' (' + str.tostring(dollarChng, format.mintick) + ')' + nl + 
-         perChangeTitle + str.tostring(perChng, "##.##") + nl + 
-         clsrngTitleWk + str.tostring(closeRange, "#") + "%" +  nl + 
-         volTitle + (syminfo.ticker == 'IXIC' ? str.tostring(nasVolWk, "#,###,###,###") : 
+    dashboard := label.new(bar_index, high ,color = color.new(color.white,100), tooltip = dateTitle + str.format_time(time, 'MM-dd-yy', 'UTC-7') + nl +
+         highTitle +  str.tostring(high, "##.##") +  nl +
+         lowTitle + str.tostring(low, "##.##") + nl +
+         closeTitle + str.tostring(close, "##.##") + ' (' + str.tostring(dollarChng, format.mintick) + ')' + nl +
+         perChangeTitle + str.tostring(perChng, "##.##") + nl +
+         clsrngTitleWk + str.tostring(closeRange, "#") + "%" +  nl +
+         volTitle + (syminfo.ticker == 'IXIC' ? str.tostring(nasVolWk, "#,###,###,###") :
          syminfo.ticker == 'SPX' ? str.tostring(spxVolWk, "#,###,###,###") : str.tostring(volume, "#,###,###,###")) + nl +
          volPercTitle + str.tostring(runRateWk, "#") + '%' +  nl +
-         maTitle5 + str.tostring(ma5, format.mintick) + ' (' + str.tostring(distMa5, "#.#") + (use == '%' ? "%" : '') + ')' + nl + 
-         maTitle6 + str.tostring(ma6, format.mintick) + ' (' + str.tostring(distMa6, "#.#") + (use == '%' ? "%" : '') + ')'
-         ) 
+         maTitle5 + str.tostring(ma5, format.mintick) + ' (' + str.tostring(distMa5, "#.#") + '%)' + nl +
+         maTitle6 + str.tostring(ma6, format.mintick) + ' (' + str.tostring(distMa6, "#.#") + '%)'
+         )
 
-
-
-
-
-
-
-
-// ── Plots (data window only — no line on chart, visible in Screener) ────────
-// plot(scrPatternType,       title = "SCR – Pattern (0=None 1=Base 2=Cup 3=DB)", display = display.all)
-// plot(scrDistanceToPivot,   title = "SCR – Distance % to Pivot",                display =display.all)
-// plot(scrBarsSinceBreakout, title = "SCR – Bars Since Breakout",                display = display.all)
-// plot(scrAbove50sma,        title = "SCR – Above 50 SMA (1/0)",                 display = display.data_window)
-// plot(scrAbove200sma,       title = "SCR – Above 200 SMA (1/0)",                display = display.data_window)
-// plot(scrSma50vs200,        title = "SCR – 50 SMA above 200 SMA (1/0)",         display = display.data_window)
-// plot(scrRsRating,          title = "SCR – RS Rating",                           display = display.data_window)
-// plot(scrEpsChange,         title = "SCR – EPS Change % YoY",                   display = display.data_window)
-// plot(scrSalesChange,       title = "SCR – Sales Change % YoY",                 display = display.data_window)
-// plot(scrEpsQoQ,            title = "SCR – EPS Change % QoQ",                   display = display.data_window)
-// Test for better arrow display but now the space between arrows and text isn't fix...
-// offsetArrow = ta.lowest(low*0.85, 4) // Get the Lowest low of the 4 previous bars for correct diplay even in case of earning gap up
-// if(EPSTime and i_ArrowOnGraph)
-//     label1    = label.new(bar_index, offsetArrow, xloc=xloc.bar_index, yloc=yloc.price, text='', style=label.style_triangleup, color=i_arrowColor, textcolor=i_arrowColor, size=arrowSize)
-//     label1Eps = label.new(bar_index, offsetArrow*0.85, xloc=xloc.bar_index, yloc=yloc.price, text=textLayout1, style=label.style_triangleup, color=color.new(color.aqua,100), textcolor=i_arrowColor, size=arrowSize)
-//     if(not i_salesOnGraph)
-//         label2 = label.new(bar_index, offsetArrow*0.81, xloc=xloc.bar_index, yloc=yloc.price, text=textLayout2, style=label.style_triangleup, color=color.new(color.aqua,100),              textcolor=textLayout2=='\nN/A' or textLayout2=='\n0%' ? i_arrowColor:EPSvalue > -1 ? i_posArrowColor:i_negArrowColor, size=arrowSize)
-//     if(i_salesOnGraph)
-//         label2 = label.new(bar_index, offsetArrow*0.81, xloc=xloc.bar_index, yloc=yloc.price, text=textLayout2+' | '+textLayout4, style=label.style_triangleup, color=color.new(color.aqua,100),              textcolor=textLayout2=='\nN/A' or textLayout2=='\n0%' ? i_arrowColor:EPSvalue > -1 ? i_posArrowColor:i_negArrowColor, size=arrowSize)
-
-
-// EPS Line (Not Finished) - Adds Another Scale on the graph
-// Just uncomment the part your interested in and add ", scale=scale.left)" at the end of the indicator() function
-
-// Plot EPS Value
-// plot(ta.barssince(EPS != EPS[1]) == 0 ? EPS:na, style=plot.style_line,    linewidth=2, color=color.white)
-// plot(ta.barssince(EPS != EPS[1]) == 0 ? EPS:na, style=plot.style_circles, linewidth=3, color=color.white)
-
-// Plot Sales Value
-// plot(ta.barssince(EPS != EPS[1]) == 0 ? Sales0M:na, style=plot.style_line,    linewidth=2, color=color.white)
-// plot(ta.barssince(EPS != EPS[1]) == 0 ? Sales0M:na, style=plot.style_circles, linewidth=3, color=color.white)
-
-// Plot MarketSurge Type Line in Weekly Graphs
-// Displays the representation of the YoY variation of the EPS
-// We take a default value and we add the change YoY every earning release.
-// Code to Uncomment -------------------------------->
-// var float marketSurgeEPSLine = 1
-// var float epsChangeCurve     = 0
-// var float plotEpsLineLog     = 0
-// // Yoy calculation   
-// if (EPS != EPS[1]) == false // Earning Release
-//     epsChangeCurve := (EPS-actualEPS4)/ math.abs(actualEPS4)//
-//     // if (epsChangeCurve == -1)
-//     //     epsChangeCurve := 0
-//     marketSurgeEPSLine := marketSurgeEPSLine * (1 + nz(epsChangeCurve))
-
-// plot(epsChangeCurve)
-// // ! Issue with math.log() function that reject negative value as entry
-// if (marketSurgeEPSLine <= 0)
-//     plotEpsLineLog := math.log(-marketSurgeEPSLine)
-// else
-//     plotEpsLineLog := math.log(marketSurgeEPSLine)
-// // Plot the result, values means nothing, only aspect of the curve. (Log as MarketSurge curve)
-// plot(ta.barssince(EPS != EPS[1]) == 0 ? plotEpsLineLog:na, style=plot.style_line,    linewidth=2, color=color.white)
-// plot(ta.barssince(EPS != EPS[1]) == 0 ? plotEpsLineLog:na, style=plot.style_circles, linewidth=3, color=color.white)
-// Code to Uncomment -------------------------------->
-
-
-
-// Next Maj
-// Number of Quarter beats
-// Remove Arrows but keep text on graph (Done)
-// Allow Modification of estimates color (or anyway to differentiate) (Not Done)
-// Correct # system (Done + estimate) and add it as an option and for future estimations (Done)
-// Modify date system? (Not Done)
-// Add MarketSmith Look / MarketSurge Look (Done)
-// Hide table when full of N/A Results? Find how to do it correctly (Not Done)
-// Correct the future ROE and GM to - and not 0% (Done)
-// Try to update Quarterly Faster using EPS or candle to detecte change (Not Working)
-
-// Daily Pivot, Add Option to make them appear on weekly and monthly
-// Ants Indicator
-// Pomper 3W Tight Close if possible
-// Modify EPS Table integrated to be a MarketSurge Like table (DONE)

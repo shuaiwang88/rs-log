@@ -1728,32 +1728,6 @@ DBPivotLine.SetLineWeight(2);
 DBPivotLine.HideBubble();
 DBPivotLine.HideTitle();
 
-# W-curve visual: left leg -> first low -> middle peak -> second low -> right side
-plot DBCurve =
-    if ShowDoubleBottom and ShowCupCurve and dbReady and !hasCupHandle then
-        if dbPhase == 3 then
-            if baseCount <= baseLowPos then
-                # Left side descent to first low
-                dbLow1 +
-                    Sqr((baseLowPos - baseCount) / Max(1, baseLowPos)) *
-                    (basePrice - dbLow1)
-            else if baseCount <= baseLowPos + (dbPeak - dbLow1) / Max(0.01, (basePrice - dbLow1)) * baseLowPos then
-                # Rally to middle peak
-                dbLow1 +
-                    Min(1, Sqr((baseCount - baseLowPos) / Max(1, baseLowPos))) *
-                    (dbPeak - dbLow1)
-            else
-                # Second decline
-                dbLow2 +
-                    Min(1, Sqr((baseCount - baseLowPos) / Max(1, baseLowPos))) *
-                    (dbPeak - dbLow2)
-        else Double.NaN
-    else Double.NaN;
-DBCurve.SetDefaultColor(GlobalColor("DB"));
-DBCurve.SetLineWeight(2);
-DBCurve.HideBubble();
-DBCurve.HideTitle();
-
 
 ##══════════════════════════════════════════════════════════════════════════════
 ##── PLOTS: CUP-WITH-HANDLE LEVELS #──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──#──
