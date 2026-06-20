@@ -339,6 +339,38 @@ def compute_output_signature():
     return '|'.join(parts)
 
 @st.cache_data
+def load_company_descriptions():
+    ibd_path = Path(__file__).resolve().parent / "IBD_data.txt"
+    if not ibd_path.exists():
+        return {}
+    try:
+        df_ibd = pd.read_csv(ibd_path)
+        df_ibd.columns = [c.strip() for c in df_ibd.columns]
+        if 'Symbol' in df_ibd.columns and 'Company Description' in df_ibd.columns:
+            df_ibd['Symbol'] = df_ibd['Symbol'].astype(str).str.strip('"').str.strip()
+            df_ibd['Company Description'] = df_ibd['Company Description'].astype(str).str.strip('"').str.strip()
+            df_ibd = df_ibd.dropna(subset=['Symbol', 'Company Description'])
+            
+            desc_map = {}
+            for _, row in df_ibd.iterrows():
+                sym = row['Symbol']
+                desc = row['Company Description']
+                if pd.isna(sym) or pd.isna(desc) or desc == 'nan':
+                    continue
+                # Map raw symbol (e.g. 'BRK.B')
+                desc_map[sym] = desc
+                # Map normalized symbol (e.g. 'BRKB')
+                norm = sym.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
+                desc_map[norm] = desc
+                # Map common hyphen/slash variations (e.g. 'BRK-B', 'BRK/B')
+                desc_map[sym.replace(".", "-")] = desc
+                desc_map[sym.replace(".", "/")] = desc
+            return desc_map
+    except Exception as e:
+        print(f"Error loading company descriptions: {e}")
+    return {}
+
+@st.cache_data
 def load_csv_files(reload_sig: str):
     output_dir = Path(__file__).parent / "output"
     stocks_historical_file = output_dir / "rs_stocks_historical.csv"
@@ -444,6 +476,7 @@ def load_industry_data(reload_sig: str):
 output_sig  = compute_output_signature()
 df          = load_csv_files(output_sig)
 df_industry = load_industry_data(output_sig)
+company_descriptions = load_company_descriptions()
 
 if df is None or df.empty:
     st.error("No data found. Please check the CSV files in the output directory.")
@@ -798,12 +831,17 @@ with (tab6 if has_historical else tab5):
         )
         
         combined_tickers = []
+        tv_combined_lines = []
         for industry in filtered_data['Industry']:
             tickers_df = latest_snapshot[latest_snapshot['Industry'] == industry][['Ticker', 'Relative Strength']].dropna()
             top_tickers = tickers_df.sort_values('Relative Strength', ascending=False).head(max_tickers_per_ind)['Ticker'].tolist()
             combined_tickers.extend(top_tickers)
+            if top_tickers:
+                tv_combined_lines.append(f"###{industry}")
+                tv_combined_lines.extend(top_tickers)
             
         combined_tickers_str = ','.join(combined_tickers)
+        tv_combined_str = "\n".join(tv_combined_lines)
         
         st.write(f"**Industries Combined (Sorted by Table Order First, then by Strongest Ticker)** ({len(combined_tickers)} tickers)")
         col1_cp, col2_cp = st.columns([4, 1])
@@ -816,6 +854,13 @@ with (tab6 if has_historical else tab5):
                 "selected_industries_tickers.txt", 
                 "text/plain",
                 key="download_selected_ind_tickers"
+            )
+            st.download_button(
+                "TradingView List", 
+                tv_combined_str,
+                "selected_industries_tv_watchlist.txt", 
+                "text/plain",
+                key="download_selected_ind_tv_watchlist"
             )
     else:
         st.warning("Industry RS data not found.")
@@ -979,7 +1024,21 @@ with (tab7 if has_historical else tab6):
                     else: val = str(val)
                     items.append((display, val))
 
-            snapshot_text = f"<b>{selected_ticker_company}</b><br>" + "".join(f"{d}: {v}<br>" for d, v in items).rstrip("<br>")
+            import textwrap
+            # Lookup description by matching either exact or normalized ticker
+            ticker_raw = selected_ticker_company
+            ticker_norm = ticker_raw.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
+            desc = company_descriptions.get(ticker_raw) or company_descriptions.get(ticker_norm)
+            
+            desc_text = ""
+            if desc and desc != 'nan':
+                wrapped_desc = "<br>".join(textwrap.wrap(desc, width=60))
+                desc_text = f"<br>Desc: {wrapped_desc}"
+
+            snapshot_text = f"<b>{selected_ticker_company}</b><br>" + "".join(f"{d}: {v}<br>" for d, v in items).rstrip("<br>") + desc_text
+
+            if desc and desc != 'nan':
+                st.info(f"**Company Description:** {desc}")
 
             st.divider()
             st.subheader("📈 Price & Volume History (2 Years)")
@@ -1486,7 +1545,7 @@ with (tab8 if has_historical else tab7):
     st.divider()
     st.subheader("📋 Top Tickers by Relative Strength (Grouped by Strongest Industry)")
     num_tickers = st.number_input("Number of top tickers to display", min_value=10,
-                                  max_value=len(table_df), value=200, step=10, key="num_top_tickers")
+                                  max_value=len(table_df), value=150, step=10, key="num_top_tickers")
     max_per_industry = st.number_input("Max tickers per industry group", min_value=1, max_value=50, value=10, step=1, key="max_per_industry")
 
     top_n = table_df.drop_duplicates(subset=['Ticker']).nlargest(int(num_tickers), 'Relative Strength')[['Ticker', 'Industry', 'Relative Strength']].copy()
@@ -1505,6 +1564,18 @@ with (tab8 if has_historical else tab7):
         all_tickers_by_industry.extend(industry_tickers)
 
     all_tickers_string = ','.join(all_tickers_by_industry)
+    
+    # Construct TradingView Watchlist format
+    tv_lines = []
+    for industry in industries_sorted:
+        industry_tickers = top_n[top_n['Industry'] == industry]['Ticker'].tolist()
+        if max_per_industry > 0:
+            industry_tickers = industry_tickers[:max_per_industry]
+        if industry_tickers:
+            tv_lines.append(f"###{industry}")
+            tv_lines.extend(industry_tickers)
+    tv_watchlist_string = "\n".join(tv_lines)
+
     st.write(f"**All Industries Combined (Sorted by Strongest Industry First)** ({len(all_tickers_by_industry)} tickers)")
     col1, col2 = st.columns([4, 1])
     with col1:
@@ -1513,6 +1584,9 @@ with (tab8 if has_historical else tab7):
         st.download_button("Copy All", all_tickers_string,
                            f"top{int(num_tickers)}_tickers_by_industry.txt", "text/plain",
                            key="download_all_tickers")
+        st.download_button("TradingView List", tv_watchlist_string,
+                           f"top{int(num_tickers)}_tickers_tv_watchlist.txt", "text/plain",
+                           key="download_tv_watchlist")
 
     st.divider()
     st.write("**By Industry (Strongest First):**")
