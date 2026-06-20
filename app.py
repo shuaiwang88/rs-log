@@ -371,6 +371,35 @@ def load_company_descriptions():
     return {}
 
 @st.cache_data
+def load_ibd_ticker_industry_mapping():
+    ibd_path = Path(__file__).resolve().parent / "IBD_data.txt"
+    if not ibd_path.exists():
+        return {}
+    try:
+        df_ibd = pd.read_csv(ibd_path)
+        df_ibd.columns = [c.strip() for c in df_ibd.columns]
+        if 'Symbol' in df_ibd.columns and 'Industry Name' in df_ibd.columns:
+            df_ibd['Symbol'] = df_ibd['Symbol'].astype(str).str.strip('"').str.strip()
+            df_ibd['Industry Name'] = df_ibd['Industry Name'].astype(str).str.strip('"').str.strip()
+            df_ibd = df_ibd.dropna(subset=['Symbol', 'Industry Name'])
+            
+            mapping = {}
+            for _, row in df_ibd.iterrows():
+                sym = row['Symbol']
+                ind = row['Industry Name']
+                if pd.isna(sym) or pd.isna(ind) or ind == 'nan' or ind == '':
+                    continue
+                mapping[sym] = ind
+                # Map normalized symbol too
+                norm = sym.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
+                mapping[norm] = ind
+            return mapping
+    except Exception as e:
+        print(f"Error loading IBD ticker-industry mapping: {e}")
+    return {}
+
+
+@st.cache_data
 def load_csv_files(reload_sig: str):
     output_dir = Path(__file__).parent / "output"
     stocks_historical_file = output_dir / "rs_stocks_historical.csv"
@@ -477,6 +506,7 @@ output_sig  = compute_output_signature()
 df          = load_csv_files(output_sig)
 df_industry = load_industry_data(output_sig)
 company_descriptions = load_company_descriptions()
+ibd_industry_mapping = load_ibd_ticker_industry_mapping()
 
 if df is None or df.empty:
     st.error("No data found. Please check the CSV files in the output directory.")
@@ -1542,6 +1572,69 @@ with (tab8 if has_historical else tab7):
     st.dataframe(display_df_with_rank, use_container_width=True, hide_index=True)
     st.download_button("Download filtered data as CSV", display_df_with_rank.to_csv(index=False),
                        "rs_analysis_filtered.csv", "text/csv")
+
+    st.divider()
+    st.subheader("📋 Custom TradingView Watchlist Generator")
+    st.markdown("Paste a comma-separated list of tickers below to generate a TradingView Watchlist grouped by their industries mapped from IBD data.")
+    
+    pasted_input = st.text_area("Paste tickers here (separated by commas, spaces, or newlines):", value="", key="custom_pasted_watchlist_tickers")
+    
+    if pasted_input.strip():
+        # Parse the tickers using regex to handle multiple delimiters
+        import re
+        pasted_tickers = [t.strip().upper() for t in re.split(r'[\s,;\n]+', pasted_input) if t.strip()]
+        
+        # De-duplicate while preserving input order
+        seen = set()
+        pasted_tickers = [t for t in pasted_tickers if not (t in seen or seen.add(t))]
+        
+        if pasted_tickers:
+            # Group tickers by industry
+            custom_industry_groups = {}
+            for ticker in pasted_tickers:
+                # Lookup in IBD mapping
+                ind = ibd_industry_mapping.get(ticker)
+                
+                # If not in IBD mapping, lookup in the loaded stock database
+                if not ind and 'Ticker' in table_df.columns and 'Industry' in table_df.columns:
+                    match = table_df[table_df['Ticker'] == ticker]
+                    if not match.empty:
+                        ind = match.iloc[0]['Industry']
+                
+                if not ind or pd.isna(ind) or ind == 'nan' or ind == '':
+                    ind = "Unknown Industry"
+                
+                if ind not in custom_industry_groups:
+                    custom_industry_groups[ind] = []
+                custom_industry_groups[ind].append(ticker)
+            
+            # Construct TradingView Watchlist format in insertion order (no sorting)
+            custom_tv_lines = []
+            for ind_group, ind_tickers in custom_industry_groups.items():
+                custom_tv_lines.append(f"###{ind_group}")
+                custom_tv_lines.extend(ind_tickers)
+            
+            custom_tv_watchlist_str = "\n".join(custom_tv_lines)
+            
+            # Show only a preview of the first 15 lines in the UI
+            lines = custom_tv_watchlist_str.split("\n")
+            preview_str = custom_tv_watchlist_str
+            if len(lines) > 15:
+                preview_str = "\n".join(lines[:5]) + "\n... (truncated, download to get the full list)"
+            
+            st.write(f"**Custom Watchlist** ({len(pasted_tickers)} tickers in {len(custom_industry_groups)} industries)")
+            c1, c2 = st.columns([4, 1])
+            with c1:
+                st.code(preview_str, language="text")
+            with c2:
+                st.download_button(
+                    "Download Watchlist",
+                    custom_tv_watchlist_str,
+                    "custom_tradingview_watchlist.txt",
+                    "text/plain",
+                    key="download_custom_tv_watchlist"
+                )
+
     st.divider()
     st.subheader("📋 Top Tickers by Relative Strength (Grouped by Strongest Industry)")
     num_tickers = st.number_input("Number of top tickers to display", min_value=10,
