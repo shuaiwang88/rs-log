@@ -989,6 +989,8 @@ with (tab7 if has_historical else tab6):
 
     st.markdown("### 📋 Select a Ticker")
     search_term = st.text_input("🔍 Search ticker", key="company_search_input").strip().upper()
+    if ":" in search_term:
+        search_term = search_term.split(":")[-1].strip()
     if search_term:
         filtered_tickers = [t for t in all_sorted_tickers if isinstance(t, str) and search_term in t]
     else:
@@ -1551,6 +1553,8 @@ with (tab8 if has_historical else tab7):
     sort_ascending = st.checkbox("Ascending", value=True)
     display_df    = table_df[selected_cols].sort_values(by=sort_col, ascending=sort_ascending, na_position='last').reset_index(drop=True)
     ticker_filter = st.text_input("🔍 Search by Ticker", "").strip().upper()
+    if ":" in ticker_filter:
+        ticker_filter = ticker_filter.split(":")[-1].strip()
     if ticker_filter and 'Ticker' in display_df.columns:
         display_df = display_df[display_df['Ticker'].astype(str).str.upper().str.contains(ticker_filter)]
     filter_cols = st.columns(3)
@@ -1582,7 +1586,13 @@ with (tab8 if has_historical else tab7):
     if pasted_input.strip():
         # Parse the tickers using regex to handle multiple delimiters
         import re
-        pasted_tickers = [t.strip().upper() for t in re.split(r'[\s,;\n]+', pasted_input) if t.strip()]
+        raw_tokens = [t.strip().upper() for t in re.split(r'[\s,;\n]+', pasted_input) if t.strip()]
+        pasted_tickers = []
+        for t in raw_tokens:
+            if ":" in t:
+                t = t.split(":")[-1].strip()
+            if t:
+                pasted_tickers.append(t)
         
         # De-duplicate while preserving input order
         seen = set()
