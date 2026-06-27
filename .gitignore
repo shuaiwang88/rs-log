@@ -1,3 +1,7 @@
 # Ignore python compiled byte code files
 *.pyc
 **/__pycache__/
+
+# Ignore large generated historical files and metadata
+output/*_historical.csv
+output/*_metadata.json
