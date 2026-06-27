@@ -602,13 +602,13 @@ with tab1:
         sector_counts = filtered_df.drop_duplicates(subset=['Ticker'])['Sector'].value_counts().head(10)
         fig = px.bar(x=sector_counts.values, y=sector_counts.index, orientation='h',
                      title="Top 10 Sectors by Stock Count", labels={'x': 'Count', 'y': 'Sector'})
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     with col2:
         avg_rs_by_sector = filtered_df.drop_duplicates(subset=['Ticker']).groupby('Sector')['Relative Strength'].mean().sort_values(ascending=False).head(10)
         fig = px.bar(x=avg_rs_by_sector.values, y=avg_rs_by_sector.index, orientation='h',
                      title="Top 10 Sectors by Avg RS", labels={'x': 'Avg RS', 'y': 'Sector'},
                      color=avg_rs_by_sector.values, color_continuous_scale='Viridis')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
 # ---------- TAB 2: Time Series ----------
 if has_historical:
@@ -621,22 +621,22 @@ if has_historical:
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['mean'],   name='Mean RS',   mode='lines'))
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['median'], name='Median RS', mode='lines'))
             fig.update_layout(title="Daily Average RS Trend", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             daily_percentile = filtered_df.groupby('date')['Percentile'].mean().reset_index()
             fig = px.line(daily_percentile, x='date', y='Percentile', title="Daily Average Percentile Trend")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
             daily_count         = filtered_df.groupby('date')['Ticker'].nunique().reset_index()
             daily_count.columns = ['date', 'stock_count']
             fig = px.line(daily_count, x='date', y='stock_count', title="Number of Stocks in Universe Over Time")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             daily_price = filtered_df.groupby('date')['Price'].mean().reset_index()
             fig = px.line(daily_price, x='date', y='Price', title="Average Stock Price Over Time")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         st.divider()
         st.subheader("📊 Sector RS Trends")
         selected_sector_trend = st.selectbox("Select sector for trend", filtered_df['Sector'].unique(), key="sector_trend")
@@ -646,16 +646,16 @@ if has_historical:
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['max'],  name='Max RS',  fill='tozeroy', mode='lines', opacity=0.2))
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['min'],  name='Min RS',  fill='tonexty', mode='lines', opacity=0.2))
         fig.update_layout(title=f"{selected_sector_trend} - RS Trend", hovermode='x unified')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 else:
     with tab2:
         col1, col2 = st.columns(2)
         with col1:
             fig = px.histogram(filtered_df, x='Relative Strength', nbins=50, title="Distribution of Relative Strength")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             fig = px.histogram(filtered_df, x='Percentile', nbins=50, title="Distribution of Percentile Rank")
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
 
 # ---------- TAB 3: Top Performers ----------
 with tab3:
@@ -663,23 +663,23 @@ with tab3:
     with col1:
         st.subheader("🏆 Top 15 by Relative Strength")
         top_rs = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Relative Strength')[['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile', 'Price']].copy()
-        st.dataframe(top_rs.reset_index(drop=True), width='stretch', hide_index=True)
+        st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
         st.subheader("⭐ Top 15 by Percentile")
         top_percentile = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Percentile')[['Rank', 'Ticker', 'Sector', 'Percentile', 'Relative Strength', 'Price']].copy()
-        st.dataframe(top_percentile.reset_index(drop=True), width='stretch', hide_index=True)
+        st.dataframe(top_percentile.reset_index(drop=True), use_container_width=True, hide_index=True)
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("💰 Top 15 by Market Cap")
         top_mcap = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'MarketCap')[['Ticker', 'Sector', 'MarketCap', 'Relative Strength', 'Percentile']].copy()
         top_mcap['MarketCap'] = top_mcap['MarketCap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "N/A")
-        st.dataframe(top_mcap.reset_index(drop=True), width='stretch', hide_index=True)
+        st.dataframe(top_mcap.reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
         st.subheader("📈 Highest 6M")
         top_6m = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, '6M_RS_Percentile')[['Ticker', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile']].copy()
         top_6m = top_6m.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
-        st.dataframe(top_6m.reset_index(drop=True), width='stretch', hide_index=True)
+        st.dataframe(top_6m.reset_index(drop=True), use_container_width=True, hide_index=True)
 
 # ---------- TAB 4: Deep Analysis ----------
 with tab4:
@@ -688,7 +688,7 @@ with tab4:
         fig = px.scatter(filtered_df, x='Price', y='Relative Strength', color='Percentile',
                          hover_data=['Ticker', 'Sector'], title="Relative Strength vs Price",
                          color_continuous_scale='Viridis')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     with col2:
         percentile_data = filtered_df[['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile']].mean()
         fig = go.Figure(data=[
@@ -697,24 +697,24 @@ with tab4:
             go.Bar(name='6M', x=['6M'], y=[percentile_data['6M_RS_Percentile']]),
         ])
         fig.update_layout(title="Average RS Percentile Comparison", barmode='group')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         fig = px.histogram(filtered_df.dropna(subset=['PctFrom52WkHigh']), x='PctFrom52WkHigh',
                            nbins=40, title="Distribution of % from 52W High")
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = px.scatter(filtered_df.dropna(subset=['RevenueGrowth']), x='RevenueGrowth',
                          y='Relative Strength', color='Percentile', hover_data=['Ticker', 'Sector'],
                          title="Revenue Growth vs Relative Strength", color_continuous_scale='Viridis')
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
     st.divider()
     st.subheader("Key Statistics Summary")
     summary_stats = filtered_df[['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
                                   '6M_RS_Percentile', 'Price', 'AvgVol10', 'AvgVol30', 'AvgVol50',
                                   'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']].describe()
-    st.dataframe(summary_stats, width='stretch')
+    st.dataframe(summary_stats, use_container_width=True)
 
 # ---------- TAB 5: Trends ----------
 if has_historical:
@@ -730,7 +730,7 @@ if has_historical:
             fig = px.bar(x=momentum.values, y=momentum.index, orientation='h',
                          title=f"RS Change by Sector ({oldest_date.date()} to {latest_date.date()})",
                          color=momentum.values, color_continuous_scale='RdYlGn')
-            st.plotly_chart(fig, width='stretch')
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             latest_stocks  = filtered_df[filtered_df['date'] == latest_date][['Ticker', 'Sector', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
             oldest_stocks  = filtered_df[filtered_df['date'] == oldest_date][['Ticker', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
@@ -740,7 +740,7 @@ if has_historical:
                 top_gainers = merged.nlargest(10, 'RS_change')[['Ticker', 'Sector', 'RS_change']]
                 fig = px.bar(top_gainers, x='RS_change', y='Ticker', orientation='h',
                              title="Top 10 RS Gainers", color='RS_change', color_continuous_scale='Greens')
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, use_container_width=True)
 
 # ---------- TAB 6: Industry Rotation (corrected delta calculations) ----------
 with (tab6 if has_historical else tab5):
@@ -1370,7 +1370,7 @@ with (tab7 if has_historical else tab6):
                                                     save_markers(selected_ticker_company, st.session_state[session_key], "daily")
                                                     rerun_app()
                                 st.plotly_chart(create_daily_chart_with_patterns(df_daily, latest_row.get('Percentile'), snapshot_text),
-                                                width='stretch')
+                                                use_container_width=True)
 
                             # Weekly chart
                             st.divider()
@@ -1529,7 +1529,7 @@ with (tab7 if has_historical else tab6):
                                                     st.session_state[session_key_w].pop(i)
                                                     save_markers(selected_ticker_company, st.session_state[session_key_w], "weekly")
                                                     rerun_app()
-                                st.plotly_chart(create_weekly_chart_plotly(), width='stretch')
+                                st.plotly_chart(create_weekly_chart_plotly(), use_container_width=True)
 
                 except Exception as e:
                     st.error(f"Error fetching data: {e}")
@@ -1573,7 +1573,7 @@ with (tab8 if has_historical else tab7):
     display_df_with_rank = pd.DataFrame({'Rank': range(1, len(display_df)+1)})
     for col in display_df.columns:
         display_df_with_rank[col] = display_df[col].values
-    st.dataframe(display_df_with_rank, width='stretch', hide_index=True)
+    st.dataframe(display_df_with_rank, use_container_width=True, hide_index=True)
     st.download_button("Download filtered data as CSV", display_df_with_rank.to_csv(index=False),
                        "rs_analysis_filtered.csv", "text/csv")
 
