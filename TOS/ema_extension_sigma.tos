@@ -1,0 +1,164 @@
+# ===============================================================================
+# EMA ATR Extension Sigma (Reference Thresholds)
+# ===============================================================================
+# DESCRIPTION:
+#   Measures how far price is extended from key moving averages, expressed
+#   in ATR multiples, then converts to a sigma score using universal
+#   thresholds derived from the full market population.
+#
+#   Extension = (Close - MA) / ATR
+#   Sigma     = (Extension - Mean) / Std Dev
+#
+#   Reference parameters (from empirical distribution):
+#     Anchor  | Mean  | SD
+#     10 EMA  | 0.05  | 0.88
+#     21 EMA  | 0.09  | 1.36
+#     50 SMA  | 0.15  | 2.56
+#    200 SMA  | 0.13  | 5.30
+#
+#   Interpretation:
+#     +/-1s = NORMAL      (price is within typical range)
+#     +/-2s = STRETCHED   (price is getting extended)
+#     +/-3s = EXTREME     (price is in the tail - potential snap-back)
+#     <1s   = SAFE        (price near the anchor)
+#
+#   Labels show: Anchor  ATR Extension  Sigma Score  Status
+#   Color coding: Green=SAFE  Yellow=NORMAL  Orange=STRETCHED  Red=EXTREME
+# ===============================================================================
+
+declare upper;
+
+# -------------------------------------------------------------------------------
+# INPUTS
+# -------------------------------------------------------------------------------
+input atrLength    = 14;
+input showReference = yes;
+
+# -------------------------------------------------------------------------------
+# MOVING AVERAGES & ATR
+# -------------------------------------------------------------------------------
+def atrVal = reference ATR(length = atrLength).ATR;
+
+def ema10  = ExpAverage(close, 10);
+def ema21  = ExpAverage(close, 21);
+def sma50  = Average(close, 50);
+def sma200 = Average(close, 200);
+
+# -------------------------------------------------------------------------------
+# PRICE EXTENSION (in ATR multiples)
+# -------------------------------------------------------------------------------
+def ext10  = if atrVal > 0 then (close - ema10) / atrVal else Double.NaN;
+def ext21  = if atrVal > 0 then (close - ema21) / atrVal else Double.NaN;
+def ext50  = if atrVal > 0 then (close - sma50) / atrVal else Double.NaN;
+def ext200 = if atrVal > 0 and !IsNaN(sma200) then (close - sma200) / atrVal else Double.NaN;
+
+# -------------------------------------------------------------------------------
+# SIGMA SCORES (Reference Thresholds)
+#   sigma = (extension - mean) / std_dev
+# -------------------------------------------------------------------------------
+def sigma10  = if !IsNaN(ext10)  then (ext10  - 0.05) / 0.88 else Double.NaN;
+def sigma21  = if !IsNaN(ext21)  then (ext21  - 0.09) / 1.36 else Double.NaN;
+def sigma50  = if !IsNaN(ext50)  then (ext50  - 0.15) / 2.56 else Double.NaN;
+def sigma200 = if !IsNaN(ext200) then (ext200 - 0.13) / 5.30 else Double.NaN;
+
+# -------------------------------------------------------------------------------
+# HIDDEN PLOT (required for upper study)
+# -------------------------------------------------------------------------------
+plot spacer = Double.NaN;
+spacer.Hide();
+
+# ===============================================================================
+# STATUS LABELS
+# ===============================================================================
+
+AddLabel(yes, " ATR Extension Sigma (Reference) ", Color.LIGHT_GRAY);
+
+# -- 10 EMA ---------------------------------------------------------------------
+AddLabel(yes,
+    if IsNaN(sigma10) then " 10 EMA - N/A "
+    else " 10 EMA " +
+         (if ext10 >= 0 then "+" else "") + AsText(Round(ext10, 2)) + "x  " +
+         (if sigma10 >= 0 then "+" else "") + AsText(Round(sigma10, 1)) + "s  " +
+         (if AbsValue(sigma10) >= 3 then "EXTREME"
+          else if AbsValue(sigma10) >= 2 then "STRETCHED"
+          else if AbsValue(sigma10) >= 1 then "NORMAL"
+          else "SAFE") + " ",
+    if IsNaN(sigma10) then Color.GRAY
+    else if AbsValue(sigma10) >= 3 then CreateColor(239, 83, 80)
+    else if AbsValue(sigma10) >= 2 then CreateColor(255, 112, 67)
+    else if AbsValue(sigma10) >= 1 then CreateColor(255, 202, 40)
+    else CreateColor(102, 187, 106));
+
+# -- 21 EMA ---------------------------------------------------------------------
+AddLabel(yes,
+    if IsNaN(sigma21) then " 21 EMA - N/A "
+    else " 21 EMA " +
+         (if ext21 >= 0 then "+" else "") + AsText(Round(ext21, 2)) + "x  " +
+         (if sigma21 >= 0 then "+" else "") + AsText(Round(sigma21, 1)) + "s  " +
+         (if AbsValue(sigma21) >= 3 then "EXTREME"
+          else if AbsValue(sigma21) >= 2 then "STRETCHED"
+          else if AbsValue(sigma21) >= 1 then "NORMAL"
+          else "SAFE") + " ",
+    if IsNaN(sigma21) then Color.GRAY
+    else if AbsValue(sigma21) >= 3 then CreateColor(239, 83, 80)
+    else if AbsValue(sigma21) >= 2 then CreateColor(255, 112, 67)
+    else if AbsValue(sigma21) >= 1 then CreateColor(255, 202, 40)
+    else CreateColor(102, 187, 106));
+
+# -- 50 SMA ---------------------------------------------------------------------
+AddLabel(yes,
+    if IsNaN(sigma50) then " 50 SMA - N/A "
+    else " 50 SMA " +
+         (if ext50 >= 0 then "+" else "") + AsText(Round(ext50, 2)) + "x  " +
+         (if sigma50 >= 0 then "+" else "") + AsText(Round(sigma50, 1)) + "s  " +
+         (if AbsValue(sigma50) >= 3 then "EXTREME"
+          else if AbsValue(sigma50) >= 2 then "STRETCHED"
+          else if AbsValue(sigma50) >= 1 then "NORMAL"
+          else "SAFE") + " ",
+    if IsNaN(sigma50) then Color.GRAY
+    else if AbsValue(sigma50) >= 3 then CreateColor(239, 83, 80)
+    else if AbsValue(sigma50) >= 2 then CreateColor(255, 112, 67)
+    else if AbsValue(sigma50) >= 1 then CreateColor(255, 202, 40)
+    else CreateColor(102, 187, 106));
+
+# -- 200 SMA --------------------------------------------------------------------
+AddLabel(yes,
+    if IsNaN(sigma200) then " 200 SMA - N/A "
+    else " 200 SMA " +
+         (if ext200 >= 0 then "+" else "") + AsText(Round(ext200, 2)) + "x  " +
+         (if sigma200 >= 0 then "+" else "") + AsText(Round(sigma200, 1)) + "s  " +
+         (if AbsValue(sigma200) >= 3 then "EXTREME"
+          else if AbsValue(sigma200) >= 2 then "STRETCHED"
+          else if AbsValue(sigma200) >= 1 then "NORMAL"
+          else "SAFE") + " ",
+    if IsNaN(sigma200) then Color.GRAY
+    else if AbsValue(sigma200) >= 3 then CreateColor(239, 83, 80)
+    else if AbsValue(sigma200) >= 2 then CreateColor(255, 112, 67)
+    else if AbsValue(sigma200) >= 1 then CreateColor(255, 202, 40)
+    else CreateColor(102, 187, 106));
+
+# ===============================================================================
+# REFERENCE THRESHOLD LABELS (Optional)
+#   Shows the sigma threshold bands from the empirical distribution.
+#   Toggle with showReference input.
+# ===============================================================================
+
+AddLabel(showReference,
+    " -- Reference Thresholds (ATR multiples) -- ",
+    CreateColor(100, 100, 130));
+
+AddLabel(showReference,
+    " 10 EMA  Mean:0.05x  -3s:-2.59x  -2s:-1.71x  -1s:-0.83x  +1s:+0.93x  +2s:+1.81x  +3s:+2.69x ",
+    CreateColor(60, 60, 85));
+
+AddLabel(showReference,
+    " 21 EMA  Mean:0.09x  -3s:-4.00x  -2s:-2.64x  -1s:-1.28x  +1s:+1.45x  +2s:+2.81x  +3s:+4.17x ",
+    CreateColor(60, 60, 85));
+
+AddLabel(showReference,
+    " 50 SMA  Mean:0.15x  -3s:-7.53x  -2s:-4.97x  -1s:-2.41x  +1s:+2.71x  +2s:+5.27x  +3s:+7.83x ",
+    CreateColor(60, 60, 85));
+
+AddLabel(showReference,
+    " 200 SMA Mean:0.13x  -3s:-15.76x  -2s:-10.47x  -1s:-5.17x  +1s:+5.42x  +2s:+10.72x  +3s:+16.02x ",
+    CreateColor(60, 60, 85));
