@@ -1,0 +1,6098 @@
+Symbol,Industry Name
+A,Medical - Research
+AA,Mining-Metal Ores
+AACG,Consumer Svcs-Education
+AADX,Aerospace/Defense
+AAGIY,Insurance
+AAL,Transportation-Airline
+AAME,Insurance
+AAMI,Finance-Investment Mgmt
+AAOI,Telecom - Equipment
+AAON,Building - Construction Products
+AAP,Retail/Whlsle-Auto Parts
+AAPG,Medical - Development Biotech
+AAPL,Telecom-Consumer Prods
+AARD,Medical - Development Biotech
+AAT,REITs
+AAUC,Mining-Gold/Silver/Gems
+AB,Finance-Investment Mgmt
+ABAT,Mining-Metal Ores
+ABBNY,Electrical-Power/Equipmt
+ABBV,Medical - Pharmaceuticals
+ABCB,Banks-Regional
+ABCL,Medical - Development Biotech
+ABEO,Medical - Development Biotech
+ABEV,Beverages-Alcoholic
+ABG,Retail/Whlsle-Automobile
+ABLV,Cosmetics/Personal Care
+ABM,Bldg-Maintenance & Svc
+ABNB,Leisure-Travel Booking
+ABOS,Medical - Development Biotech
+ABPO,Medical - Development Biotech
+ABR,REITs
+ABSI,Medical - Pharmaceuticals
+ABT,Medical-Products
+ABTC,Finance - Crypto/Blockchain
+ABTS,Internet-Content
+ABUS,Medical - Development Biotech
+ABVC,Medical - Development Biotech
+ABVEF,Agricultural Operations
+ABVX,Medical - Development Biotech
+ABX,Finance-Investment Mgmt
+ACA,Building - Construction Products
+ACAD,Medical - Profitable Biotech
+ACAN,Comml Svcs-Consulting
+ACB,Cannabis
+ACCL,Comml Svcs-Outsourcing
+ACCO,Business Equip & Supplies
+ACCS,Media
+ACDC,Oil&Gas-Field Services
+ACEL,Leisure-Gaming/Equip
+ACET,Medical - Development Biotech
+ACFN,Elec-Scientific/Msrng
+ACGL,Insurance
+ACH,Medical-Services
+ACHC,Medical-Services
+ACHR,Aerospace/Defense
+ACHV,Medical - Development Biotech
+ACI,Retail-Super/Mini Mkts
+ACIC,Insurance
+ACIU,Medical - Development Biotech
+ACIW,Comp Sftwr - Financial
+ACLS,Elec-Semiconductor Equip
+ACM,Bldg-Heavy Construction
+ACMR,Elec-Semiconductor Equip
+ACN,Computer-Tech Services
+ACNB,Banks-Regional
+ACNT,Steel-Specialty Alloys
+ACOG,Medical - Development Biotech
+ACON,Medical - Development Biotech
+ACP,Closed-end Funds
+ACR,REITs
+ACRE,REITs
+ACRS,Medical - Pharmaceuticals
+ACRV,Medical - Development Biotech
+ACT,Finance-Mrtg&Rel Svc
+ACTG,Diversified Operations
+ACTU,Medical - Development Biotech
+ACU,Medical-Products
+ACV,Closed-end Funds
+ACVA,Retail/Whlsle-Automobile
+ACXP,Medical - Development Biotech
+AD,Telecom-Infrastructure
+ADAG,Medical - Development Biotech
+ADAM,REITs
+ADAPY,Medical - Development Biotech
+ADBE,Computer Sftwr-Design
+ADC,REITs
+ADCT,Medical - Development Biotech
+ADDYY,Apparel - Clothing & Shoes
+ADEA,Internet-Content
+ADGM,Medical-Systems
+ADI,Elec-Semiconductor Mfg
+ADIL,Medical - Development Biotech
+ADM,Food - Foodstuffs
+ADMA,Medical - Profitable Biotech
+ADNH,Energy-Alternative/Other
+ADNT,Auto/Truck Equipment Parts & Tires
+ADP,Comml Svcs-Outsourcing
+ADPT,Medical - Revenue Biotech
+ADRNY,Retail-Super/Mini Mkts
+ADSE,Electrical-Power/Equipmt
+ADSK,Computer Sftwr-Design
+ADT,Security/Sfty
+ADTN,Telecom - Equipment
+ADTX,Medical - Development Biotech
+ADUR,Pollution Control
+ADUS,Medical - Home & Nursing Care
+ADV,Comml Svcs-Consulting
+ADVB,Medical - Research
+ADX,Closed-end Funds
+ADXN,Medical - Development Biotech
+ADYEY,Finance-CrdtCard/PmtPr
+ADYYF,Finance-CrdtCard/PmtPr
+AEBI,Machinery-Constr/Mining/Farming
+AEC,Mining-Metal Ores
+AEE,Utilities
+AEF,Closed-end Funds
+AEG,Insurance
+AEHL,Building - Construction Products
+AEHR,Elec-Semiconductor Equip
+AEI,Real Estate Dvlpmt/Ops
+AEIS,Elec-Semiconductor Equip
+AEM,Mining-Gold/Silver/Gems
+AEMD,Medical-Products
+AENT,Retail-Internet
+AEO,Retail-Apparel/Shoes/Acc
+AEON,Medical - Development Biotech
+AEP,Utilities
+AER,Comml Svcs-Leasing
+AERG,Aerospace/Defense
+AERO,Transportation-Airline
+AERT,Computer-Tech Services
+AES,Utilities
+AESI,Oil&Gas-Field Services
+AEVA,Auto/Truck Equipment Parts & Tires
+AEYE,Comp Sftwr - Enterprise
+AFB,Closed-end Funds
+AFBI,Banks-Regional
+AFCG,Consumer - Specialty
+AFG,Insurance
+AFL,Insurance
+AFRI,Food - Foodstuffs
+AFRM,Finance-CrdtCard/PmtPr
+AFYA,Consumer Svcs-Education
+AG,Mining-Gold/Silver/Gems
+AGBK,Banks-Foreign
+AGCC,Beverages-Alcoholic
+AGCO,Machinery-Constr/Mining/Farming
+AGD,Closed-end Funds
+AGEN,Medical - Revenue Biotech
+AGI,Mining-Gold/Silver/Gems
+AGIG,Energy-Alternative/Other
+AGIO,Medical - Development Biotech
+AGL,Comml Svcs-Consulting
+AGM,Finance-Mrtg&Rel Svc
+AGM.A,Finance-Mrtg&Rel Svc
+AGMB,Medical - Development Biotech
+AGMH,Finance-Invest Bnk/Bkrs
+AGNC,REITs
+AGNT,Real Estate Dvlpmt/Ops
+AGO,Insurance
+AGPU,Finance - Crypto/Blockchain
+AGRO,Agricultural Operations
+AGRZ,Agricultural Operations
+AGX,Bldg-Heavy Construction
+AGYS,Computer-Tech Services
+AHCHY,Bldg-Cement/Concrt/Ag
+AHCO,Medical-Services
+AHG,Financial Svcs-Specialty
+AHKSY,Chemicals-Specialty
+AHMA,Leisure-Travel Booking
+AHR,REITs
+AHRT,REITs
+AHT,REITs
+AI,Comp Sftwr - Enterprise
+AIAI,Comp Sftwr - Financial
+AIB,Computer-Tech Services
+AIBZ,Finance - Crypto/Blockchain
+AIDX,Medical - Research
+AIFA,Telecom-Infrastructure
+AIFC,Comp Sftwr - Financial
+AIFF,Computer-Tech Services
+AIFU,Insurance
+AIG,Insurance
+AIHS,Comp Sftwr - Financial
+AII,Insurance
+AIIO,Auto Manufacturers
+AIIR,Retail - Specialty
+AIM,Medical - Development Biotech
+AIMD,Computer-Hardware/Perip
+AIN,Machinery-Mtl Hdlg/Autmn
+AIO,Closed-end Funds
+AIOS,Comml Svcs-Consulting
+AIOT,Security/Sfty
+AIP,Elec-Semicondctor Fablss
+AIR,Aerospace/Defense
+AIRE,Real Estate Dvlpmt/Ops
+AIRG,Electronic-Parts
+AIRI,Aerospace/Defense
+AIRJ,Building - Construction Products
+AIRO,Aerospace/Defense
+AIRS,Medical-Systems
+AIRT,Transport-Air Freight
+AISP,Computer Sftwr-Security
+AIT,Metal Products - Distributors/Fabrication
+AIV,REITs
+AIXC,Finance - Crypto/Blockchain
+AIXI,Comp Sftwr - Enterprise
+AIZ,Insurance
+AJG,Insurance
+AKA,Retail-Apparel/Shoes/Acc
+AKAM,Comp Sftwr - Enterprise
+AKAN,Cannabis
+AKBA,Medical - Revenue Biotech
+AKO.A,Beverages-Non-Alcoholic
+AKO.B,Beverages-Non-Alcoholic
+AKR,REITs
+AKTS,Medical - Development Biotech
+AKTX,Medical - Development Biotech
+AKZOY,Building - Construction Products
+ALAB,Elec-Semicondctor Fablss
+ALAR,Computer Sftwr-Security
+ALB,Chemicals-Specialty
+ALBT,Medical-Services
+ALC,Medical-Products
+ALCO,Agricultural Operations
+ALDX,Medical - Development Biotech
+ALEC,Medical - Development Biotech
+ALG,Machinery-Constr/Mining/Farming
+ALGM,Elec-Semicondctor Fablss
+ALGN,Medical-Products
+ALGS,Medical - Development Biotech
+ALGT,Transportation-Airline
+ALH,Machinery-Gen Industrial
+ALHC,Medical-Managed Care
+ALIT,Comp Sftwr - Enterprise
+ALIZY,Insurance
+ALK,Transportation-Airline
+ALKS,Medical - Profitable Biotech
+ALKT,Comp Sftwr - Financial
+ALL,Insurance
+ALLE,Security/Sfty
+ALLO,Medical - Development Biotech
+ALLR,Medical - Development Biotech
+ALLT,Computer-Networking
+ALLY,Financial Svcs-Specialty
+ALM,Mining-Metal Ores
+ALMR,Medical-Products
+ALMS,Medical - Development Biotech
+ALMU,Elec-Semiconductor Equip
+ALNT,Electrical-Power/Equipmt
+ALNY,Medical - Revenue Biotech
+ALOT,Computer-Hardware/Perip
+ALOY,Mining-Metal Ores
+ALP,Computer-Tech Services
+ALPMY,Medical - Revenue Biotech
+ALPS,Medical - Development Biotech
+ALRM,Security/Sfty
+ALRS,Banks-Regional
+ALSN,Auto/Truck Equipment Parts & Tires
+ALT,Medical - Development Biotech
+ALTG,Comml Svcs-Leasing
+ALTI,Finance-Investment Mgmt
+ALTO,Energy-Alternative/Other
+ALUR,Medical-Systems
+ALV,Auto/Truck Equipment Parts & Tires
+ALVO,Medical - Profitable Biotech
+ALX,REITs
+ALXO,Medical - Development Biotech
+ALZN,Medical - Development Biotech
+AM,Oil&Gas-Integrated
+AMA,Finance-ETF / ETN
+AMADY,Computer-Tech Services
+AMAL,Banks-Regional
+AMAT,Elec-Semiconductor Equip
+AMBA,Elec-Semicondctor Fablss
+AMBIQ,Pollution Control
+AMBO,Consumer Svcs-Education
+AMBP,Food - Packaged
+AMBQ,Elec-Semicondctor Fablss
+AMBR,Internet-Content
+AMC,Leisure-Services
+AMCI,Machinery-Mtl Hdlg/Autmn
+AMCR,Containers/Packaging
+AMCX,Media
+AMD,Elec-Semicondctor Fablss
+AME,Electrical-Power/Equipmt
+AMFC,Banks-Savings & Loan
+AMG,Finance-Investment Mgmt
+AMGN,Medical - Profitable Biotech
+AMH,REITs
+AMIX,Medical-Products
+AMJB,Finance-ETF / ETN
+AMKR,Elec-Semiconductor Mfg
+AMLX,Medical - Development Biotech
+AMN,Comml Svcs-Staffing
+AMOD,Comp Sftwr - Financial
+AMP,Finance-Invest Bnk/Bkrs
+AMPG,Elec-Semiconductor Mfg
+AMPH,Medical - Profitable Biotech
+AMPL,Comp Sftwr - Enterprise
+AMPX,Energy-Alternative/Other
+AMPY,Oil&Gas-Explorers/Producers
+AMR,Energy-Coal
+AMRC,Energy-Alternative/Other
+AMRN,Medical - Revenue Biotech
+AMRX,Medical - Pharmaceuticals
+AMRZ,Bldg-Cement/Concrt/Ag
+AMS,Medical-Services
+AMSC,Electrical-Power/Equipmt
+AMSF,Insurance
+AMSS,Beverages-Alcoholic
+AMST,Computer Sftwr-Edu/Media
+AMT,REITs
+AMTB,Banks-Regional
+AMTD,Finance-Investment Mgmt
+AMTM,Computer-Tech Services
+AMTX,Energy-Alternative/Other
+AMTY,Auto/Truck Equipment Parts & Tires
+AMUB,Finance-ETF / ETN
+AMWL,Computer Sftwr-Medical
+AMX,Telecom Svcs- Foreign
+AMZE,Internet-Content
+AMZN,Retail-Internet
+AN,Retail/Whlsle-Automobile
+ANAB,Medical - Revenue Biotech
+ANCTF,Retail-Super/Mini Mkts
+ANDE,Food - Wholesale
+ANDG,Comml Svcs-Consulting
+ANEB,Medical - Development Biotech
+ANET,Computer-Networking
+ANF,Retail-Apparel/Shoes/Acc
+ANGH,Computer Sftwr-Edu/Media
+ANGI,Internet-Content
+ANGO,Medical-Systems
+ANGX,Leisure-Movies & Related
+ANIK,Medical - Revenue Biotech
+ANIP,Medical - Pharmaceuticals
+ANIX,Medical - Development Biotech
+ANL,Medical - Development Biotech
+ANNA,Oil&Gas-Explorers/Producers
+ANNX,Medical - Development Biotech
+ANPA,Business Equip & Supplies
+ANPDY,Apparel - Clothing & Shoes
+ANRO,Medical - Development Biotech
+ANTA,Finance - Crypto/Blockchain
+ANTX,Medical - Development Biotech
+ANVS,Medical - Development Biotech
+ANY,Comp Sftwr - Specialty Enterprise
+AOD,Closed-end Funds
+AOMR,REITs
+AON,Insurance
+AORT,Medical-Products
+AOS,Building - Construction Products
+AOSL,Elec-Semicondctor Fablss
+AOUT,Leisure-Products
+AP,Steel-Specialty Alloys
+APA,Oil&Gas-Explorers/Producers
+APAM,Finance-Investment Mgmt
+APC,Transport - Oil/Gas Shipping
+APD,Chemicals-Specialty
+APEI,Consumer Svcs-Education
+APELY,Auto/Truck Equipment Parts & Tires
+APG,Bldg-Heavy Construction
+APGE,Medical - Development Biotech
+APH,Electronic-Parts
+APHU,Finance-ETF / ETN
+API,Comp Sftwr - Enterprise
+APLD,Computer-Tech Services
+APLE,REITs
+APLM,Medical - Development Biotech
+APM,Medical - Development Biotech
+APO,Finance-Investment Mgmt
+APOG,Building - Construction Products
+APP,Comp Sftwr - Specialty Enterprise
+APPF,Comp Sftwr - Specialty Enterprise
+APPN,Comp Sftwr - Enterprise
+APPS,Comp Sftwr - Enterprise
+APRE,Medical - Development Biotech
+APT,Building - Construction Products
+APTV,Auto/Truck Equipment Parts & Tires
+APUS,Medical - Development Biotech
+APVO,Medical - Development Biotech
+APWC,Electrical-Power/Equipmt
+APYX,Medical-Products
+AQB,Medical - Development Biotech
+AQMS,Chemicals-Specialty
+AQN,Utilities
+AQST,Medical - Development Biotech
+AR,Oil&Gas-Explorers/Producers
+ARAI,Comp Sftwr - Specialty Enterprise
+ARAY,Medical-Systems
+ARBB,Computer-Tech Services
+ARBE,Auto/Truck Equipment Parts & Tires
+ARBK,Comp Sftwr - Financial
+ARCB,Transportation-Truck
+ARCC,Finance-Investment Mgmt
+ARCO,Retail-Restaurants
+ARCT,Medical - Development Biotech
+ARDC,Closed-end Funds
+ARDT,Medical-Hospitals
+ARDX,Medical - Revenue Biotech
+ARE,REITs
+AREB,Retail-Internet
+AREC,Energy-Coal
+AREN,Media
+ARES,Finance-Investment Mgmt
+ARGX,Medical - Profitable Biotech
+ARHS,Retail - Home Furnishings/Electronics
+ARI,REITs
+ARIS,Mining-Gold/Silver/Gems
+ARKAY,Chemicals-Specialty
+ARKO,Retail-Super/Mini Mkts
+ARKR,Retail-Restaurants
+ARL,Real Estate Dvlpmt/Ops
+ARLO,Security/Sfty
+ARLP,Energy-Coal
+ARLUF,Leisure-Gaming/Equip
+ARM,Elec-Semicondctor Fablss
+ARMH,Finance-ETF / ETN
+ARMK,Comml Svcs-Outsourcing
+ARMP,Medical - Development Biotech
+AROC,Oil&Gas-Machinery/Equip
+AROW,Banks-Regional
+ARQ,Pollution Control
+ARQQ,Computer Sftwr-Security
+ARQT,Medical - Revenue Biotech
+ARR,REITs
+ARRY,Energy-Solar
+ARTL,Medical - Development Biotech
+ARTNA,Utilities
+ARTV,Medical - Development Biotech
+ARTW,Machinery-Constr/Mining/Farming
+ARVN,Medical - Revenue Biotech
+ARW,Electronic-Parts
+ARWR,Medical - Revenue Biotech
+ARX,Insurance
+ARXS,Aerospace/Defense
+AS,Apparel - Clothing & Shoes
+ASA,Closed-end Funds
+ASAIY,Retail-Super/Mini Mkts
+ASAN,Comp Sftwr - Enterprise
+ASB,Banks-Regional
+ASBFY,Retail-Apparel/Shoes/Acc
+ASBP,Medical - Development Biotech
+ASC,Transportation-Ship
+ASG,Closed-end Funds
+ASGI,Closed-end Funds
+ASGLY,Building - Construction Products
+ASH,Chemicals-Specialty
+ASIC,Insurance
+ASIX,Chemicals-Basic
+ASLE,Aerospace/Defense
+ASM,Mining-Gold/Silver/Gems
+ASMB,Medical - Development Biotech
+ASMH,Finance-ETF / ETN
+ASML,Elec-Semiconductor Equip
+ASND,Medical - Revenue Biotech
+ASO,Retail-Leisure Products
+ASPI,Chemicals-Specialty
+ASPN,Chemicals-Specialty
+ASPS,Financial Svcs-Specialty
+ASR,Real Estate Dvlpmt/Ops
+ASRV,Banks-Regional
+ASST,Finance-Investment Mgmt
+ASTC,Machinery-Gen Industrial
+ASTE,Machinery-Constr/Mining/Farming
+ASTH,Medical-Managed Care
+ASTI,Energy-Solar
+ASTL,Steel-Producers
+ASTS,Telecom/Cable Services
+ASUR,Comp Sftwr - Enterprise
+ASX,Elec-Semiconductor Mfg
+ASYS,Elec-Semiconductor Equip
+ATAI,Medical - Development Biotech
+ATAT,Leisure-Lodging
+ATCH,Comp Sftwr - Financial
+ATCX,Mining-Metal Ores
+ATEC,Medical-Products
+ATEN,Internet-Network Sltns
+ATER,Hsehold-Appliances/Wares
+ATEX,Telecom/Cable Services
+ATEYY,Elec-Semiconductor Equip
+ATGL,Computer-Tech Services
+ATHE,Medical - Development Biotech
+ATHM,Internet-Content
+ATHR,Comp Sftwr - Financial
+ATI,Aerospace/Defense
+ATKR,Building - Construction Products
+ATLC,Finance-Consumer Loans
+ATLCY,Machinery-Constr/Mining/Farming
+ATLKY,Machinery-Gen Industrial
+ATLN,Comml Svcs-Staffing
+ATLO,Banks-Regional
+ATLX,Mining-Metal Ores
+ATMP,Finance-ETF / ETN
+ATMU,Auto/Truck Equipment Parts & Tires
+ATNI,Telecom Svcs- Foreign
+ATNM,Medical - Development Biotech
+ATO,Utilities
+ATOM,Elec-Semiconductor Equip
+ATOS,Medical-Services
+ATPC,Cosmetics/Personal Care
+ATR,Containers/Packaging
+ATRA,Medical - Development Biotech
+ATRC,Medical-Systems
+ATRO,Aerospace/Defense
+ATROB,Aerospace/Defense
+ATS,Machinery-Gen Industrial
+ATXG,Diversified Operations
+ATYR,Medical - Development Biotech
+AU,Mining-Gold/Silver/Gems
+AUB,Banks-Regional
+AUBN,Banks-Regional
+AUC,Finance-Investment Mgmt
+AUDC,Comp Sftwr - Enterprise
+AUGO,Mining-Gold/Silver/Gems
+AUID,Security/Sfty
+AUNA,Medical-Hospitals
+AUPH,Medical - Profitable Biotech
+AUR,Auto/Truck Equipment Parts & Tires
+AURA,Medical - Development Biotech
+AURE,Finance-Investment Mgmt
+AUST,Mining-Gold/Silver/Gems
+AUTL,Medical - Development Biotech
+AUUD,Media
+AVA,Utilities
+AVAH,Medical - Home & Nursing Care
+AVAL,Banks-Foreign
+AVAT,Finance - Crypto/Blockchain
+AVAV,Aerospace/Defense
+AVB,REITs
+AVBC,Banks-Regional
+AVBH,Banks-Regional
+AVBP,Medical - Development Biotech
+AVD,Chemicals-Agricultural
+AVEX,Aerospace/Defense
+AVGO,Elec-Semicondctor Fablss
+AVIR,Medical - Development Biotech
+AVK,Closed-end Funds
+AVLN,Medical - Pharmaceuticals
+AVNS,Medical-Products
+AVNT,Chemicals-Plastics
+AVNW,Telecom-Infrastructure
+AVO,Agricultural Operations
+AVPT,Computer Sftwr-Database
+AVR,Medical-Products
+AVT,Electronic-Parts
+AVTR,Medical - Research
+AVTX,Medical - Development Biotech
+AVX,Finance - Crypto/Blockchain
+AVXL,Medical - Development Biotech
+AVY,Containers/Packaging
+AWF,Closed-end Funds
+AWI,Building - Construction Products
+AWK,Utilities
+AWP,Closed-end Funds
+AWR,Utilities
+AWRE,Telecom-Infrastructure
+AWX,Pollution Control
+AX,Banks-Savings & Loan
+AXAHY,Insurance
+AXG,Finance-Invest Bnk/Bkrs
+AXGN,Medical-Products
+AXIA,Utilities
+AXIL,Consumer Prod-Electronic
+AXON,Security/Sfty
+AXP,Finance-CrdtCard/PmtPr
+AXR,Real Estate Dvlpmt/Ops
+AXS,Insurance
+AXSM,Medical - Revenue Biotech
+AXTA,Chemicals-Specialty
+AXTI,Elec-Semiconductor Mfg
+AXTN,Medical - Development Biotech
+AYA,Mining-Gold/Silver/Gems
+AYI,Building - Construction Products
+AYRWF,Cannabis
+AYTU,Medical - Development Biotech
+AZ,Computer-Tech Services
+AZI,Retail/Whlsle-Automobile
+AZN,Medical - Profitable Biotech
+AZO,Retail/Whlsle-Auto Parts
+AZTA,Medical - Research
+AZTR,Medical - Development Biotech
+AZUL,Transportation-Airline
+AZZ,Electrical-Power/Equipmt
+B,Mining-Gold/Silver/Gems
+BA,Aerospace/Defense
+BABA,Retail-Internet
+BAC,Banks-Money Center
+BAER,Aerospace/Defense
+BAESY,Aerospace/Defense
+BAFN,Banks-Regional
+BAH,Comml Svcs-Consulting
+BAK,Chemicals-Plastics
+BALL,Containers/Packaging
+BALY,Leisure-Gaming/Equip
+BAM,Finance-Investment Mgmt
+BANC,Banks-Regional
+BAND,Comp Sftwr - Enterprise
+BANF,Banks-Regional
+BANL,Oil&Gas-Refining/Mktg
+BANR,Banks-Regional
+BANX,Closed-end Funds
+BAOS,Comml Svcs-Advertising
+BAP,Banks-Foreign
+BARK,Retail - Specialty
+BASFY,Chemicals-Basic
+BATL,Oil&Gas-Explorers/Producers
+BATRA,Leisure-Services
+BATRB,Leisure-Services
+BATRK,Leisure-Services
+BAX,Medical-Products
+BAYRY,Medical - Pharmaceuticals
+BAYZF,Medical - Pharmaceuticals
+BB,Computer Sftwr-Security
+BBAI,Comp Sftwr - Enterprise
+BBAR,Banks-Foreign
+BBBY,Retail-Internet
+BBCP,Bldg-Heavy Construction
+BBD,Banks-Foreign
+BBDC,Finance-Investment Mgmt
+BBDO,Banks-Foreign
+BBGI,Media
+BBIO,Medical - Revenue Biotech
+BBLG,Medical-Products
+BBN,Closed-end Funds
+BBNX,Medical-Products
+BBOT,Medical - Development Biotech
+BBSI,Comml Svcs-Outsourcing
+BBT,Banks-Regional
+BBUC,Finance-Investment Mgmt
+BBVA,Banks-Foreign
+BBW,Retail-Leisure Products
+BBWI,Retail - Specialty
+BBY,Retail - Home Furnishings/Electronics
+BC,Leisure-Products
+BCAB,Medical - Development Biotech
+BCAL,Banks-Regional
+BCAT,Closed-end Funds
+BCAX,Medical - Development Biotech
+BCBP,Banks-Regional
+BCC,Retail/Whlsle-Bldg Prds
+BCDA,Medical - Development Biotech
+BCE,Telecom Svcs- Foreign
+BCG,Finance-Investment Mgmt
+BCGS,Finance-ETF / ETN
+BCH,Banks-Foreign
+BCHT,Comml Svcs-Advertising
+BCIC,Closed-end Funds
+BCML,Banks-Regional
+BCO,Security/Sfty
+BCPC,Chemicals-Specialty
+BCRX,Medical - Profitable Biotech
+BCS,Banks-Money Center
+BCSF,Financial Svcs-Specialty
+BCTX,Medical - Development Biotech
+BCV,Closed-end Funds
+BCX,Closed-end Funds
+BCYC,Medical - Development Biotech
+BDC,Telecom - Equipment
+BDCX,Finance-ETF / ETN
+BDCZ,Finance-ETF / ETN
+BDJ,Closed-end Funds
+BDL,Retail-Restaurants
+BDMD,Medical-Products
+BDN,REITs
+BDRX,Medical - Development Biotech
+BDSX,Medical-Services
+BDTX,Medical - Development Biotech
+BDX,Medical-Products
+BE,Energy-Alternative/Other
+BEAM,Medical - Development Biotech
+BEAT,Medical - Research
+BEEM,Electrical-Power/Equipmt
+BEEP,REITs
+BEKE,Real Estate Dvlpmt/Ops
+BELFA,Electronic-Parts
+BELFB,Electronic-Parts
+BEN,Finance-Investment Mgmt
+BENF,Finance-Investment Mgmt
+BEP,Energy-Alternative/Other
+BEPC,Energy-Alternative/Other
+BERZ,Finance-ETF / ETN
+BESIY,Elec-Semiconductor Equip
+BESO,Finance-ETF / ETN
+BESS,Energy-Alternative/Other
+BETA,Aerospace/Defense
+BETR,Finance-Mrtg&Rel Svc
+BEZ,Finance-ETF / ETN
+BF.A,Beverages-Alcoholic
+BF.B,Beverages-Alcoholic
+BFAM,Consumer - Specialty
+BFC,Banks-Regional
+BFH,Finance-CrdtCard/PmtPr
+BFLY,Medical-Systems
+BFRG,Medical - Development Biotech
+BFRI,Medical - Pharmaceuticals
+BFS,REITs
+BFST,Financial Svcs-Specialty
+BG,Agricultural Operations
+BGB,Closed-end Funds
+BGC,Finance-Invest Bnk/Bkrs
+BGDE,Finance - Crypto/Blockchain
+BGH,Closed-end Funds
+BGI,Retail - Specialty
+BGIN,Finance - Crypto/Blockchain
+BGL,Mining-Gold/Silver/Gems
+BGLC,Chemicals-Specialty
+BGM,Medical - Pharmaceuticals
+BGMS,Medical - Development Biotech
+BGR,Closed-end Funds
+BGS,Food - Packaged
+BGSF,Comml Svcs-Staffing
+BGSI,Retail/Whlsle-Auto Parts
+BGT,Closed-end Funds
+BGX,Closed-end Funds
+BGY,Closed-end Funds
+BH,Retail-Restaurants
+BH.A,Retail-Restaurants
+BHATF,Metal Products - Distributors/Fabrication
+BHB,Banks-Regional
+BHC,Medical - Pharmaceuticals
+BHE,Elec-Contract Mfg
+BHF,Insurance
+BHK,Closed-end Funds
+BHKLY,Banks-Foreign
+BHM,REITs
+BHP,Mining-Metal Ores
+BHR,REITs
+BHRB,Banks-Regional
+BHST,Consumer - Specialty
+BHV,Closed-end Funds
+BHVN,Medical - Development Biotech
+BIAF,Medical-Services
+BIDU,Internet-Content
+BIIB,Medical - Profitable Biotech
+BILI,Internet-Content
+BILL,Comp Sftwr - Financial
+BIO,Medical - Research
+BIO.B,Medical - Profitable Biotech
+BIOA,Medical - Development Biotech
+BIOX,Agricultural Operations
+BIP,Finance-Investment Mgmt
+BIPC,Finance-Investment Mgmt
+BIRD,Apparel - Clothing & Shoes
+BIRK,Apparel - Clothing & Shoes
+BIT,Closed-end Funds
+BIVI,Medical - Development Biotech
+BIYA,Comml Svcs-Staffing
+BJ,Retail - General
+BJDX,Medical - Development Biotech
+BJRI,Retail-Restaurants
+BKD,Medical - Home & Nursing Care
+BKE,Retail-Apparel/Shoes/Acc
+BKFG,Finance-Investment Mgmt
+BKH,Utilities
+BKKT,Finance - Crypto/Blockchain
+BKNG,Leisure-Travel Booking
+BKR,Oil&Gas-Machinery/Equip
+BKSY,Telecom/Cable Services
+BKT,Closed-end Funds
+BKTI,Computer-Networking
+BKU,Banks-Regional
+BKV,Oil&Gas-Explorers/Producers
+BKYI,Security/Sfty
+BL,Comp Sftwr - Financial
+BLBD,Transportation-Equip Mfg
+BLCO,Medical-Systems
+BLD,Building - Construction Products
+BLDP,Energy-Alternative/Other
+BLDR,Building - Construction Products
+BLFS,Medical-Products
+BLIN,Internet-Network Sltns
+BLIV,Comp Sftwr - Enterprise
+BLK,Finance-Investment Mgmt
+BLKB,Comp Sftwr - Specialty Enterprise
+BLLN,Medical - Research
+BLMH,Cannabis
+BLMN,Retail-Restaurants
+BLMZF,Leisure-Movies & Related
+BLND,Comp Sftwr - Financial
+BLNE,Finance-Mrtg&Rel Svc
+BLNK,Energy-Alternative/Other
+BLRX,Medical - Development Biotech
+BLSH,Finance - Crypto/Blockchain
+BLTE,Medical - Development Biotech
+BLW,Closed-end Funds
+BLX,Banks-Foreign
+BLZE,Computer-Hardware/Perip
+BMA,Banks-Foreign
+BMBL,Internet-Content
+BME,Closed-end Funds
+BMEA,Medical - Development Biotech
+BMEZ,Closed-end Funds
+BMGL,Medical-Services
+BMHL,Comml Svcs-Consulting
+BMI,Machinery-Gen Industrial
+BMM,Mining-Metal Ores
+BMMJ,Cannabis
+BMN,Closed-end Funds
+BMNR,Finance - Crypto/Blockchain
+BMO,Banks-Money Center
+BMR,Computer-Tech Services
+BMRA,Medical-Products
+BMRC,Banks-Regional
+BMRN,Medical - Revenue Biotech
+BMY,Medical - Pharmaceuticals
+BN,Finance-Investment Mgmt
+BNAI,Comp Sftwr - Enterprise
+BNBX,Finance - Crypto/Blockchain
+BNC,Finance - Crypto/Blockchain
+BNED,Retail-Leisure Products
+BNET,Pollution Control
+BNGO,Medical-Products
+BNKD,Finance-ETF / ETN
+BNKK,Finance - Crypto/Blockchain
+BNKU,Finance-ETF / ETN
+BNL,REITs
+BNPQY,Banks-Money Center
+BNR,Medical-Services
+BNRG,Energy-Alternative/Other
+BNS,Banks-Money Center
+BNT,Insurance
+BNTC,Medical - Development Biotech
+BNTX,Medical - Revenue Biotech
+BNY,Banks-Money Center
+BNZI,Comml Svcs-Market Rsrch
+BOBS,Retail - Home Furnishings/Electronics
+BOC,Diversified Operations
+BODI,Leisure-Services
+BOE,Closed-end Funds
+BOF,Food - Packaged
+BOH,Banks-Regional
+BOKF,Banks-Regional
+BOLD,Medical - Development Biotech
+BOLT,Medical - Development Biotech
+BON,Cosmetics/Personal Care
+BOOM,Metal Products - Distributors/Fabrication
+BOOT,Retail-Apparel/Shoes/Acc
+BORR,Oil&Gas-Drilling
+BOSC,Computer-Networking
+BOT,Closed-end Funds
+BOTJ,Banks-Regional
+BOUYY,Bldg-Heavy Construction
+BOW,Insurance
+BOX,Computer Sftwr-Database
+BOXL,Consumer Prod-Electronic
+BP,Oil&Gas-Integrated
+BPH,Finance-ETF / ETN
+BPOP,Banks-Regional
+BPRN,Banks-Regional
+BQ,Retail-Internet
+BR,Financial Svcs-Specialty
+BRAG,Computer Sftwr-Gaming
+BRAI,Comp Sftwr - Specialty Enterprise
+BRBR,Cosmetics/Personal Care
+BRBS,Banks-Regional
+BRC,Elec-Misc Products
+BRCB,Retail-Restaurants
+BRCC,Retail-Restaurants
+BRDCY,Auto/Truck Equipment Parts & Tires
+BRFH,Beverages-Non-Alcoholic
+BRIA,Apparel - Clothing & Shoes
+BRID,Food - Packaged
+BRK.A,Diversified Operations
+BRK.B,Diversified Operations
+BRKR,Medical-Systems
+BRLS,Food - Packaged
+BRLT,Retail - Specialty
+BRN,Oil&Gas-Explorers/Producers
+BRNS,Medical - Development Biotech
+BRO,Insurance
+BROS,Retail-Restaurants
+BRR,Finance - Crypto/Blockchain
+BRSL,Leisure-Gaming/Equip
+BRSP,REITs
+BRT,REITs
+BRTX,Medical - Development Biotech
+BRUN,Computer Sftwr-Database
+BRW,Closed-end Funds
+BRX,REITs
+BRZE,Comp Sftwr - Enterprise
+BSAC,Banks-Foreign
+BSBK,Banks-Regional
+BSBR,Banks-Foreign
+BSET,Hsehold/Office Furniture
+BSIN,Oil&Gas-Explorers/Producers
+BSL,Closed-end Funds
+BSM,Oil&Gas-Explorers/Producers
+BSRR,Banks-Regional
+BST,Closed-end Funds
+BSTZ,Closed-end Funds
+BSVN,Banks-Regional
+BSX,Medical-Products
+BSY,Computer Sftwr-Design
+BTAI,Medical - Development Biotech
+BTBD,Retail-Restaurants
+BTBT,Finance - Crypto/Blockchain
+BTCS,Finance - Crypto/Blockchain
+BTCT,Finance - Crypto/Blockchain
+BTDR,Finance - Crypto/Blockchain
+BTE,Oil&Gas-Explorers/Producers
+BTG,Mining-Gold/Silver/Gems
+BTGO,Finance - Crypto/Blockchain
+BTI,Tobacco
+BTMCQ,Finance - Crypto/Blockchain
+BTMD,Medical - Pharmaceuticals
+BTO,Closed-end Funds
+BTOC,Transportation-Logistics
+BTOG,Food - Foodstuffs
+BTQ,Computer Sftwr-Security
+BTSG,Medical-Services
+BTT,Closed-end Funds
+BTU,Energy-Coal
+BTX,Closed-end Funds
+BTZ,Closed-end Funds
+BUD,Beverages-Alcoholic
+BUDA,Beverages-Non-Alcoholic
+BUI,Closed-end Funds
+BULG,Finance-ETF / ETN
+BULL,Finance-Invest Bnk/Bkrs
+BULZ,Finance-ETF / ETN
+BUR,Finance-Investment Mgmt
+BURL,Retail-Apparel/Shoes/Acc
+BURU,Machinery-Gen Industrial
+BUSE,Banks-Regional
+BUUU,Comml Svcs-Advertising
+BV,Bldg-Maintenance & Svc
+BVC,Finance-Investment Mgmt
+BVFL,Banks-Regional
+BVN,Mining-Gold/Silver/Gems
+BVS,Medical-Products
+BW,Electrical-Power/Equipmt
+BWA,Auto/Truck Equipment Parts & Tires
+BWAY,Medical-Systems
+BWB,Banks-Regional
+BWEN,Energy-Alternative/Other
+BWFG,Banks-Regional
+BWG,Closed-end Funds
+BWIN,Insurance
+BWLP,Transportation-Ship
+BWMN,Comml Svcs-Consulting
+BWMX,Hsehold-Appliances/Wares
+BWXT,Aerospace/Defense
+BX,Finance-Investment Mgmt
+BXC,Retail/Whlsle-Bldg Prds
+BXDC,REITs
+BXMT,REITs
+BXP,REITs
+BXSL,Closed-end Funds
+BY,Banks-Regional
+BYAH,Cosmetics/Personal Care
+BYD,Leisure-Gaming/Equip
+BYDDF,Auto Manufacturers
+BYFC,Banks-Regional
+BYND,Food - Foodstuffs
+BYRN,Security/Sfty
+BYSI,Medical - Development Biotech
+BZ,Internet-Content
+BZAI,Computer-Tech Services
+BZFD,Internet-Content
+BZH,Bldg-Resident/Comml
+BZUN,Comp Sftwr - Enterprise
+C,Banks-Money Center
+CAAP,Real Estate Dvlpmt/Ops
+CAAS,Auto/Truck Equipment Parts & Tires
+CABA,Medical - Development Biotech
+CABO,Telecom/Cable Services
+CABR,Cosmetics/Personal Care
+CAC,Banks-Regional
+CACC,Finance-Consumer Loans
+CACI,Computer-Tech Services
+CADL,Medical - Development Biotech
+CAE,Aerospace/Defense
+CAF,Closed-end Funds
+CAG,Food - Packaged
+CAH,Medical-Distribution
+CAI,Medical - Research
+CAIXY,Banks-Foreign
+CAKE,Retail-Restaurants
+CAL,Retail-Apparel/Shoes/Acc
+CALC,Medical - Development Biotech
+CALM,Agricultural Operations
+CALX,Computer-Networking
+CALY,Leisure-Products
+CAMP,Medical - Development Biotech
+CAMT,Elec-Scientific/Msrng
+CAN,Elec-Semicondctor Fablss
+CANF,Medical - Development Biotech
+CANG,Comp Sftwr - Financial
+CANN,Cannabis
+CAPL,Oil&Gas-Refining/Mktg
+CAPR,Medical - Development Biotech
+CAPS,Building - Construction Products
+CAR,Leisure-Services
+CARD,Finance-ETF / ETN
+CARE,Banks-Regional
+CARG,Internet-Content
+CARL,Medical-Products
+CARM,Medical - Development Biotech
+CARR,Building - Construction Products
+CARS,Retail/Whlsle-Automobile
+CART,Retail-Internet
+CARU,Finance-ETF / ETN
+CASH,Banks-Regional
+CASIF,Medical - Development Biotech
+CASS,Finance-CrdtCard/PmtPr
+CAST,Media
+CASY,Retail-Super/Mini Mkts
+CAT,Machinery-Constr/Mining/Farming
+CATO,Retail-Apparel/Shoes/Acc
+CATX,Medical - Pharmaceuticals
+CATY,Banks-Regional
+CAVA,Retail-Restaurants
+CB,Insurance
+CBAN,Banks-Regional
+CBAT,Consumer - Specialty
+CBC,Banks-Regional
+CBFV,Banks-Regional
+CBIO,Medical - Development Biotech
+CBK,Banks-Regional
+CBL,REITs
+CBLL,Medical-Products
+CBNA,Banks-Regional
+CBNK,Banks-Regional
+CBOE,Financial Svcs-Specialty
+CBRE,Real Estate Dvlpmt/Ops
+CBRL,Retail-Restaurants
+CBRS,Elec-Semicondctor Fablss
+CBSH,Banks-Regional
+CBSTQ,Cannabis
+CBT,Chemicals-Specialty
+CBU,Banks-Regional
+CBUS,Agricultural Operations
+CBWTF,Cannabis
+CBZ,Comml Svcs-Consulting
+CC,Chemicals-Specialty
+CCAP,Finance-Investment Mgmt
+CCB,Banks-Regional
+CCBG,Banks-Regional
+CCC,Comp Sftwr - Specialty Enterprise
+CCCC,Medical - Development Biotech
+CCD,Closed-end Funds
+CCDBF,Containers/Packaging
+CCEC,Transport - Oil/Gas Shipping
+CCEL,Medical-Services
+CCEP,Beverages-Non-Alcoholic
+CCG,Insurance
+CCHGY,Beverages-Non-Alcoholic
+CCHH,Retail-Restaurants
+CCI,REITs
+CCIF,Closed-end Funds
+CCJ,Mining-Metal Ores
+CCK,Containers/Packaging
+CCL,Leisure-Services
+CCLD,Computer Sftwr-Medical
+CCM,Medical-Services
+CCNE,Banks-Regional
+CCO,Comml Svcs-Advertising
+CCOI,Telecom Svcs- Foreign
+CCRN,Comml Svcs-Staffing
+CCS,Bldg-Resident/Comml
+CCSI,Comp Sftwr - Enterprise
+CCTG,Electronic-Parts
+CCU,Beverages-Alcoholic
+CD,Finance - Crypto/Blockchain
+CDE,Mining-Gold/Silver/Gems
+CDIO,Medical-Systems
+CDLR,Transportation-Ship
+CDLX,Comp Sftwr - Enterprise
+CDNA,Medical-Services
+CDNL,Bldg-Heavy Construction
+CDNS,Computer Sftwr-Design
+CDP,REITs
+CDRE,Security/Sfty
+CDRO,Leisure-Gaming/Equip
+CDT,Medical - Development Biotech
+CDTG,Pollution Control
+CDW,Computer-Tech Services
+CDXS,Medical - Development Biotech
+CDZI,Utilities
+CE,Chemicals-Basic
+CECO,Pollution Control
+CEE,Closed-end Funds
+CEF,Closed-end Funds
+CEFD,Finance-ETF / ETN
+CEG,Energy-Alternative/Other
+CELC,Medical - Development Biotech
+CELH,Beverages-Non-Alcoholic
+CELU,Medical - Development Biotech
+CELZ,Medical - Development Biotech
+CENN,Auto Manufacturers
+CENT,Hsehold-Appliances/Wares
+CENTA,Consumer - Specialty
+CENX,Metal Products - Distributors/Fabrication
+CEPU,Utilities
+CERO,Medical - Development Biotech
+CERS,Medical - Revenue Biotech
+CERT,Computer Sftwr-Medical
+CET,Closed-end Funds
+CETX,Elec-Misc Products
+CETY,Energy-Alternative/Other
+CEV,Closed-end Funds
+CEVA,Elec-Semicondctor Fablss
+CF,Chemicals-Agricultural
+CFBK,Banks-Regional
+CFFI,Banks-Regional
+CFFN,Banks-Savings & Loan
+CFG,Banks-Super Regional
+CFND,Finance-ETF / ETN
+CFR,Banks-Regional
+CFRUY,Apparel - Clothing & Shoes
+CG,Finance-Investment Mgmt
+CGAU,Mining-Gold/Silver/Gems
+CGBD,Finance-Commercial Loans
+CGC,Cannabis
+CGEM,Medical - Development Biotech
+CGEMY,Computer-Tech Services
+CGEN,Medical - Development Biotech
+CGNT,Computer Sftwr-Security
+CGNX,Elec-Scientific/Msrng
+CGO,Closed-end Funds
+CGON,Medical - Development Biotech
+CGTL,Consumer Prod-Electronic
+CGTX,Medical - Development Biotech
+CHA,Retail-Restaurants
+CHAI,Computer Sftwr-Gaming
+CHCI,Bldg-Resident/Comml
+CHCO,Banks-Regional
+CHCT,REITs
+CHD,Consumer - Specialty
+CHDN,Leisure-Gaming/Equip
+CHE,Diversified Operations
+CHEF,Food - Packaged
+CHGCY,Medical - Pharmaceuticals
+CHGG,Consumer Svcs-Education
+CHH,Leisure-Lodging
+CHI,Closed-end Funds
+CHKP,Computer Sftwr-Security
+CHMG,Banks-Regional
+CHMI,REITs
+CHNR,Mining-Gold/Silver/Gems
+CHOW,Computer-Tech Services
+CHPT,Energy-Alternative/Other
+CHR,Internet-Content
+CHRD,Oil&Gas-Explorers/Producers
+CHRN,Computer-Tech Services
+CHRS,Medical - Development Biotech
+CHRW,Transportation-Logistics
+CHSN,Food - Packaged
+CHT,Telecom Svcs- Foreign
+CHTR,Telecom/Cable Services
+CHW,Closed-end Funds
+CHWY,Retail-Internet
+CHY,Closed-end Funds
+CHYM,Comp Sftwr - Specialty Enterprise
+CI,Medical-Managed Care
+CIA,Insurance
+CIB,Banks-Foreign
+CICHY,Banks-Foreign
+CIEN,Telecom - Equipment
+CIF,Closed-end Funds
+CIFR,Finance - Crypto/Blockchain
+CIG,Utilities
+CIGI,Real Estate Dvlpmt/Ops
+CIHKY,Banks-Foreign
+CII,Closed-end Funds
+CIIT,Transportation-Logistics
+CIK,Closed-end Funds
+CIM,REITs
+CIMG,Food - Packaged
+CINF,Insurance
+CING,Medical - Development Biotech
+CINT,Computer-Tech Services
+CION,Finance-Commercial Loans
+CISO,Computer Sftwr-Security
+CISS,Transportation-Ship
+CITR,Chemicals-Specialty
+CIVB,Banks-Regional
+CIX,Hsehold/Office Furniture
+CJMB,Transportation-Logistics
+CKHUY,Diversified Operations
+CKX,Real Estate Dvlpmt/Ops
+CL,Cosmetics/Personal Care
+CLAR,Leisure-Products
+CLB,Oil&Gas-Field Services
+CLBK,Banks-Regional
+CLBT,Comp Sftwr - Specialty Enterprise
+CLDI,Medical - Development Biotech
+CLDT,REITs
+CLDX,Medical - Development Biotech
+CLF,Steel-Producers
+CLFD,Telecom - Equipment
+CLGN,Medical-Systems
+CLH,Pollution Control
+CLIK,Comml Svcs-Staffing
+CLIR,Energy-Alternative/Other
+CLLS,Medical - Development Biotech
+CLM,Closed-end Funds
+CLMB,Business Equip & Supplies
+CLMT,Oil&Gas-Refining/Mktg
+CLNE,Energy-Alternative/Other
+CLNN,Medical - Development Biotech
+CLOV,Medical-Managed Care
+CLPR,REITs
+CLPS,Comp Sftwr - Financial
+CLPT,Medical-Systems
+CLRB,Medical - Development Biotech
+CLRO,Telecom-Infrastructure
+CLS,Elec-Contract Mfg
+CLSDQ,Medical - Development Biotech
+CLSK,Finance - Crypto/Blockchain
+CLST,Banks-Regional
+CLVT,Comp Sftwr - Specialty Enterprise
+CLW,Paper & Paper Products
+CLWT,Pollution Control
+CLX,Consumer - Specialty
+CLYM,Medical - Development Biotech
+CM,Banks-Foreign
+CMBMF,Telecom-Infrastructure
+CMBT,Transportation-Ship
+CMC,Metal Products - Distributors/Fabrication
+CMCL,Mining-Gold/Silver/Gems
+CMCM,Computer Sftwr-Security
+CMCO,Machinery-Mtl Hdlg/Autmn
+CMCSA,Telecom/Cable Services
+CMCT,REITs
+CMDB,Transportation-Ship
+CME,Financial Svcs-Specialty
+CMG,Retail-Restaurants
+CMI,Trucks & Parts-Hvy Duty
+CMMB,Medical - Development Biotech
+CMND,Medical - Development Biotech
+CMP,Chemicals-Basic
+CMPGY,Food - Packaged
+CMPR,Comml Svcs-Market Rsrch
+CMPS,Medical - Development Biotech
+CMPX,Medical - Development Biotech
+CMRC,Comp Sftwr - Enterprise
+CMRE,Transportation-Ship
+CMS,Utilities
+CMT,Chemicals-Plastics
+CMTG,REITs
+CMTL,Telecom - Equipment
+CMTV,Banks-Regional
+CNA,Insurance
+CNC,Medical-Managed Care
+CNCK,Financial Svcs-Specialty
+CNDT,Comml Svcs-Outsourcing
+CNET,Internet-Content
+CNEY,Chemicals-Specialty
+CNF,Finance-Mrtg&Rel Svc
+CNH,Machinery-Constr/Mining/Farming
+CNI,Transportation-Rail
+CNK,Leisure-Services
+CNL,Mining-Gold/Silver/Gems
+CNM,Building - Construction Products
+CNMD,Medical-Products
+CNNE,Finance-Investment Mgmt
+CNO,Insurance
+CNOB,Banks-Regional
+CNP,Utilities
+CNQ,Oil&Gas-Explorers/Producers
+CNR,Energy-Coal
+CNS,Finance-Investment Mgmt
+CNSP,Medical - Development Biotech
+CNSWF,Comp Sftwr - Specialty Enterprise
+CNTA,Medical - Research
+CNTB,Medical - Development Biotech
+CNTMF,Cannabis
+CNTN,Medical - Development Biotech
+CNTX,Medical - Development Biotech
+CNTY,Leisure-Gaming/Equip
+CNVS,Leisure-Movies & Related
+CNX,Oil&Gas-Explorers/Producers
+CNXC,Comp Sftwr - Enterprise
+CNXN,Computer-Tech Services
+CNXU,Medical - Development Biotech
+COAG,Medical - Development Biotech
+COCH,Medical-Products
+COCO,Beverages-Non-Alcoholic
+COCP,Medical - Development Biotech
+CODA,Aerospace/Defense
+CODI,Finance-Investment Mgmt
+CODX,Medical - Development Biotech
+COE,Consumer Svcs-Education
+COF,Finance-CrdtCard/PmtPr
+COFS,Banks-Regional
+COGNY,Consumer Svcs-Education
+COGT,Medical - Development Biotech
+COHN,Finance-Invest Bnk/Bkrs
+COHR,Electronic-Parts
+COHU,Elec-Semiconductor Equip
+COIN,Finance - Crypto/Blockchain
+COKE,Beverages-Non-Alcoholic
+COLB,Banks-Regional
+COLD,REITs
+COLL,Medical - Pharmaceuticals
+COLM,Apparel - Clothing & Shoes
+COMP,Comp Sftwr - Specialty Enterprise
+CON,Medical-Managed Care
+COO,Medical-Products
+COOK,Hsehold-Appliances/Wares
+COOT,Food - Packaged
+COP,Oil&Gas-Explorers/Producers
+COR,Medical-Distribution
+CORT,Medical - Profitable Biotech
+CORZ,Finance - Crypto/Blockchain
+COSM,Medical - Development Biotech
+COSO,Banks-Regional
+COST,Retail - General
+COTY,Cosmetics/Personal Care
+COUR,Computer Sftwr-Edu/Media
+COYA,Medical - Development Biotech
+CP,Transportation-Rail
+CPA,Transportation-Airline
+CPAC,Bldg-Cement/Concrt/Ag
+CPAY,Financial Svcs-Specialty
+CPB,Food - Packaged
+CPBI,Banks-Regional
+CPF,Banks-Regional
+CPHC,Leisure-Gaming/Equip
+CPHI,Medical - Pharmaceuticals
+CPIX,Medical - Pharmaceuticals
+CPK,Utilities
+CPNG,Retail-Internet
+CPOP,Internet-Content
+CPRI,Apparel - Clothing & Shoes
+CPRT,Retail/Whlsle-Automobile
+CPRX,Medical - Profitable Biotech
+CPS,Auto/Truck Equipment Parts & Tires
+CPSH,Elec-Misc Products
+CPSS,Finance-Consumer Loans
+CPT,REITs
+CPTAF,Building - Construction Products
+CPZ,Closed-end Funds
+CQP,Oil&Gas - Pipeline
+CR,Machinery-Gen Industrial
+CRAI,Comml Svcs-Consulting
+CRBG,Insurance
+CRBJY,Real Estate Dvlpmt/Ops
+CRBP,Medical - Development Biotech
+CRBU,Medical - Development Biotech
+CRC,Oil&Gas-Explorers/Producers
+CRCL,Finance - Crypto/Blockchain
+CRCT,Computer-Hardware/Perip
+CRD.A,Insurance
+CRD.B,Insurance
+CRDF,Medical - Research
+CRDL,Medical - Development Biotech
+CRDO,Elec-Semicondctor Fablss
+CRE,Business Equip & Supplies
+CREG,Energy-Alternative/Other
+CRESY,REITs
+CREVF,Auto/Truck Equipment Parts & Tires
+CREX,Comml Svcs-Advertising
+CRF,Closed-end Funds
+CRGO,Transport-Air Freight
+CRGY,Oil&Gas-Explorers/Producers
+CRH,Bldg-Cement/Concrt/Ag
+CRI,Apparel - Clothing & Shoes
+CRIS,Medical - Development Biotech
+CRK,Oil&Gas-Explorers/Producers
+CRL,Medical - Research
+CRLBF,Cannabis
+CRM,Comp Sftwr - Enterprise
+CRMD,Medical - Profitable Biotech
+CRML,Mining-Metal Ores
+CRMT,Retail/Whlsle-Automobile
+CRNC,Comp Sftwr - Specialty Enterprise
+CRNT,Telecom-Infrastructure
+CRNX,Medical - Development Biotech
+CRON,Cannabis
+CROX,Apparel - Clothing & Shoes
+CRS,Steel-Specialty Alloys
+CRSP,Medical - Development Biotech
+CRSR,Computer-Hardware/Perip
+CRT,Oil&Gas-Royalty Trust
+CRTO,Comml Svcs-Advertising
+CRUS,Elec-Semicondctor Fablss
+CRVL,Medical-Managed Care
+CRVO,Medical - Development Biotech
+CRVS,Medical - Development Biotech
+CRWD,Computer Sftwr-Security
+CRWS,Consumer - Specialty
+CRWV,Internet-Network Sltns
+CSAI,Computer Sftwr-Security
+CSAN,Oil&Gas-Refining/Mktg
+CSBR,Medical - Research
+CSCO,Computer-Networking
+CSGP,Comml Svcs-Market Rsrch
+CSHR,Finance - Crypto/Blockchain
+CSIQ,Energy-Solar
+CSL,Diversified Operations
+CSLLY,Medical - Development Biotech
+CSPI,Computer-Tech Services
+CSQ,Closed-end Funds
+CSR,REITs
+CSTE,Building - Construction Products
+CSTL,Medical-Services
+CSTM,Steel-Specialty Alloys
+CSV,Consumer - Specialty
+CSW,Machinery-Constr/Mining/Farming
+CSWC,Finance-Investment Mgmt
+CSX,Transportation-Rail
+CTAS,Comml Svcs-Outsourcing
+CTBI,Banks-Regional
+CTEV,Computer Sftwr-Medical
+CTGO,Mining-Gold/Silver/Gems
+CTKB,Medical - Research
+CTM,Computer-Tech Services
+CTMX,Medical - Development Biotech
+CTNM,Medical - Development Biotech
+CTNT,Transportation-Logistics
+CTO,Real Estate Dvlpmt/Ops
+CTOR,Medical - Development Biotech
+CTOS,Comml Svcs-Leasing
+CTRE,REITs
+CTRI,Utilities
+CTRM,Transportation-Ship
+CTRN,Retail-Apparel/Shoes/Acc
+CTS,Electronic-Parts
+CTSH,Computer-Tech Services
+CTSO,Medical-Products
+CTVA,Agricultural Operations
+CTW,Computer Sftwr-Gaming
+CTXR,Medical - Development Biotech
+CUBE,REITs
+CUBI,Banks-Regional
+CUBT,Medical - Development Biotech
+CUE,Medical - Development Biotech
+CULP,Apparel - Clothing & Shoes
+CUPR,Medical-Products
+CURB,REITs
+CURI,Leisure-Movies & Related
+CURLD,Cannabis
+CURR,Comp Sftwr - Financial
+CURV,Retail-Apparel/Shoes/Acc
+CURX,Medical - Development Biotech
+CUZ,REITs
+CV,Medical-Systems
+CVBF,Banks-Regional
+CVCO,Bldg-Resident/Comml
+CVE,Oil&Gas-Integrated
+CVEO,Oil&Gas-Field Services
+CVGI,Trucks & Parts-Hvy Duty
+CVI,Oil&Gas-Refining/Mktg
+CVKD,Medical - Development Biotech
+CVLG,Transportation-Truck
+CVLT,Computer Sftwr-Database
+CVM,Medical - Development Biotech
+CVNA,Retail/Whlsle-Automobile
+CVR,Auto/Truck Equipment Parts & Tires
+CVRX,Medical-Systems
+CVS,Medical-Managed Care
+CVSA,Consumer Svcs-Education
+CVSI,Cannabis
+CVU,Aerospace/Defense
+CVV,Elec-Semiconductor Equip
+CVX,Oil&Gas-Integrated
+CW,Aerospace/Defense
+CWAN,Comp Sftwr - Enterprise
+CWBC,Banks-Regional
+CWBHF,Cannabis
+CWCO,Utilities
+CWD,Finance-Investment Mgmt
+CWEN,Energy-Alternative/Other
+CWH,Retail/Whlsle-Automobile
+CWK,Real Estate Dvlpmt/Ops
+CWST,Pollution Control
+CWT,Utilities
+CX,Bldg-Cement/Concrt/Ag
+CXAI,Comp Sftwr - Enterprise
+CXDO,Internet-Network Sltns
+CXM,Comp Sftwr - Enterprise
+CXT,Comp Sftwr - Financial
+CXW,Security/Sfty
+CYAB,Computer Sftwr-Database
+CYATY,Auto/Truck Equipment Parts & Tires
+CYCN,Medical - Development Biotech
+CYCU,Computer Sftwr-Security
+CYD,Trucks & Parts-Hvy Duty
+CYH,Medical-Hospitals
+CYN,Computer-Tech Services
+CYPH,Finance - Crypto/Blockchain
+CYRX,Transportation-Logistics
+CYTK,Medical - Development Biotech
+CZFS,Banks-Regional
+CZNC,Banks-Regional
+CZR,Leisure-Gaming/Equip
+CZWI,Banks-Regional
+D,Utilities
+DAC,Transportation-Ship
+DAIC,Comp Sftwr - Enterprise
+DAIO,Elec-Semiconductor Mfg
+DAKT,Elec-Misc Products
+DAL,Transportation-Airline
+DAN,Auto/Truck Equipment Parts & Tires
+DANOY,Food - Packaged
+DAO,Computer Sftwr-Edu/Media
+DAR,Agricultural Operations
+DARE,Medical - Development Biotech
+DASH,Retail-Internet
+DASTY,Computer Sftwr-Design
+DAVA,Computer-Tech Services
+DAVE,Computer-Tech Services
+DB,Banks-Money Center
+DBD,Computer-Tech Services
+DBGI,Retail-Apparel/Shoes/Acc
+DBI,Retail-Apparel/Shoes/Acc
+DBL,Closed-end Funds
+DBOEF,Financial Svcs-Specialty
+DBRG,Finance-Investment Mgmt
+DBSDY,Banks-Money Center
+DBVT,Medical - Development Biotech
+DBX,Computer Sftwr-Database
+DC,Mining-Gold/Silver/Gems
+DCBO,Comp Sftwr - Enterprise
+DCGO,Medical-Services
+DCH,Auto/Truck Equipment Parts & Tires
+DCI,Pollution Control
+DCO,Aerospace/Defense
+DCOM,Banks-Regional
+DCOY,Medical - Development Biotech
+DCTH,Medical-Products
+DCX,Finance - Crypto/Blockchain
+DD,Chemicals-Basic
+DDC,Food - Packaged
+DDD,Machinery-Mtl Hdlg/Autmn
+DDI,Computer Sftwr-Gaming
+DDL,Food - Foodstuffs
+DDOG,Comp Sftwr - Enterprise
+DDS,Retail - General
+DE,Machinery-Constr/Mining/Farming
+DEA,REITs
+DEC,Oil&Gas-Explorers/Producers
+DECK,Apparel - Clothing & Shoes
+DEFT,Finance - Crypto/Blockchain
+DEI,REITs
+DELL,Computer-Hardware/Perip
+DEO,Beverages-Alcoholic
+DERM,Medical - Development Biotech
+DETX,Security/Sfty
+DEVS,Pollution Control
+DFDV,Finance - Crypto/Blockchain
+DFH,Bldg-Resident/Comml
+DFIN,Financial Svcs-Specialty
+DFLI,Electrical-Power/Equipmt
+DFNS,Comp Sftwr - Financial
+DFP,Closed-end Funds
+DFSC,Aerospace/Defense
+DFTX,Medical - Development Biotech
+DG,Retail - General
+DGICA,Insurance
+DGICB,Insurance
+DGII,Computer-Networking
+DGNX,Finance - Crypto/Blockchain
+DGP,Finance-ETF / ETN
+DGX,Medical-Services
+DGXX,Financial Svcs-Specialty
+DGZ,Finance-ETF / ETN
+DH,Computer Sftwr-Medical
+DHC,REITs
+DHF,Closed-end Funds
+DHI,Bldg-Resident/Comml
+DHR,Medical - Research
+DHT,Transport - Oil/Gas Shipping
+DHX,Internet-Content
+DHY,Closed-end Funds
+DIBS,Retail-Internet
+DIDIY,Leisure-Services
+DIN,Retail-Restaurants
+DINO,Oil&Gas-Refining/Mktg
+DIOD,Elec-Semiconductor Mfg
+DIS,Media
+DIT,Food - Wholesale
+DJCO,Media
+DJP,Finance-ETF / ETN
+DJT,Media
+DK,Oil&Gas-Refining/Mktg
+DKI,Leisure-Gaming/Equip
+DKILY,Building - Construction Products
+DKL,Oil&Gas - Pipeline
+DKNG,Leisure-Gaming/Equip
+DKS,Retail-Leisure Products
+DLB,Elec-Misc Products
+DLHC,Comml Svcs-Staffing
+DLNG,Transport - Oil/Gas Shipping
+DLO,Finance-CrdtCard/PmtPr
+DLPN,Leisure-Movies & Related
+DLR,REITs
+DLTH,Retail-Apparel/Shoes/Acc
+DLTR,Retail - General
+DLX,Comml Svcs-Advertising
+DLXY,Oil&Gas-Refining/Mktg
+DLY,Closed-end Funds
+DMA,Closed-end Funds
+DMAC,Medical - Development Biotech
+DMB,Closed-end Funds
+DMLP,Oil&Gas-Explorers/Producers
+DMO,Closed-end Funds
+DMRA,Medical - Development Biotech
+DMRC,Computer Sftwr-Security
+DNA,Medical - Revenue Biotech
+DNKEY,Banks-Foreign
+DNLI,Medical - Development Biotech
+DNN,Mining-Metal Ores
+DNOW,Oil&Gas-Machinery/Equip
+DNP,Closed-end Funds
+DNTH,Medical - Development Biotech
+DNUT,Retail-Restaurants
+DOC,REITs
+DOCN,Comp Sftwr - Enterprise
+DOCS,Computer Sftwr-Medical
+DOCU,Comp Sftwr - Enterprise
+DOGZ,Retail - Specialty
+DOLE,Agricultural Operations
+DOMH,Finance-Investment Mgmt
+DOMO,Comp Sftwr - Enterprise
+DOO,Leisure-Products
+DORM,Auto/Truck Equipment Parts & Tires
+DOUG,REITs
+DOV,Machinery-Gen Industrial
+DOW,Chemicals-Plastics
+DOX,Computer-Tech Services
+DOYU,Internet-Content
+DPG,Closed-end Funds
+DPRE,Finance-ETF / ETN
+DPRO,Aerospace/Defense
+DPZ,Retail-Restaurants
+DQ,Energy-Solar
+DRCT,Internet-Content
+DRD,Mining-Gold/Silver/Gems
+DRH,REITs
+DRI,Retail-Restaurants
+DRIL,Mining-Gold/Silver/Gems
+DRIO,Medical-Products
+DRMA,Medical - Development Biotech
+DRS,Aerospace/Defense
+DRSHF,Aerospace/Defense
+DRTS,Medical - Development Biotech
+DRUG,Medical - Development Biotech
+DRVN,Retail/Whlsle-Auto Parts
+DSCO,Finance-ETF / ETN
+DSDVY,Transportation-Logistics
+DSEEY,Finance-Invest Bnk/Bkrs
+DSGN,Medical - Development Biotech
+DSGR,Machinery-Constr/Mining/Farming
+DSGX,Comp Sftwr - Specialty Enterprise
+DSL,Closed-end Funds
+DSM,Closed-end Funds
+DSP,Comml Svcs-Advertising
+DSS,Security/Sfty
+DSU,Closed-end Funds
+DSWL,Consumer Prod-Electronic
+DSX,Transportation-Ship
+DSY,Cosmetics/Personal Care
+DT,Comp Sftwr - Enterprise
+DTCKF,Food - Wholesale
+DTCX,Finance - Crypto/Blockchain
+DTE,Utilities
+DTEGY,Telecom Svcs- Foreign
+DTF,Closed-end Funds
+DTI,Oil&Gas-Machinery/Equip
+DTIL,Medical - Development Biotech
+DTM,Oil&Gas - Pipeline
+DTSS,Computer-Networking
+DTST,Computer Sftwr-Database
+DUK,Utilities
+DUKR,Aerospace/Defense
+DULL,Finance-ETF / ETN
+DUO,Internet-Content
+DUOL,Computer Sftwr-Edu/Media
+DUOT,Comp Sftwr - Enterprise
+DV,Comml Svcs-Advertising
+DVA,Medical-Services
+DVLT,Computer Sftwr-Database
+DVN,Oil&Gas-Explorers/Producers
+DWSN,Oil&Gas-Field Services
+DWTX,Medical - Development Biotech
+DX,REITs
+DXC,Computer-Tech Services
+DXCM,Medical-Products
+DXF,Finance-Commercial Loans
+DXLG,Retail-Apparel/Shoes/Acc
+DXPE,Machinery-Gen Industrial
+DXR,Medical-Systems
+DXST,Pollution Control
+DXYZ,Closed-end Funds
+DY,Telecom-Infrastructure
+DYAI,Medical - Development Biotech
+DYN,Medical - Development Biotech
+DZZ,Finance-ETF / ETN
+E,Oil&Gas-Integrated
+EA,Computer Sftwr-Gaming
+EAD,Closed-end Funds
+EADSY,Aerospace/Defense
+EAF,Steel-Specialty Alloys
+EARN,REITs
+EAT,Retail-Restaurants
+EBAY,Retail-Internet
+EBC,Banks-Regional
+EBF,Business Equip & Supplies
+EBMT,Banks-Regional
+EBON,Elec-Semicondctor Fablss
+EBS,Medical - Profitable Biotech
+EC,Oil&Gas-Integrated
+ECAT,Closed-end Funds
+ECBK,Banks-Regional
+ECC,Closed-end Funds
+ECF,Closed-end Funds
+ECG,Bldg-Heavy Construction
+ECL,Pollution Control
+ECO,Transportation-Ship
+ECOR,Medical - Development Biotech
+ECPG,Financial Svcs-Specialty
+ECVT,Chemicals-Basic
+ECX,Comp Sftwr - Specialty Enterprise
+ED,Utilities
+EDBL,Agricultural Operations
+EDD,Closed-end Funds
+EDF,Closed-end Funds
+EDHL,Comml Svcs-Advertising
+EDIT,Medical - Development Biotech
+EDN,Utilities
+EDPFY,Utilities
+EDRY,Transportation-Ship
+EDSA,Medical - Development Biotech
+EDTK,Consumer Svcs-Education
+EDU,Consumer Svcs-Education
+EDUC,Media
+EE,Utilities
+EEA,Closed-end Funds
+EEFT,Finance-CrdtCard/PmtPr
+EEIQ,Consumer Svcs-Education
+EEX,Comml Svcs-Advertising
+EFC,Finance-Investment Mgmt
+EFOI,Building - Construction Products
+EFOR,Computer-Tech Services
+EFR,Closed-end Funds
+EFSC,Banks-Regional
+EFSI,Banks-Regional
+EFT,Closed-end Funds
+EFTY,Comml Svcs-Advertising
+EFX,Financial Svcs-Specialty
+EFXT,Oil&Gas-Machinery/Equip
+EG,Insurance
+EGAN,Comp Sftwr - Enterprise
+EGBN,Banks-Regional
+EGG,Comml Svcs-Consulting
+EGHT,Comp Sftwr - Enterprise
+EGO,Mining-Gold/Silver/Gems
+EGP,REITs
+EGY,Oil&Gas-Explorers/Producers
+EH,Aerospace/Defense
+EHC,Medical-Services
+EHGO,Retail - Specialty
+EHI,Closed-end Funds
+EHLD,Transportation-Ship
+EHTH,Insurance
+EIC,Closed-end Funds
+EIG,Insurance
+EIKN,Medical - Development Biotech
+EIM,Closed-end Funds
+EIX,Utilities
+EJH,Consumer - Specialty
+EJPRY,Transportation-Rail
+EL,Cosmetics/Personal Care
+ELA,Retail - Specialty
+ELAB,Cosmetics/Personal Care
+ELAN,Medical-Products
+ELBM,Electrical-Power/Equipmt
+ELDN,Medical - Development Biotech
+ELE,Mining-Gold/Silver/Gems
+ELF,Cosmetics/Personal Care
+ELLO,Energy-Alternative/Other
+ELMD,Medical-Systems
+ELME,REITs
+ELMT,Metal Products - Distributors/Fabrication
+ELOG,Transportation-Logistics
+ELOX,Medical - Development Biotech
+ELPC,Utilities
+ELPW,Electrical-Power/Equipmt
+ELS,REITs
+ELSE,Machinery-Gen Industrial
+ELTK,Elec-Contract Mfg
+ELTP,Medical - Pharmaceuticals
+ELTX,Medical - Development Biotech
+ELUT,Medical-Products
+ELUXY,Hsehold-Appliances/Wares
+ELV,Medical-Managed Care
+ELVA,Auto/Truck Equipment Parts & Tires
+ELVN,Medical - Development Biotech
+ELVR,Mining-Metal Ores
+ELWT,Telecom-Infrastructure
+EMA,Utilities
+EMAT,Mining-Metal Ores
+EMBC,Medical-Products
+EMBJ,Aerospace/Defense
+EMD,Closed-end Funds
+EME,Bldg-Heavy Construction
+EMF,Closed-end Funds
+EMI,Medical-Products
+EML,Security/Sfty
+EMN,Chemicals-Specialty
+EMO,Closed-end Funds
+EMPD,Finance - Crypto/Blockchain
+EMPG,Cosmetics/Personal Care
+EMR,Elec-Scientific/Msrng
+ENB,Oil&Gas - Pipeline
+ENFY,Chemicals-Agricultural
+ENGN,Medical - Pharmaceuticals
+ENGS,Electrical-Power/Equipmt
+ENHA,Leisure-Services
+ENIC,Utilities
+ENLT,Energy-Alternative/Other
+ENLV,Medical - Development Biotech
+ENOV,Medical-Products
+ENPH,Energy-Solar
+ENR,Consumer - Specialty
+ENRD,Transportation-Logistics
+ENS,Electrical-Power/Equipmt
+ENSC,Medical - Development Biotech
+ENSG,Medical - Home & Nursing Care
+ENTA,Medical - Development Biotech
+ENTG,Elec-Semiconductor Equip
+ENTX,Medical - Development Biotech
+ENVA,Finance-Consumer Loans
+ENVB,Medical - Development Biotech
+ENVX,Electrical-Power/Equipmt
+EOD,Closed-end Funds
+EOG,Oil&Gas-Explorers/Producers
+EOI,Closed-end Funds
+EOLS,Medical - Pharmaceuticals
+EONGY,Utilities
+EONR,Oil&Gas-Explorers/Producers
+EOS,Closed-end Funds
+EOSE,Electrical-Power/Equipmt
+EOSU,Finance-ETF / ETN
+EOT,Closed-end Funds
+EP,Oil&Gas-Explorers/Producers
+EPAC,Machinery-Constr/Mining/Farming
+EPAM,Computer-Tech Services
+EPC,Cosmetics/Personal Care
+EPD,Oil&Gas - Pipeline
+EPM,Oil&Gas-Explorers/Producers
+EPOW,Electrical-Power/Equipmt
+EPR,REITs
+EPRT,REITs
+EPRX,Medical - Development Biotech
+EPSM,Beverages-Alcoholic
+EPSN,Oil&Gas-Explorers/Producers
+EQ,Medical - Development Biotech
+EQBK,Banks-Regional
+EQH,Finance-Investment Mgmt
+EQIX,REITs
+EQNR,Oil&Gas-Integrated
+EQPT,Comml Svcs-Leasing
+EQR,REITs
+EQS,Finance-Investment Mgmt
+EQT,Oil&Gas-Integrated
+EQX,Mining-Gold/Silver/Gems
+ERAS,Medical - Development Biotech
+ERC,Closed-end Funds
+ERH,Closed-end Funds
+ERIC,Telecom-Infrastructure
+ERIE,Insurance
+ERII,Machinery-Gen Industrial
+ERNA,Medical - Development Biotech
+ERO,Mining-Metal Ores
+EROC,Electrical-Power/Equipmt
+EROK,Oil&Gas-Machinery/Equip
+ES,Utilities
+ESAB,Machinery-Gen Industrial
+ESCA,Leisure-Products
+ESE,Machinery-Gen Industrial
+ESEA,Transportation-Ship
+ESI,Chemicals-Specialty
+ESIM,Finance-ETF / ETN
+ESLA,Medical - Development Biotech
+ESLOY,Medical-Products
+ESLT,Aerospace/Defense
+ESNT,Finance-Mrtg&Rel Svc
+ESOA,Oil&Gas-Field Services
+ESP,Elec-Misc Products
+ESPR,Medical - Revenue Biotech
+ESQ,Banks-Super Regional
+ESRT,REITs
+ESS,REITs
+ESTA,Medical-Products
+ESTC,Computer Sftwr-Database
+ET,Oil&Gas - Pipeline
+ETB,Closed-end Funds
+ETD,Retail - Home Furnishings/Electronics
+ETG,Closed-end Funds
+ETJ,Closed-end Funds
+ETN,Electrical-Power/Equipmt
+ETO,Closed-end Funds
+ETON,Medical - Development Biotech
+ETOR,Finance-Invest Bnk/Bkrs
+ETR,Utilities
+ETS,Transportation-Truck
+ETSY,Retail-Internet
+ETV,Closed-end Funds
+ETW,Closed-end Funds
+ETX,Closed-end Funds
+ETY,Closed-end Funds
+EU,Mining-Metal Ores
+EUDA,Computer Sftwr-Medical
+EVAX,Medical - Development Biotech
+EVC,Media
+EVCM,Comp Sftwr - Enterprise
+EVER,Insurance
+EVEX,Aerospace/Defense
+EVF,Closed-end Funds
+EVG,Closed-end Funds
+EVGN,Agricultural Operations
+EVGO,Electrical-Power/Equipmt
+EVH,Computer Sftwr-Medical
+EVI,Machinery-Gen Industrial
+EVLV,Security/Sfty
+EVMN,Medical - Development Biotech
+EVN,Closed-end Funds
+EVO,Medical - Revenue Biotech
+EVR,Finance-Invest Bnk/Bkrs
+EVRG,Utilities
+EVT,Closed-end Funds
+EVTC,Finance-CrdtCard/PmtPr
+EVTL,Aerospace/Defense
+EVTV,Auto Manufacturers
+EVV,Closed-end Funds
+EVVTY,Leisure-Gaming/Equip
+EW,Medical-Products
+EWBC,Banks-Regional
+EWTX,Medical - Development Biotech
+EXC,Utilities
+EXE,Oil&Gas-Explorers/Producers
+EXEL,Medical - Profitable Biotech
+EXFY,Comp Sftwr - Financial
+EXG,Closed-end Funds
+EXK,Mining-Gold/Silver/Gems
+EXLS,Comml Svcs-Outsourcing
+EXOD,Finance - Crypto/Blockchain
+EXOZ,Medical - Development Biotech
+EXP,Bldg-Cement/Concrt/Ag
+EXPD,Transportation-Logistics
+EXPE,Leisure-Travel Booking
+EXPO,Comml Svcs-Consulting
+EXR,REITs
+EXTR,Computer-Networking
+EXYN,Comp Sftwr - Enterprise
+EYE,Retail - Specialty
+EYPT,Medical - Development Biotech
+EZGO,Electrical-Power/Equipmt
+EZPW,Finance-Consumer Loans
+EZRA,Insurance
+F,Auto Manufacturers
+FA,Comml Svcs-Staffing
+FABC,Elec-Semicondctor Fablss
+FABTQ,Retail-Restaurants
+FAC,Auto/Truck Equipment Parts & Tires
+FAF,Insurance
+FAMI,Food - Packaged
+FANG,Oil&Gas-Explorers/Producers
+FANUY,Machinery-Gen Industrial
+FAST,Retail - Specialty
+FATAQ,Retail-Restaurants
+FATE,Medical - Development Biotech
+FATN,Comp Sftwr - Enterprise
+FAX,Closed-end Funds
+FBGL,Building - Construction Products
+FBIN,Building - Construction Products
+FBIO,Medical - Development Biotech
+FBIZ,Banks-Regional
+FBK,Banks-Regional
+FBLA,Banks-Regional
+FBLG,Medical - Development Biotech
+FBNC,Banks-Regional
+FBP,Banks-Regional
+FBRT,REITs
+FBRX,Medical - Development Biotech
+FBYD,Leisure-Services
+FC,Consumer Svcs-Education
+FCAP,Banks-Regional
+FCBC,Banks-Regional
+FCCO,Banks-Regional
+FCEL,Energy-Alternative/Other
+FCF,Banks-Regional
+FCFS,Finance-Consumer Loans
+FCHL,Consumer Svcs-Education
+FCN,Comml Svcs-Consulting
+FCNCA,Banks-Super Regional
+FCPT,REITs
+FCT,Closed-end Funds
+FCUV,Telecom/Cable Services
+FCX,Mining-Metal Ores
+FDBC,Banks-Regional
+FDMT,Medical - Development Biotech
+FDP,Agricultural Operations
+FDS,Comml Svcs-Market Rsrch
+FDSB,Banks-Regional
+FDUS,Finance-Investment Mgmt
+FDX,Transport-Air Freight
+FDXF,Transportation-Truck
+FE,Utilities
+FEAM,Mining-Metal Ores
+FEBO,Consumer Prod-Electronic
+FEDU,Consumer Svcs-Education
+FEED,Medical-Systems
+FEIM,Telecom - Equipment
+FELE,Electrical-Power/Equipmt
+FEMY,Medical-Systems
+FENC,Medical - Development Biotech
+FENG,Internet-Content
+FER,Bldg-Heavy Construction
+FERG,Retail/Whlsle-Bldg Prds
+FET,Oil&Gas-Machinery/Equip
+FF,Chemicals-Specialty
+FFA,Closed-end Funds
+FFAI,Auto Manufacturers
+FFBC,Banks-Regional
+FFC,Closed-end Funds
+FFIN,Banks-Regional
+FFIV,Internet-Network Sltns
+FFNTF,Cannabis
+FG,Insurance
+FGBI,Banks-Regional
+FGI,Retail - Home Furnishings/Electronics
+FGL,Energy-Solar
+FGNX,Finance - Crypto/Blockchain
+FGROY,Transportation-Logistics
+FHB,Banks-Regional
+FHI,Finance-Investment Mgmt
+FHN,Banks-Regional
+FHTX,Medical - Development Biotech
+FIBK,Banks-Regional
+FICO,Comp Sftwr - Financial
+FIEE,Computer-Networking
+FIG,Computer Sftwr-Design
+FIGR,Finance-Mrtg&Rel Svc
+FIGS,Apparel - Clothing & Shoes
+FINS,Closed-end Funds
+FINV,Financial Svcs-Specialty
+FINW,Banks-Regional
+FIP,Transportation-Equip Mfg
+FIS,Comp Sftwr - Specialty Enterprise
+FISI,Banks-Regional
+FISN,Energy-Alternative/Other
+FISV,Comp Sftwr - Financial
+FITB,Banks-Super Regional
+FIVE,Retail - General
+FIVN,Comp Sftwr - Enterprise
+FIX,Building - Construction Products
+FIZZ,Beverages-Non-Alcoholic
+FJET,Aerospace/Defense
+FJTSY,Computer-Tech Services
+FKWL,Telecom - Equipment
+FLC,Closed-end Funds
+FLD,Finance - Crypto/Blockchain
+FLEX,Elec-Contract Mfg
+FLG,Banks-Savings & Loan
+FLGT,Medical - Research
+FLL,Leisure-Gaming/Equip
+FLNA,Medical - Development Biotech
+FLNC,Energy-Alternative/Other
+FLNG,Transportation-Ship
+FLNT,Comml Svcs-Advertising
+FLO,Food - Packaged
+FLOC,Oil&Gas-Machinery/Equip
+FLR,Bldg-Heavy Construction
+FLS,Machinery-Gen Industrial
+FLUT,Leisure-Gaming/Equip
+FLUX,Electrical-Power/Equipmt
+FLWS,Retail - Specialty
+FLX,Transportation-Logistics
+FLXS,Hsehold/Office Furniture
+FLY,Aerospace/Defense
+FLYD,Finance-ETF / ETN
+FLYE,Auto Manufacturers
+FLYU,Finance-ETF / ETN
+FLYW,Finance-CrdtCard/PmtPr
+FLYX,Transportation-Airline
+FLZH,Media
+FMAO,Banks-Regional
+FMBH,Banks-Regional
+FMC,Chemicals-Agricultural
+FMCC,Finance-Mrtg&Rel Svc
+FMFC,Retail-Apparel/Shoes/Acc
+FMN,Closed-end Funds
+FMNB,Banks-Regional
+FMS,Medical-Services
+FMST,Mining-Metal Ores
+FMX,Beverages-Non-Alcoholic
+FMY,Closed-end Funds
+FN,Elec-Contract Mfg
+FNB,Banks-Regional
+FND,Retail/Whlsle-Bldg Prds
+FNF,Insurance
+FNGD,Finance-ETF / ETN
+FNGO,Finance-ETF / ETN
+FNGR,Telecom-Infrastructure
+FNGS,Finance-ETF / ETN
+FNGU,Finance-ETF / ETN
+FNKO,Leisure-Products
+FNLC,Banks-Regional
+FNMA,Finance-Mrtg&Rel Svc
+FNMAS,Finance-Mrtg&Rel Svc
+FNRN,Banks-Regional
+FNUC,Mining-Metal Ores
+FNV,Mining-Gold/Silver/Gems
+FNWB,Banks-Regional
+FNWD,Banks-Regional
+FOA,Finance-Mrtg&Rel Svc
+FOCL,Medical-Systems
+FOF,Closed-end Funds
+FOFO,Comml Svcs-Consulting
+FOR,Real Estate Dvlpmt/Ops
+FORM,Elec-Semiconductor Equip
+FORR,Comml Svcs-Market Rsrch
+FORTY,Computer-Tech Services
+FOSL,Retail - Specialty
+FOUR,Finance-CrdtCard/PmtPr
+FOX,Media
+FOXA,Media
+FOXF,Leisure-Products
+FOXX,Telecom-Consumer Prods
+FPAFY,Telecom Svcs- Foreign
+FPF,Closed-end Funds
+FPH,Real Estate Dvlpmt/Ops
+FPI,REITs
+FPS,Electrical-Power/Equipmt
+FR,REITs
+FRA,Closed-end Funds
+FRAF,Banks-Regional
+FRBA,Banks-Regional
+FRBT,Banks-Regional
+FRCOY,Retail-Apparel/Shoes/Acc
+FRD,Metal Products - Distributors/Fabrication
+FRFHF,Insurance
+FRGT,Comp Sftwr - Specialty Enterprise
+FRHC,Finance-Invest Bnk/Bkrs
+FRME,Banks-Regional
+FRMI,Energy-Alternative/Other
+FRMM,Finance - Crypto/Blockchain
+FRO,Transportation-Ship
+FROG,Comp Sftwr - Enterprise
+FRPH,Real Estate Dvlpmt/Ops
+FRPT,Food - Packaged
+FRSH,Comp Sftwr - Enterprise
+FRST,Banks-Regional
+FRSX,Auto/Truck Equipment Parts & Tires
+FRT,REITs
+FRTT,Retail-Internet
+FRVO,Energy-Alternative/Other
+FSBC,Banks-Regional
+FSBW,Banks-Regional
+FSCO,Closed-end Funds
+FSEA,Banks-Savings & Loan
+FSI,Chemicals-Specialty
+FSK,Finance-Investment Mgmt
+FSLR,Energy-Solar
+FSLY,Comp Sftwr - Enterprise
+FSM,Mining-Gold/Silver/Gems
+FSP,REITs
+FSS,Security/Sfty
+FSSL,Closed-end Funds
+FSTR,Metal Products - Distributors/Fabrication
+FSUN,Banks-Regional
+FSV,Real Estate Dvlpmt/Ops
+FT,Closed-end Funds
+FTAI,Aerospace/Defense
+FTCI,Computer-Tech Services
+FTDR,Bldg-Maintenance & Svc
+FTEK,Pollution Control
+FTF,Closed-end Funds
+FTFT,Computer-Tech Services
+FTH,Medical - Development Biotech
+FTHM,Real Estate Dvlpmt/Ops
+FTHY,Closed-end Funds
+FTI,Oil&Gas-Machinery/Equip
+FTK,Chemicals-Specialty
+FTLF,Cosmetics/Personal Care
+FTNT,Computer Sftwr-Security
+FTRE,Medical - Research
+FTRK,Comml Svcs-Advertising
+FTS,Utilities
+FTV,Machinery-Gen Industrial
+FTW,Oil&Gas-Explorers/Producers
+FUBO,Leisure-Movies & Related
+FUFU,Finance - Crypto/Blockchain
+FUJHY,Auto Manufacturers
+FUJIY,Computer-Hardware/Perip
+FUL,Chemicals-Specialty
+FULC,Medical - Development Biotech
+FULT,Banks-Regional
+FUN,Leisure-Services
+FUNC,Banks-Regional
+FUND,Closed-end Funds
+FURY,Mining-Gold/Silver/Gems
+FUSB,Banks-Regional
+FUSE,Computer-Tech Services
+FUTU,Finance-Invest Bnk/Bkrs
+FVCB,Banks-Regional
+FVR,REITs
+FVRR,Retail-Internet
+FWDI,Finance - Crypto/Blockchain
+FWONA,Media
+FWONB,Media
+FWONK,Media
+FWRD,Transportation-Truck
+FWRG,Retail-Restaurants
+FXNC,Banks-Regional
+G,Comml Svcs-Outsourcing
+GAB,Closed-end Funds
+GABC,Banks-Regional
+GAIA,Leisure-Movies & Related
+GAIN,Finance-Investment Mgmt
+GALDY,Medical - Pharmaceuticals
+GALT,Medical - Development Biotech
+GAM,Closed-end Funds
+GAMB,Comml Svcs-Advertising
+GAME,Internet-Content
+GANX,Medical - Development Biotech
+GAP,Retail-Apparel/Shoes/Acc
+GASS,Transportation-Ship
+GATX,Comml Svcs-Leasing
+GAU,Mining-Gold/Silver/Gems
+GAUZ,Elec-Misc Products
+GBAB,Closed-end Funds
+GBCI,Banks-Regional
+GBDC,Finance-Investment Mgmt
+GBFH,Banks-Regional
+GBLI,Insurance
+GBR,Real Estate Dvlpmt/Ops
+GBTG,Leisure-Travel Booking
+GBX,Transportation-Equip Mfg
+GCBC,Banks-Savings & Loan
+GCDT,Building - Construction Products
+GCL,Retail-Leisure Products
+GCMG,Finance-Investment Mgmt
+GCO,Retail-Apparel/Shoes/Acc
+GCT,Computer-Tech Services
+GCTK,Medical-Products
+GCTS,Elec-Semiconductor Mfg
+GCV,Closed-end Funds
+GD,Aerospace/Defense
+GDC,Pollution Control
+GDDY,Comp Sftwr - Enterprise
+GDEV,Computer Sftwr-Gaming
+GDHG,Leisure-Services
+GDL,Closed-end Funds
+GDO,Closed-end Funds
+GDOT,Finance-CrdtCard/PmtPr
+GDRX,Computer Sftwr-Medical
+GDS,Internet-Network Sltns
+GDTC,Medical - Development Biotech
+GDV,Closed-end Funds
+GDXD,Finance-ETF / ETN
+GDXU,Finance-ETF / ETN
+GDYN,Computer-Tech Services
+GE,Aerospace/Defense
+GECC,Finance-Investment Mgmt
+GEF,Containers/Packaging
+GEF.B,Containers/Packaging
+GEG,Internet-Network Sltns
+GEHC,Medical-Systems
+GEL,Oil&Gas-Refining/Mktg
+GELS,Medical - Pharmaceuticals
+GEMI,Finance - Crypto/Blockchain
+GEN,Computer Sftwr-Security
+GENB,Medical - Development Biotech
+GENC,Machinery-Constr/Mining/Farming
+GENI,Leisure-Gaming/Equip
+GENK,Retail-Restaurants
+GEO,Security/Sfty
+GEOS,Oil&Gas-Machinery/Equip
+GERN,Medical - Revenue Biotech
+GETY,Internet-Content
+GEV,Energy-Alternative/Other
+GEVO,Chemicals-Specialty
+GF,Closed-end Funds
+GFAI,Security/Sfty
+GFF,Building - Construction Products
+GFI,Mining-Gold/Silver/Gems
+GFL,Pollution Control
+GFR,Oil&Gas-Explorers/Producers
+GFS,Elec-Semiconductor Mfg
+GGAL,Banks-Foreign
+GGB,Steel-Producers
+GGG,Machinery-Gen Industrial
+GGN,Closed-end Funds
+GGR,Auto Manufacturers
+GGRP,Comp Sftwr - Enterprise
+GGT,Closed-end Funds
+GGZ,Closed-end Funds
+GH,Medical-Services
+GHC,Media
+GHG,Leisure-Lodging
+GHI,Finance-Mrtg&Rel Svc
+GHM,Machinery-Gen Industrial
+GHRS,Medical - Development Biotech
+GHY,Closed-end Funds
+GIB,Computer-Tech Services
+GIBO,Internet-Content
+GIC,Retail/Whlsle-Bldg Prds
+GIFT,Retail-Internet
+GIGM,Computer Sftwr-Gaming
+GIII,Apparel - Clothing & Shoes
+GIL,Apparel - Clothing & Shoes
+GILD,Medical - Profitable Biotech
+GILT,Telecom - Equipment
+GIPR,REITs
+GIS,Food - Packaged
+GITS,Internet-Content
+GKOS,Medical-Products
+GL,Insurance
+GLAD,Finance-Investment Mgmt
+GLBE,Comp Sftwr - Enterprise
+GLBS,Transportation-Ship
+GLBZ,Banks-Regional
+GLDG,Mining-Gold/Silver/Gems
+GLDI,Finance-ETF / ETN
+GLE,Computer-Tech Services
+GLIBA,Telecom/Cable Services
+GLIBK,Telecom/Cable Services
+GLMD,Medical - Development Biotech
+GLNCY,Energy-Coal
+GLND,Oil&Gas-Explorers/Producers
+GLNG,Transport - Oil/Gas Shipping
+GLO,Closed-end Funds
+GLOB,Computer-Tech Services
+GLOO,Comp Sftwr - Specialty Enterprise
+GLP,Oil&Gas-Refining/Mktg
+GLPI,REITs
+GLQ,Closed-end Funds
+GLRE,Insurance
+GLSI,Medical - Development Biotech
+GLU,Closed-end Funds
+GLUE,Medical - Revenue Biotech
+GLV,Closed-end Funds
+GLW,Elec-Misc Products
+GLWG,Finance-ETF / ETN
+GLXG,Comml Svcs-Staffing
+GLXY,Finance - Crypto/Blockchain
+GM,Auto Manufacturers
+GMAB,Medical - Profitable Biotech
+GME,Retail - Specialty
+GMED,Medical-Products
+GMEX,Leisure-Services
+GMHS,Computer Sftwr-Gaming
+GMM,Computer-Tech Services
+GMRS,Medical-Services
+GMTL,Mining-Metal Ores
+GNE,Utilities
+GNK,Transportation-Ship
+GNL,REITs
+GNLN,Consumer - Specialty
+GNLX,Medical - Development Biotech
+GNPX,Medical - Development Biotech
+GNRC,Electrical-Power/Equipmt
+GNS,Computer Sftwr-Edu/Media
+GNSS,Security/Sfty
+GNT,Closed-end Funds
+GNTA,Medical - Development Biotech
+GNTX,Auto/Truck Equipment Parts & Tires
+GNW,Insurance
+GO,Retail-Super/Mini Mkts
+GOAI,Comml Svcs-Advertising
+GOCOQ,Insurance
+GOF,Closed-end Funds
+GOGO,Telecom-Infrastructure
+GOLD,Finance-Invest Bnk/Bkrs
+GOLF,Leisure-Products
+GOOD,REITs
+GOOG,Internet-Content
+GOOGL,Internet-Content
+GOOS,Apparel - Clothing & Shoes
+GORO,Mining-Gold/Silver/Gems
+GOSS,Medical - Development Biotech
+GOTU,Consumer Svcs-Education
+GOVX,Medical - Development Biotech
+GP,Auto Manufacturers
+GPC,Retail/Whlsle-Auto Parts
+GPCR,Medical - Development Biotech
+GPGI,Diversified Operations
+GPI,Retail/Whlsle-Automobile
+GPK,Paper & Paper Products
+GPMT,REITs
+GPN,Finance-CrdtCard/PmtPr
+GPOR,Oil&Gas-Explorers/Producers
+GPRE,Energy-Alternative/Other
+GPRK,Oil&Gas-Explorers/Producers
+GPRO,Consumer Prod-Electronic
+GPUS,Electrical-Power/Equipmt
+GRAB,Leisure-Services
+GRAL,Medical-Services
+GRAN,Finance-Invest Bnk/Bkrs
+GRBK,Bldg-Resident/Comml
+GRC,Machinery-Gen Industrial
+GRCE,Medical - Development Biotech
+GRDN,Medical-Services
+GRDX,Comp Sftwr - Specialty Enterprise
+GREE,Finance - Crypto/Blockchain
+GRF,Closed-end Funds
+GRFS,Medical - Pharmaceuticals
+GRI,Medical - Development Biotech
+GRML,Mining-Gold/Silver/Gems
+GRMN,Consumer Prod-Electronic
+GRN,Finance-ETF / ETN
+GRND,Internet-Content
+GRNQ,Finance-Investment Mgmt
+GRNT,Oil&Gas-Explorers/Producers
+GRO,Mining-Metal Ores
+GROV,Retail - Specialty
+GROW,Finance-Investment Mgmt
+GROY,Mining-Gold/Silver/Gems
+GRPN,Retail-Internet
+GRRR,Computer-Tech Services
+GRVY,Computer Sftwr-Gaming
+GRWG,Retail - Specialty
+GRX,Closed-end Funds
+GS,Banks-Money Center
+GSAT,Telecom/Cable Services
+GSBC,Banks-Regional
+GSBD,Finance-Commercial Loans
+GSHD,Insurance
+GSIT,Elec-Semicondctor Fablss
+GSIW,Finance-Investment Mgmt
+GSK,Medical - Pharmaceuticals
+GSKH,Finance-ETF / ETN
+GSL,Transportation-Ship
+GSM,Steel-Specialty Alloys
+GSOL,Finance-ETF / ETN
+GSUN,Comml Svcs-Advertising
+GT,Auto/Truck Equipment Parts & Tires
+GTBIF,Cannabis
+GTBP,Medical - Development Biotech
+GTE,Oil&Gas-Explorers/Producers
+GTEC,Auto/Truck Equipment Parts & Tires
+GTES,Electrical-Power/Equipmt
+GTIJF,Chemicals-Specialty
+GTIM,Retail-Restaurants
+GTLB,Computer-Tech Services
+GTLS,Oil&Gas-Machinery/Equip
+GTM,Comp Sftwr - Specialty Enterprise
+GTN,Media
+GTN.A,Media
+GTOP,Finance-ETF / ETN
+GTPS,Banks-Savings & Loan
+GTX,Auto/Truck Equipment Parts & Tires
+GTY,REITs
+GUG,Closed-end Funds
+GURE,Chemicals-Basic
+GUT,Closed-end Funds
+GUTS,Medical - Development Biotech
+GV,Consumer Svcs-Education
+GVA,Bldg-Heavy Construction
+GVH,Transportation-Logistics
+GWAV,Pollution Control
+GWH,Electrical-Power/Equipmt
+GWRE,Comp Sftwr - Financial
+GWRS,Utilities
+GWW,Retail - Specialty
+GXAI,Computer Sftwr-Gaming
+GXO,Transportation-Logistics
+GYRE,Medical - Profitable Biotech
+GYRO,REITs
+H,Leisure-Lodging
+HAE,Medical-Systems
+HAFC,Banks-Regional
+HAFN,Transportation-Ship
+HAIN,Food - Packaged
+HAL,Oil&Gas-Field Services
+HALO,Medical - Profitable Biotech
+HAO,Comml Svcs-Advertising
+HAS,Leisure-Products
+HASI,REITs
+HAWK,Aerospace/Defense
+HAYW,Retail-Leisure Products
+HBAN,Banks-Super Regional
+HBB,Hsehold-Appliances/Wares
+HBCP,Banks-Regional
+HBIO,Medical-Products
+HBM,Mining-Metal Ores
+HBNB,Leisure-Lodging
+HBNC,Banks-Regional
+HBT,Banks-Regional
+HCA,Medical-Hospitals
+HCAI,Machinery-Mtl Hdlg/Autmn
+HCAT,Computer Sftwr-Medical
+HCC,Energy-Coal
+HCHL,Retail-Restaurants
+HCI,Insurance
+HCKT,Computer-Tech Services
+HCM,Medical - Revenue Biotech
+HCMLY,Bldg-Cement/Concrt/Ag
+HCSG,Comml Svcs-Outsourcing
+HCTI,Comml Svcs-Consulting
+HCWB,Medical - Development Biotech
+HCWC,Retail - Specialty
+HD,Retail/Whlsle-Bldg Prds
+HDB,Banks-Foreign
+HDL,Retail-Restaurants
+HDLB,Finance-ETF / ETN
+HDRN,Energy-Alternative/Other
+HDSN,Pollution Control
+HE,Utilities
+HEGIY,Cosmetics/Personal Care
+HEI,Aerospace/Defense
+HEI.A,Aerospace/Defense
+HEINY,Beverages-Alcoholic
+HELE,Cosmetics/Personal Care
+HELP,Medical - Development Biotech
+HENKY,Chemicals-Specialty
+HEPS,Retail-Internet
+HEQ,Closed-end Funds
+HERE,Leisure-Products
+HERZ,Closed-end Funds
+HESAY,Apparel - Clothing & Shoes
+HESM,Oil&Gas - Pipeline
+HFBL,Banks-Savings & Loan
+HFFG,Food - Wholesale
+HFRO,Closed-end Funds
+HFWA,Banks-Regional
+HG,Insurance
+HGBL,Finance-Investment Mgmt
+HGLB,Finance-ETF / ETN
+HGTY,Insurance
+HGV,Leisure-Services
+HHH,Real Estate Dvlpmt/Ops
+HHS,Comml Svcs-Advertising
+HIFS,Banks-Regional
+HIG,Insurance
+HIHO,Metal Products - Distributors/Fabrication
+HII,Aerospace/Defense
+HIMS,Medical-Services
+HIMX,Elec-Semicondctor Fablss
+HIND,Medical - Development Biotech
+HIO,Closed-end Funds
+HIPO,Insurance
+HIT,Insurance
+HITI,Cannabis
+HIVE,Finance - Crypto/Blockchain
+HIW,REITs
+HIX,Closed-end Funds
+HKD,Finance-Investment Mgmt
+HKIT,Computer-Hardware/Perip
+HKPD,Transportation-Logistics
+HKXCY,Financial Svcs-Specialty
+HL,Mining-Gold/Silver/Gems
+HLF,Cosmetics/Personal Care
+HLI,Finance-Invest Bnk/Bkrs
+HLIO,Machinery-Gen Industrial
+HLIT,Telecom - Equipment
+HLLY,Auto/Truck Equipment Parts & Tires
+HLMN,Retail/Whlsle-Bldg Prds
+HLN,Medical - Pharmaceuticals
+HLNE,Finance-Investment Mgmt
+HLP,Steel-Producers
+HLT,Leisure-Lodging
+HLTOY,Telecom Svcs- Foreign
+HLX,Oil&Gas-Field Services
+HMC,Auto Manufacturers
+HMH,Oil&Gas-Machinery/Equip
+HMN,Insurance
+HMR,Transportation-Ship
+HMRZF,Retail-Apparel/Shoes/Acc
+HMY,Mining-Gold/Silver/Gems
+HNGE,Medical-Services
+HNI,Hsehold/Office Furniture
+HNNA,Finance-Investment Mgmt
+HNRG,Energy-Coal
+HNST,Cosmetics/Personal Care
+HNVR,Banks-Regional
+HOCPY,Medical-Systems
+HOFT,Hsehold/Office Furniture
+HOG,Leisure-Products
+HOLO,Elec-Semiconductor Mfg
+HOMB,Banks-Regional
+HON,Diversified Operations
+HONAV,Aerospace/Defense
+HOOD,Finance-Invest Bnk/Bkrs
+HOPE,Banks-Regional
+HOUR,Retail - Specialty
+HOV,Bldg-Resident/Comml
+HOVR,Aerospace/Defense
+HOWL,Medical - Development Biotech
+HP,Oil&Gas-Drilling
+HPAI,Comp Sftwr - Specialty Enterprise
+HPE,Computer-Tech Services
+HPF,Closed-end Funds
+HPI,Closed-end Funds
+HPK,Oil&Gas-Explorers/Producers
+HPP,REITs
+HPQ,Computer-Hardware/Perip
+HPS,Closed-end Funds
+HQ,Comp Sftwr - Enterprise
+HQH,Closed-end Funds
+HQI,Comml Svcs-Staffing
+HQL,Closed-end Funds
+HQY,Comml Svcs-Outsourcing
+HR,REITs
+HRB,Financial Svcs-Specialty
+HRI,Comml Svcs-Leasing
+HRL,Food - Foodstuffs
+HRMY,Medical - Profitable Biotech
+HROW,Medical - Revenue Biotech
+HRTG,Insurance
+HRTX,Medical - Revenue Biotech
+HRZN,Finance-Investment Mgmt
+HSAI,Auto/Truck Equipment Parts & Tires
+HSBC,Banks-Money Center
+HSCS,Medical-Products
+HSDT,Medical-Products
+HSHP,Transportation-Ship
+HSIC,Medical-Products
+HSLV,Mining-Gold/Silver/Gems
+HST,REITs
+HSTM,Comml Svcs-Consulting
+HSY,Food - Packaged
+HTB,Banks-Regional
+HTCO,Transportation-Ship
+HTCR,Comp Sftwr - Enterprise
+HTD,Closed-end Funds
+HTFL,Computer Sftwr-Medical
+HTGC,Finance-Investment Mgmt
+HTH,Banks-Regional
+HTHIY,Diversified Operations
+HTHT,Leisure-Lodging
+HTLD,Transportation-Truck
+HTLM,Retail - Home Furnishings/Electronics
+HTO,Utilities
+HTOO,Energy-Alternative/Other
+HTT,Finance-Consumer Loans
+HTZ,Leisure-Services
+HUBB,Electrical-Power/Equipmt
+HUBC,Computer Sftwr-Security
+HUBG,Transportation-Logistics
+HUBS,Comp Sftwr - Enterprise
+HUDI,Steel-Producers
+HUHU,Machinery-Gen Industrial
+HUIZ,Insurance
+HUM,Medical-Managed Care
+HUMA,Medical - Development Biotech
+HUN,Chemicals-Basic
+HURA,Medical - Development Biotech
+HURC,Machinery-Mtl Hdlg/Autmn
+HURN,Comml Svcs-Consulting
+HUT,Finance - Crypto/Blockchain
+HUYA,Internet-Content
+HVT,Retail - Home Furnishings/Electronics
+HVT.A,Retail - Home Furnishings/Electronics
+HWBK,Banks-Regional
+HWC,Banks-Regional
+HWH,Comml Svcs-Market Rsrch
+HWKN,Chemicals-Basic
+HWM,Aerospace/Defense
+HXHX,Transportation-Truck
+HXL,Aerospace/Defense
+HY,Machinery-Gen Industrial
+HYFM,Machinery-Gen Industrial
+HYFT,Medical - Development Biotech
+HYI,Closed-end Funds
+HYLN,Energy-Alternative/Other
+HYMC,Mining-Gold/Silver/Gems
+HYNE,Banks-Savings & Loan
+HYPD,Finance - Crypto/Blockchain
+HYPR,Medical-Systems
+HYT,Closed-end Funds
+HZO,Retail-Leisure Products
+IAE,Closed-end Funds
+IAF,Closed-end Funds
+IAG,Mining-Gold/Silver/Gems
+IART,Medical-Products
+IAUX,Mining-Gold/Silver/Gems
+IBCP,Banks-Regional
+IBDRY,Utilities
+IBEX,Computer-Tech Services
+IBG,Beverages-Alcoholic
+IBIO,Medical - Development Biotech
+IBKR,Finance-Invest Bnk/Bkrs
+IBM,Computer-Tech Services
+IBN,Banks-Foreign
+IBO,Medical - Development Biotech
+IBOC,Banks-Regional
+IBP,Bldg-Heavy Construction
+IBRX,Medical - Development Biotech
+IBTA,Comml Svcs-Advertising
+ICAGY,Transportation-Airline
+ICCC,Medical-Products
+ICCM,Medical-Systems
+ICE,Financial Svcs-Specialty
+ICFI,Comml Svcs-Consulting
+ICG,Elec-Semicondctor Fablss
+ICHR,Elec-Semiconductor Equip
+ICL,Chemicals-Agricultural
+ICLR,Medical - Research
+ICMB,Finance-Investment Mgmt
+ICON,Transportation-Ship
+ICU,Medical - Development Biotech
+ICUI,Medical-Products
+IDA,Utilities
+IDAI,Security/Sfty
+IDCC,Elec-Misc Products
+IDE,Closed-end Funds
+IDEXY,Retail-Apparel/Shoes/Acc
+IDN,Security/Sfty
+IDR,Mining-Gold/Silver/Gems
+IDT,Telecom/Cable Services
+IDXX,Medical-Systems
+IDYA,Medical - Revenue Biotech
+IE,Mining-Metal Ores
+IEP,Diversified Operations
+IESC,Bldg-Heavy Construction
+IEX,Machinery-Gen Industrial
+IFBD,Comp Sftwr - Enterprise
+IFED,Finance-ETF / ETN
+IFF,Cosmetics/Personal Care
+IFN,Closed-end Funds
+IFNNY,Elec-Semiconductor Mfg
+IFRX,Medical - Development Biotech
+IFS,Banks-Foreign
+IGA,Closed-end Funds
+IGC,Medical - Development Biotech
+IGD,Closed-end Funds
+IGI,Closed-end Funds
+IGIC,Insurance
+IGR,Closed-end Funds
+IH,Consumer Svcs-Education
+IHD,Closed-end Funds
+IHG,Leisure-Lodging
+IHRT,Media
+IHS,Telecom-Infrastructure
+IHT,REITs
+IIF,Closed-end Funds
+III,Comml Svcs-Consulting
+IIIN,Metal Products - Distributors/Fabrication
+IIIV,Finance-CrdtCard/PmtPr
+IIM,Closed-end Funds
+IIPR,REITs
+IKT,Medical - Development Biotech
+ILAG,Retail - Home Furnishings/Electronics
+ILLR,Internet-Content
+ILMN,Medical - Research
+ILPT,REITs
+IMA,Medical - Development Biotech
+IMAX,Leisure-Movies & Related
+IMCC,Cannabis
+IMCR,Medical - Revenue Biotech
+IMDX,Medical - Development Biotech
+IMKTA,Retail-Super/Mini Mkts
+IMMP,Medical - Development Biotech
+IMMR,Elec-Misc Products
+IMMX,Medical - Development Biotech
+IMNM,Medical - Development Biotech
+IMNN,Medical - Development Biotech
+IMO,Oil&Gas-Integrated
+IMOS,Elec-Semiconductor Mfg
+IMPP,Transport - Oil/Gas Shipping
+IMPUY,Mining-Gold/Silver/Gems
+IMRN,Medical - Development Biotech
+IMRX,Medical - Development Biotech
+IMSR,Energy-Alternative/Other
+IMTE,Computer-Tech Services
+IMTX,Medical - Development Biotech
+IMUX,Medical - Development Biotech
+IMVT,Medical - Development Biotech
+IMXI,Finance-CrdtCard/PmtPr
+INAB,Medical - Development Biotech
+INBK,Banks-Regional
+INBS,Medical-Products
+INBX,Medical - Development Biotech
+INCR,Cannabis
+INCY,Medical - Profitable Biotech
+INDB,Banks-Regional
+INDI,Elec-Semicondctor Fablss
+INDO,Oil&Gas-Explorers/Producers
+INDP,Medical - Development Biotech
+INDV,Medical - Pharmaceuticals
+INDZ,Finance-ETF / ETN
+INEO,Retail/Whlsle-Auto Parts
+INFQ,Comp Sftwr - Enterprise
+INFU,Medical - Home & Nursing Care
+INFY,Computer-Tech Services
+ING,Banks-Foreign
+INGM,Computer-Tech Services
+INGN,Medical-Products
+INGR,Food - Foodstuffs
+INHD,Steel-Specialty Alloys
+INIO,Electrical-Power/Equipmt
+INKT,Medical - Development Biotech
+INLF,Machinery-Mtl Hdlg/Autmn
+INLX,Comp Sftwr - Enterprise
+INM,Medical - Pharmaceuticals
+INMB,Medical - Development Biotech
+INMD,Medical-Systems
+INN,REITs
+INNPF,Medical - Pharmaceuticals
+INNV,Medical-Services
+INO,Medical - Development Biotech
+INOD,Computer-Tech Services
+INR,Oil&Gas-Explorers/Producers
+INSE,Leisure-Services
+INSG,Telecom-Infrastructure
+INSM,Medical - Revenue Biotech
+INSP,Medical-Products
+INSW,Transport - Oil/Gas Shipping
+INTA,Comp Sftwr - Financial
+INTC,Elec-Semiconductor Mfg
+INTG,Real Estate Dvlpmt/Ops
+INTJ,Comml Svcs-Advertising
+INTR,Banks-Foreign
+INTS,Medical - Development Biotech
+INTT,Elec-Semiconductor Equip
+INTU,Comp Sftwr - Financial
+INTZ,Computer Sftwr-Security
+INUV,Internet-Network Sltns
+INV,Finance-Investment Mgmt
+INVA,Medical - Profitable Biotech
+INVE,Computer Sftwr-Security
+INVH,REITs
+INVX,Oil&Gas-Machinery/Equip
+INVZ,Auto/Truck Equipment Parts & Tires
+IOBTQ,Medical - Development Biotech
+IONQ,Computer-Hardware/Perip
+IONR,Mining-Metal Ores
+IONS,Medical - Revenue Biotech
+IOR,Real Estate Dvlpmt/Ops
+IOSP,Chemicals-Specialty
+IOT,Comp Sftwr - Enterprise
+IOTR,Telecom Svcs- Foreign
+IOVA,Medical - Revenue Biotech
+IP,Paper & Paper Products
+IPAR,Cosmetics/Personal Care
+IPDN,Internet-Content
+IPGP,Elec-Scientific/Msrng
+IPHA,Medical - Development Biotech
+IPI,Chemicals-Agricultural
+IPM,Internet-Network Sltns
+IPSC,Medical - Revenue Biotech
+IPST,Beverages-Alcoholic
+IPW,Retail-Internet
+IPWR,Elec-Semicondctor Fablss
+IPX,Mining-Metal Ores
+IQ,Leisure-Movies & Related
+IQI,Closed-end Funds
+IQST,Telecom/Cable Services
+IQV,Medical - Research
+IR,Machinery-Gen Industrial
+IRD,Medical - Development Biotech
+IRDM,Telecom/Cable Services
+IREN,Finance - Crypto/Blockchain
+IREZ,Finance-ETF / ETN
+IRIX,Medical-Systems
+IRM,REITs
+IRMD,Medical-Systems
+IRON,Medical - Development Biotech
+IRS,Real Estate Dvlpmt/Ops
+IRT,REITs
+IRTC,Medical-Services
+IRWD,Medical - Revenue Biotech
+ISBA,Banks-Regional
+ISD,Closed-end Funds
+ISMAY,Computer-Tech Services
+ISNPY,Banks-Foreign
+ISOU,Mining-Metal Ores
+ISPC,Medical - Research
+ISPR,Tobacco
+ISRG,Medical-Systems
+ISSC,Aerospace/Defense
+ISTR,Banks-Regional
+IT,Comml Svcs-Market Rsrch
+ITGR,Medical-Products
+ITHUF,Consumer - Specialty
+ITIC,Insurance
+ITOC,Medical-Systems
+ITOCY,Diversified Operations
+ITP,Paper & Paper Products
+ITRG,Mining-Gold/Silver/Gems
+ITRI,Elec-Scientific/Msrng
+ITRMF,Medical - Development Biotech
+ITRN,Security/Sfty
+ITT,Machinery-Gen Industrial
+ITUB,Banks-Foreign
+ITW,Machinery-Gen Industrial
+IVA,Medical - Development Biotech
+IVDA,Security/Sfty
+IVF,Medical-Services
+IVPR,Medical-Services
+IVR,REITs
+IVT,REITs
+IVVD,Medical - Development Biotech
+IVZ,Finance-Investment Mgmt
+IWDL,Finance-ETF / ETN
+IWFL,Finance-ETF / ETN
+IWML,Finance-ETF / ETN
+IX,Finance-Consumer Loans
+IXHL,Medical - Development Biotech
+IZEA,Internet-Content
+IZM,Retail-Internet
+J,Bldg-Heavy Construction
+JACK,Retail-Restaurants
+JAGU,Mining-Metal Ores
+JAGX,Medical - Pharmaceuticals
+JAKK,Leisure-Products
+JAN,REITs
+JANX,Medical - Development Biotech
+JAPAY,Tobacco
+JAPSY,Transportation-Airline
+JAZZ,Medical - Pharmaceuticals
+JBAXY,Finance-Investment Mgmt
+JBDI,Containers/Packaging
+JBGS,REITs
+JBHT,Transportation-Truck
+JBI,Security/Sfty
+JBIO,Medical - Development Biotech
+JBL,Elec-Contract Mfg
+JBLU,Transportation-Airline
+JBS,Food - Foodstuffs
+JBSS,Food - Packaged
+JBTM,Machinery-Gen Industrial
+JCAP,Financial Svcs-Specialty
+JCE,Closed-end Funds
+JCI,Diversified Operations
+JCSE,Machinery-Gen Industrial
+JCTC,Retail/Whlsle-Bldg Prds
+JD,Retail-Internet
+JDVL,Finance-ETF / ETN
+JDZG,Computer Sftwr-Edu/Media
+JEF,Finance-Invest Bnk/Bkrs
+JELD,Building - Construction Products
+JEM,Retail-Apparel/Shoes/Acc
+JETD,Finance-ETF / ETN
+JETU,Finance-ETF / ETN
+JF,Comp Sftwr - Financial
+JFB,Real Estate Dvlpmt/Ops
+JFIN,Financial Svcs-Specialty
+JFR,Closed-end Funds
+JFU,Financial Svcs-Specialty
+JG,Computer Sftwr-Database
+JGH,Closed-end Funds
+JHG,Finance-Investment Mgmt
+JHI,Closed-end Funds
+JHS,Closed-end Funds
+JHX,Building - Construction Products
+JILL,Retail-Apparel/Shoes/Acc
+JJSF,Food - Packaged
+JKHY,Comp Sftwr - Financial
+JKS,Energy-Solar
+JL,Apparel - Clothing & Shoes
+JLHL,Bldg-Heavy Construction
+JLL,Real Estate Dvlpmt/Ops
+JLS,Closed-end Funds
+JMIA,Retail-Internet
+JMM,Closed-end Funds
+JMSB,Banks-Regional
+JNJ,Medical - Pharmaceuticals
+JOB,Comml Svcs-Staffing
+JOBY,Aerospace/Defense
+JOE,Real Estate Dvlpmt/Ops
+JOF,Closed-end Funds
+JOUT,Leisure-Products
+JOYY,Internet-Content
+JPC,Closed-end Funds
+JPM,Banks-Money Center
+JQC,Closed-end Funds
+JRI,Closed-end Funds
+JRS,Closed-end Funds
+JRSH,Apparel - Clothing & Shoes
+JRVR,Insurance
+JSPR,Medical - Development Biotech
+JTAI,Comp Sftwr - Enterprise
+JUNS,Medical - Development Biotech
+JVA,Beverages-Non-Alcoholic
+JWEL,Retail-Internet
+JXG,Apparel - Clothing & Shoes
+JXN,Insurance
+JYD,Transportation-Logistics
+JYNT,Medical-Services
+JZ,Consumer Svcs-Education
+JZXN,Retail/Whlsle-Automobile
+KAI,Machinery-Gen Industrial
+KALA,Medical - Development Biotech
+KALU,Metal Products - Distributors/Fabrication
+KAOOY,Cosmetics/Personal Care
+KAPA,Medical - Development Biotech
+KARO,Comp Sftwr - Enterprise
+KAVL,Tobacco
+KAZR,Bldg-Resident/Comml
+KB,Banks-Foreign
+KBCSY,Banks-Foreign
+KBDC,Closed-end Funds
+KBH,Bldg-Resident/Comml
+KBR,Comml Svcs-Consulting
+KBSX,Leisure-Products
+KC,Comp Sftwr - Enterprise
+KCDMY,Cosmetics/Personal Care
+KCOP,Finance-ETF / ETN
+KD,Comp Sftwr - Enterprise
+KDDIY,Telecom/Cable Services
+KDK,Auto/Truck Equipment Parts & Tires
+KDP,Beverages-Non-Alcoholic
+KE,Elec-Contract Mfg
+KEEL,Computer-Tech Services
+KELYA,Comml Svcs-Staffing
+KELYB,Comml Svcs-Staffing
+KEN,Energy-Alternative/Other
+KEP,Utilities
+KEQU,Hsehold/Office Furniture
+KEX,Transportation-Ship
+KEY,Banks-Super Regional
+KEYS,Elec-Scientific/Msrng
+KF,Closed-end Funds
+KFFB,Banks-Regional
+KFRC,Comml Svcs-Staffing
+KFY,Comml Svcs-Staffing
+KG,Insurance
+KGC,Mining-Gold/Silver/Gems
+KGEI,Oil&Gas-Explorers/Producers
+KGS,Oil&Gas-Field Services
+KHC,Food - Packaged
+KIDS,Medical-Products
+KIDZ,Computer Sftwr-Edu/Media
+KIM,REITs
+KINS,Insurance
+KIO,Closed-end Funds
+KITT,Machinery-Mtl Hdlg/Autmn
+KKR,Finance-Investment Mgmt
+KLAC,Elec-Semiconductor Equip
+KLAR,Finance-Consumer Loans
+KLC,Consumer Svcs-Education
+KLIC,Elec-Semiconductor Equip
+KLRA,Medical - Development Biotech
+KLRS,Medical - Development Biotech
+KLTR,Computer Sftwr-Edu/Media
+KLXE,Oil&Gas-Field Services
+KMB,Cosmetics/Personal Care
+KMDA,Medical - Profitable Biotech
+KMI,Oil&Gas - Pipeline
+KMPR,Insurance
+KMRK,Leisure-Products
+KMT,Machinery-Constr/Mining/Farming
+KMTS,Medical-Products
+KMTUY,Machinery-Constr/Mining/Farming
+KMX,Retail/Whlsle-Automobile
+KN,Electronic-Parts
+KNBWY,Beverages-Alcoholic
+KNDI,Auto Manufacturers
+KNF,Bldg-Cement/Concrt/Ag
+KNOP,Transportation-Ship
+KNRX,Comml Svcs-Advertising
+KNSA,Medical - Profitable Biotech
+KNSL,Insurance
+KNTK,Oil&Gas - Pipeline
+KNX,Transportation-Truck
+KO,Beverages-Non-Alcoholic
+KOD,Medical - Development Biotech
+KODK,Leisure-Products
+KOF,Beverages-Non-Alcoholic
+KOP,Chemicals-Specialty
+KOPN,Elec-Semiconductor Equip
+KORE,Comp Sftwr - Enterprise
+KOS,Oil&Gas-Explorers/Producers
+KOSS,Consumer Prod-Electronic
+KPLT,Retail-Internet
+KPRX,Medical - Development Biotech
+KPTI,Medical - Revenue Biotech
+KR,Retail-Super/Mini Mkts
+KRC,REITs
+KREF,Finance-Mrtg&Rel Svc
+KRG,REITs
+KRKNF,Aerospace/Defense
+KRKR,Internet-Content
+KRMD,Medical-Products
+KRMN,Aerospace/Defense
+KRNT,Machinery-Gen Industrial
+KRNY,Banks-Savings & Loan
+KRO,Chemicals-Specialty
+KROS,Medical - Profitable Biotech
+KRP,Oil&Gas-Explorers/Producers
+KRRO,Medical - Development Biotech
+KRT,Containers/Packaging
+KRUS,Retail-Restaurants
+KRYAY,Food - Packaged
+KRYS,Medical - Profitable Biotech
+KSCP,Security/Sfty
+KSPI,Finance-CrdtCard/PmtPr
+KSS,Retail - General
+KT,Telecom Svcs- Foreign
+KTB,Apparel - Clothing & Shoes
+KTCC,Elec-Contract Mfg
+KTF,Closed-end Funds
+KTOS,Aerospace/Defense
+KTTA,Medical - Development Biotech
+KUBTY,Machinery-Constr/Mining/Farming
+KUKEY,Leisure-Services
+KULR,Electrical-Power/Equipmt
+KURA,Medical - Development Biotech
+KUST,Leisure-Services
+KVHI,Telecom-Infrastructure
+KVUE,Cosmetics/Personal Care
+KVYO,Comp Sftwr - Enterprise
+KWM,Leisure-Movies & Related
+KWR,Chemicals-Specialty
+KWY,Diversified Operations
+KXIN,Retail/Whlsle-Automobile
+KYIV,Telecom Svcs- Foreign
+KYMR,Medical - Development Biotech
+KYN,Closed-end Funds
+KYNB,Medical - Development Biotech
+KYOAY,Elec-Misc Products
+KYTX,Medical - Development Biotech
+KZIA,Medical - Development Biotech
+L,Insurance
+LAB,Medical-Systems
+LABT,Medical - Development Biotech
+LAC,Mining-Metal Ores
+LAD,Retail/Whlsle-Automobile
+LADR,REITs
+LAES,Elec-Semicondctor Fablss
+LAKE,Security/Sfty
+LAMR,Comml Svcs-Advertising
+LAND,REITs
+LANV,Apparel - Clothing & Shoes
+LAR,Mining-Metal Ores
+LARK,Banks-Regional
+LASE,Machinery-Gen Industrial
+LASR,Electronic-Parts
+LAUR,Consumer Svcs-Education
+LAW,Comp Sftwr - Specialty Enterprise
+LAWR,Comp Sftwr - Enterprise
+LAZ,Finance-Invest Bnk/Bkrs
+LB,Oil&Gas-Explorers/Producers
+LBGJ,Hsehold-Appliances/Wares
+LBRDA,Media
+LBRDK,Media
+LBRT,Oil&Gas-Field Services
+LBRX,Medical - Development Biotech
+LBTYA,Telecom/Cable Services
+LBTYB,Telecom Svcs- Foreign
+LBTYK,Telecom/Cable Services
+LC,Financial Svcs-Specialty
+LCFY,Comp Sftwr - Enterprise
+LCID,Auto Manufacturers
+LCII,Auto/Truck Equipment Parts & Tires
+LCLN,Banks-Money Center
+LCNB,Banks-Regional
+LCTX,Medical - Development Biotech
+LCUT,Hsehold-Appliances/Wares
+LDI,Finance-Mrtg&Rel Svc
+LDOS,Computer-Tech Services
+LDP,Closed-end Funds
+LDSCY,REITs
+LE,Retail-Apparel/Shoes/Acc
+LEA,Auto/Truck Equipment Parts & Tires
+LECO,Machinery-Gen Industrial
+LEDS,Elec-Semiconductor Mfg
+LEE,Media
+LEG,Hsehold/Office Furniture
+LEGH,REITs
+LEGN,Medical - Revenue Biotech
+LEN,Bldg-Resident/Comml
+LEN.B,Bldg-Resident/Comml
+LENZ,Medical - Development Biotech
+LEO,Closed-end Funds
+LESL,Retail-Leisure Products
+LEU,Energy-Alternative/Other
+LEVI,Apparel - Clothing & Shoes
+LEXX,Medical - Pharmaceuticals
+LFCBY,Medical-Systems
+LFCR,Medical - Pharmaceuticals
+LFMD,Medical-Products
+LFS,Leisure-Services
+LFST,Medical-Hospitals
+LFSWF,Cannabis
+LFT,REITs
+LFTO,Comml Svcs-Advertising
+LFUS,Electronic-Parts
+LFVN,Cosmetics/Personal Care
+LFWD,Medical-Products
+LGCL,Computer-Tech Services
+LGCY,Consumer Svcs-Education
+LGGNY,Finance-Investment Mgmt
+LGHL,Finance-Invest Bnk/Bkrs
+LGI,Closed-end Funds
+LGIH,Bldg-Resident/Comml
+LGL,Machinery-Gen Industrial
+LGN,Bldg-Heavy Construction
+LGND,Medical - Profitable Biotech
+LGO,Mining-Metal Ores
+LGPS,Real Estate Dvlpmt/Ops
+LGVN,Medical - Development Biotech
+LH,Medical-Services
+LHAI,Real Estate Dvlpmt/Ops
+LHSW,Elec-Scientific/Msrng
+LHX,Aerospace/Defense
+LI,Auto Manufacturers
+LICN,Comml Svcs-Consulting
+LIDR,Auto/Truck Equipment Parts & Tires
+LIEN,Finance-Investment Mgmt
+LIF,Computer Sftwr-Security
+LIFE,Insurance
+LII,Building - Construction Products
+LILA,Telecom Svcs- Foreign
+LILAB,Telecom/Cable Services
+LILAK,Telecom Svcs- Foreign
+LIMN,Medical - Development Biotech
+LIN,Chemicals-Specialty
+LINC,Consumer Svcs-Education
+LIND,Leisure-Services
+LINE,REITs
+LINK,Elec-Misc Products
+LION,Leisure-Movies & Related
+LIQT,Pollution Control
+LITB,Retail-Internet
+LITE,Telecom - Equipment
+LITS,Finance - Crypto/Blockchain
+LITZ,Finance-ETF / ETN
+LIVE,Retail-Internet
+LIVN,Medical-Products
+LIXT,Medical - Development Biotech
+LKFN,Banks-Regional
+LKFT,Medical - Profitable Biotech
+LKNCY,Retail-Restaurants
+LKQ,Retail/Whlsle-Auto Parts
+LLY,Medical - Pharmaceuticals
+LLYVA,Leisure-Services
+LLYVB,Leisure-Services
+LLYVK,Leisure-Services
+LMAT,Medical-Products
+LMB,Building - Construction Products
+LMFA,Financial Svcs-Specialty
+LMND,Insurance
+LMNR,Agricultural Operations
+LMRI,Medical-Services
+LMT,Aerospace/Defense
+LNAI,Medical - Development Biotech
+LNC,Insurance
+LND,Agricultural Operations
+LNG,Oil&Gas - Pipeline
+LNKS,Electrical-Power/Equipmt
+LNN,Machinery-Constr/Mining/Farming
+LNSR,Medical-Systems
+LNT,Utilities
+LNTH,Medical-Products
+LNVGY,Computer-Hardware/Perip
+LNWO,Leisure-Gaming/Equip
+LNZA,Chemicals-Specialty
+LOAN,REITs
+LOAR,Aerospace/Defense
+LOB,Banks-Regional
+LOBO,Auto Manufacturers
+LOCL,Agricultural Operations
+LOCO,Retail-Restaurants
+LODE,Mining-Gold/Silver/Gems
+LOGI,Computer-Hardware/Perip
+LOMA,Bldg-Cement/Concrt/Ag
+LONA,Medical - Development Biotech
+LOOP,Chemicals-Plastics
+LOPE,Consumer Svcs-Education
+LOT,Auto Manufacturers
+LOVE,Retail - Home Furnishings/Electronics
+LOW,Retail/Whlsle-Bldg Prds
+LPA,Real Estate Dvlpmt/Ops
+LPCN,Medical - Development Biotech
+LPG,Transport - Oil/Gas Shipping
+LPL,Elec-Misc Products
+LPLA,Finance-Invest Bnk/Bkrs
+LPRO,Finance-Commercial Loans
+LPSN,Comp Sftwr - Enterprise
+LPTH,Elec-Scientific/Msrng
+LPX,Building - Construction Products
+LQDA,Medical - Development Biotech
+LQDT,Retail-Internet
+LRCX,Elec-Semiconductor Equip
+LRE,Real Estate Dvlpmt/Ops
+LRHC,Real Estate Dvlpmt/Ops
+LRLCY,Cosmetics/Personal Care
+LRMR,Medical - Pharmaceuticals
+LRN,Consumer Svcs-Education
+LSAK,Finance-CrdtCard/PmtPr
+LSBK,Banks-Savings & Loan
+LSCC,Elec-Semicondctor Fablss
+LSE,Oil&Gas-Machinery/Equip
+LSF,Food - Packaged
+LSH,Transportation-Logistics
+LSPD,Comp Sftwr - Enterprise
+LSRCY,Elec-Semiconductor Equip
+LSTA,Medical - Development Biotech
+LSTR,Transportation-Truck
+LTBR,Energy-Alternative/Other
+LTC,REITs
+LTCN,Closed-end Funds
+LTH,Leisure-Services
+LTM,Transportation-Airline
+LTRN,Medical - Development Biotech
+LTRX,Computer-Networking
+LU,Financial Svcs-Specialty
+LUCD,Medical-Products
+LUCK,Leisure-Services
+LUCY,Retail - Specialty
+LUD,Steel-Producers
+LULU,Retail-Apparel/Shoes/Acc
+LUMN,Telecom Svcs- Foreign
+LUNG,Medical-Products
+LUNR,Aerospace/Defense
+LUV,Transportation-Airline
+LUXE,Retail-Internet
+LVLU,Retail-Internet
+LVMUY,Apparel - Clothing & Shoes
+LVO,Internet-Content
+LVRO,Chemicals-Agricultural
+LVS,Leisure-Gaming/Equip
+LVWR,Auto Manufacturers
+LW,Food - Packaged
+LWAY,Food - Foodstuffs
+LWLG,Elec-Misc Products
+LX,Finance-Consumer Loans
+LXEH,Consumer Svcs-Education
+LXEO,Medical - Development Biotech
+LXFR,Chemicals-Specialty
+LXP,REITs
+LXRX,Medical - Development Biotech
+LXU,Chemicals-Agricultural
+LYB,Chemicals-Plastics
+LYEL,Medical - Development Biotech
+LYFT,Leisure-Services
+LYG,Banks-Money Center
+LYTS,Building - Construction Products
+LYV,Leisure-Services
+LZ,Internet-Content
+LZAGY,Chemicals-Specialty
+LZB,Retail - Home Furnishings/Electronics
+LZM,Mining-Metal Ores
+LZMH,Comml Svcs-Advertising
+M,Retail - General
+MA,Finance-CrdtCard/PmtPr
+MAA,REITs
+MAAS,Retail-Internet
+MAC,REITs
+MAGH,Building - Construction Products
+MAGN,Paper & Paper Products
+MAIA,Medical - Development Biotech
+MAIN,Closed-end Funds
+MAIR,Building - Construction Products
+MAKO,Mining-Gold/Silver/Gems
+MAMA,Food - Foodstuffs
+MAMK,Apparel - Clothing & Shoes
+MAMO,Leisure-Products
+MAN,Comml Svcs-Staffing
+MANE,Medical - Development Biotech
+MANH,Comp Sftwr - Enterprise
+MANU,Leisure-Services
+MAPS,Comp Sftwr - Specialty Enterprise
+MAR,Leisure-Lodging
+MARA,Finance - Crypto/Blockchain
+MARPS,Oil&Gas-Royalty Trust
+MAS,Building - Construction Products
+MASK,Computer-Tech Services
+MASS,Medical - Research
+MAT,Leisure-Products
+MATE,Finance-ETF / ETN
+MATH,Comml Svcs-Consulting
+MATV,Paper & Paper Products
+MATW,Consumer - Specialty
+MATX,Transportation-Ship
+MAX,Comml Svcs-Advertising
+MAXNQ,Energy-Solar
+MAYS,Real Estate Dvlpmt/Ops
+MAZE,Medical - Development Biotech
+MB,Retail-Restaurants
+MBAI,Comp Sftwr - Enterprise
+MBBC,Banks-Regional
+MBC,Hsehold-Appliances/Wares
+MBGAF,Auto Manufacturers
+MBGL.WI,Comp Sftwr - Specialty Enterprise
+MBI,Insurance
+MBIN,Banks-Regional
+MBIO,Medical - Development Biotech
+MBLY,Elec-Semicondctor Fablss
+MBOT,Medical - Development Biotech
+MBRX,Medical - Development Biotech
+MBUU,Leisure-Products
+MBWM,Banks-Regional
+MBX,Medical - Development Biotech
+MC,Finance-Invest Bnk/Bkrs
+MCB,Banks-Regional
+MCBS,Banks-Regional
+MCD,Retail-Restaurants
+MCFT,Leisure-Products
+MCHB,Banks-Regional
+MCHP,Elec-Semiconductor Mfg
+MCHX,Comp Sftwr - Enterprise
+MCI,Closed-end Funds
+MCK,Medical-Distribution
+MCN,Closed-end Funds
+MCO,Financial Svcs-Specialty
+MCR,Closed-end Funds
+MCRB,Medical - Development Biotech
+MCRI,Leisure-Gaming/Equip
+MCRP,Auto Manufacturers
+MCS,Leisure-Movies & Related
+MCTA,Medical-Services
+MCY,Insurance
+MD,Medical-Services
+MDA,Aerospace/Defense
+MDAI,Medical - Research
+MDB,Computer Sftwr-Database
+MDBH,Finance-Investment Mgmt
+MDCX,Medical - Research
+MDGL,Medical - Revenue Biotech
+MDIA,Media
+MDLN,Medical-Products
+MDLZ,Food - Packaged
+MDRR,Real Estate Dvlpmt/Ops
+MDT,Medical-Products
+MDU,Utilities
+MDV,REITs
+MDWD,Medical - Development Biotech
+MDXG,Medical-Products
+MDXH,Medical - Revenue Biotech
+MEC,Auto/Truck Equipment Parts & Tires
+MED,Cosmetics/Personal Care
+MEDP,Medical - Research
+MEGI,Closed-end Funds
+MEGL,Finance-Investment Mgmt
+MEHA,Cosmetics/Personal Care
+MEI,Electronic-Parts
+MELI,Retail-Internet
+MENS,Medical - Development Biotech
+MEOH,Chemicals-Specialty
+MERC,Paper & Paper Products
+MESO,Medical - Development Biotech
+MET,Insurance
+META,Internet-Content
+METC,Energy-Coal
+METCB,Energy-Coal
+MFA,REITs
+MFC,Insurance
+MFG,Banks-Money Center
+MFI,Finance-Invest Bnk/Bkrs
+MFIC,Finance-Investment Mgmt
+MFIN,Finance-Commercial Loans
+MFM,Closed-end Funds
+MG,Bldg-Maintenance & Svc
+MGA,Auto/Truck Equipment Parts & Tires
+MGDDY,Auto/Truck Equipment Parts & Tires
+MGEE,Utilities
+MGF,Closed-end Funds
+MGIH,Paper & Paper Products
+MGLD,Diversified Operations
+MGM,Leisure-Gaming/Equip
+MGN,Agricultural Operations
+MGNI,Comml Svcs-Advertising
+MGNX,Medical - Revenue Biotech
+MGPI,Beverages-Alcoholic
+MGRC,Comml Svcs-Leasing
+MGRT,Comp Sftwr - Specialty Enterprise
+MGRX,Medical-Services
+MGTX,Medical - Development Biotech
+MGX,Medical - Development Biotech
+MGY,Oil&Gas-Explorers/Producers
+MGYR,Banks-Regional
+MH,Consumer Svcs-Education
+MHD,Closed-end Funds
+MHF,Closed-end Funds
+MHH,Comml Svcs-Staffing
+MHK,Building - Construction Products
+MHO,Bldg-Resident/Comml
+MHUAF,Medical-Products
+MI,Computer-Tech Services
+MIAX,Finance-Invest Bnk/Bkrs
+MICC,Food - Packaged
+MIDD,Machinery-Gen Industrial
+MIELY,Diversified Operations
+MIMI,Building - Construction Products
+MIN,Closed-end Funds
+MIND,Oil&Gas-Machinery/Equip
+MINE,Mining-Gold/Silver/Gems
+MIR,Machinery-Gen Industrial
+MIRA,Medical - Development Biotech
+MIRM,Medical - Revenue Biotech
+MIST,Medical - Pharmaceuticals
+MITK,Computer Sftwr-Security
+MITQ,Leisure-Movies & Related
+MITSY,Diversified Operations
+MITT,REITs
+MIY,Closed-end Funds
+MJNA,Cannabis
+MKC,Food - Packaged
+MKC.V,Food - Packaged
+MKDW,Elec-Misc Products
+MKL,Insurance
+MKSI,Elec-Semiconductor Equip
+MKTAY,Building - Tools
+MKTW,Comp Sftwr - Financial
+MKTX,Financial Svcs-Specialty
+MKZR,REITs
+MLAB,Medical-Systems
+MLCI,Finance-Investment Mgmt
+MLCO,Leisure-Gaming/Equip
+MLEC,Medical - Development Biotech
+MLGO,Computer-Tech Services
+MLI,Metal Products - Distributors/Fabrication
+MLKN,Hsehold/Office Furniture
+MLM,Bldg-Cement/Concrt/Ag
+MLP,Real Estate Dvlpmt/Ops
+MLPB,Finance-ETF / ETN
+MLPR,Finance-ETF / ETN
+MLR,Trucks & Parts-Hvy Duty
+MLSS,Medical-Products
+MLTX,Medical - Development Biotech
+MLYS,Medical - Development Biotech
+MMA,Leisure-Services
+MMD,Closed-end Funds
+MMED,Medical-Products
+MMI,Real Estate Dvlpmt/Ops
+MMLP,Oil&Gas - Pipeline
+MMM,Diversified Operations
+MMS,Comml Svcs-Consulting
+MMSI,Medical-Products
+MMT,Closed-end Funds
+MMU,Closed-end Funds
+MMYT,Leisure-Travel Booking
+MNDO,Comp Sftwr - Enterprise
+MNDR,Medical-Services
+MNDY,Comp Sftwr - Enterprise
+MNKD,Medical - Profitable Biotech
+MNOV,Medical - Development Biotech
+MNPR,Medical - Development Biotech
+MNR,Oil&Gas-Integrated
+MNRO,Retail/Whlsle-Auto Parts
+MNSB,Banks-Regional
+MNSO,Retail - General
+MNST,Beverages-Non-Alcoholic
+MNTK,Energy-Alternative/Other
+MNTN,Comml Svcs-Advertising
+MNTS,Aerospace/Defense
+MNY,Finance-Consumer Loans
+MO,Tobacco
+MOB,Computer Sftwr-Security
+MOBI,Medical-Systems
+MOBX,Elec-Semicondctor Fablss
+MOD,Building - Construction Products
+MODD,Medical-Products
+MOG.A,Aerospace/Defense
+MOG.B,Aerospace/Defense
+MOGU,Retail-Internet
+MOH,Medical-Managed Care
+MOLN,Medical - Development Biotech
+MOMO,Internet-Content
+MONRY,Apparel - Clothing & Shoes
+MORN,Financial Svcs-Specialty
+MOS,Chemicals-Agricultural
+MOV,Retail - Specialty
+MOVE,Computer Sftwr-Design
+MP,Mining-Metal Ores
+MPA,Closed-end Funds
+MPAA,Auto/Truck Equipment Parts & Tires
+MPB,Banks-Regional
+MPC,Oil&Gas-Refining/Mktg
+MPLT,Medical - Development Biotech
+MPLX,Oil&Gas - Pipeline
+MPT,REITs
+MPTI,Aerospace/Defense
+MPU,Comml Svcs-Leasing
+MPV,Closed-end Funds
+MPWR,Elec-Semicondctor Fablss
+MQ,Finance-CrdtCard/PmtPr
+MQBKY,Finance-Investment Mgmt
+MQY,Closed-end Funds
+MRAAY,Electronic-Parts
+MRAM,Elec-Semiconductor Mfg
+MRBK,Banks-Regional
+MRCY,Aerospace/Defense
+MRDN,Leisure-Gaming/Equip
+MREO,Medical - Development Biotech
+MRK,Medical - Pharmaceuticals
+MRKR,Medical - Development Biotech
+MRLN,Aerospace/Defense
+MRM,Leisure-Services
+MRMD,Cannabis
+MRNA,Medical - Revenue Biotech
+MRNO,REITs
+MRP,REITs
+MRSH,Insurance
+MRT,Transportation-Logistics
+MRTN,Transportation-Truck
+MRVI,Medical - Revenue Biotech
+MRVL,Elec-Semicondctor Fablss
+MRX,Financial Svcs-Specialty
+MS,Banks-Money Center
+MSA,Security/Sfty
+MSADY,Insurance
+MSAI,Elec-Contract Mfg
+MSB,Mining-Metal Ores
+MSBI,Banks-Regional
+MSC,Leisure-Gaming/Equip
+MSCI,Financial Svcs-Specialty
+MSD,Closed-end Funds
+MSDL,Finance-Commercial Loans
+MSEX,Utilities
+MSFT,Comp Sftwr - Enterprise
+MSGE,Leisure-Services
+MSGM,Computer Sftwr-Gaming
+MSGS,Leisure-Services
+MSGY,Bldg-Heavy Construction
+MSI,Telecom-Consumer Prods
+MSIF,Finance-Investment Mgmt
+MSLE,Medical - Development Biotech
+MSM,Retail - Specialty
+MSN,Consumer Prod-Electronic
+MSS,Retail - Specialty
+MSTR,Finance - Crypto/Blockchain
+MSW,Bldg-Maintenance & Svc
+MT,Steel-Producers
+MTA,Mining-Gold/Silver/Gems
+MTB,Banks-Super Regional
+MTC,Finance-Investment Mgmt
+MTCH,Internet-Content
+MTD,Machinery-Gen Industrial
+MTDR,Oil&Gas-Explorers/Producers
+MTEK,Comp Sftwr - Enterprise
+MTEN,Machinery-Gen Industrial
+MTEX,Cosmetics/Personal Care
+MTG,Insurance
+MTH,Bldg-Resident/Comml
+MTLS,Machinery-Mtl Hdlg/Autmn
+MTN,Leisure-Services
+MTNB,Medical - Development Biotech
+MTPLF,Finance - Crypto/Blockchain
+MTR,Oil&Gas-Royalty Trust
+MTRN,Metal Products - Distributors/Fabrication
+MTRX,Oil&Gas-Field Services
+MTSI,Elec-Semiconductor Mfg
+MTUL,Finance-ETF / ETN
+MTUS,Steel-Specialty Alloys
+MTVA,Medical - Development Biotech
+MTW,Machinery-Constr/Mining/Farming
+MTX,Chemicals-Specialty
+MTZ,Bldg-Heavy Construction
+MU,Computer-Hardware/Perip
+MUA,Closed-end Funds
+MUC,Closed-end Funds
+MUFG,Banks-Money Center
+MUJ,Closed-end Funds
+MUR,Oil&Gas-Explorers/Producers
+MURGY,Insurance
+MUSA,Retail-Super/Mini Mkts
+MUX,Mining-Gold/Silver/Gems
+MVBF,Banks-Regional
+MVIS,Elec-Misc Products
+MVO,Oil&Gas-Royalty Trust
+MVRL,Finance-ETF / ETN
+MVST,Electrical-Power/Equipmt
+MWA,Building - Construction Products
+MWC,Comp Sftwr - Enterprise
+MWG,Machinery-Mtl Hdlg/Autmn
+MWH,Bldg-Heavy Construction
+MWYN,Beverages-Non-Alcoholic
+MX,Elec-Semiconductor Mfg
+MXC,Oil&Gas-Explorers/Producers
+MXCT,Medical - Research
+MXE,Closed-end Funds
+MXF,Closed-end Funds
+MXL,Elec-Semicondctor Fablss
+MYE,Containers/Packaging
+MYFW,Banks-Regional
+MYGN,Medical - Research
+MYI,Closed-end Funds
+MYN,Closed-end Funds
+MYND,Computer Sftwr-Edu/Media
+MYO,Medical-Systems
+MYPS,Computer Sftwr-Gaming
+MYRG,Bldg-Heavy Construction
+MYSE,Comp Sftwr - Enterprise
+MYSZ,Retail-Internet
+MZTI,Food - Packaged
+NA,Elec-Semicondctor Fablss
+NAAS,Energy-Alternative/Other
+NABL,Computer-Tech Services
+NABZY,Banks-Foreign
+NAC,Closed-end Funds
+NAD,Closed-end Funds
+NAGE,Medical - Pharmaceuticals
+NAII,Cosmetics/Personal Care
+NAK,Mining-Metal Ores
+NAKA,Finance - Crypto/Blockchain
+NAMI,Computer Sftwr-Edu/Media
+NAMM,Mining-Gold/Silver/Gems
+NAMS,Medical - Development Biotech
+NAN,Closed-end Funds
+NASC,Cannabis
+NAT,Transport - Oil/Gas Shipping
+NATH,Retail-Restaurants
+NATKY,Mining-Metal Ores
+NATL,Computer-Tech Services
+NATR,Cosmetics/Personal Care
+NAUT,Medical - Development Biotech
+NAVI,Financial Svcs-Specialty
+NAVN,Comp Sftwr - Enterprise
+NAZ,Closed-end Funds
+NB,Mining-Metal Ores
+NBB,Closed-end Funds
+NBBK,Banks-Regional
+NBH,Closed-end Funds
+NBHC,Banks-Regional
+NBIS,Internet-Network Sltns
+NBIX,Medical - Profitable Biotech
+NBN,Banks-Regional
+NBP,Medical - Development Biotech
+NBR,Oil&Gas-Drilling
+NBTB,Banks-Regional
+NBTX,Medical - Development Biotech
+NBXG,Closed-end Funds
+NC,Energy-Coal
+NCA,Closed-end Funds
+NCDL,Finance-Investment Mgmt
+NCEL,Medical - Development Biotech
+NCEW,Transportation-Logistics
+NCI,Apparel - Clothing & Shoes
+NCL,Building - Construction Products
+NCLH,Leisure-Services
+NCLTY,Retail - Home Furnishings/Electronics
+NCMI,Comml Svcs-Advertising
+NCNA,Medical - Development Biotech
+NCNO,Comp Sftwr - Financial
+NCPL,Finance-Investment Mgmt
+NCRA,Machinery-Constr/Mining/Farming
+NCSM,Oil&Gas-Field Services
+NCT,Transportation-Ship
+NCTY,Computer Sftwr-Gaming
+NCV,Closed-end Funds
+NCZ,Closed-end Funds
+NDAQ,Financial Svcs-Specialty
+NDEKY,Elec-Misc Products
+NDLS,Retail-Restaurants
+NDMO,Closed-end Funds
+NDRA,Medical-Systems
+NDSN,Machinery-Gen Industrial
+NE,Oil&Gas-Drilling
+NEA,Closed-end Funds
+NECB,Banks-Savings & Loan
+NEE,Utilities
+NEGG,Retail-Internet
+NEM,Mining-Gold/Silver/Gems
+NEN,Real Estate Dvlpmt/Ops
+NEO,Medical-Services
+NEOG,Medical-Products
+NEON,Elec-Misc Products
+NEOV,Energy-Solar
+NEPH,Medical-Products
+NERV,Medical - Development Biotech
+NESR,Oil&Gas-Field Services
+NET,Comp Sftwr - Enterprise
+NEU,Chemicals-Specialty
+NEUP,Medical - Development Biotech
+NEWP,Mining-Gold/Silver/Gems
+NEWT,Finance-Investment Mgmt
+NEXA,Mining-Gold/Silver/Gems
+NEXM,Mining-Metal Ores
+NEXN,Comml Svcs-Advertising
+NEXOY,Computer Sftwr-Gaming
+NEXR,Computer Sftwr-Security
+NEXT,Utilities
+NFBK,Banks-Savings & Loan
+NFE,Oil&Gas-Integrated
+NFG,Utilities
+NFGC,Mining-Gold/Silver/Gems
+NFJ,Closed-end Funds
+NFLX,Leisure-Movies & Related
+NG,Mining-Gold/Silver/Gems
+NGEN,Medical - Development Biotech
+NGG,Utilities
+NGL,Oil&Gas-Refining/Mktg
+NGLOY,Mining-Metal Ores
+NGNE,Medical - Development Biotech
+NGS,Oil&Gas-Machinery/Equip
+NGVC,Retail-Super/Mini Mkts
+NGVT,Chemicals-Specialty
+NHC,Medical - Home & Nursing Care
+NHI,REITs
+NHP,REITs
+NHS,Closed-end Funds
+NHTC,Cosmetics/Personal Care
+NHYDY,Metal Products - Distributors/Fabrication
+NI,Utilities
+NIC,Banks-Regional
+NICE,Comp Sftwr - Enterprise
+NICM,Mining-Gold/Silver/Gems
+NIE,Closed-end Funds
+NIM,Closed-end Funds
+NINE,Oil&Gas-Field Services
+NIO,Auto Manufacturers
+NIPG,Leisure-Services
+NIQ,Comml Svcs-Market Rsrch
+NIU,Leisure-Products
+NIVF,Medical-Services
+NIXX,Comml Svcs-Staffing
+NJDCY,Electrical-Power/Equipmt
+NJR,Utilities
+NKE,Apparel - Clothing & Shoes
+NKLR,Energy-Alternative/Other
+NKSH,Banks-Regional
+NKTR,Medical - Development Biotech
+NKTX,Medical - Development Biotech
+NKX,Closed-end Funds
+NL,Hsehold/Office Furniture
+NLOP,Real Estate Dvlpmt/Ops
+NLY,REITs
+NMAI,Closed-end Funds
+NMAX,Media
+NMCO,Closed-end Funds
+NMFC,Finance-Investment Mgmt
+NMG,Energy-Alternative/Other
+NMGX,Chemicals-Specialty
+NMI,Closed-end Funds
+NMIH,Finance-Mrtg&Rel Svc
+NML,Closed-end Funds
+NMM,Transportation-Ship
+NMR,Finance-Invest Bnk/Bkrs
+NMRA,Medical - Development Biotech
+NMRK,Real Estate Dvlpmt/Ops
+NMS,Closed-end Funds
+NMT,Closed-end Funds
+NMTC,Medical - Development Biotech
+NMZ,Closed-end Funds
+NN,Consumer Prod-Electronic
+NNBR,Machinery-Gen Industrial
+NNDM,Elec-Misc Products
+NNE,Energy-Alternative/Other
+NNI,Finance-Consumer Loans
+NNN,REITs
+NNNN,Medical - Development Biotech
+NNOX,Medical-Systems
+NNVC,Medical - Development Biotech
+NNY,Closed-end Funds
+NOA,Oil&Gas-Field Services
+NOAH,Finance-Investment Mgmt
+NOC,Aerospace/Defense
+NODK,Insurance
+NOG,Oil&Gas-Explorers/Producers
+NOK,Telecom-Infrastructure
+NOMA,Leisure-Services
+NOMD,Food - Packaged
+NOTVQ,Medical - Research
+NOV,Oil&Gas-Machinery/Equip
+NOVT,Elec-Scientific/Msrng
+NOW,Comp Sftwr - Enterprise
+NP,Insurance
+NPB,Banks-Regional
+NPCE,Medical-Products
+NPCT,Closed-end Funds
+NPFD,Closed-end Funds
+NPK,Aerospace/Defense
+NPKI,Oil&Gas-Field Services
+NPNYY,Transportation-Logistics
+NPO,Machinery-Gen Industrial
+NPSCY,Steel-Producers
+NPSNY,Media
+NPT,Chemicals-Basic
+NPV,Closed-end Funds
+NPWR,Energy-Alternative/Other
+NRC,Comml Svcs-Market Rsrch
+NRDBY,Banks-Foreign
+NRDS,Financial Svcs-Specialty
+NRDY,Computer Sftwr-Edu/Media
+NREF,REITs
+NRG,Utilities
+NRGD,Finance-ETF / ETN
+NRGU,Finance-ETF / ETN
+NRGV,Energy-Alternative/Other
+NRILY,Computer-Tech Services
+NRIM,Banks-Regional
+NRIX,Medical - Development Biotech
+NRK,Closed-end Funds
+NRO,Closed-end Funds
+NRP,Energy-Coal
+NRSN,Medical - Development Biotech
+NRT,Oil&Gas-Royalty Trust
+NRXP,Medical - Development Biotech
+NRXS,Medical - Development Biotech
+NSA,REITs
+NSANY,Auto Manufacturers
+NSC,Transportation-Rail
+NSIT,Computer-Tech Services
+NSP,Comml Svcs-Outsourcing
+NSPR,Medical-Products
+NSRGY,Food - Packaged
+NSRX,Medical - Development Biotech
+NSSC,Security/Sfty
+NSTS,Banks-Regional
+NSYS,Elec-Contract Mfg
+NTAP,Computer-Hardware/Perip
+NTB,Banks-Foreign
+NTCL,Computer Sftwr-Edu/Media
+NTCT,Comp Sftwr - Enterprise
+NTDOY,Computer Sftwr-Gaming
+NTES,Computer Sftwr-Gaming
+NTGR,Computer-Networking
+NTHI,Medical - Development Biotech
+NTIC,Chemicals-Specialty
+NTIP,Elec-Misc Products
+NTLA,Medical - Development Biotech
+NTNX,Comp Sftwr - Enterprise
+NTOIY,Oil&Gas-Refining/Mktg
+NTR,Chemicals-Agricultural
+NTRA,Medical-Services
+NTRB,Medical - Development Biotech
+NTRP,Leisure-Travel Booking
+NTRS,Banks-Super Regional
+NTSK,Computer Sftwr-Security
+NTST,REITs
+NTTYY,Telecom Svcs- Foreign
+NTWK,Comp Sftwr - Financial
+NTZ,Hsehold/Office Furniture
+NU,Banks-Foreign
+NUAI,Oil&Gas-Explorers/Producers
+NUCL,Mining-Metal Ores
+NUE,Steel-Producers
+NUS,Cosmetics/Personal Care
+NUTR,Leisure-Travel Booking
+NUTX,Medical-Hospitals
+NUV,Closed-end Funds
+NUVB,Medical - Development Biotech
+NUVL,Medical - Development Biotech
+NUW,Closed-end Funds
+NUWE,Medical-Products
+NVAX,Medical - Profitable Biotech
+NVCR,Medical-Products
+NVCT,Medical - Development Biotech
+NVDA,Elec-Semicondctor Fablss
+NVEC,Electronic-Parts
+NVG,Closed-end Funds
+NVGS,Transport - Oil/Gas Shipping
+NVMI,Elec-Semiconductor Equip
+NVNI,Computer-Tech Services
+NVNO,Medical-Products
+NVO,Medical - Pharmaceuticals
+NVOH,Finance-ETF / ETN
+NVR,Bldg-Resident/Comml
+NVRI,Metal Products - Distributors/Fabrication
+NVS,Medical - Pharmaceuticals
+NVST,Medical-Systems
+NVT,Electrical-Power/Equipmt
+NVTS,Elec-Semicondctor Fablss
+NVVE,Elec-Misc Products
+NVX,Electrical-Power/Equipmt
+NVZMY,Chemicals-Specialty
+NWBI,Banks-Regional
+NWE,Utilities
+NWFL,Banks-Regional
+NWG,Banks-Money Center
+NWGL,Building - Construction Products
+NWL,Hsehold-Appliances/Wares
+NWN,Utilities
+NWPX,Metal Products - Distributors/Fabrication
+NWS,Media
+NWSA,Media
+NWTG,Leisure-Products
+NX,Building - Construction Products
+NXB,Retail-Leisure Products
+NXDR,Internet-Content
+NXDT,Closed-end Funds
+NXE,Mining-Metal Ores
+NXG,Closed-end Funds
+NXGL,Medical - Pharmaceuticals
+NXL,Medical-Products
+NXP,Closed-end Funds
+NXPI,Elec-Semiconductor Mfg
+NXPL,Security/Sfty
+NXRT,REITs
+NXST,Media
+NXT,Energy-Solar
+NXTC,Medical - Development Biotech
+NXTS,Chemicals-Agricultural
+NXTT,Computer-Tech Services
+NXXT,Oil&Gas-Refining/Mktg
+NYAX,Comp Sftwr - Financial
+NYC,REITs
+NYT,Media
+NYXH,Medical-Products
+NZF,Closed-end Funds
+O,REITs
+OABI,Medical - Development Biotech
+OBAI,Computer Sftwr-Security
+OBDC,Finance-Investment Mgmt
+OBE,Oil&Gas-Explorers/Producers
+OBIO,Medical - Development Biotech
+OBK,Banks-Regional
+OBT,Banks-Regional
+OBTC,Finance-ETF / ETN
+OC,Building - Construction Products
+OCC,Telecom - Equipment
+OCCI,Closed-end Funds
+OCFC,Banks-Regional
+OCG,Retail-Internet
+OCGN,Medical - Development Biotech
+OCS,Medical - Development Biotech
+OCSL,Finance-Investment Mgmt
+OCTV,Comp Sftwr - Enterprise
+OCUL,Medical - Development Biotech
+ODC,Consumer - Specialty
+ODD,Cosmetics/Personal Care
+ODFL,Transportation-Truck
+ODTX,Medical - Development Biotech
+ODV,Mining-Gold/Silver/Gems
+ODYS,Elec-Scientific/Msrng
+OEC,Chemicals-Specialty
+OESX,Electrical-Power/Equipmt
+OFAL,Bldg-Heavy Construction
+OFG,Banks-Regional
+OFIX,Medical-Products
+OFLX,Metal Products - Distributors/Fabrication
+OFRM,Food - Packaged
+OFS,Finance-Investment Mgmt
+OGC,Mining-Gold/Silver/Gems
+OGE,Utilities
+OGEN,Medical - Development Biotech
+OGI,Cannabis
+OGN,Medical - Pharmaceuticals
+OGS,Utilities
+OHI,REITs
+OI,Containers/Packaging
+OIA,Closed-end Funds
+OII,Oil&Gas-Field Services
+OILCF,Oil&Gas-Explorers/Producers
+OILD,Finance-ETF / ETN
+OILU,Finance-ETF / ETN
+OIO,Pollution Control
+OIS,Oil&Gas-Field Services
+OKE,Oil&Gas - Pipeline
+OKLO,Energy-Alternative/Other
+OKTA,Computer Sftwr-Security
+OKUR,Medical - Development Biotech
+OKYO,Medical - Development Biotech
+OLB,Finance-CrdtCard/PmtPr
+OLED,Elec-Misc Products
+OLLI,Retail - General
+OLMA,Medical - Development Biotech
+OLN,Chemicals-Specialty
+OLOX,Metal Products - Distributors/Fabrication
+OLP,REITs
+OLPX,Cosmetics/Personal Care
+OLYMY,Medical-Systems
+OM,Medical-Systems
+OMAB,Real Estate Dvlpmt/Ops
+OMC,Comml Svcs-Advertising
+OMCL,Medical-Systems
+OMDA,Medical-Services
+OMER,Medical - Development Biotech
+OMEX,Mining-Metal Ores
+OMF,Finance-Consumer Loans
+OMH,Retail-Internet
+OMRNY,Elec-Scientific/Msrng
+OMSE,Oil&Gas-Machinery/Equip
+ON,Elec-Semiconductor Mfg
+ONB,Banks-Regional
+ONC,Medical - Revenue Biotech
+ONCO,Medical - Development Biotech
+ONCY,Medical - Development Biotech
+ONDS,Aerospace/Defense
+ONEG,Bldg-Heavy Construction
+ONEW,Retail-Leisure Products
+ONFO,Computer-Tech Services
+ONIT,Finance-Mrtg&Rel Svc
+ONL,REITs
+ONMD,Medical - Research
+ONON,Apparel - Clothing & Shoes
+ONT,Pollution Control
+ONTO,Elec-Semiconductor Equip
+OOMA,Telecom-Consumer Prods
+OPAD,Real Estate Dvlpmt/Ops
+OPAL,Energy-Alternative/Other
+OPBK,Financial Svcs-Specialty
+OPCH,Medical-Services
+OPEN,Real Estate Dvlpmt/Ops
+OPFI,Comp Sftwr - Financial
+OPHC,Banks-Regional
+OPHLY,Medical - Pharmaceuticals
+OPITQ,REITs
+OPK,Medical - Revenue Biotech
+OPLN,Retail/Whlsle-Automobile
+OPP,Closed-end Funds
+OPRA,Internet-Content
+OPRT,Finance-Consumer Loans
+OPRX,Computer Sftwr-Medical
+OPTEY,Medical - Development Biotech
+OPTH,Medical - Pharmaceuticals
+OPTT,Energy-Alternative/Other
+OPTU,Telecom/Cable Services
+OPTX,Telecom - Equipment
+OPXS,Aerospace/Defense
+OPY,Finance-Invest Bnk/Bkrs
+OR,Mining-Gold/Silver/Gems
+ORA,Energy-Alternative/Other
+ORBS,Finance - Crypto/Blockchain
+ORC,REITs
+ORCL,Computer Sftwr-Database
+ORGN,Energy-Alternative/Other
+ORGO,Medical-Products
+ORI,Insurance
+ORIC,Medical - Development Biotech
+ORIO,Finance - Crypto/Blockchain
+ORIS,Beverages-Non-Alcoholic
+ORKA,Medical - Development Biotech
+ORKT,Computer-Tech Services
+ORLA,Mining-Gold/Silver/Gems
+ORLY,Retail/Whlsle-Auto Parts
+ORMP,Medical - Development Biotech
+ORN,Bldg-Heavy Construction
+ORRF,Banks-Regional
+OSBC,Banks-Regional
+OSCR,Insurance
+OSG,Insurance
+OSIS,Aerospace/Defense
+OSK,Trucks & Parts-Hvy Duty
+OSPN,Computer Sftwr-Security
+OSRH,Medical - Development Biotech
+OSS,Computer-Hardware/Perip
+OST,Elec-Misc Products
+OSTX,Medical - Development Biotech
+OSUR,Medical-Products
+OSW,Leisure-Services
+OTCM,Financial Svcs-Specialty
+OTEX,Computer Sftwr-Database
+OTF,Closed-end Funds
+OTIS,Machinery-Gen Industrial
+OTLK,Medical - Development Biotech
+OTLY,Food - Foodstuffs
+OTSKY,Medical - Pharmaceuticals
+OTTR,Diversified Operations
+OUST,Elec-Misc Products
+OUT,REITs
+OVBC,Banks-Regional
+OVCHY,Banks-Foreign
+OVID,Medical - Development Biotech
+OVLY,Banks-Regional
+OVV,Oil&Gas-Explorers/Producers
+OWL,Finance-Investment Mgmt
+OWLS,Finance - Crypto/Blockchain
+OWLT,Medical-Products
+OXBR,Insurance
+OXLC,Closed-end Funds
+OXM,Apparel - Clothing & Shoes
+OXSQ,Finance-Investment Mgmt
+OXY,Oil&Gas-Explorers/Producers
+OZ,Real Estate Dvlpmt/Ops
+OZK,Banks-Regional
+P,Computer-Hardware/Perip
+PAA,Oil&Gas - Pipeline
+PAAS,Mining-Gold/Silver/Gems
+PAC,Real Estate Dvlpmt/Ops
+PACB,Medical-Systems
+PACK,Containers/Packaging
+PACS,Medical - Home & Nursing Care
+PAG,Retail/Whlsle-Automobile
+PAGP,Oil&Gas - Pipeline
+PAGS,Finance-CrdtCard/PmtPr
+PAHC,Medical - Pharmaceuticals
+PAI,Closed-end Funds
+PAL,Transportation-Logistics
+PALI,Medical - Development Biotech
+PAM,Utilities
+PAMT,Transportation-Truck
+PANL,Transportation-Ship
+PANW,Computer Sftwr-Security
+PAPL,Financial Svcs-Specialty
+PAR,Computer-Tech Services
+PARK,Medical-Services
+PARR,Oil&Gas-Refining/Mktg
+PASG,Medical - Development Biotech
+PASW,Apparel - Clothing & Shoes
+PATH,Comp Sftwr - Enterprise
+PATK,Auto/Truck Equipment Parts & Tires
+PAVM,Medical-Products
+PAVS,Cosmetics/Personal Care
+PAX,Finance-Investment Mgmt
+PAXS,Closed-end Funds
+PAY,Finance-CrdtCard/PmtPr
+PAYC,Comp Sftwr - Enterprise
+PAYO,Finance-CrdtCard/PmtPr
+PAYP,Finance-CrdtCard/PmtPr
+PAYS,Finance-CrdtCard/PmtPr
+PAYX,Comml Svcs-Outsourcing
+PB,Banks-Regional
+PBA,Oil&Gas - Pipeline
+PBCRY,Banks-Foreign
+PBF,Oil&Gas-Refining/Mktg
+PBFS,Banks-Regional
+PBH,Cosmetics/Personal Care
+PBHC,Banks-Regional
+PBI,Business Equip & Supplies
+PBK,Energy-Solar
+PBLS,Medical - Development Biotech
+PBM,Medical - Development Biotech
+PBOT,Finance-ETF / ETN
+PBR,Oil&Gas-Integrated
+PBR.A,Oil&Gas-Integrated
+PBT,Oil&Gas-Royalty Trust
+PBYI,Medical - Profitable Biotech
+PC,Retail-Restaurants
+PCAR,Trucks & Parts-Hvy Duty
+PCB,Banks-Regional
+PCF,Closed-end Funds
+PCG,Utilities
+PCLA,Computer-Networking
+PCLB,Banks-Regional
+PCM,Closed-end Funds
+PCN,Closed-end Funds
+PCOR,Comp Sftwr - Specialty Enterprise
+PCQ,Closed-end Funds
+PCRX,Medical - Profitable Biotech
+PCSA,Medical - Pharmaceuticals
+PCT,Chemicals-Plastics
+PCTY,Comp Sftwr - Enterprise
+PCVX,Medical - Development Biotech
+PCYO,Utilities
+PD,Comp Sftwr - Enterprise
+PDC,Comp Sftwr - Financial
+PDCC,Closed-end Funds
+PDD,Retail-Internet
+PDEX,Medical-Products
+PDFS,Comp Sftwr - Specialty Enterprise
+PDI,Closed-end Funds
+PDLB,Banks-Regional
+PDM,REITs
+PDO,Closed-end Funds
+PDS,Oil&Gas-Drilling
+PDSB,Medical - Development Biotech
+PDT,Closed-end Funds
+PDX,Closed-end Funds
+PDYN,Aerospace/Defense
+PEB,REITs
+PEBK,Banks-Regional
+PEBO,Banks-Regional
+PECO,REITs
+PED,Oil&Gas-Explorers/Producers
+PEG,Utilities
+PEGA,Comp Sftwr - Financial
+PEN,Medical-Products
+PENG,Computer-Hardware/Perip
+PENN,Leisure-Gaming/Equip
+PEO,Closed-end Funds
+PEP,Food - Packaged
+PEPG,Medical - Development Biotech
+PERF,Comp Sftwr - Specialty Enterprise
+PERI,Comml Svcs-Advertising
+PESI,Pollution Control
+PETS,Retail-Internet
+PETZ,Food - Packaged
+PEW,Retail-Internet
+PFAI,Agricultural Operations
+PFBC,Banks-Regional
+PFD,Closed-end Funds
+PFE,Medical - Pharmaceuticals
+PFFL,Finance-ETF / ETN
+PFG,Insurance
+PFGC,Food - Wholesale
+PFIS,Banks-Regional
+PFL,Closed-end Funds
+PFLT,Finance-Investment Mgmt
+PFN,Closed-end Funds
+PFO,Closed-end Funds
+PFS,Banks-Regional
+PFSA,Medical-Systems
+PFSI,Finance-Mrtg&Rel Svc
+PFX,Finance-Investment Mgmt
+PG,Cosmetics/Personal Care
+PGC,Banks-Regional
+PGEN,Medical - Development Biotech
+PGNY,Medical-Services
+PGP,Closed-end Funds
+PGR,Insurance
+PGY,Comp Sftwr - Financial
+PGZ,Closed-end Funds
+PH,Machinery-Gen Industrial
+PHAR,Medical - Profitable Biotech
+PHAT,Medical - Development Biotech
+PHG,Diversified Operations
+PHGE,Medical - Development Biotech
+PHI,Telecom Svcs- Foreign
+PHIN,Auto/Truck Equipment Parts & Tires
+PHIO,Medical - Development Biotech
+PHK,Closed-end Funds
+PHM,Bldg-Resident/Comml
+PHOE,Bldg-Heavy Construction
+PHR,Computer Sftwr-Medical
+PHUN,Computer-Tech Services
+PHVS,Medical - Development Biotech
+PHYS,Finance-ETF / ETN
+PI,Elec-Semicondctor Fablss
+PICS,Finance-CrdtCard/PmtPr
+PII,Leisure-Products
+PIII,Medical-Services
+PIM,Closed-end Funds
+PINE,REITs
+PINS,Internet-Content
+PIPR,Finance-Invest Bnk/Bkrs
+PJT,Finance-Invest Bnk/Bkrs
+PK,REITs
+PKBK,Banks-Regional
+PKE,Aerospace/Defense
+PKG,Paper & Paper Products
+PKOH,Metal Products - Distributors/Fabrication
+PKX,Steel-Producers
+PL,Telecom/Cable Services
+PLAB,Elec-Semiconductor Equip
+PLAG,Food - Packaged
+PLAY,Retail-Restaurants
+PLBC,Banks-Regional
+PLBL,Retail-Internet
+PLBY,Retail-Leisure Products
+PLCE,Retail-Apparel/Shoes/Acc
+PLD,REITs
+PLG,Mining-Gold/Silver/Gems
+PLGO,Insurance
+PLMR,Insurance
+PLNT,Leisure-Services
+PLOW,Auto/Truck Equipment Parts & Tires
+PLPC,Telecom - Equipment
+PLRX,Medical - Development Biotech
+PLRZ,Medical - Development Biotech
+PLSE,Medical-Systems
+PLSM,Medical-Systems
+PLTK,Computer Sftwr-Gaming
+PLTR,Comp Sftwr - Enterprise
+PLTS,Comp Sftwr - Financial
+PLUG,Energy-Alternative/Other
+PLUR,Medical - Development Biotech
+PLUS,Computer-Tech Services
+PLUT,Finance-Investment Mgmt
+PLX,Medical - Development Biotech
+PLXS,Elec-Contract Mfg
+PLYX,Medical - Development Biotech
+PM,Tobacco
+PMAX,Business Equip & Supplies
+PMCB,Medical - Development Biotech
+PMEC,Bldg-Maintenance & Svc
+PMI,Medical-Systems
+PML,Closed-end Funds
+PMM,Closed-end Funds
+PMN,Medical - Development Biotech
+PMNT,Apparel - Clothing & Shoes
+PMO,Closed-end Funds
+PMT,REITs
+PMTS,Finance-CrdtCard/PmtPr
+PMVP,Medical - Development Biotech
+PN,Energy-Solar
+PNBK,Banks-Regional
+PNC,Banks-Super Regional
+PNFP,Banks-Regional
+PNGAY,Insurance
+PNI,Closed-end Funds
+PNNT,Finance-Investment Mgmt
+PNR,Machinery-Gen Industrial
+PNRG,Oil&Gas-Explorers/Producers
+PNTG,Medical - Home & Nursing Care
+PNW,Utilities
+POAHY,Auto Manufacturers
+POAS,Elec-Scientific/Msrng
+POCI,Medical-Products
+PODC,Internet-Content
+PODD,Medical-Products
+POET,Elec-Semiconductor Mfg
+POLA,Electrical-Power/Equipmt
+POM,Medical-Services
+PONY,Auto/Truck Equipment Parts & Tires
+POOL,Retail-Leisure Products
+POR,Utilities
+POST,Food - Packaged
+POWI,Elec-Semicondctor Fablss
+POWL,Electrical-Power/Equipmt
+POWW,Retail-Internet
+PPBT,Medical - Development Biotech
+PPC,Food - Foodstuffs
+PPCB,Medical - Development Biotech
+PPERY,Banks-Foreign
+PPG,Building - Construction Products
+PPHC,Comml Svcs-Advertising
+PPIH,Pollution Control
+PPL,Utilities
+PPLI,Internet-Content
+PPSI,Electrical-Power/Equipmt
+PPT,Closed-end Funds
+PPTA,Mining-Gold/Silver/Gems
+PR,Oil&Gas-Explorers/Producers
+PRA,Insurance
+PRAA,Financial Svcs-Specialty
+PRAX,Medical - Development Biotech
+PRCH,Computer-Tech Services
+PRCT,Medical-Systems
+PRDO,Consumer Svcs-Education
+PRE,Medical-Services
+PRFX,Medical - Pharmaceuticals
+PRG,Comml Svcs-Leasing
+PRGO,Medical - Pharmaceuticals
+PRGS,Comp Sftwr - Enterprise
+PRHI,Insurance
+PRI,Insurance
+PRIM,Bldg-Heavy Construction
+PRK,Banks-Regional
+PRKS,Leisure-Services
+PRLB,Machinery-Gen Industrial
+PRLD,Medical - Development Biotech
+PRM,Chemicals-Specialty
+PRMB,Beverages-Non-Alcoholic
+PRME,Medical - Development Biotech
+PRNDY,Beverages-Alcoholic
+PROF,Medical-Systems
+PROK,Medical - Development Biotech
+PROP,Oil&Gas-Explorers/Producers
+PROV,Banks-Savings & Loan
+PRPH,Cosmetics/Personal Care
+PRPL,Hsehold/Office Furniture
+PRPO,Medical-Services
+PRQR,Medical - Development Biotech
+PRSO,Elec-Semicondctor Fablss
+PRSU,Leisure-Services
+PRT,Oil&Gas-Royalty Trust
+PRTA,Medical - Development Biotech
+PRTCY,Medical - Development Biotech
+PRTH,Financial Svcs-Specialty
+PRTS,Retail/Whlsle-Auto Parts
+PRU,Insurance
+PRVA,Computer Sftwr-Medical
+PRZO,Aerospace/Defense
+PS,Finance-Investment Mgmt
+PSA,REITs
+PSBD,Finance-Investment Mgmt
+PSEC,Finance-Investment Mgmt
+PSF,Closed-end Funds
+PSFE,Finance-CrdtCard/PmtPr
+PSHG,Transportation-Ship
+PSIG,Transportation-Logistics
+PSIX,Machinery-Gen Industrial
+PSKY,Media
+PSLV,Finance-ETF / ETN
+PSMT,Retail - General
+PSN,Comp Sftwr - Specialty Enterprise
+PSNL,Medical-Services
+PSNY,Auto Manufacturers
+PSO,Media
+PSQH,Internet-Content
+PSTL,REITs
+PSTV,Medical - Development Biotech
+PSTVY,Banks-Money Center
+PSUS,Closed-end Funds
+PSX,Oil&Gas-Refining/Mktg
+PTA,Finance-ETF / ETN
+PTBS,Banks-Regional
+PTC,Computer Sftwr-Design
+PTCT,Medical - Revenue Biotech
+PTEN,Oil&Gas-Drilling
+PTGX,Medical - Pharmaceuticals
+PTHS,Medical - Development Biotech
+PTIX,Medical - Development Biotech
+PTLE,Transportation-Ship
+PTLO,Retail-Restaurants
+PTN,Medical - Development Biotech
+PTNM,Retail - Specialty
+PTON,Leisure-Services
+PTRN,Comp Sftwr - Enterprise
+PTY,Closed-end Funds
+PUBGY,Comml Svcs-Advertising
+PUBM,Comml Svcs-Advertising
+PUK,Insurance
+PULM,Medical - Development Biotech
+PUMP,Oil&Gas-Field Services
+PUMSY,Apparel - Clothing & Shoes
+PURR,Finance - Crypto/Blockchain
+PUSA,Leisure-Services
+PVH,Apparel - Clothing & Shoes
+PVL,Oil&Gas-Royalty Trust
+PVLA,Medical - Development Biotech
+PW,REITs
+PWP,Finance-Invest Bnk/Bkrs
+PWR,Bldg-Heavy Construction
+PWRL,Closed-end Funds
+PXED,Consumer Svcs-Education
+PXLW,Elec-Semicondctor Fablss
+PXS,Transportation-Ship
+PYPD,Medical - Development Biotech
+PYPL,Finance-CrdtCard/PmtPr
+PYXS,Medical - Development Biotech
+PZG,Mining-Gold/Silver/Gems
+PZIV,Finance-ETF / ETN
+PZZA,Retail-Restaurants
+Q,Elec-Semiconductor Equip
+QBTS,Comp Sftwr - Enterprise
+QCLS,Computer-Hardware/Perip
+QCOM,Elec-Semicondctor Fablss
+QCRH,Banks-Regional
+QDEL,Medical-Products
+QFIN,Financial Svcs-Specialty
+QGEN,Medical-Products
+QH,Comml Svcs-Outsourcing
+QLYS,Computer Sftwr-Security
+QMCO,Computer-Hardware/Perip
+QMMM,Comml Svcs-Advertising
+QNC,Computer Sftwr-Security
+QNCX,Medical - Development Biotech
+QNRX,Medical - Development Biotech
+QNST,Comml Svcs-Advertising
+QNT,Computer-Hardware/Perip
+QNTM,Medical - Development Biotech
+QQQX,Closed-end Funds
+QRHC,Pollution Control
+QRVO,Elec-Semiconductor Mfg
+QS,Auto/Truck Equipment Parts & Tires
+QSI,Medical - Development Biotech
+QSR,Retail-Restaurants
+QTEX,Computer-Hardware/Perip
+QTI,Medical-Products
+QTRX,Medical-Products
+QTTB,Medical - Development Biotech
+QTWO,Comp Sftwr - Financial
+QUAD,Media
+QUBT,Computer-Tech Services
+QUCY,Computer-Hardware/Perip
+QUIK,Elec-Semicondctor Fablss
+QULL,Finance-ETF / ETN
+QURE,Medical - Development Biotech
+QVCAQ,Retail-Internet
+QXL,Computer-Hardware/Perip
+QXO,Building - Construction Products
+R,Comml Svcs-Leasing
+RA,Closed-end Funds
+RACE,Auto Manufacturers
+RADX,Medical - Development Biotech
+RAIL,Transportation-Equip Mfg
+RAIN,Machinery-Gen Industrial
+RAL,Elec-Scientific/Msrng
+RAMP,Computer-Tech Services
+RAND,Finance-Investment Mgmt
+RANI,Medical - Development Biotech
+RAPP,Medical - Development Biotech
+RARE,Medical - Revenue Biotech
+RAVE,Retail-Restaurants
+RAY,Consumer Prod-Electronic
+RAYA,Electrical-Power/Equipmt
+RBA,Retail - Specialty
+RBB,Banks-Regional
+RBBN,Telecom-Infrastructure
+RBC,Metal Products - Distributors/Fabrication
+RBCAA,Banks-Regional
+RBKB,Banks-Regional
+RBLX,Computer Sftwr-Gaming
+RBNE,Transportation-Ship
+RBOT,Computer Sftwr-Medical
+RBRK,Computer Sftwr-Security
+RC,REITs
+RCAT,Comp Sftwr - Specialty Enterprise
+RCEL,Medical-Products
+RCG,Closed-end Funds
+RCI,Telecom Svcs- Foreign
+RCKT,Medical - Development Biotech
+RCKY,Apparel - Clothing & Shoes
+RCL,Leisure-Services
+RCMT,Computer-Tech Services
+RCON,Oil&Gas-Machinery/Equip
+RCRUY,Comml Svcs-Staffing
+RCS,Closed-end Funds
+RCT,Comp Sftwr - Specialty Enterprise
+RCUS,Medical - Revenue Biotech
+RDCM,Internet-Network Sltns
+RDDT,Internet-Content
+RDGT,Retail - Specialty
+RDHL,Medical - Development Biotech
+RDI,Leisure-Movies & Related
+RDIB,Leisure-Movies & Related
+RDN,Finance-Mrtg&Rel Svc
+RDNT,Medical-Services
+RDNW,Retail/Whlsle-Automobile
+RDVT,Comml Svcs-Outsourcing
+RDVWF,Internet-Network Sltns
+RDW,Aerospace/Defense
+RDWR,Computer-Networking
+RDY,Medical - Pharmaceuticals
+RDZN,Insurance
+REA,Mining-Metal Ores
+REAL,Retail-Internet
+REAX,Real Estate Dvlpmt/Ops
+REBN,Beverages-Non-Alcoholic
+RECT,Security/Sfty
+REE,Auto/Truck Equipment Parts & Tires
+REED,Beverages-Non-Alcoholic
+REFI,REITs
+REFR,Elec-Misc Products
+REG,REITs
+REGN,Medical - Profitable Biotech
+REI,Oil&Gas-Explorers/Producers
+REKR,Comml Svcs-Consulting
+RELL,Elec-Misc Products
+RELX,Comml Svcs-Market Rsrch
+RELY,Finance-CrdtCard/PmtPr
+RENT,Retail-Internet
+RENX,Real Estate Dvlpmt/Ops
+REPL,Medical - Development Biotech
+REPX,Oil&Gas-Explorers/Producers
+REPYY,Oil&Gas-Explorers/Producers
+RERE,Retail - Home Furnishings/Electronics
+RES,Oil&Gas-Field Services
+RETO,Building - Construction Products
+REVB,Medical - Development Biotech
+REX,Energy-Alternative/Other
+REXR,REITs
+REYN,Containers/Packaging
+REZI,Security/Sfty
+RF,Banks-Super Regional
+RFI,Closed-end Funds
+RFIL,Telecom - Equipment
+RFL,Finance-Investment Mgmt
+RFM,Closed-end Funds
+RFMZ,Closed-end Funds
+RGA,Insurance
+RGC,Medical - Development Biotech
+RGCO,Utilities
+RGEN,Medical - Research
+RGLD,Mining-Gold/Silver/Gems
+RGNT,Medical-Products
+RGNX,Medical - Revenue Biotech
+RGP,Comml Svcs-Consulting
+RGR,Security/Sfty
+RGRX,Medical - Development Biotech
+RGS,Retail - Specialty
+RGT,Closed-end Funds
+RGTI,Computer-Tech Services
+RH,Retail - Home Furnishings/Electronics
+RHHBY,Medical - Pharmaceuticals
+RHI,Comml Svcs-Staffing
+RHLD,Financial Svcs-Specialty
+RHP,REITs
+RICK,Leisure-Services
+RIG,Oil&Gas-Drilling
+RIGL,Medical - Profitable Biotech
+RILY,Finance-Invest Bnk/Bkrs
+RIME,Consumer Prod-Electronic
+RIO,Mining-Metal Ores
+RIOT,Finance - Crypto/Blockchain
+RITM,REITs
+RITR,Comml Svcs-Consulting
+RIV,Closed-end Funds
+RIVN,Auto Manufacturers
+RJET,Transportation-Airline
+RJF,Finance-Invest Bnk/Bkrs
+RKDA,Agricultural Operations
+RKLB,Aerospace/Defense
+RKT,Finance-Mrtg&Rel Svc
+RKTO,Elec-Semiconductor Mfg
+RL,Apparel - Clothing & Shoes
+RLAY,Medical - Development Biotech
+RLGT,Transportation-Logistics
+RLI,Insurance
+RLJ,REITs
+RLMD,Medical - Development Biotech
+RLTY,Closed-end Funds
+RLX,Tobacco
+RLYB,Medical - Development Biotech
+RM,Finance-Consumer Loans
+RMAX,Real Estate Dvlpmt/Ops
+RMBI,Banks-Regional
+RMBS,Elec-Semicondctor Fablss
+RMCF,Food - Packaged
+RMCO,REITs
+RMD,Medical-Products
+RMI,Closed-end Funds
+RMIX,Bldg-Cement/Concrt/Ag
+RMM,Closed-end Funds
+RMMZ,Closed-end Funds
+RMNI,Computer-Tech Services
+RMR,Real Estate Dvlpmt/Ops
+RMSG,Internet-Content
+RMT,Closed-end Funds
+RMTI,Medical-Products
+RNA,Medical - Development Biotech
+RNAC,Medical - Development Biotech
+RNAZ,Medical - Development Biotech
+RNG,Comp Sftwr - Enterprise
+RNGR,Oil&Gas-Field Services
+RNMBY,Aerospace/Defense
+RNP,Closed-end Funds
+RNR,Insurance
+RNST,Banks-Regional
+RNTX,Medical - Development Biotech
+RNW,Energy-Alternative/Other
+RNXT,Medical - Development Biotech
+ROAD,Bldg-Heavy Construction
+ROC,Comp Sftwr - Specialty Enterprise
+ROCK,Metal Products - Distributors/Fabrication
+ROG,Elec-Semiconductor Mfg
+ROIV,Medical - Development Biotech
+ROK,Electrical-Power/Equipmt
+ROKU,Leisure-Movies & Related
+ROL,Bldg-Maintenance & Svc
+ROLR,Leisure-Gaming/Equip
+ROMA,Comml Svcs-Consulting
+ROOT,Insurance
+ROP,Diversified Operations
+ROST,Retail-Apparel/Shoes/Acc
+ROSYY,Telecom Svcs- Foreign
+RPAY,Finance-CrdtCard/PmtPr
+RPC,Finance-Investment Mgmt
+RPD,Computer Sftwr-Security
+RPGL,Comp Sftwr - Enterprise
+RPID,Medical - Research
+RPM,Building - Construction Products
+RPRX,Medical - Profitable Biotech
+RPT,REITs
+RQI,Closed-end Funds
+RR,Machinery-Mtl Hdlg/Autmn
+RRBI,Banks-Regional
+RRC,Oil&Gas-Explorers/Producers
+RRGB,Retail-Restaurants
+RRR,Leisure-Gaming/Equip
+RRX,Electrical-Power/Equipmt
+RS,Metal Products - Distributors/Fabrication
+RSF,Closed-end Funds
+RSG,Pollution Control
+RSI,Leisure-Gaming/Equip
+RSKD,Computer Sftwr-Security
+RSSS,Comml Svcs-Market Rsrch
+RSVR,Leisure-Movies & Related
+RTB,Comp Sftwr - Enterprise
+RTO,Comml Svcs-Outsourcing
+RTX,Aerospace/Defense
+RUBI,Transportation-Ship
+RUM,Internet-Content
+RUN,Energy-Solar
+RUSHA,Retail/Whlsle-Automobile
+RUSHB,Retail/Whlsle-Automobile
+RVI,Closed-end Funds
+RVLV,Retail-Apparel/Shoes/Acc
+RVMD,Medical - Development Biotech
+RVP,Medical-Products
+RVPH,Medical - Development Biotech
+RVSB,Banks-Regional
+RVSN,Transportation-Equip Mfg
+RVT,Closed-end Funds
+RVTY,Medical - Research
+RWAY,Finance-Commercial Loans
+RWIN,Finance-ETF / ETN
+RWT,REITs
+RXO,Transportation-Truck
+RXRX,Medical - Development Biotech
+RXST,Medical-Products
+RXT,Comp Sftwr - Enterprise
+RY,Banks-Money Center
+RYAAY,Transportation-Airline
+RYAM,Chemicals-Specialty
+RYAN,Insurance
+RYCEY,Aerospace/Defense
+RYDE,Leisure-Travel Booking
+RYET,Consumer Svcs-Education
+RYM,Cannabis
+RYN,REITs
+RYOJ,Medical-Services
+RYTM,Medical - Revenue Biotech
+RYZ,Metal Products - Distributors/Fabrication
+RZLT,Medical - Development Biotech
+RZLV,Comp Sftwr - Specialty Enterprise
+S,Computer Sftwr-Security
+SA,Mining-Gold/Silver/Gems
+SABA,Closed-end Funds
+SABR,Leisure-Travel Booking
+SABS,Medical - Development Biotech
+SACH,REITs
+SAFE,REITs
+SAFT,Insurance
+SAFX,Energy-Alternative/Other
+SAGT,Computer-Tech Services
+SAH,Retail/Whlsle-Automobile
+SAIA,Transportation-Truck
+SAIC,Comml Svcs-Consulting
+SAIH,Finance - Crypto/Blockchain
+SAIL,Computer Sftwr-Security
+SAM,Beverages-Alcoholic
+SAMG,Finance-Investment Mgmt
+SAN,Banks-Money Center
+SANA,Medical - Development Biotech
+SANG,Telecom/Cable Services
+SANM,Elec-Contract Mfg
+SAP,Comp Sftwr - Enterprise
+SAPH,Finance-ETF / ETN
+SAR,Finance-Investment Mgmt
+SARO,Aerospace/Defense
+SATL,Aerospace/Defense
+SATS,Telecom - Equipment
+SB,Transportation-Ship
+SBAC,REITs
+SBC,Comml Svcs-Consulting
+SBCF,Banks-Regional
+SBDS,Leisure-Products
+SBET,Finance - Crypto/Blockchain
+SBEV,Beverages-Alcoholic
+SBFG,Banks-Regional
+SBFM,Medical - Development Biotech
+SBGI,Media
+SBGSY,Electrical-Power/Equipmt
+SBH,Retail - Specialty
+SBI,Closed-end Funds
+SBLK,Transportation-Ship
+SBMT,Mining-Gold/Silver/Gems
+SBR,Oil&Gas-Royalty Trust
+SBRA,REITs
+SBS,Utilities
+SBSI,Banks-Regional
+SBSW,Mining-Gold/Silver/Gems
+SBUX,Retail-Restaurants
+SCAG,Trucks & Parts-Hvy Duty
+SCCO,Mining-Metal Ores
+SCD,Closed-end Funds
+SCDL,Finance-ETF / ETN
+SCHL,Media
+SCHW,Finance-Invest Bnk/Bkrs
+SCHYY,Leisure-Gaming/Equip
+SCI,Consumer - Specialty
+SCKT,Computer-Hardware/Perip
+SCL,Chemicals-Specialty
+SCLX,Medical - Development Biotech
+SCM,Finance-Investment Mgmt
+SCNI,Medical - Development Biotech
+SCNX,Medical-Distribution
+SCOR,Comml Svcs-Market Rsrch
+SCSC,Business Equip & Supplies
+SCWO,Pollution Control
+SCYX,Medical - Development Biotech
+SCZM,Mining-Gold/Silver/Gems
+SD,Oil&Gas-Explorers/Producers
+SDA,Leisure-Services
+SDEV,Finance - Crypto/Blockchain
+SDGR,Medical - Research
+SDHC,Bldg-Resident/Comml
+SDHY,Closed-end Funds
+SDM,Comml Svcs-Advertising
+SDOT,Retail-Restaurants
+SDRL,Oil&Gas-Drilling
+SDST,Electrical-Power/Equipmt
+SE,Retail-Internet
+SEAT,Leisure-Travel Booking
+SEB,Diversified Operations
+SEDG,Energy-Solar
+SEED,Agricultural Operations
+SEER,Medical - Development Biotech
+SEG,Leisure-Services
+SEGG,Leisure-Gaming/Equip
+SEI,Electrical-Power/Equipmt
+SEIC,Finance-Investment Mgmt
+SELF,REITs
+SELXF,Electronic-Parts
+SEM,Medical-Hospitals
+SEMG,Finance-ETF / ETN
+SENEA,Food - Packaged
+SENEB,Food - Packaged
+SENS,Medical-Products
+SEPN,Medical - Development Biotech
+SER,Medical - Development Biotech
+SERA,Medical-Services
+SERV,Machinery-Mtl Hdlg/Autmn
+SES,Electrical-Power/Equipmt
+SEV,Auto Manufacturers
+SEVN,REITs
+SEZL,Finance-CrdtCard/PmtPr
+SF,Finance-Invest Bnk/Bkrs
+SFBC,Banks-Regional
+SFBS,Banks-Regional
+SFD,Food - Foodstuffs
+SFHG,Business Equip & Supplies
+SFIX,Retail-Internet
+SFL,Transport - Oil/Gas Shipping
+SFM,Retail-Super/Mini Mkts
+SFNC,Banks-Regional
+SFPT,Insurance
+SFST,Banks-Regional
+SFTBY,Telecom Svcs- Foreign
+SFWL,Transportation-Logistics
+SG,Retail-Restaurants
+SGA,Media
+SGAPY,Telecom Svcs- Foreign
+SGC,Comml Svcs-Outsourcing
+SGHC,Leisure-Gaming/Equip
+SGHT,Medical-Systems
+SGI,Hsehold/Office Furniture
+SGIOY,Medical - Pharmaceuticals
+SGLY,Transportation-Logistics
+SGML,Mining-Metal Ores
+SGMO,Medical - Development Biotech
+SGMT,Medical - Development Biotech
+SGP,Medical-Products
+SGRP,Comml Svcs-Advertising
+SGRY,Medical-Hospitals
+SGSOY,Comml Svcs-Consulting
+SGU,Oil&Gas-Refining/Mktg
+SHAK,Retail-Restaurants
+SHAZ,Computer-Tech Services
+SHBI,Banks-Regional
+SHC,Medical-Services
+SHECY,Chemicals-Specialty
+SHEL,Oil&Gas-Integrated
+SHEN,Telecom/Cable Services
+SHFS,Comml Svcs-Outsourcing
+SHG,Banks-Foreign
+SHIM,Bldg-Heavy Construction
+SHIP,Transportation-Ship
+SHLS,Energy-Solar
+SHMD,Machinery-Gen Industrial
+SHNY,Finance-ETF / ETN
+SHO,REITs
+SHOE,Retail-Apparel/Shoes/Acc
+SHOO,Apparel - Clothing & Shoes
+SHOP,Comp Sftwr - Enterprise
+SHPH,Medical - Development Biotech
+SHTDY,Medical - Pharmaceuticals
+SHW,Building - Construction Products
+SHWZ,Comml Svcs-Consulting
+SHZHY,Apparel - Clothing & Shoes
+SI,Medical-Products
+SIBN,Medical-Systems
+SID,Steel-Producers
+SIDU,Telecom - Equipment
+SIEB,Finance-Invest Bnk/Bkrs
+SIEGY,Diversified Operations
+SIF,Aerospace/Defense
+SIFY,Telecom Svcs- Foreign
+SIG,Retail - Specialty
+SIGA,Medical - Development Biotech
+SIGI,Insurance
+SII,Finance-Investment Mgmt
+SILA,REITs
+SILC,Computer-Networking
+SILO,Medical - Development Biotech
+SIM,Steel-Producers
+SIMO,Computer-Hardware/Perip
+SINT,Medical-Products
+SION,Medical - Development Biotech
+SIRI,Telecom/Cable Services
+SISI,Medical - Development Biotech
+SITC,REITs
+SITE,Retail/Whlsle-Bldg Prds
+SITM,Elec-Semicondctor Fablss
+SJ,Internet-Content
+SJM,Food - Packaged
+SJT,Oil&Gas-Royalty Trust
+SKE,Mining-Gold/Silver/Gems
+SKHSY,Bldg-Resident/Comml
+SKIL,Consumer Svcs-Education
+SKIN,Cosmetics/Personal Care
+SKK,Bldg-Heavy Construction
+SKLZ,Leisure-Gaming/Equip
+SKM,Telecom Svcs- Foreign
+SKT,REITs
+SKWD,Insurance
+SKY,Auto Manufacturers
+SKYA,Comp Sftwr - Financial
+SKYE,Medical - Development Biotech
+SKYH,Bldg-Heavy Construction
+SKYQ,Oil&Gas-Refining/Mktg
+SKYT,Elec-Semiconductor Mfg
+SKYW,Transportation-Airline
+SKYX,Electrical-Power/Equipmt
+SLAB,Elec-Semicondctor Fablss
+SLAI,Finance - Crypto/Blockchain
+SLB,Oil&Gas-Field Services
+SLDB,Medical - Development Biotech
+SLDE,Insurance
+SLDP,Electrical-Power/Equipmt
+SLE,Internet-Content
+SLF,Insurance
+SLG,REITs
+SLGB,Transportation-Logistics
+SLGL,Medical - Development Biotech
+SLGN,Containers/Packaging
+SLI,Mining-Metal Ores
+SLM,Finance-Consumer Loans
+SLMT,Finance - Crypto/Blockchain
+SLN,Medical - Development Biotech
+SLND,Bldg-Heavy Construction
+SLNG,Oil&Gas-Integrated
+SLNH,Computer-Hardware/Perip
+SLP,Computer Sftwr-Medical
+SLQT,Insurance
+SLRC,Finance-Investment Mgmt
+SLS,Medical - Development Biotech
+SLSN,Cosmetics/Personal Care
+SLSR,Mining-Gold/Silver/Gems
+SLVM,Containers/Packaging
+SLVO,Finance-ETF / ETN
+SLXN,Medical - Development Biotech
+SM,Oil&Gas-Explorers/Producers
+SMA,REITs
+SMBC,Banks-Regional
+SMBK,Banks-Regional
+SMC,Oil&Gas - Pipeline
+SMCAY,Machinery-Gen Industrial
+SMCI,Computer-Hardware/Perip
+SMERY,Energy-Alternative/Other
+SMFG,Banks-Money Center
+SMG,Chemicals-Agricultural
+SMHB,Finance-ETF / ETN
+SMHI,Transportation-Ship
+SMID,Bldg-Cement/Concrt/Ag
+SMJF,Building - Construction Products
+SMMT,Medical - Development Biotech
+SMMYY,Mining-Metal Ores
+SMNNY,Leisure-Products
+SMP,Auto/Truck Equipment Parts & Tires
+SMPL,Food - Packaged
+SMPNY,Insurance
+SMR,Energy-Alternative/Other
+SMRT,Security/Sfty
+SMSGY,Apparel - Clothing & Shoes
+SMSI,Internet-Network Sltns
+SMSMY,Metal Products - Distributors/Fabrication
+SMTC,Elec-Semicondctor Fablss
+SMTI,Medical-Products
+SMTK,Elec-Semiconductor Equip
+SMWB,Computer Sftwr-Database
+SMX,Internet-Network Sltns
+SMXT,Energy-Solar
+SN,Hsehold-Appliances/Wares
+SNA,Building - Tools
+SNAL,Computer Sftwr-Gaming
+SNAP,Internet-Content
+SNBR,Retail - Home Furnishings/Electronics
+SND,Chemicals-Specialty
+SNDA,Medical - Home & Nursing Care
+SNDK,Computer-Hardware/Perip
+SNDL,Cannabis
+SNDQ,Finance-ETF / ETN
+SNDR,Transportation-Logistics
+SNDX,Medical - Revenue Biotech
+SNES,Medical - Development Biotech
+SNEX,Finance-Invest Bnk/Bkrs
+SNFCA,Finance-Mrtg&Rel Svc
+SNGX,Medical - Development Biotech
+SNN,Medical-Products
+SNOA,Medical - Pharmaceuticals
+SNOW,Comp Sftwr - Enterprise
+SNPHY,Medical - Pharmaceuticals
+SNPS,Computer Sftwr-Design
+SNT,Security/Sfty
+SNTG,Finance-Consumer Loans
+SNTI,Medical - Development Biotech
+SNWV,Medical-Products
+SNX,Computer-Tech Services
+SNY,Medical - Pharmaceuticals
+SNYR,Cosmetics/Personal Care
+SO,Utilities
+SOAR,Aerospace/Defense
+SOBKY,Telecom/Cable Services
+SOBO,Oil&Gas - Pipeline
+SOBR,Computer-Tech Services
+SOC,Oil&Gas-Integrated
+SOFI,Finance-Consumer Loans
+SOGP,Internet-Content
+SOHU,Computer Sftwr-Gaming
+SOLS,Chemicals-Specialty
+SOLV,Medical-Products
+SOMLY,Security/Sfty
+SON,Containers/Packaging
+SONDQ,Leisure-Lodging
+SONM,Telecom-Consumer Prods
+SONO,Consumer Prod-Electronic
+SONY,Media
+SOPAQ,Internet-Content
+SOPH,Medical - Development Biotech
+SOR,Closed-end Funds
+SORA,Retail-Apparel/Shoes/Acc
+SOS,Finance - Crypto/Blockchain
+SOTGY,Electrical-Power/Equipmt
+SOTK,Machinery-Gen Industrial
+SOUN,Computer-Tech Services
+SOWG,Food - Packaged
+SPAI,Aerospace/Defense
+SPB,Building - Construction Products
+SPCB,Security/Sfty
+SPCE,Aerospace/Defense
+SPCX,Telecom-Infrastructure
+SPE,Closed-end Funds
+SPFI,Banks-Regional
+SPG,REITs
+SPGI,Financial Svcs-Specialty
+SPH,Oil&Gas-Refining/Mktg
+SPHL,Real Estate Dvlpmt/Ops
+SPHR,Leisure-Services
+SPIR,Aerospace/Defense
+SPKKY,Telecom Svcs- Foreign
+SPMC,Closed-end Funds
+SPNT,Insurance
+SPOK,Telecom/Cable Services
+SPOT,Computer Sftwr-Edu/Media
+SPPJY,Paper & Paper Products
+SPPL,Computer-Tech Services
+SPPP,Finance-ETF / ETN
+SPRB,Medical - Development Biotech
+SPRC,Medical - Development Biotech
+SPRO,Medical - Development Biotech
+SPRU,Energy-Solar
+SPRY,Medical - Development Biotech
+SPSC,Comp Sftwr - Specialty Enterprise
+SPT,Internet-Content
+SPTX,Medical - Development Biotech
+SPWH,Retail-Leisure Products
+SPWR,Energy-Solar
+SPXC,Machinery-Gen Industrial
+SPXX,Closed-end Funds
+SPYU,Finance-ETF / ETN
+SQFT,REITs
+SQM,Chemicals-Agricultural
+SQNS,Elec-Semicondctor Fablss
+SR,Utilities
+SRAD,Leisure-Gaming/Equip
+SRBK,Banks-Regional
+SRCE,Banks-Regional
+SRE,Utilities
+SRFM,Transportation-Airline
+SRG,REITs
+SRGHY,Retail-Super/Mini Mkts
+SRI,Auto/Truck Equipment Parts & Tires
+SRL,Financial Svcs-Specialty
+SRPT,Medical - Revenue Biotech
+SRRK,Medical - Development Biotech
+SRTA,Medical-Services
+SRTS,Medical-Systems
+SRV,Closed-end Funds
+SRXH,Food - Packaged
+SRZN,Medical - Development Biotech
+SSB,Banks-Regional
+SSBI,Banks-Regional
+SSD,Building - Construction Products
+SSDOY,Cosmetics/Personal Care
+SSII,Medical-Systems
+SSKN,Medical-Systems
+SSL,Oil&Gas-Refining/Mktg
+SSLZY,Oil&Gas-Explorers/Producers
+SSM,Auto Manufacturers
+SSMR,Mining-Gold/Silver/Gems
+SSMXY,Medical-Systems
+SSNC,Comp Sftwr - Financial
+SSP,Media
+SSREY,Insurance
+SSRM,Mining-Gold/Silver/Gems
+SSSS,Finance-Investment Mgmt
+SST,Comml Svcs-Advertising
+SSTI,Security/Sfty
+SSTK,Retail-Internet
+SSUMY,Diversified Operations
+SSYS,Machinery-Gen Industrial
+ST,Elec-Misc Products
+STAA,Medical-Products
+STAG,REITs
+STAI,Elec-Scientific/Msrng
+STAK,Oil&Gas-Machinery/Equip
+STBA,Banks-Regional
+STBFY,Beverages-Non-Alcoholic
+STC,Insurance
+STE,Medical-Systems
+STEL,Banks-Regional
+STEM,Comp Sftwr - Specialty Enterprise
+STEP,Finance-Investment Mgmt
+STEW,Closed-end Funds
+STEX,Finance - Crypto/Blockchain
+STFS,Comml Svcs-Advertising
+STG,Consumer Svcs-Education
+STGW,Comml Svcs-Advertising
+STHH,Finance-ETF / ETN
+STHO,REITs
+STI,Energy-Alternative/Other
+STIM,Medical - Revenue Biotech
+STK,Closed-end Funds
+STKE,Finance - Crypto/Blockchain
+STKH,Food - Foodstuffs
+STKS,Retail-Restaurants
+STLA,Auto Manufacturers
+STLD,Steel-Producers
+STM,Elec-Semiconductor Mfg
+STN,Comml Svcs-Consulting
+STNE,Finance-CrdtCard/PmtPr
+STNG,Transportation-Ship
+STOK,Medical - Revenue Biotech
+STRA,Consumer Svcs-Education
+STRL,Bldg-Heavy Construction
+STRO,Medical - Revenue Biotech
+STRR,Comml Svcs-Staffing
+STRS,Real Estate Dvlpmt/Ops
+STRT,Auto/Truck Equipment Parts & Tires
+STRW,REITs
+STRZ,Leisure-Movies & Related
+STT,Finance-Investment Mgmt
+STTK,Medical - Development Biotech
+STUB,Retail-Internet
+STVN,Medical-Services
+STWD,REITs
+STX,Computer-Hardware/Perip
+STXS,Medical-Systems
+STZ,Beverages-Alcoholic
+SU,Oil&Gas-Integrated
+SUGP,Security/Sfty
+SUHJY,Real Estate Dvlpmt/Ops
+SUI,REITs
+SUIG,Finance - Crypto/Blockchain
+SUJA,Beverages-Non-Alcoholic
+SUN,Oil&Gas-Refining/Mktg
+SUNB,Comml Svcs-Leasing
+SUNC,Oil&Gas-Refining/Mktg
+SUNE,Energy-Solar
+SUNS,REITs
+SUPN,Medical - Profitable Biotech
+SUPV,Banks-Foreign
+SUPX,Computer-Hardware/Perip
+SURG,Comp Sftwr - Enterprise
+SUTNY,Banks-Money Center
+SUZ,Paper & Paper Products
+SVA,Medical - Development Biotech
+SVC,REITs
+SVCO,Computer Sftwr-Design
+SVM,Mining-Gold/Silver/Gems
+SVNDY,Retail-Super/Mini Mkts
+SVRA,Medical - Development Biotech
+SVRE,Computer Sftwr-Security
+SVRN,Transportation-Ship
+SVV,Retail - Specialty
+SW,Containers/Packaging
+SWAG,Comml Svcs-Advertising
+SWBI,Security/Sfty
+SWDBY,Banks-Foreign
+SWGAY,Retail - Specialty
+SWIM,Building - Construction Products
+SWK,Building - Tools
+SWKS,Elec-Semiconductor Mfg
+SWMR,Aerospace/Defense
+SWVL,Comp Sftwr - Specialty Enterprise
+SWX,Utilities
+SWZ,Closed-end Funds
+SXC,Energy-Coal
+SXI,Machinery-Gen Industrial
+SXT,Food - Packaged
+SXTC,Medical - Pharmaceuticals
+SXTP,Medical - Pharmaceuticals
+SY,Medical-Services
+SYBT,Banks-Regional
+SYBX,Medical - Development Biotech
+SYF,Finance-CrdtCard/PmtPr
+SYK,Medical-Products
+SYM,Machinery-Gen Industrial
+SYNA,Elec-Semicondctor Fablss
+SYNX,Consumer Prod-Electronic
+SYPR,Elec-Contract Mfg
+SYRE,Medical - Development Biotech
+SYY,Food - Wholesale
+SZKMY,Auto Manufacturers
+T,Telecom/Cable Services
+TAC,Utilities
+TACT,Computer-Hardware/Perip
+TAK,Medical - Pharmaceuticals
+TAL,Consumer Svcs-Education
+TALK,Medical-Services
+TALO,Oil&Gas-Explorers/Producers
+TANH,Chemicals-Specialty
+TAOP,Security/Sfty
+TAOX,Finance - Crypto/Blockchain
+TAP,Beverages-Alcoholic
+TAP.A,Beverages-Alcoholic
+TARA,Medical - Development Biotech
+TARS,Medical - Revenue Biotech
+TASK,Computer-Tech Services
+TATT,Aerospace/Defense
+TATYY,Food - Foodstuffs
+TAYD,Machinery-Gen Industrial
+TBBB,Retail - General
+TBBK,Banks-Regional
+TBCH,Consumer Prod-Electronic
+TBH,Leisure-Gaming/Equip
+TBI,Comml Svcs-Staffing
+TBLA,Comml Svcs-Advertising
+TBLD,Closed-end Funds
+TBN,Oil&Gas-Explorers/Producers
+TBPH,Medical - Development Biotech
+TBRG,Computer Sftwr-Medical
+TC,Retail/Whlsle-Automobile
+TCBI,Banks-Regional
+TCBK,Banks-Regional
+TCBS,Banks-Regional
+TCBX,Banks-Regional
+TCEHY,Internet-Content
+TCI,Real Estate Dvlpmt/Ops
+TCMD,Medical-Products
+TCOM,Leisure-Travel Booking
+TCPC,Finance-Investment Mgmt
+TCRT,Medical - Development Biotech
+TCRX,Medical - Development Biotech
+TCX,Internet-Network Sltns
+TD,Banks-Money Center
+TDAY,Media
+TDC,Computer Sftwr-Database
+TDF,Closed-end Funds
+TDG,Aerospace/Defense
+TDIC,Comml Svcs-Advertising
+TDOC,Computer Sftwr-Medical
+TDS,Telecom/Cable Services
+TDTH,Computer-Tech Services
+TDUP,Retail-Internet
+TDW,Oil&Gas-Field Services
+TDY,Aerospace/Defense
+TE,Energy-Alternative/Other
+TEAD,Comml Svcs-Advertising
+TEAM,Comp Sftwr - Enterprise
+TECH,Medical - Research
+TECK,Mining-Metal Ores
+TECX,Medical - Development Biotech
+TEI,Closed-end Funds
+TEL,Electronic-Parts
+TELA,Medical-Products
+TELFY,Telecom Svcs- Foreign
+TELNY,Telecom Svcs- Foreign
+TELO,Medical - Development Biotech
+TEM,Medical - Research
+TEN,Transport - Oil/Gas Shipping
+TENB,Computer Sftwr-Security
+TENX,Medical - Development Biotech
+TEO,Telecom Svcs- Foreign
+TER,Elec-Semiconductor Equip
+TEVA,Medical - Pharmaceuticals
+TEX,Machinery-Constr/Mining/Farming
+TEZNY,Utilities
+TFC,Banks-Super Regional
+TFII,Transportation-Truck
+TFIN,Banks-Regional
+TFPM,Mining-Gold/Silver/Gems
+TFSL,Banks-Savings & Loan
+TFX,Medical-Products
+TG,Chemicals-Plastics
+TGB,Mining-Metal Ores
+TGE,Media
+TGEN,Machinery-Gen Industrial
+TGHL,Comp Sftwr - Enterprise
+TGL,Comp Sftwr - Enterprise
+TGLS,Building - Construction Products
+TGS,Oil&Gas - Pipeline
+TGT,Retail - General
+TGTX,Medical - Profitable Biotech
+TH,Leisure-Lodging
+THC,Medical-Hospitals
+THCH,Retail-Restaurants
+THFF,Banks-Regional
+THG,Insurance
+THH,Leisure-Services
+THM,Mining-Gold/Silver/Gems
+THO,Auto Manufacturers
+THQ,Closed-end Funds
+THRM,Auto/Truck Equipment Parts & Tires
+THRY,Comp Sftwr - Enterprise
+THW,Closed-end Funds
+TIC,Comml Svcs-Outsourcing
+TIGO,Telecom Svcs- Foreign
+TIGR,Finance-Invest Bnk/Bkrs
+TII,Mining-Metal Ores
+TIL,Medical - Development Biotech
+TILE,Building - Construction Products
+TIMB,Telecom Svcs- Foreign
+TIPT,Financial Svcs-Specialty
+TIRXF,Insurance
+TISI,Pollution Control
+TITN,Retail/Whlsle-Bldg Prds
+TJGC,Comml Svcs-Advertising
+TJX,Retail-Apparel/Shoes/Acc
+TK,Transportation-Ship
+TKC,Telecom Svcs- Foreign
+TKLF,Cosmetics/Personal Care
+TKMJF,Telecom Svcs- Foreign
+TKNO,Medical - Research
+TKO,Media
+TKOMY,Insurance
+TKR,Metal Products - Distributors/Fabrication
+TLF,Retail-Apparel/Shoes/Acc
+TLGPY,Telecom Svcs- Foreign
+TLIH,Machinery-Constr/Mining/Farming
+TLK,Telecom Svcs- Foreign
+TLN,Utilities
+TLPH,Medical - Development Biotech
+TLRY,Cannabis
+TLS,Computer Sftwr-Security
+TLSA,Medical - Development Biotech
+TLSI,Medical - Development Biotech
+TLX,Medical - Revenue Biotech
+TLYS,Retail-Apparel/Shoes/Acc
+TM,Auto Manufacturers
+TMC,Mining-Metal Ores
+TMCI,Medical-Systems
+TMCR,Mining-Metal Ores
+TMDE,Transport - Oil/Gas Shipping
+TMDX,Medical-Products
+TME,Internet-Content
+TMH,Finance-ETF / ETN
+TMHC,Bldg-Resident/Comml
+TMNL,Finance-ETF / ETN
+TMO,Medical - Research
+TMP,Banks-Regional
+TMQ,Mining-Metal Ores
+TMUS,Telecom/Cable Services
+TNC,Machinery-Gen Industrial
+TNDM,Medical-Products
+TNET,Comml Svcs-Outsourcing
+TNGX,Medical - Development Biotech
+TNK,Transportation-Ship
+TNL,Leisure-Services
+TNMG,Comml Svcs-Advertising
+TNON,Medical-Products
+TNXP,Medical - Development Biotech
+TNYA,Medical - Development Biotech
+TOELY,Elec-Semiconductor Equip
+TOI,Medical-Hospitals
+TOL,Bldg-Resident/Comml
+TOMZ,Pollution Control
+TONX,Finance - Crypto/Blockchain
+TOON,Media
+TOP,Finance-Invest Bnk/Bkrs
+TOPP,Transportation-Truck
+TOPS,Transportation-Ship
+TORO,Transportation-Ship
+TOST,Finance-CrdtCard/PmtPr
+TOUR,Leisure-Travel Booking
+TOVX,Medical - Development Biotech
+TOWN,Banks-Regional
+TOYO,Energy-Solar
+TPB,Tobacco
+TPC,Bldg-Heavy Construction
+TPCS,Metal Products - Distributors/Fabrication
+TPET,Oil&Gas-Explorers/Producers
+TPG,Finance-Investment Mgmt
+TPL,Oil&Gas-Royalty Trust
+TPR,Apparel - Clothing & Shoes
+TPST,Medical - Development Biotech
+TPVG,Finance-Investment Mgmt
+TR,Food - Packaged
+TRAK,Comp Sftwr - Specialty Enterprise
+TRAW,Medical - Development Biotech
+TRAX,Medical - Development Biotech
+TRC,Real Estate Dvlpmt/Ops
+TRDA,Medical - Development Biotech
+TREE,Finance-Mrtg&Rel Svc
+TREX,Building - Construction Products
+TRGP,Oil&Gas - Pipeline
+TRI,Comml Svcs-Market Rsrch
+TRIB,Medical-Products
+TRIN,Finance-Investment Mgmt
+TRIP,Leisure-Travel Booking
+TRLV,Cannabis
+TRMB,Computer Sftwr-Design
+TRMD,Transportation-Ship
+TRMK,Banks-Regional
+TRN,Transportation-Equip Mfg
+TRNO,REITs
+TRNR,Leisure-Services
+TRNS,Electronic-Parts
+TRON,Finance - Crypto/Blockchain
+TROO,Comml Svcs-Consulting
+TROW,Finance-Investment Mgmt
+TROX,Chemicals-Specialty
+TRP,Oil&Gas - Pipeline
+TRS,Containers/Packaging
+TRSG,Machinery-Gen Industrial
+TRST,Banks-Savings & Loan
+TRT,Elec-Semiconductor Equip
+TRTX,Finance-Mrtg&Rel Svc
+TRU,Financial Svcs-Specialty
+TRUG,Computer Sftwr-Gaming
+TRUP,Insurance
+TRV,Insurance
+TRVG,Leisure-Travel Booking
+TRVI,Medical - Development Biotech
+TRX,Mining-Gold/Silver/Gems
+TS,Steel-Specialty Alloys
+TSAT,Telecom - Equipment
+TSBK,Banks-Regional
+TSCO,Retail - Specialty
+TSEM,Elec-Semiconductor Mfg
+TSEOQ,Chemicals-Plastics
+TSHA,Medical - Development Biotech
+TSI,Closed-end Funds
+TSIC,Finance-ETF / ETN
+TSLA,Auto Manufacturers
+TSLX,Finance-Commercial Loans
+TSM,Elec-Semiconductor Mfg
+TSN,Food - Foodstuffs
+TSNDF,Cannabis
+TSQ,Media
+TSSI,Computer-Tech Services
+TT,Building - Construction Products
+TTAM,Building - Construction Products
+TTAN,Comp Sftwr - Specialty Enterprise
+TTC,Building - Tools
+TTD,Comml Svcs-Advertising
+TTDKY,Electronic-Parts
+TTE,Oil&Gas-Integrated
+TTEC,Comml Svcs-Outsourcing
+TTEK,Pollution Control
+TTGT,Comp Sftwr - Enterprise
+TTI,Oil&Gas-Field Services
+TTMI,Elec-Contract Mfg
+TTNDY,Building - Tools
+TTRX,Medical - Development Biotech
+TTSH,Retail/Whlsle-Bldg Prds
+TTWO,Computer Sftwr-Gaming
+TU,Telecom Svcs- Foreign
+TULP,Agricultural Operations
+TURB,Electrical-Power/Equipmt
+TUSK,Oil&Gas-Field Services
+TUYA,Comp Sftwr - Enterprise
+TV,Media
+TVGN,Medical - Development Biotech
+TVRD,Medical - Development Biotech
+TVTX,Medical - Revenue Biotech
+TW,Financial Svcs-Specialty
+TWAV,Finance - Crypto/Blockchain
+TWFG,Insurance
+TWG,Food - Foodstuffs
+TWI,Auto/Truck Equipment Parts & Tires
+TWIN,Transportation-Equip Mfg
+TWLO,Comp Sftwr - Enterprise
+TWN,Closed-end Funds
+TWNPQ,Retail-Restaurants
+TWO,REITs
+TWST,Medical - Revenue Biotech
+TX,Steel-Producers
+TXG,Medical-Products
+TXMD,Medical - Pharmaceuticals
+TXN,Elec-Semiconductor Mfg
+TXNM,Utilities
+TXO,Oil&Gas-Explorers/Producers
+TXRH,Retail-Restaurants
+TXT,Aerospace/Defense
+TY,Closed-end Funds
+TYG,Closed-end Funds
+TYGO,Energy-Solar
+TYIDY,Auto Manufacturers
+TYL,Comp Sftwr - Specialty Enterprise
+TYRA,Medical - Development Biotech
+TZOO,Leisure-Travel Booking
+U,Computer Sftwr-Design
+UA,Apparel - Clothing & Shoes
+UAA,Apparel - Clothing & Shoes
+UAL,Transportation-Airline
+UAMY,Mining-Metal Ores
+UAN,Chemicals-Agricultural
+UAVS,Machinery-Constr/Mining/Farming
+UBCP,Banks-Regional
+UBER,Leisure-Services
+UBS,Banks-Money Center
+UBSI,Banks-Regional
+UBXG,Comml Svcs-Advertising
+UCAR,Retail/Whlsle-Auto Parts
+UCB,Banks-Regional
+UCFI,Food - Packaged
+UCIB,Finance-ETF / ETN
+UCL,Telecom Svcs- Foreign
+UCTT,Elec-Semiconductor Equip
+UDR,REITs
+UE,REITs
+UEC,Mining-Metal Ores
+UEIC,Consumer Prod-Electronic
+UFCS,Insurance
+UFG,Oil&Gas-Field Services
+UFI,Apparel - Clothing & Shoes
+UFOD,Finance-ETF / ETN
+UFPI,Building - Construction Products
+UFPT,Containers/Packaging
+UG,Medical-Products
+UGI,Oil&Gas-Refining/Mktg
+UGP,Oil&Gas-Refining/Mktg
+UHAL,Comml Svcs-Leasing
+UHAL.B,Comml Svcs-Leasing
+UHS,Medical-Hospitals
+UHT,REITs
+UI,Telecom-Infrastructure
+UIS,Computer-Tech Services
+UK,Real Estate Dvlpmt/Ops
+UL,Cosmetics/Personal Care
+ULBI,Consumer - Specialty
+ULCC,Transportation-Airline
+ULH,Transportation-Truck
+ULS,Computer-Tech Services
+ULTA,Retail - Specialty
+UMAC,Leisure-Products
+UMBF,Banks-Regional
+UMC,Elec-Semiconductor Mfg
+UMH,REITs
+UNB,Banks-Regional
+UNCY,Medical - Development Biotech
+UNF,Comml Svcs-Outsourcing
+UNFI,Food - Wholesale
+UNH,Medical-Managed Care
+UNICY,Cosmetics/Personal Care
+UNIT,REITs
+UNM,Insurance
+UNP,Transportation-Rail
+UNTY,Banks-Regional
+UOKAF,Real Estate Dvlpmt/Ops
+UONE,Media
+UONEK,Media
+UOVEY,Banks-Foreign
+UP,Leisure-Services
+UPB,Medical - Development Biotech
+UPBD,Comml Svcs-Leasing
+UPC,Medical - Development Biotech
+UPLD,Comp Sftwr - Enterprise
+UPMMY,Paper & Paper Products
+UPS,Transport-Air Freight
+UPST,Finance-Consumer Loans
+UPWK,Comml Svcs-Staffing
+UPXI,Consumer - Specialty
+URBN,Retail-Apparel/Shoes/Acc
+URG,Mining-Metal Ores
+URGN,Medical - Development Biotech
+URI,Comml Svcs-Leasing
+UROY,Oil&Gas-Royalty Trust
+USA,Closed-end Funds
+USAC,Oil&Gas-Field Services
+USAR,Mining-Metal Ores
+USAS,Mining-Gold/Silver/Gems
+USAU,Mining-Gold/Silver/Gems
+USB,Banks-Super Regional
+USBC,Finance - Crypto/Blockchain
+USCB,Banks-Regional
+USEA,Transportation-Ship
+USFD,Food - Wholesale
+USGO,Mining-Gold/Silver/Gems
+USIO,Finance-CrdtCard/PmtPr
+USLM,Bldg-Cement/Concrt/Ag
+USML,Finance-ETF / ETN
+USNA,Cosmetics/Personal Care
+USNZY,Steel-Producers
+USOI,Finance-ETF / ETN
+USPH,Medical-Services
+UTF,Closed-end Funds
+UTG,Closed-end Funds
+UTHR,Medical - Profitable Biotech
+UTI,Consumer Svcs-Education
+UTL,Utilities
+UTMD,Medical-Products
+UTSI,Telecom-Infrastructure
+UTZ,Food - Packaged
+UUU,Security/Sfty
+UUUU,Mining-Metal Ores
+UVE,Insurance
+UVSP,Banks-Regional
+UVV,Tobacco
+UWMC,Finance-Mrtg&Rel Svc
+UXIN,Retail-Internet
+UZX,Retail-Internet
+V,Finance-CrdtCard/PmtPr
+VABK,Banks-Regional
+VAC,Leisure-Lodging
+VAL,Oil&Gas-Drilling
+VALE,Mining-Metal Ores
+VALN,Medical - Revenue Biotech
+VALU,Media
+VANI,Medical-Products
+VATE,Bldg-Heavy Construction
+VBF,Closed-end Funds
+VBIO,Medical - Pharmaceuticals
+VBNK,Banks-Foreign
+VC,Auto/Truck Equipment Parts & Tires
+VCEL,Medical - Profitable Biotech
+VCIG,Comml Svcs-Consulting
+VCTR,Finance-Investment Mgmt
+VCV,Closed-end Funds
+VCX,Closed-end Funds
+VCYT,Medical-Services
+VECO,Elec-Semiconductor Equip
+VEEA,Computer-Networking
+VEEE,Leisure-Products
+VEEV,Computer Sftwr-Medical
+VEL,Finance-Mrtg&Rel Svc
+VELO,Machinery-Gen Industrial
+VENU,Leisure-Services
+VEOEY,Utilities
+VEON,Telecom Svcs- Foreign
+VERA,Medical - Development Biotech
+VERI,Comp Sftwr - Enterprise
+VERU,Medical - Development Biotech
+VERX,Comp Sftwr - Financial
+VET,Oil&Gas-Explorers/Producers
+VFC,Apparel - Clothing & Shoes
+VFF,Agricultural Operations
+VFL,Closed-end Funds
+VFS,Auto Manufacturers
+VG,Oil&Gas-Integrated
+VGAS,Energy-Alternative/Other
+VGI,Closed-end Funds
+VGM,Closed-end Funds
+VGNT,Auto/Truck Equipment Parts & Tires
+VGZ,Mining-Gold/Silver/Gems
+VHC,Elec-Misc Products
+VHI,Chemicals-Specialty
+VHUB,Machinery-Gen Industrial
+VIA,Comp Sftwr - Specialty Enterprise
+VIAV,Telecom - Equipment
+VICI,REITs
+VICR,Electronic-Parts
+VIDA,Comp Sftwr - Enterprise
+VIK,Leisure-Services
+VINP,Finance-Investment Mgmt
+VIOT,Hsehold-Appliances/Wares
+VIPS,Retail-Internet
+VIR,Medical - Development Biotech
+VIRC,Hsehold/Office Furniture
+VIRT,Financial Svcs-Specialty
+VISN,Telecom-Infrastructure
+VIST,Oil&Gas-Explorers/Producers
+VITL,Food - Foodstuffs
+VIV,Telecom Svcs- Foreign
+VIVHY,Media
+VIVK,Oil&Gas-Machinery/Equip
+VIVO,Auto/Truck Equipment Parts & Tires
+VIVS,Medical - Development Biotech
+VKI,Closed-end Funds
+VKQ,Closed-end Funds
+VKTX,Medical - Development Biotech
+VLEEY,Auto/Truck Equipment Parts & Tires
+VLGEA,Retail-Super/Mini Mkts
+VLN,Elec-Semicondctor Fablss
+VLO,Oil&Gas-Refining/Mktg
+VLRS,Transportation-Airline
+VLT,Closed-end Funds
+VLTO,Pollution Control
+VLY,Banks-Regional
+VMAR,Leisure-Products
+VMC,Bldg-Cement/Concrt/Ag
+VMD,Medical-Distribution
+VMET,Mining-Gold/Silver/Gems
+VMI,Metal Products - Distributors/Fabrication
+VMO,Closed-end Funds
+VNCE,Apparel - Clothing & Shoes
+VNDA,Medical - Revenue Biotech
+VNET,Internet-Network Sltns
+VNO,REITs
+VNOM,Oil&Gas-Explorers/Producers
+VNRX,Medical-Products
+VNT,Machinery-Gen Industrial
+VNTG,Transportation-Logistics
+VOC,Oil&Gas-Royalty Trust
+VOD,Telecom Svcs- Foreign
+VOR,Medical - Development Biotech
+VOXR,Mining-Gold/Silver/Gems
+VOYA,Insurance
+VOYG,Aerospace/Defense
+VPG,Elec-Scientific/Msrng
+VPV,Closed-end Funds
+VPX,Finance-ETF / ETN
+VRA,Apparel - Clothing & Shoes
+VRAX,Medical - Development Biotech
+VRCA,Medical - Development Biotech
+VRDN,Medical - Development Biotech
+VREOD,Cannabis
+VREX,Medical-Systems
+VRM,Transportation-Logistics
+VRME,Security/Sfty
+VRNOD,Cannabis
+VRNS,Computer Sftwr-Database
+VRRM,Comp Sftwr - Specialty Enterprise
+VRSK,Comml Svcs-Market Rsrch
+VRSN,Computer Sftwr-Security
+VRT,Electrical-Power/Equipmt
+VRTS,Finance-Investment Mgmt
+VRTX,Medical - Profitable Biotech
+VRXA,Medical - Development Biotech
+VS,Computer Sftwr-Gaming
+VSA,Consumer Svcs-Education
+VSAT,Telecom-Infrastructure
+VSEC,Comml Svcs-Consulting
+VSEE,Computer Sftwr-Medical
+VSH,Electronic-Parts
+VSME,Comml Svcs-Advertising
+VSNT,Media
+VST,Utilities
+VSTD,Retail-Restaurants
+VSTM,Medical - Development Biotech
+VSTS,Comml Svcs-Outsourcing
+VSXY,Apparel - Clothing & Shoes
+VTAK,Medical-Systems
+VTEX,Comp Sftwr - Specialty Enterprise
+VTGN,Medical - Development Biotech
+VTIX,Leisure-Products
+VTMX,Real Estate Dvlpmt/Ops
+VTN,Closed-end Funds
+VTOL,Oil&Gas-Field Services
+VTR,REITs
+VTRS,Medical - Pharmaceuticals
+VTS,Finance-Investment Mgmt
+VTSI,Computer Sftwr-Edu/Media
+VTVT,Medical - Development Biotech
+VUZI,Consumer - Specialty
+VVOS,Medical - Development Biotech
+VVR,Closed-end Funds
+VVV,Retail/Whlsle-Auto Parts
+VVX,Aerospace/Defense
+VWAGY,Auto Manufacturers
+VWAPY,Auto Manufacturers
+VWAV,Aerospace/Defense
+VWDRY,Energy-Alternative/Other
+VXX,Finance-ETF / ETN
+VXZ,Finance-ETF / ETN
+VYGR,Medical - Development Biotech
+VYLD,Finance-ETF / ETN
+VYNE,Medical - Development Biotech
+VYX,Computer-Tech Services
+VZ,Telecom/Cable Services
+VZLA,Mining-Gold/Silver/Gems
+W,Retail-Internet
+WAB,Transportation-Equip Mfg
+WABC,Banks-Regional
+WAFD,Banks-Regional
+WAFU,Consumer Svcs-Education
+WAI,Comml Svcs-Consulting
+WAL,Banks-Regional
+WALD,Cosmetics/Personal Care
+WASH,Banks-Regional
+WAT,Medical-Systems
+WATT,Elec-Misc Products
+WAVE,Utilities
+WAY,Computer Sftwr-Medical
+WB,Internet-Content
+WBD,Media
+WBI,Oil&Gas-Machinery/Equip
+WBRBY,Building - Construction Products
+WBS,Banks-Regional
+WBTN,Internet-Content
+WBUY,Retail-Internet
+WBX,Electrical-Power/Equipmt
+WCC,Electronic-Parts
+WCN,Pollution Control
+WCT,Comp Sftwr - Enterprise
+WD,Finance-Mrtg&Rel Svc
+WDAY,Comp Sftwr - Enterprise
+WDC,Computer-Hardware/Perip
+WDFC,Chemicals-Specialty
+WDH,Insurance
+WDI,Closed-end Funds
+WDS,Oil&Gas-Explorers/Producers
+WEA,Closed-end Funds
+WEAV,Computer Sftwr-Medical
+WEC,Utilities
+WELL,REITs
+WEN,Retail-Restaurants
+WERN,Transportation-Truck
+WES,Oil&Gas - Pipeline
+WEST,Beverages-Non-Alcoholic
+WETH,Computer-Hardware/Perip
+WETO,Leisure-Services
+WEX,Finance-CrdtCard/PmtPr
+WEYS,Apparel - Clothing & Shoes
+WF,Banks-Foreign
+WFC,Banks-Money Center
+WFCF,Comml Svcs-Consulting
+WFF,Machinery-Gen Industrial
+WFG,Building - Construction Products
+WFRD,Oil&Gas-Machinery/Equip
+WGO,Auto Manufacturers
+WGRX,Medical-Services
+WGS,Medical-Services
+WH,Leisure-Lodging
+WHD,Oil&Gas-Machinery/Equip
+WHF,Finance-Investment Mgmt
+WHG,Finance-Investment Mgmt
+WHK,Oil&Gas-Royalty Trust
+WHLR,REITs
+WHR,Hsehold-Appliances/Wares
+WHWK,Medical - Development Biotech
+WIA,Closed-end Funds
+WILC,Food - Wholesale
+WIMI,Internet-Content
+WINA,Retail-Leisure Products
+WING,Retail-Restaurants
+WIT,Computer-Tech Services
+WIW,Closed-end Funds
+WIX,Comp Sftwr - Enterprise
+WK,Computer Sftwr-Database
+WKC,Oil&Gas-Refining/Mktg
+WKEY,Elec-Semicondctor Fablss
+WKHS,Auto/Truck Equipment Parts & Tires
+WKSP,Auto/Truck Equipment Parts & Tires
+WLDN,Bldg-Heavy Construction
+WLDS,Consumer Prod-Electronic
+WLFC,Comml Svcs-Leasing
+WLK,Chemicals-Basic
+WLKP,Chemicals-Basic
+WLTH,Finance-Investment Mgmt
+WLY,Media
+WLYB,Media
+WM,Pollution Control
+WMB,Oil&Gas-Integrated
+WMG,Leisure-Services
+WMK,Retail-Super/Mini Mkts
+WMMVY,Retail - General
+WMS,Building - Construction Products
+WMT,Retail - General
+WNC,Transportation-Equip Mfg
+WNEB,Banks-Savings & Loan
+WNW,Retail-Internet
+WOK,Medical-Products
+WOLF,Elec-Semiconductor Mfg
+WOOF,Retail - Specialty
+WOR,Metal Products - Distributors/Fabrication
+WPC,REITs
+WPM,Mining-Gold/Silver/Gems
+WPP,Comml Svcs-Advertising
+WPRT,Trucks & Parts-Hvy Duty
+WRAP,Security/Sfty
+WRB,Insurance
+WRBY,Retail - Specialty
+WRCDF,Financial Svcs-Specialty
+WRD,Leisure-Services
+WRLD,Finance-Consumer Loans
+WRN,Mining-Metal Ores
+WRTBY,Machinery-Gen Industrial
+WS,Steel-Specialty Alloys
+WSBC,Banks-Regional
+WSBF,Banks-Savings & Loan
+WSBK,Banks-Savings & Loan
+WSC,Comml Svcs-Leasing
+WSE,Banks-Money Center
+WSFS,Banks-Savings & Loan
+WSHP,Retail-Internet
+WSM,Retail - Home Furnishings/Electronics
+WSO,Building - Construction Products
+WSO.B,Building - Construction Products
+WSR,REITs
+WST,Medical-Products
+WT,Finance-Investment Mgmt
+WTBA,Banks-Regional
+WTF,Finance-Investment Mgmt
+WTFC,Banks-Regional
+WTI,Oil&Gas-Explorers/Producers
+WTID,Finance-ETF / ETN
+WTIU,Finance-ETF / ETN
+WTKWY,Comml Svcs-Market Rsrch
+WTM,Insurance
+WTO,Telecom-Consumer Prods
+WTRG,Utilities
+WTS,Building - Construction Products
+WTTR,Utilities
+WTW,Insurance
+WU,Finance-CrdtCard/PmtPr
+WULF,Finance - Crypto/Blockchain
+WVE,Medical - Development Biotech
+WVVI,Beverages-Alcoholic
+WW,Cosmetics/Personal Care
+WWD,Aerospace/Defense
+WWR,Mining-Metal Ores
+WWW,Apparel - Clothing & Shoes
+WXM,Building - Construction Products
+WXXWY,Medical - Research
+WY,REITs
+WYFI,Internet-Network Sltns
+WYHG,Food - Foodstuffs
+WYNN,Leisure-Gaming/Equip
+WYY,Computer-Tech Services
+XAIR,Medical-Systems
+XBIO,Medical - Development Biotech
+XBIT,Medical - Development Biotech
+XBP,Financial Svcs-Specialty
+XCH,Energy-Alternative/Other
+XCUR,Medical - Development Biotech
+XE,Energy-Alternative/Other
+XEL,Utilities
+XELB,Retail-Apparel/Shoes/Acc
+XENE,Medical - Development Biotech
+XERS,Medical - Revenue Biotech
+XFLT,Closed-end Funds
+XFOR,Medical - Development Biotech
+XGN,Medical - Research
+XHG,Real Estate Dvlpmt/Ops
+XHLD,Leisure-Services
+XHR,REITs
+XIACY,Telecom-Consumer Prods
+XIFR,Energy-Alternative/Other
+XINRY,Bldg-Resident/Comml
+XLO,Medical - Development Biotech
+XMAX,Comp Sftwr - Enterprise
+XMTR,Elec-Contract Mfg
+XNCR,Medical - Revenue Biotech
+XNDU,Computer-Hardware/Perip
+XNET,Computer Sftwr-Edu/Media
+XNGSY,Utilities
+XOM,Oil&Gas-Integrated
+XOMA,Medical - Development Biotech
+XOS,Trucks & Parts-Hvy Duty
+XP,Finance-Invest Bnk/Bkrs
+XPEG,Finance-ETF / ETN
+XPEL,Auto/Truck Equipment Parts & Tires
+XPER,Elec-Semiconductor Mfg
+XPEV,Auto Manufacturers
+XPL,Mining-Metal Ores
+XPO,Transportation-Logistics
+XPOF,Leisure-Services
+XPON,Electrical-Power/Equipmt
+XPRO,Oil&Gas-Field Services
+XRAY,Medical-Products
+XRN,REITs
+XRTX,Medical - Development Biotech
+XRX,Computer-Hardware/Perip
+XTIA,Aerospace/Defense
+XTLB,Medical - Development Biotech
+XTNT,Medical-Products
+XWEL,Cosmetics/Personal Care
+XXI,Finance - Crypto/Blockchain
+XXII,Tobacco
+XYF,Financial Svcs-Specialty
+XYL,Pollution Control
+XYZ,Finance-CrdtCard/PmtPr
+XZO,Comp Sftwr - Specialty Enterprise
+YAAS,Comp Sftwr - Enterprise
+YAHOY,Retail-Internet
+YALA,Internet-Content
+YARIY,Chemicals-Agricultural
+YASKY,Electrical-Power/Equipmt
+YB,Insurance
+YCBD,Consumer - Specialty
+YDDL,Pollution Control
+YDES,Medical - Development Biotech
+YDKG,Finance - Crypto/Blockchain
+YELP,Internet-Content
+YETI,Leisure-Products
+YEXT,Comp Sftwr - Enterprise
+YGMZF,Transportation-Truck
+YHC,Comml Svcs-Advertising
+YHGJ,Consumer - Specialty
+YI,Retail - Specialty
+YIBO,Computer-Hardware/Perip
+YJ,Retail-Internet
+YMAT,Leisure-Products
+YMM,Internet-Content
+YMT,Retail-Internet
+YOOV,Security/Sfty
+YORW,Utilities
+YOU,Security/Sfty
+YOUL,Comml Svcs-Staffing
+YPF,Oil&Gas-Integrated
+YQ,Consumer Svcs-Education
+YRD,Comp Sftwr - Financial
+YSG,Cosmetics/Personal Care
+YSS,Aerospace/Defense
+YSWY,Retail-Super/Mini Mkts
+YSXT,Consumer - Specialty
+YTRA,Leisure-Travel Booking
+YUM,Retail-Restaurants
+YUMC,Retail-Restaurants
+YXT,Comp Sftwr - Enterprise
+YYAI,Leisure-Services
+YYGH,Comml Svcs-Staffing
+Z,Real Estate Dvlpmt/Ops
+ZBAO,Insurance
+ZBH,Medical-Products
+ZBIO,Medical - Development Biotech
+ZBRA,Business Equip & Supplies
+ZCMD,Internet-Content
+ZD,Internet-Content
+ZDAI,Bldg-Heavy Construction
+ZDGE,Computer Sftwr-Edu/Media
+ZDPY,Real Estate Dvlpmt/Ops
+ZENA,Aerospace/Defense
+ZENVF,Comp Sftwr - Enterprise
+ZEO,Energy-Solar
+ZEPP,Consumer Prod-Electronic
+ZETA,Comp Sftwr - Enterprise
+ZG,Real Estate Dvlpmt/Ops
+ZGN,Apparel - Clothing & Shoes
+ZH,Internet-Content
+ZIM,Transportation-Ship
+ZION,Banks-Regional
+ZIP,Internet-Content
+ZJK,Metal Products - Distributors/Fabrication
+ZJYL,Medical-Systems
+ZKH,Retail-Internet
+ZKIN,Steel-Producers
+ZLAB,Medical - Revenue Biotech
+ZM,Comp Sftwr - Enterprise
+ZNB,Internet-Content
+ZNTL,Medical - Development Biotech
+ZONE,Consumer - Specialty
+ZOOZ,Energy-Alternative/Other
+ZS,Computer Sftwr-Security
+ZSQR,Finance - Crypto/Blockchain
+ZSTK,Finance - Crypto/Blockchain
+ZTEK,Medical - Development Biotech
+ZTG,Comml Svcs-Consulting
+ZTO,Transportation-Logistics
+ZTR,Closed-end Funds
+ZTS,Medical - Pharmaceuticals
+ZUMZ,Retail-Apparel/Shoes/Acc
+ZURA,Medical - Development Biotech
+ZVIA,Beverages-Non-Alcoholic
+ZVRA,Medical - Development Biotech
+ZWS,Machinery-Gen Industrial
+ZYBT,Medical - Pharmaceuticals
+ZYME,Medical - Revenue Biotech

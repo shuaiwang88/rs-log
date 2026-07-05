@@ -372,7 +372,7 @@ def load_company_descriptions():
 
 @st.cache_data
 def load_ibd_ticker_industry_mapping():
-    ibd_path = Path(__file__).resolve().parent / "IBD_data.txt"
+    ibd_path = Path(__file__).resolve().parent / "IBD Industry Mapping.txt"
     if not ibd_path.exists():
         return {}
     try:
@@ -397,6 +397,44 @@ def load_ibd_ticker_industry_mapping():
     except Exception as e:
         print(f"Error loading IBD ticker-industry mapping: {e}")
     return {}
+
+
+@st.cache_data
+def load_ibd_data_tables_ranks():
+    ibd_tables_path = Path(__file__).resolve().parent / "IBD" / "IBD Data Tables.csv"
+    if not ibd_tables_path.exists():
+        return {}
+    try:
+        df_ibd = pd.read_csv(ibd_tables_path)
+        df_ibd.columns = [c.strip() for c in df_ibd.columns]
+        if 'Symbol' in df_ibd.columns and 'Industry Group Rank' in df_ibd.columns:
+            df_ibd['Symbol'] = df_ibd['Symbol'].astype(str).str.strip('"').str.strip()
+            df_ibd['Industry Group Rank'] = pd.to_numeric(df_ibd['Industry Group Rank'], errors='coerce')
+            df_ibd = df_ibd.dropna(subset=['Symbol', 'Industry Group Rank'])
+            
+            ranks = {}
+            for _, row in df_ibd.iterrows():
+                sym = row['Symbol']
+                rank = row['Industry Group Rank']
+                ranks[sym] = rank
+                # Map normalized symbol too
+                norm = sym.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
+                ranks[norm] = rank
+            return ranks
+    except Exception as e:
+        print(f"Error loading IBD Data Tables ranks: {e}")
+    return {}
+
+
+@st.cache_data
+def get_industry_ranks(ibd_industry_mapping, symbol_ranks):
+    industry_ranks = {}
+    for sym, rank in symbol_ranks.items():
+        ind = ibd_industry_mapping.get(sym)
+        if ind and ind != "Unknown Industry":
+            if ind not in industry_ranks or rank < industry_ranks[ind]:
+                industry_ranks[ind] = rank
+    return industry_ranks
 
 
 @st.cache_data
@@ -507,6 +545,8 @@ df          = load_csv_files(output_sig)
 df_industry = load_industry_data(output_sig)
 company_descriptions = load_company_descriptions()
 ibd_industry_mapping = load_ibd_ticker_industry_mapping()
+symbol_ranks = load_ibd_data_tables_ranks()
+industry_ranks = get_industry_ranks(ibd_industry_mapping, symbol_ranks)
 
 if df is None or df.empty:
     st.error("No data found. Please check the CSV files in the output directory.")
@@ -1618,9 +1658,28 @@ with (tab8 if has_historical else tab7):
                     custom_industry_groups[ind] = []
                 custom_industry_groups[ind].append(ticker)
             
-            # Construct TradingView Watchlist format in insertion order (no sorting)
+            # Sort the groups by their industry group rank ascending
+            def get_group_rank(ind_group, tickers):
+                if ind_group == "Unknown Industry":
+                    return 9999
+                if ind_group in industry_ranks:
+                    return industry_ranks[ind_group]
+                # Fallback to symbol ranks in that group
+                for t in tickers:
+                    r = symbol_ranks.get(t)
+                    if r is not None:
+                        return r
+                return 9999
+
+            sorted_groups = sorted(
+                custom_industry_groups.keys(),
+                key=lambda g: get_group_rank(g, custom_industry_groups[g])
+            )
+
+            # Construct TradingView Watchlist format in sorted order
             custom_tv_lines = []
-            for ind_group, ind_tickers in custom_industry_groups.items():
+            for ind_group in sorted_groups:
+                ind_tickers = custom_industry_groups[ind_group]
                 custom_tv_lines.append(f"###{ind_group}")
                 custom_tv_lines.extend(ind_tickers)
             
