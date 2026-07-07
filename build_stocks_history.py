@@ -31,13 +31,6 @@ def get_all_commits():
         print(f"Error getting commits: {e}")
         return []
 
-def get_file_from_commit(commit_hash, file_path):
-    """Get file content from a specific commit"""
-    try:
-        return get_file_from_commit(commit_hash, file_path, repo_dir=REPO_DIR)
-    except Exception as e:
-        print(f"Error getting file from commit {commit_hash}: {e}")
-        return None
 
 def build_historical_stocks_data():
     """Build historical dataset from all commits"""
@@ -95,6 +88,9 @@ def build_historical_stocks_data():
     if all_data:
         # Combine all data
         df_combined = pd.concat(all_data, ignore_index=True)
+        
+        # Drop duplicates for the same date and ticker, keeping the first (latest commit)
+        df_combined = df_combined.drop_duplicates(subset=['date', 'Ticker'], keep='first')
         
         # Sort by date descending
         df_combined = df_combined.sort_values('date', ascending=False)

@@ -444,6 +444,7 @@ def load_csv_files(reload_sig: str):
     if stocks_historical_file.exists():
         try:
             df = pd.read_csv(stocks_historical_file)
+            df = df.drop_duplicates(subset=['date', 'Ticker'])
             df['date'] = pd.to_datetime(df['date'])
             df['source_file'] = 'stocks_historical'
             unique_dates = df['date'].nunique() if 'date' in df.columns else 0
@@ -456,6 +457,7 @@ def load_csv_files(reload_sig: str):
     if historical_file.exists():
         try:
             df = pd.read_csv(historical_file)
+            df = df.drop_duplicates(subset=['date', 'Ticker'])
             df['date'] = pd.to_datetime(df['date'])
             df['source_file'] = 'historical_all'
             st.success("✅ Loaded historical data (5.87M records, Oct 2021-Present)")
@@ -463,7 +465,11 @@ def load_csv_files(reload_sig: str):
         except Exception as e:
             st.warning(f"Error loading historical data: {e}")
 
-    csv_files = sorted(glob.glob(str(output_dir / "rs_stocks*.csv")))
+    main_stock_file = output_dir / "rs_stocks.csv"
+    if main_stock_file.exists():
+        csv_files = [str(main_stock_file)]
+    else:
+        csv_files = sorted(glob.glob(str(output_dir / "rs_stocks_*.csv")))
     if not csv_files:
         return None
     dfs = []
@@ -488,7 +494,7 @@ def load_industry_data(reload_sig: str):
             if 'date' in df_hist.columns:
                 df_hist['date'] = pd.to_datetime(df_hist['date'])
                 latest_date = df_hist['date'].max()
-                df_industry = df_hist[df_hist['date'] == latest_date].copy()
+                df_industry = df_hist[df_hist['date'] == latest_date].drop_duplicates(subset=['Industry']).copy()
                 
                 # Get unique dates in ascending order
                 unique_dates = pd.Series(sorted(df_hist['date'].unique()))
@@ -795,14 +801,14 @@ with (tab6 if has_historical else tab5):
             if '1W_RS_Rank' in ind_display.columns:
                 ind_display['Delta Rank-1W'] = ind_display['1W_RS_Rank'] - ind_display['Rank']
             ind_display['Delta Rank-1M'] = ind_display['1M_RS_Rank'] - ind_display['Rank']
-            ind_display['Delta Rank-3M'] = ind_display['3M_RS_Rank'] - ind_display['Rank']
-            ind_display['Delta Rank-6M'] = ind_display['6M_RS_Rank'] - ind_display['Rank']
+            ind_display['Delta Rank-3M-1M'] = ind_display['3M_RS_Rank'] - ind_display['1M_RS_Rank']
+            ind_display['Delta Rank-6M-3M'] = ind_display['6M_RS_Rank'] - ind_display['3M_RS_Rank']
             
             if '1W_RS_Rank' in ind_display.columns:
                 ind_display = ind_display.rename(columns={'1W_RS_Rank': '1W'})
             ind_display = ind_display.rename(columns={'1M_RS_Rank': '1M', '3M_RS_Rank': '3M', '6M_RS_Rank': '6M'})
             
-            convert_cols = ['Rank', '1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M']
+            convert_cols = ['Rank', '1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M-1M', 'Delta Rank-6M-3M']
             if '1W' in ind_display.columns:
                 convert_cols.extend(['1W', 'Delta Rank-1W'])
                 
@@ -813,7 +819,7 @@ with (tab6 if has_historical else tab5):
             cols_to_show = ['Rank', 'Industry']
             if '1W' in ind_display.columns:
                 cols_to_show.extend(['1W', 'Delta Rank-1W'])
-            cols_to_show.extend(['1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M', 'Top 10 Tickers'])
+            cols_to_show.extend(['1M', '3M', '6M', 'Delta Rank-1M', 'Delta Rank-3M-1M', 'Delta Rank-6M-3M', 'Top 10 Tickers'])
         elif has_percentiles and 'Rank' in ind_display.columns:
             # For percentiles, we cannot do rank comparison – skip deltas or compute differently
             ind_display = ind_display.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
@@ -880,7 +886,7 @@ with (tab6 if has_historical else tab5):
             except: return ''
 
         styled_df    = filtered_data.style
-        delta_cols   = [c for c in ['Delta Rank-1W', 'Delta Rank-1M', 'Delta Rank-3M', 'Delta Rank-6M'] if c in available_cols]
+        delta_cols   = [c for c in ['Delta Rank-1W', 'Delta Rank-1M', 'Delta Rank-3M-1M', 'Delta Rank-6M-3M'] if c in available_cols]
         if delta_cols:
             if hasattr(styled_df, 'map'):
                 styled_df = styled_df.map(color_delta, subset=delta_cols)
