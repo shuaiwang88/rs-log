@@ -1,0 +1,86 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Amphibiantrading
+
+//@version=6
+indicator("Trendlines", overlay = true)
+
+//----------types----------//
+type trendLine 
+    line tl 
+    int lastB
+    bool active = true
+
+type pivData
+    float h
+    int b
+
+//----------settings----------//
+bars = input.int(5, 'Pivot High Bars Required for Anchor')
+buffer = input.float(0.1, 'Price Buffer %', minval = 0.0, step = 0.1)/100
+numTouches = input.int(3, 'Minimum Number of Touches', minval = 3)
+tlCol = input.color(color.purple, 'Trendline Color', inline = '1')
+tlWidth = input.int(2, 'Width', inline = '1', minval = 1, maxval = 5)
+ext = input.bool(false, 'Extend Trendlines')
+newH = input.int(100, 'Look for New Pivot High after X Bars')
+showBo = input.bool(true, 'Show Trendline Breakouts | ', inline = '2')
+boCol = input.color(color.lime, 'Breakout Color', inline = '2')
+showNum = input.int(1, 'Number of Trendlines to show')
+
+
+//----------variables----------//
+ph = ta.pivothigh(bars,bars)
+var piv = pivData.new(na, na)
+var label boLab = na
+var trendLines = array.new<trendLine>()
+touches = 0
+bo = 0
+
+
+//----------execution----------//
+if not na(ph) and (na(piv.h) or high[bars] > piv.h or bar_index - piv.b > newH)
+    piv.h := high[bars]
+    piv.b := bar_index[bars]
+
+if high < piv.h
+    tl = line.new(piv.b, piv.h, bar_index, high, extend = extend.right, color = color.new(color.white,100), width = tlWidth)
+    for i = 0 to bar_index - piv.b
+        if high[i] > tl.get_price(bar_index[i]) * (1+buffer)
+            tl.delete()
+            touches := 0
+            break
+        else if high[i] <= tl.get_price(bar_index[i]) * (1 + buffer) and high[i] >= tl.get_price(bar_index[i]) * (1 - buffer)
+            touches += 1
+    if touches >= numTouches
+        tl.set_color(tlCol)
+        trendLines.push(trendLine.new(tl, bar_index))
+        if trendLines.size() > showNum
+            old = trendLines.shift()
+            old.tl.delete()
+    else
+        tl.delete()
+    if trendLines.size() > 1
+        current = trendLines.last()
+        for [idx,t] in trendLines
+            if t.tl.get_price(piv.b) == current.tl.get_price(piv.b) and idx != trendLines.size()-1
+                t.tl.delete()
+                trendLines.remove(idx)
+
+for tl in trendLines
+    if tl.active
+        if not ext
+            extended = tl.tl.get_price(bar_index+1)
+            tl.tl.set_extend(extend.none)
+            tl.tl.set_xy2(bar_index+1, extended)
+        for i = 0 to bar_index - tl.lastB
+            if high[i] > tl.tl.get_price(bar_index[i]) * (1+buffer)
+                bo := 1
+                tl.active := false
+                break
+
+if bo == 1 
+    if showBo
+        (boLab[1]).delete()
+        boLab := label.new(bar_index, low, style = label.style_triangleup, yloc = yloc.belowbar, size = size.auto, color = boCol)
+
+alertcondition(bo == 1, 'Trendline Breakout', 'Trendline Breakout')
+alertcondition(touches >= numTouches and touches[1] < numTouches, 'Trendline Found', 'New Trendline')
