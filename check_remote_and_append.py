@@ -25,20 +25,45 @@ def get_current_branch():
         return r.stdout.strip()
     return "main"
 
-def remote_ahead(branch):
-    # Fetch remote refs
+def check_and_sync_upstream(branch):
+    print("Fetching remotes (origin and upstream)...")
+    run_cmd(["git", "fetch", "upstream"], cwd=REPO_DIR)
     run_cmd(["git", "fetch", "origin"], cwd=REPO_DIR)
-    # Compare local..origin/branch
-    r = run_cmd(["git", "rev-list", "--left-right", "--count", f"HEAD...origin/{branch}"])
+    
+    # Check if upstream/branch has commits that HEAD does not have
+    r = run_cmd(["git", "rev-list", "--count", f"HEAD..upstream/{branch}"], cwd=REPO_DIR)
     if r.returncode != 0:
+        print("Failed to run rev-list check.")
         return False
-    out = r.stdout.strip()
+        
     try:
-        left, right = [int(x) for x in out.split()]
-        # right = commits in origin ahead of local
-        return right > 0
-    except Exception:
+        count = int(r.stdout.strip())
+        if count == 0:
+            print(f"No new commits on upstream/{branch} compared to local HEAD.")
+            return False
+            
+        print(f"Upstream has {count} new commits. Merging upstream/{branch}...")
+        # Merge with strategy option 'theirs' to resolve conflicting CSV modifications in favor of upstream
+        merge_res = run_cmd(["git", "merge", "-X", "theirs", "--no-edit", f"upstream/{branch}"], cwd=REPO_DIR)
+        if merge_res.returncode != 0:
+            print("Merge failed! Aborting merge...")
+            run_cmd(["git", "merge", "--abort"], cwd=REPO_DIR)
+            print(merge_res.stderr)
+            return False
+            
+        print("Merge successful.")
+        return True
+    except Exception as e:
+        print(f"Error during remote check/merge: {e}")
         return False
+
+def push_to_origin(branch):
+    print(f"Pushing updated local commits to origin/{branch}...")
+    r = run_cmd(["git", "push", "origin", branch], cwd=REPO_DIR)
+    if r.returncode == 0:
+        print("Pushed to origin successfully.")
+    else:
+        print(f"Failed to push to origin:\n{r.stderr}")
 
 def run_append_scripts():
     print("Running append scripts...")
@@ -57,8 +82,9 @@ if __name__ == '__main__':
         sys.exit(0)
 
     branch = get_current_branch()
-    if remote_ahead(branch):
-        print("Remote ahead — running append scripts")
+    if check_and_sync_upstream(branch):
+        print("Successfully synced with upstream — running append scripts")
         run_append_scripts()
+        push_to_origin(branch)
     else:
-        print("No new upstream commits")
+        print("No updates applied.")
