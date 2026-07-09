@@ -90,6 +90,10 @@ colCupBot     = input.color(color.new(color.green, 50), 'Cup Base Bottom Line', 
 colBaseTop    = input.color(color.gray, 'Standard Base Top Line', group = 'RS Pattern Recognition', inline = 'baseCol')
 colBaseBot    = input.color(color.new(color.gray, 50), 'Standard Base Bottom Line', group = 'RS Pattern Recognition', inline = 'baseCol')
 
+// RS Divergence Inputs
+showDivergence = input.bool(true, 'Show RS Bullish Divergence', group = 'RS Pattern Recognition')
+colBullDiv     = input.color(color.blue, 'Divergence Label Color', group = 'RS Pattern Recognition')
+
 // ── Helper Functions ─────────────────────────────────────────────────────────
 f_rrs_highest(src, len) =>
     h = src
@@ -415,43 +419,46 @@ for i = 0 to 6 by 1
         rsRating3m := -1
         rsRating6m := -1
 
-// ── Dashboard Table UI ────────────────────────────────────────────────────────
-var table infoTable = na
-if showDashboard and barstate.islast
-    posTable = dashLocation == 'Top Right' ? position.top_right :
-               dashLocation == 'Bottom Right' ? position.bottom_right :
-               dashLocation == 'Top Left' ? position.top_left :
-               position.bottom_left
-               
-    infoTable := table.new(position = posTable, columns = 2, rows = 5, 
-                           bgcolor = color.new(color.black, 20), 
-                           border_width = 1, border_color = color.gray)
-    
-    // Header
-    table.cell(infoTable, 0, 0, 'RS Metric', text_color=color.white, text_size=size.small, bgcolor=color.rgb(24, 140, 202))
-    table.cell(infoTable, 1, 0, 'Value', text_color=color.white, text_size=size.small, bgcolor=color.rgb(24, 140, 202))
-    
-    // Rows
-    table.cell(infoTable, 0, 1, 'RS Rating (12M)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 1, totalRsRating == -1 ? 'N/A' : str.tostring(totalRsRating, '#0'), 
-               text_color = totalRsRating >= 90 ? color.green : totalRsRating >= 70 ? color.yellow : color.white, 
-               text_size=size.small)
-               
-    table.cell(infoTable, 0, 2, 'RS Rating (6M)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 2, rsRating6m == -1 ? 'N/A' : str.tostring(rsRating6m, '#0'), 
-               text_color = rsRating6m >= 90 ? color.green : rsRating6m >= 70 ? color.yellow : color.white, 
-               text_size=size.small)
-               
-    table.cell(infoTable, 0, 3, 'RS Rating (3M)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 3, rsRating3m == -1 ? 'N/A' : str.tostring(rsRating3m, '#0'), 
-               text_color = rsRating3m >= 90 ? color.green : rsRating3m >= 70 ? color.yellow : color.white, 
-               text_size=size.small)
+// Calculate RS Rating Changes on the last bar using the fully-populated seed bounds
+f_calculateRating(score, f, s, t, fr, ff, sx, sv) =>
+    float rating = -1
+    if score >= f
+        rating := 99
+    else if score <= sv
+        rating := 1
+    else if score < f and score >= s
+        rating := f_attributePercentile(score, f, s, 98, 90, 0.33)
+    else if score < s and score >= t
+        rating := f_attributePercentile(score, s, t, 89, 70, 2.1)
+    else if score < t and score >= fr
+        rating := f_attributePercentile(score, t, fr, 69, 50, 0)
+    else if score < fr and score >= ff
+        rating := f_attributePercentile(score, fr, ff, 49, 30, 0)
+    else if score < ff and score >= sx
+        rating := f_attributePercentile(score, ff, sx, 29, 10, 0)
+    else if score < sx and score >= sv
+        rating := f_attributePercentile(score, sx, sv, 9, 2, 0)
+    rating
 
-    // Current State
-    currentState = rs_nh_any ? 'New High (' + rs_nh_period + ')' : rs_nl ? 'New Low' : 'Neutral'
-    stateColor = rs_nh_any ? color.green : rs_nl ? color.red : color.white
-    table.cell(infoTable, 0, 4, 'RS State', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 4, currentState, text_color=stateColor, text_size=size.small)
+bool isRatingValid = true
+for i = 0 to 6 by 1
+    if nz(array.get(different_values, i)) == 0 and not allowReplay
+        isRatingValid := false
+
+ratingToday  = isRatingValid ? f_calculateRating(totalRsScore, first, scnd, thrd, frth, ffth, sxth, svth) : -1
+rating5dAgo  = isRatingValid ? f_calculateRating(totalRsScore[5], first, scnd, thrd, frth, ffth, sxth, svth) : -1
+rating20dAgo = isRatingValid ? f_calculateRating(totalRsScore[20], first, scnd, thrd, frth, ffth, sxth, svth) : -1
+
+ratingChange1w = (ratingToday != -1 and rating5dAgo != -1) ? (ratingToday - rating5dAgo) : na
+ratingChange1m = (ratingToday != -1 and rating20dAgo != -1) ? (ratingToday - rating20dAgo) : na
+
+f_getChangeText(val) =>
+    na(val) ? 'N/A' : (val > 0 ? '+' : '') + str.tostring(val, '#0')
+
+f_getChangeColor(val) =>
+    na(val) ? color.white : (val > 0 ? color.green : val < 0 ? color.red : color.white)
+
+
 
 // ── RS Trendline Calculation & Drawing ───────────────────────────────────────
 ph = ta.pivothigh(rs, tlBars, tlBars)
@@ -548,6 +555,8 @@ var float bLow   = na
 var int   bStart = na
 var bool  isBase = false
 var int   bCount = 0
+var bool  isCup = false
+bool      isFlatBase = false
 
 bool newBase = false
 
@@ -590,10 +599,9 @@ if showPatterns
 
     // Classification
     float bDepPct = not na(bTop) and bTop > 0 and not na(bLow) ? (bTop - bLow) / bTop * 100 : na
-    bool isFlatBase = isBase and not na(bDepPct) and bDepPct <= 15.0
+    isFlatBase := isBase and not na(bDepPct) and bDepPct <= 15.0
 
     // Cup shape check
-    var bool isCup = false
     bool detectCup = false
     int minCupLen = 6 * barsPerWeek
     if isBase and not na(bTop) and not na(bLow) and bCount >= minCupLen
@@ -652,5 +660,85 @@ if showPatterns
         label.new(bar_index, rs, text = isCup[1] ? "RS Cup BO" : isFlatBase[1] ? "RS Flat BO" : "RS Base BO", style = label.style_label_up, color = color.green, textcolor = color.white, size = size.small)
 
     // alertcondition(rsPatternBreakout, 'RS Base Breakout', 'RS base breakout triggered')
+
+// ── RS/Price Bullish Divergence Detection ────────────────────────────────────
+// Find pivot lows for Price
+float prPivotLow = ta.pivotlow(low, i_pivLen, i_pivLen)
+
+// Track values at confirmed pivot lows (i_pivLen bars ago)
+float rsPl        = ta.valuewhen(not na(_pL), rs[i_pivLen], 0)
+float prevRsPl    = ta.valuewhen(not na(_pL), rs[i_pivLen], 1)
+float pricePl     = ta.valuewhen(not na(prPivotLow), low[i_pivLen], 0)
+float prevPricePl = ta.valuewhen(not na(prPivotLow), low[i_pivLen], 1)
+
+bool isBullDiv = not na(_pL) and not na(prPivotLow) and (rsPl > prevRsPl) and (pricePl < prevPricePl)
+
+
+if showDivergence and isBullDiv
+    label.new(x = bar_index[i_pivLen], y = rs[i_pivLen], text = "Bull Div", 
+              style = label.style_label_down, color = colBullDiv, textcolor = color.white, size = size.small)
+
+// ── Dashboard Table UI ────────────────────────────────────────────────────────
+var table infoTable = na
+if showDashboard and barstate.islast
+    posTable = dashLocation == 'Top Right' ? position.top_right :
+               dashLocation == 'Bottom Right' ? position.bottom_right :
+               dashLocation == 'Top Left' ? position.top_left :
+               position.bottom_left
+               
+    infoTable := table.new(position = posTable, columns = 2, rows = 7, 
+                           bgcolor = color.new(color.black, 20), 
+                           border_width = 1, border_color = color.gray)
+    
+    // Header
+    table.cell(infoTable, 0, 0, 'RS Metric', text_color=color.white, text_size=size.small, bgcolor=color.rgb(24, 140, 202))
+    table.cell(infoTable, 1, 0, 'Value', text_color=color.white, text_size=size.small, bgcolor=color.rgb(24, 140, 202))
+    
+    // Rows
+    table.cell(infoTable, 0, 1, 'RS Rating (12M)', text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 1, ratingToday == -1 ? 'N/A' : str.tostring(ratingToday, '#0'), 
+               text_color = ratingToday >= 90 ? color.green : ratingToday >= 70 ? color.yellow : color.white, 
+               text_size=size.small)
+               
+    table.cell(infoTable, 0, 2, 'RS Rating (6M)', text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 2, rsRating6m == -1 ? 'N/A' : str.tostring(rsRating6m, '#0'), 
+               text_color = rsRating6m >= 90 ? color.green : rsRating6m >= 70 ? color.yellow : color.white, 
+               text_size=size.small)
+               
+    table.cell(infoTable, 0, 3, 'RS Rating (3M)', text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 3, rsRating3m == -1 ? 'N/A' : str.tostring(rsRating3m, '#0'), 
+               text_color = rsRating3m >= 90 ? color.green : rsRating3m >= 70 ? color.yellow : color.white, 
+               text_size=size.small)
+
+    // 1W Change
+    table.cell(infoTable, 0, 4, 'RS Rating (1W Change)', text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 4, f_getChangeText(ratingChange1w), text_color=f_getChangeColor(ratingChange1w), text_size=size.small)
+
+    // 1M Change
+    table.cell(infoTable, 0, 5, 'RS Rating (1M Change)', text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 5, f_getChangeText(ratingChange1m), text_color=f_getChangeColor(ratingChange1m), text_size=size.small)
+
+    // Current State
+    int barsSinceNH = ta.barssince(rs_nh_any)
+    int barsSinceNL = ta.barssince(rs_nl)
+    
+    currentState = rs_nh_any ? 'New High (' + rs_nh_period + ')' : 
+                   rs_nl ? 'New Low' : 
+                   (barsSinceNH >= 0 and barsSinceNH < 5) ? 'New High (Recent)' : 
+                   (barsSinceNL >= 0 and barsSinceNL < 5) ? 'New Low (Recent)' : 
+                   isCup ? 'Cup Base' : 
+                   isFlatBase ? 'Flat Base' : 
+                   isBase ? 'In Base' : 
+                   'Neutral'
+                   
+    stateColor = (rs_nh_any or (barsSinceNH >= 0 and barsSinceNH < 5) or isCup or isFlatBase) ? color.green : 
+                 (rs_nl or (barsSinceNL >= 0 and barsSinceNL < 5)) ? color.red : 
+                 isBase ? color.gray : 
+                 color.white
+                 
+    table.cell(infoTable, 0, 6, 'RS State', text_color=color.white, text_size=size.small)
+    table.cell(infoTable, 1, 6, currentState, text_color=stateColor, text_size=size.small)
+
+
 
 

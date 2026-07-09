@@ -55,6 +55,25 @@ input showRSMAs            = yes;
 input showQGDRS_MAs        = yes;  # Show Quick / QuickSand / Grateful Dead EMAs
 
 input RS_Rating_ChartBubble = yes;
+
+# RS Trendline & Pattern Inputs
+input showTrendlines     = yes;
+input tlPivLen           = 9;
+input showPatterns       = yes;
+input cupLB              = 25;
+input MaxBaseDepthPct    = 50.0;
+input MinBaseDepthPct    = 8.0;
+input FlatMaxDepthPct    = 15.0;
+input FlatMinLengthBars  = 25;
+input MinLegUpPct        = 30.0;
+input FlatMinLegUpPct    = 20.0;
+input MaxLegUpPct        = 200.0;
+input MaxSymmetryRatio   = 2.5;
+input MidTierBelowPct    = 65.0;
+input OuterTierAbovePct  = 50.0;
+input MergeAdjacentBases = yes;
+input MergeTopBottomTolPct = 3.0;
+
 def isLastBar = BarNumber() == HighestAll(if !IsNaN(close) then BarNumber() else Double.NaN);
 # ─────────────────────────────────────────────────────────────────────────────
 # COLORS
@@ -79,6 +98,12 @@ DefineGlobalColor("Blue_3M",  CreateColor(180, 220, 255)); # Light sky blue
 DefineGlobalColor("Green_12M", CreateColor(  0, 180,   0)); # Deepest vibrant green
 DefineGlobalColor("Green_6M",  CreateColor(  0, 255, 128)); # Medium vibrant green
 DefineGlobalColor("Green_3M",  CreateColor(150, 255, 150)); # Light mint green
+
+# Patterns Colors
+DefineGlobalColor("Cup",      CreateColor(146, 193, 131));
+DefineGlobalColor("Flat",     CreateColor(255, 165, 0));
+DefineGlobalColor("CompBase", Color.CYAN);
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -403,6 +428,307 @@ def signalCount = (if quickBreak_raw then 1 else 0) +
                   (if rsReset        then 1 else 0) +
                   (if rs_raw_new_high and !price_new_high then 1 else 0);
 AddLabel(signalCount > 0, "Active Signals: " + signalCount, Color.ORANGE);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RS TRENDLINE & PATTERN RECOGNITION ADDITIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── RS Trendline Calculation
+def isPV = rs_raw[tlPivLen] == Highest(rs_raw, 2 * tlPivLen + 1);
+
+rec pv1Val = if isPV then rs_raw[tlPivLen] else pv1Val[1];
+rec pv1Bar = if isPV then BarNumber() - tlPivLen else pv1Bar[1];
+rec pv2Val = if isPV then pv1Val[1] else pv2Val[1];
+rec pv2Bar = if isPV then pv1Bar[1] else pv2Bar[1];
+
+def tlRun = pv1Bar - pv2Bar;
+def tlRise = pv1Val - pv2Val;
+def tlSlope = if tlRun != 0 then tlRise / tlRun else 0;
+def tlVal = pv1Val + tlSlope * (BarNumber() - pv1Bar);
+
+def tlBreak = rs_raw > tlVal and rs_raw[1] <= tlVal[1];
+
+rec tlActive = if isPV then 1 else if tlBreak then 0 else if IsNaN(tlActive[1]) then 0 else tlActive[1];
+
+
+# Normalize trendline
+def tlVal_norm = if (_rsHH - _rsLL) != 0
+                 then ((_rsRngMax - _rsRngMin) * (tlVal - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                 else _rsRngMin;
+
+plot Trendline = if showTrendlines and tlActive and BarNumber() >= pv1Bar then tlVal_norm else Double.NaN;
+Trendline.SetDefaultColor(Color.MAGENTA);
+Trendline.SetLineWeight(2);
+Trendline.SetStyle(Curve.SHORT_DASH);
+
+# RS Base & Cup Pattern Recognition (Ported from drw_pattern.tos, running on rs_raw)
+def bn = BarNumber();
+def bp = if isWeekly then 5 else 3; 
+def bMax = if isWeekly then 24 else 99; 
+
+rec state;
+rec rTop;
+rec topBar;
+rec tHeld;
+rec lowestSinceTop;
+rec rBot;
+rec bHeld;
+rec prevTop;
+rec prevBot;
+rec baseNum;
+rec bobNum;
+
+def distFromTop = bn - topBar[1];
+def isTooWide   = distFromTop > bMax;
+def cutBaseHigh = rs_raw > rTop[1];
+
+def topValid  = rTop[1] > 0 and ((rTop[1] - rs_raw) / rTop[1] * 100) < 80;
+def go1to2    = state[1] == 1 and tHeld[1] >= bp and topValid;
+
+def reset2to1 = state[1] == 2 and (cutBaseHigh or isTooWide);
+def botValid  = ((rTop[1] - rBot[1]) / rTop[1] * 100) <= 50;
+def go2to3    = state[1] == 2 and bHeld[1] >= bp and botValid and !reset2to1;
+
+def reset3to1 = state[1] == 3 and (cutBaseHigh or rs_raw < rBot[1]);
+
+state = if bn == 1 then 1
+        else if state[1] == 1 then (if go1to2 then 2 else 1)
+        else if state[1] == 2 then (if reset2to1 then 1 else if go2to3 then 3 else 2)
+        else if state[1] == 3 then (if reset3to1 then 1 else 3)
+        else 1;
+
+def inBaseActive = state == 3;
+def newBase      = state[1] == 2 and state == 3;
+
+rTop = if bn == 1 then rs_raw
+       else if state == 1 then (if rs_raw >= rTop[1] then rs_raw else rTop[1])
+       else rTop[1];
+
+topBar = if bn == 1 then bn
+         else if state == 1 then (if rs_raw >= rTop[1] then bn else topBar[1])
+         else topBar[1];
+
+tHeld = if bn == 1 then 0
+        else if state == 1 then (if rs_raw >= rTop[1] then 0 else tHeld[1] + 1)
+        else 0;
+
+lowestSinceTop = if bn == 1 then rs_raw
+                 else if state == 1 and rs_raw >= rTop[1] then rs_raw
+                 else if state == 1 then Min(lowestSinceTop[1], rs_raw)
+                 else lowestSinceTop[1];
+
+rBot = if bn == 1 then rs_raw
+       else if state == 2 and state[1] == 1 then lowestSinceTop
+       else if state == 2 then Min(rBot[1], rs_raw)
+       else if state == 3 then Min(rBot[1], rs_raw)
+       else rBot[1];
+
+bHeld = if bn == 1 then 0
+        else if state == 2 and state[1] == 1 then 0
+        else if state == 2 then (if rs_raw <= rBot[1] then 0 else bHeld[1] + 1)
+        else 0;
+
+#── Derived Values
+def depth = if rTop > 0 then (rTop - rBot) / rTop * 100 else 0;
+
+def advance = if IsNaN(prevTop[1]) or prevTop[1] == 0 or baseNum[1] == 0
+              then 0
+              else (rTop - prevTop[1]) / prevTop[1] * 100;
+
+def doReset = newBase and (depth > 50 or (prevBot[1] > 0 and rBot < prevBot[1]));
+
+prevTop = if bn == 1 then Double.NaN
+          else if newBase then (if doReset or advance > 20 or advance <= 0 then rTop else prevTop[1])
+          else prevTop[1];
+
+prevBot = if bn == 1 then Double.NaN
+          else if newBase then (if doReset or advance > 20 or advance <= 0 then rBot else prevBot[1])
+          else prevBot[1];
+
+baseNum = if bn == 1 then 0
+          else if newBase then (if baseNum[1] == 0 or doReset then 1 else if advance > 20 then baseNum[1] + 1 else baseNum[1])
+          else baseNum[1];
+
+bobNum = if bn == 1 then 0
+         else if newBase then (if doReset then 0 else if advance > 20 then 0 else if advance > 0 then bobNum[1] + 1 else 0)
+         else bobNum[1];
+
+#── Adjacent Base Merger
+rec mergeTop;
+rec mergeBot;
+rec mergeActive;
+rec mergeBaseNum;
+
+if bn == 1 {
+    mergeTop     = Double.NaN;
+    mergeBot     = Double.NaN;
+    mergeActive  = 0;
+    mergeBaseNum = 0;
+} else if newBase {
+    if MergeAdjacentBases and mergeActive[1] and !IsNaN(mergeTop[1]) and AbsValue(rTop - mergeTop[1]) / mergeTop[1] <= (MergeTopBottomTolPct / 100) then {
+        mergeTop    = Max(rTop, mergeTop[1]);
+        mergeBot    = Min(rBot, mergeBot[1]);
+        mergeActive = 1;
+        mergeBaseNum = mergeBaseNum[1];
+    } else {
+        mergeTop    = rTop;
+        mergeBot    = rBot;
+        mergeActive = 1;
+        mergeBaseNum = if mergeBaseNum[1] == 0 then 1 else mergeBaseNum[1] + 1;
+    }
+} else if mergeActive[1] and !inBaseActive {
+    mergeTop     = mergeTop[1];
+    mergeBot     = mergeBot[1];
+    mergeActive  = 0;
+    mergeBaseNum = mergeBaseNum[1];
+} else {
+    mergeTop     = mergeTop[1];
+    mergeBot     = mergeBot[1];
+    mergeActive  = mergeActive[1];
+    mergeBaseNum = mergeBaseNum[1];
+}
+
+def inMergedBase = mergeActive and inBaseActive;
+def dispTop = if MergeAdjacentBases then mergeTop else rTop;
+def dispBot = if MergeAdjacentBases then mergeBot else rBot;
+
+# Patterns detection
+def maxLenBars = if isWeekly then 65 else 325;
+def minLenBars = if isWeekly then 6 else 30;
+def maxDepth = MaxBaseDepthPct / 100;
+def minDepth = MinBaseDepthPct / 100;
+
+def candHigh = GetValue(rs_raw, cupLB);
+def lowestWin = Lowest(rs_raw, cupLB);
+def highestWin = Highest(rs_raw, cupLB);
+def freshHighBars = if isWeekly then 13 else 65;
+def highestCmp = Highest(GetValue(rs_raw, cupLB), freshHighBars);
+def legUpBars = if isWeekly then 13 else 65;
+def lowestLeg = Lowest(GetValue(rs_raw, cupLB), legUpBars);
+
+def minLegUp = MinLegUpPct / 100;
+def flatLegUp = FlatMinLegUpPct / 100;
+def maxLegUpR = MaxLegUpPct / 100;
+def c_legUp30 = candHigh >= lowestLeg * (1 + minLegUp);
+def c_legUp20 = candHigh >= lowestLeg * (1 + flatLegUp);
+def c_maxLegUp = candHigh <= lowestLeg * (1 + maxLegUpR);
+
+def c_depthOK = candHigh * (1 - maxDepth) <= lowestWin;
+def c_noBigger = highestWin <= candHigh;
+def c_isHigh = candHigh >= highestCmp;
+
+def newCupBase = c_legUp20 and c_maxLegUp and c_depthOK and c_noBigger and c_isHigh;
+
+rec baseAge;
+baseAge = if newCupBase then cupLB else baseAge[1] + 1;
+
+rec basePrice;
+basePrice = if newCupBase then candHigh
+            else if basePrice[1] == 0 then 0
+            else if rs_raw > basePrice[1] then 0
+            else if rs_raw < basePrice[1] * (1 - maxDepth) then 0
+            else if baseAge >= maxLenBars then 0
+            else basePrice[1];
+
+def baseCount = if basePrice > 0 then baseAge else 0;
+
+rec baseLowVal;
+baseLowVal = if newCupBase then lowestWin
+             else if basePrice == 0 then 0
+             else if rs_raw < baseLowVal[1] then rs_raw
+             else baseLowVal[1];
+
+rec baseLowPos;
+baseLowPos = if newCupBase then cupLB - GetMinValueOffset(rs_raw, cupLB)
+             else if basePrice == 0 then 0
+             else if rs_raw <= baseLowVal[1] then baseCount
+             else baseLowPos[1];
+
+def inCupBase = basePrice > 0;
+
+rec legUp30OK;
+legUp30OK = if newCupBase then (c_legUp30 and c_maxLegUp)
+            else if basePrice == 0 then 0
+            else legUp30OK[1];
+
+rec legUp20OK;
+legUp20OK = if newCupBase then (c_legUp20 and c_maxLegUp)
+            else if basePrice == 0 then 0
+            else legUp20OK[1];
+
+def cupDepth = if basePrice > 0 then (basePrice - baseLowVal) / basePrice else 0;
+def lowPosPct = if baseCount > 0 then baseLowPos / baseCount else 0;
+def midPrice = (basePrice + baseLowVal) / 2;
+
+def k_depthMax = cupDepth <= maxDepth;
+def k_depthMin = cupDepth >= minDepth;
+def k_lenMax = baseCount <= maxLenBars;
+def k_lenMin = baseCount >= minLenBars;
+def k_upperHalf = rs_raw >= midPrice;
+
+def leftSideBars = baseLowPos;
+def rightSideBars = baseCount - baseLowPos;
+def k_symmetry = leftSideBars > 0 and rightSideBars > 0 and rightSideBars <= leftSideBars * MaxSymmetryRatio and leftSideBars <= rightSideBars * MaxSymmetryRatio;
+
+def baseTier = Max(1, Floor(baseCount / 3));
+def baseFourth = Max(1, Floor(baseCount / 4));
+
+def midThirdCount = fold i1 = 0 to 325 with c1 = 0 do c1 + (if GetValue(rs_raw, i1) <= midPrice and i1 >= baseTier and i1 <= baseCount - baseTier then 1 else 0);
+def condThird = if baseTier > 0 then midThirdCount / baseTier >= MidTierBelowPct / 100 else 0;
+
+def outerLeftCount = fold i2 = 0 to 325 with c2 = 0 do c2 + (if GetValue(rs_raw, i2) >= midPrice and i2 >= 3 * baseFourth and i2 <= baseCount then 1 else 0);
+def condThirdTwo = if baseFourth > 0 then outerLeftCount / baseFourth >= OuterTierAbovePct / 100 else 0;
+
+def k_cupForm = condThird and condThird[1] and condThirdTwo and condThirdTwo[1];
+
+def isCupRaw = inCupBase and legUp30OK and k_depthMax and k_depthMin and k_lenMax and k_lenMin and k_upperHalf and k_cupForm and k_symmetry;
+
+def flatMinBars = if isWeekly then Max(1, Ceil(FlatMinLengthBars / 5)) else FlatMinLengthBars;
+def flatDepthQual = cupDepth > 0 and cupDepth <= FlatMaxDepthPct / 100;
+def flatLenQual = baseCount >= flatMinBars;
+def flatQualifies = ShowFlatBase and flatDepthQual and flatLenQual;
+
+def isFlatBase = inCupBase and flatQualifies and legUp20OK and k_lenMax and k_upperHalf;
+
+def flatDetected = isFlatBase and !isFlatBase[1];
+def flatBreakout = inCupBase[1] and isFlatBase[1] and rs_raw > basePrice[1];
+
+def isCup = isCupRaw and !flatQualifies;
+def cupDetected = isCup and !isCup[1];
+def cupBreakout = inCupBase[1] and isCup[1] and rs_raw > basePrice[1];
+
+def rsBaseBreakout = flatBreakout or cupBreakout;
+
+# Normalize pattern values to 1–99 scale
+def basePrice_norm = if (_rsHH - _rsLL) != 0
+                      then ((_rsRngMax - _rsRngMin) * (basePrice - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                      else _rsRngMin;
+
+def baseLowVal_norm = if (_rsHH - _rsLL) != 0
+                       then ((_rsRngMax - _rsRngMin) * (baseLowVal - _rsLL)) / (_rsHH - _rsLL) + _rsRngMin
+                       else _rsRngMin;
+
+# Plot Pattern Lines
+plot BaseTopLine = if showPatterns and inCupBase then basePrice_norm else Double.NaN;
+BaseTopLine.SetStyle(Curve.SHORT_DASH);
+BaseTopLine.SetLineWeight(2);
+BaseTopLine.AssignValueColor(if isCup then GlobalColor("Cup") else if isFlatBase then GlobalColor("Flat") else GlobalColor("CompBase"));
+
+plot BaseBotLine = if showPatterns and inCupBase then baseLowVal_norm else Double.NaN;
+BaseBotLine.SetStyle(Curve.FIRM);
+BaseBotLine.SetLineWeight(2);
+BaseBotLine.AssignValueColor(if isCup then GlobalColor("Cup") else if isFlatBase then GlobalColor("Flat") else GlobalColor("CompBase"));
+
+# Breakout Arrow
+plot RS_Base_BO = if showPatterns and rsBaseBreakout then rs_disp else Double.NaN;
+RS_Base_BO.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+RS_Base_BO.SetDefaultColor(Color.GREEN);
+RS_Base_BO.SetLineWeight(3);
+
+# Breakout Alerts
+Alert(showPatterns and flatBreakout, "RS Flat Base Breakout triggered", Alert.BAR, Sound.Bell);
+Alert(showPatterns and cupBreakout, "RS Cup Breakout triggered", Alert.BAR, Sound.Bell);
+Alert(showTrendlines and tlBreak, "RS Trendline Breakout triggered", Alert.BAR, Sound.Bell);
 
 # ══════════════════════════════════════════════════════════════════════════════
 # END OF SCRIPT
