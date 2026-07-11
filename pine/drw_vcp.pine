@@ -1,0 +1,291 @@
+// ─────────────────────────────────────────────────────────────────────────────
+//  Volatility Contraction Pattern (VCP)
+//  Original implementation inspired by Mark Minervini's VCP concept:
+//    • Prior uptrend into the base
+//    • 2–5 pullbacks (contractions), each with a HIGHER LOW and SHALLOWER depth
+//    • Final contraction must be tight (user-defined max depth)
+//    • Pivot = high of the final contraction; breakout = price clears the pivot
+//  Features: curved/straight leg drawing, depth labels, pivot line, breakout
+//  marker, buffer to avoid false resets, auto-reset on depth/time, alerts.
+// ─────────────────────────────────────────────────────────────────────────────
+//@version=6
+indicator("Volatility Contraction Pattern (VCP)", "VCP", overlay = true,
+     max_lines_count = 500, max_labels_count = 500, max_polylines_count = 100)
+
+// ═════════════════════════════ INPUTS ════════════════════════════════════════
+grpDet = "Pattern Detection"
+pivLen     = input.int(5,  "Swing detection length",        minval = 2, maxval = 25, group = grpDet, tooltip = "Bars on each side required to confirm a swing high/low. Larger = smoother pivots, more lag.")
+minLegs    = input.int(2,  "Minimum contractions",          minval = 2, maxval = 5,  group = grpDet)
+maxLegs    = input.int(5,  "Maximum contractions",          minval = 2, maxval = 5,  group = grpDet)
+minLegBars = input.int(5,  "Minimum bars per contraction",  minval = 1,              group = grpDet, tooltip = "Filters out 1–2 bar shakeouts that are noise rather than real contractions.")
+
+grpDepth = "Depth Rules"
+maxFirstDepth = input.float(35.0, "Max first contraction depth %",  minval = 5,  maxval = 75, group = grpDepth, tooltip = "Rejects bases whose first pullback is too deep.")
+maxFinalDepth = input.float(10.0, "Max final contraction depth %",  minval = 1,  maxval = 30, group = grpDepth, tooltip = "The last pullback must be at least this tight for the VCP to qualify.")
+shrinkPct     = input.float(110.0, "Each leg vs prior leg (max %)",  minval = 25, maxval = 110, group = grpDepth, tooltip = "Each contraction's depth must be no more than this percent of the previous one. 100 = merely smaller, lower = stricter tightening.")
+
+grpTrend = "Trend Filter"
+useTrend  = input.bool(true,   "Require prior uptrend",          group = grpTrend)
+trendBars = input.int(60,      "Uptrend lookback (bars)",        minval = 10, group = grpTrend)
+trendGain = input.float(20.0,  "Minimum gain over lookback %",   minval = 0,  group = grpTrend)
+
+grpReset = "Reset / Buffer"
+hiBufPct    = input.float(5, "High-break buffer %", minval = 0, step = 0.1, group = grpReset, tooltip = "Price may poke this far above the base high without resetting the pattern.")
+maxBaseBars = input.int(300,   "Max base duration (bars)", minval = 20, group = grpReset, tooltip = "Auto-reset stale patterns after this many bars.")
+hiResetBars = input.int(150,   "Reset high after X bars", minval = 10, group = grpReset, tooltip = "Reset the pattern if the active high is older than this many bars.")
+brkOnClose  = input.bool(true, "Require close above pivot for breakout", group = grpReset)
+
+grpVis = "Visuals"
+showLegs   = input.bool(true, "Draw contraction structure", group = grpVis)
+curvedLegs = input.bool(true, "Curved style",               group = grpVis)
+showDepth  = input.bool(true, "Label contraction depths",   group = grpVis)
+showTable  = input.bool(true, "Show status table",          group = grpVis)
+colStruct  = input.color(color.new(#26a69a, 0), "Structure", group = grpVis, inline = "c")
+colPiv     = input.color(color.new(#2962ff, 0), "Pivot",     group = grpVis, inline = "c")
+colBrk     = input.color(color.new(#00c853, 0), "Breakout",  group = grpVis, inline = "c")
+
+int   effMaxLegs   = math.max(minLegs, maxLegs)
+float hiBuf        = 1 + hiBufPct / 100
+float shrinkFactor = shrinkPct / 100
+
+// phase constants
+int P_IDLE      = 0
+int P_SEEK_LOW  = 1   // leg high anchored, waiting for the contraction low
+int P_SEEK_HIGH = 2   // leg recorded, waiting for the recovery high
+
+// ══════════════════════ STATE TYPE & METHODS ════════════════════════════════
+type VcpState
+    int          phase        = 0
+    int          baseStartBar = na
+    float        actHigh      = na    // active (unrecorded) leg high
+    int          actHighBar   = na
+    float        pivot        = na    // last contraction high = breakout level
+    bool         ready        = false // qualifying VCP sequence complete
+    array<float> hs           = na    // recorded contraction highs
+    array<int>   hBars        = na
+    array<float> ls           = na    // recorded contraction lows
+    array<int>   lBars        = na
+    array<float> depths       = na    // recorded contraction depths (%)
+    array<label> lbls         = na
+    polyline     poly         = na
+    line         pivLine      = na
+    array<line>  legLines     = na
+    label        actLbl       = na
+
+method resetState(VcpState this, bool keepDrawings) =>
+    if keepDrawings
+        // completed pattern → leave drawings on the chart, just detach them
+        this.poly     := na
+        this.pivLine  := na
+        this.lbls     := array.new<label>()
+        this.legLines := array.new<line>()
+        if not na(this.actLbl)
+            label.delete(this.actLbl)
+            this.actLbl := na
+    else
+        if not na(this.poly)
+            polyline.delete(this.poly)
+            this.poly := na
+        if not na(this.pivLine)
+            line.delete(this.pivLine)
+            this.pivLine := na
+        for lb in this.lbls
+            label.delete(lb)
+        this.lbls.clear()
+        if not na(this.actLbl)
+            label.delete(this.actLbl)
+            this.actLbl := na
+        for ln in this.legLines
+            line.delete(ln)
+        this.legLines.clear()
+    this.hs.clear()
+    this.hBars.clear()
+    this.ls.clear()
+    this.lBars.clear()
+    this.depths.clear()
+    this.phase        := P_IDLE
+    this.baseStartBar := na
+    this.actHigh      := na
+    this.actHighBar   := na
+    this.pivot        := na
+    this.ready        := false
+
+method anchor(VcpState this, float hi, int hiBar) =>
+    this.baseStartBar := hiBar
+    this.actHigh      := hi
+    this.actHighBar   := hiBar
+    this.phase        := P_SEEK_LOW
+
+method redraw(VcpState this) =>
+    if showLegs
+        for ln in this.legLines
+            line.delete(ln)
+        this.legLines.clear()
+        
+        // Draw confirmed legs (High to Low only)
+        if this.hs.size() > 0
+            for i = 0 to this.hs.size() - 1
+                if i < this.ls.size()
+                    line ln = line.new(this.hBars.get(i), this.hs.get(i), this.lBars.get(i), this.ls.get(i),
+                         color = colStruct, width = 2)
+                    this.legLines.push(ln)
+        
+        // Draw active forming leg (High to Low only)
+        if this.phase == P_SEEK_LOW and not na(this.actHigh)
+            line ln = line.new(this.actHighBar, this.actHigh, bar_index, low,
+                 color = colStruct, width = 2)
+            this.legLines.push(ln)
+            
+    // Manage active/forming label
+    if not na(this.actLbl)
+        label.delete(this.actLbl)
+        this.actLbl := na
+        
+    if showDepth and this.phase == P_SEEK_LOW and not na(this.actHigh)
+        float d = (this.actHigh - low) / this.actHigh * 100
+        if d > 0
+            this.actLbl := label.new(bar_index, low,
+                 "C" + str.tostring(this.hs.size() + 1) + "  −" + str.tostring(d, "#.#") + "%",
+                 style = label.style_label_up, color = color.new(colStruct, 85),
+                 textcolor = colStruct, size = size.small)
+
+var VcpState v = VcpState.new(
+     hs       = array.new<float>(),
+     hBars    = array.new<int>(),
+     ls       = array.new<float>(),
+     lBars    = array.new<int>(),
+     depths   = array.new<float>(),
+     lbls     = array.new<label>(),
+     legLines = array.new<line>())
+
+// ═══════════════════════════ DETECTION ══════════════════════════════════════
+float ph    = ta.pivothigh(high, pivLen, pivLen)
+float pl    = ta.pivotlow(low,  pivLen, pivLen)
+int   pvBar = bar_index - pivLen
+
+bool histOK  = bar_index > pivLen + trendBars
+bool trendOK = not useTrend or (histOK and (close[pivLen] / close[pivLen + trendBars] - 1) * 100 >= trendGain)
+
+bool formedSig   = false
+bool breakoutSig = false
+
+// ── real-time invalidation: undercut, excessive depth, stale base ───────────
+if v.phase != P_IDLE
+    bool undercut = v.ls.size() > 0 and low < v.ls.last()
+    bool tooDeep  = false
+    if v.phase == P_SEEK_LOW and not na(v.actHigh)
+        float curDepth = (v.actHigh - low) / v.actHigh * 100
+        float allowed  = v.hs.size() == 0 ? maxFirstDepth : v.depths.last() * shrinkFactor
+        tooDeep := curDepth > allowed
+    bool stale     = not na(v.baseStartBar) and bar_index - v.baseStartBar > maxBaseBars
+    bool staleHigh = not na(v.actHighBar) and bar_index - v.actHighBar > hiResetBars
+    if undercut or tooDeep or stale or staleHigh
+        v.resetState(false)
+
+// ── confirmed swing HIGH ─────────────────────────────────────────────────────
+if not na(ph)
+    if v.phase == P_IDLE
+        if trendOK
+            v.anchor(ph, pvBar)
+    else if v.phase == P_SEEK_LOW
+        if v.hs.size() > 0 and ph > v.hs.first() * hiBuf
+            // exceeded the left-side base high without a confirmed breakout → restart
+            v.resetState(false)
+            if trendOK
+                v.anchor(ph, pvBar)
+        else if ph > v.actHigh
+            // price still pushing up before any pullback completes → slide anchor
+            v.actHigh    := ph
+            v.actHighBar := pvBar
+            if v.hs.size() == 0
+                v.baseStartBar := pvBar
+    else  // P_SEEK_HIGH → recovery high confirmed = start of the next leg
+        if ph > v.hs.first() * hiBuf
+            v.resetState(false)
+            if trendOK
+                v.anchor(ph, pvBar)
+        else if v.hs.size() >= effMaxLegs
+            // would exceed the max contraction count → stale pattern, reset
+            v.resetState(false)
+        else
+            v.actHigh    := ph
+            v.actHighBar := pvBar
+            v.phase      := P_SEEK_LOW
+
+// ── confirmed swing LOW → try to record a contraction leg ───────────────────
+if not na(pl) and v.phase == P_SEEK_LOW and not na(v.actHigh)
+    int   n       = v.hs.size()
+    int   legBars = pvBar - v.actHighBar
+    float d       = (v.actHigh - pl) / v.actHigh * 100
+    float allowed = n == 0 ? maxFirstDepth : v.depths.last() * shrinkFactor
+    bool  hlOK    = n == 0 or pl > v.ls.last()
+    if d > 0 and legBars >= minLegBars
+        if d <= allowed and hlOK
+            v.hs.push(v.actHigh)
+            v.hBars.push(v.actHighBar)
+            v.ls.push(pl)
+            v.lBars.push(pvBar)
+            v.depths.push(d)
+            v.phase := P_SEEK_HIGH
+            v.pivot := v.hs.last()
+            bool wasReady = v.ready
+            v.ready := v.hs.size() >= minLegs and d <= maxFinalDepth
+            formedSig := v.ready and not wasReady
+            v.redraw()
+            if showDepth
+                label lb = label.new(pvBar, pl,
+                     "C" + str.tostring(v.hs.size()) + "  −" + str.tostring(d, "#.#") + "%",
+                     style = label.style_label_up, color = color.new(colStruct, 85),
+                     textcolor = colStruct, size = size.small)
+                v.lbls.push(lb)
+            // pivot line: only shown once the sequence qualifies
+            if not na(v.pivLine)
+                line.delete(v.pivLine)
+                v.pivLine := na
+            if v.ready
+                v.pivLine := line.new(v.hBars.last(), v.pivot, bar_index, v.pivot,
+                     color = colPiv, width = 2, style = line.style_dotted)
+        else
+            v.resetState(false)
+    // legs shorter than minLegBars (or non-declines) are ignored as noise
+
+// ── breakout: price clears the pivot while the pattern is qualified ─────────
+float brkSrc = brkOnClose ? close : high
+if v.ready and not na(v.pivot) and brkSrc > v.pivot
+    breakoutSig := true
+    if not na(v.pivLine)
+        line.set_x2(v.pivLine, bar_index)
+    v.resetState(true)   // keep completed drawings on the chart
+
+// keep extending the pivot line while waiting for the breakout
+if v.ready and not na(v.pivLine)
+    line.set_x2(v.pivLine, bar_index)
+
+v.redraw()
+
+// ═══════════════════════════ OUTPUT ═════════════════════════════════════════
+plotshape(breakoutSig, "VCP Breakout", shape.triangleup, location.belowbar,
+     colBrk, size = size.small, text = "BO", textcolor = colBrk)
+
+alertcondition(formedSig,   "VCP Forming",  "VCP: qualifying contraction sequence complete — pivot is set.")
+alertcondition(breakoutSig, "VCP Breakout", "VCP: price broke above the pivot.")
+
+var table tb = na
+if showTable
+    if na(tb)
+        tb := table.new(position.top_right, 2, 4, border_width = 1,
+             border_color = color.new(chart.fg_color, 85))
+    if barstate.islast
+        int    n         = v.hs.size()
+        string statusTxt = v.phase == P_IDLE ? "Idle" : v.ready ? "VCP ready — watch pivot" : "Tracking base"
+        color  statusCol = v.phase == P_IDLE ? color.gray : v.ready ? colBrk : colStruct
+        tb.cell(0, 0, "Status",       text_color = chart.fg_color, text_size = size.small)
+        tb.cell(1, 0, statusTxt,      text_color = statusCol,      text_size = size.small)
+        tb.cell(0, 1, "Contractions", text_color = chart.fg_color, text_size = size.small)
+        tb.cell(1, 1, str.tostring(n), text_color = chart.fg_color, text_size = size.small)
+        tb.cell(0, 2, "Last depth",   text_color = chart.fg_color, text_size = size.small)
+        tb.cell(1, 2, n > 0 ? str.tostring(v.depths.last(), "#.#") + "%" : "—",
+             text_color = chart.fg_color, text_size = size.small)
+        tb.cell(0, 3, "Pivot",        text_color = chart.fg_color, text_size = size.small)
+        tb.cell(1, 3, v.ready ? str.tostring(v.pivot, format.mintick) : "—",
+             text_color = chart.fg_color, text_size = size.small)
