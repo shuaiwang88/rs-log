@@ -358,20 +358,7 @@ for i = 0 to 6 by 1
     if nz(array.get(different_values, i)) == 0 and not allowReplay
         totalRsRating := -1
 
-isDaily = timeframe.isdaily
-labelText1 = ''
-labelText2 = ''
-if isDaily and totalRsRating != -1
-    labelText2 := '\n\n       ' + str.tostring(totalRsRating, '#0')
-if ratingOnly
-    labelText1 := ''
-    labelText2 := '\n    ' + str.tostring(totalRsRating, '#0')
 
-label1 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
-label2 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
-
-label.delete(label1[1])
-label.delete(label2[1])
 
 // ── 3-Month and 6-Month RS Ratings ───────────────────────────────────────────
 rsScore3m = perfTicker63  / perfComp63  * 100
@@ -451,6 +438,30 @@ rating20dAgo = isRatingValid ? f_calculateRating(totalRsScore[20], first, scnd, 
 
 ratingChange1w = (ratingToday != -1 and rating5dAgo != -1) ? (ratingToday - rating5dAgo) : na
 ratingChange1m = (ratingToday != -1 and rating20dAgo != -1) ? (ratingToday - rating20dAgo) : na
+
+// Fetch daily ratings when on non-daily charts
+[t_t, t_3m, t_6m, t_1w, t_1m] = request.security(syminfo.tickerid, 'D', [ratingToday, rsRating3m, rsRating6m, ratingChange1w, ratingChange1m])
+
+rToday  = timeframe.isdaily ? ratingToday : t_t
+r3m     = timeframe.isdaily ? rsRating3m : t_3m
+r6m     = timeframe.isdaily ? rsRating6m : t_6m
+r1w     = timeframe.isdaily ? ratingChange1w : t_1w
+r1m     = timeframe.isdaily ? ratingChange1m : t_1m
+
+// Plot RS Rating Labels on Chart
+labelText1 = ''
+labelText2 = ''
+if (timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly) and rToday != -1
+    labelText2 := '\n\n       ' + str.tostring(rToday, '#0')
+if ratingOnly
+    labelText1 := ''
+    labelText2 := '\n    ' + str.tostring(rToday, '#0')
+
+label1 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
+label2 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
+
+label.delete(label1[1])
+label.delete(label2[1])
 
 f_getChangeText(val) =>
     na(val) ? 'N/A' : (val > 0 ? '+' : '') + str.tostring(val, '#0')
@@ -696,27 +707,27 @@ if showDashboard and barstate.islast
     
     // Rows
     table.cell(infoTable, 0, 1, 'RS Rating (12M)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 1, ratingToday == -1 ? 'N/A' : str.tostring(ratingToday, '#0'), 
-               text_color = ratingToday >= 90 ? color.green : ratingToday >= 70 ? color.yellow : color.white, 
+    table.cell(infoTable, 1, 1, rToday == -1 ? 'N/A' : str.tostring(rToday, '#0'), 
+               text_color = rToday >= 90 ? color.green : rToday >= 70 ? color.yellow : color.white, 
                text_size=size.small)
                
     table.cell(infoTable, 0, 2, 'RS Rating (6M)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 2, rsRating6m == -1 ? 'N/A' : str.tostring(rsRating6m, '#0'), 
-               text_color = rsRating6m >= 90 ? color.green : rsRating6m >= 70 ? color.yellow : color.white, 
+    table.cell(infoTable, 1, 2, r6m == -1 ? 'N/A' : str.tostring(r6m, '#0'), 
+               text_color = r6m >= 90 ? color.green : r6m >= 70 ? color.yellow : color.white, 
                text_size=size.small)
                
     table.cell(infoTable, 0, 3, 'RS Rating (3M)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 3, rsRating3m == -1 ? 'N/A' : str.tostring(rsRating3m, '#0'), 
-               text_color = rsRating3m >= 90 ? color.green : rsRating3m >= 70 ? color.yellow : color.white, 
+    table.cell(infoTable, 1, 3, r3m == -1 ? 'N/A' : str.tostring(r3m, '#0'), 
+               text_color = r3m >= 90 ? color.green : r3m >= 70 ? color.yellow : color.white, 
                text_size=size.small)
 
     // 1W Change
     table.cell(infoTable, 0, 4, 'RS Rating (1W Change)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 4, f_getChangeText(ratingChange1w), text_color=f_getChangeColor(ratingChange1w), text_size=size.small)
+    table.cell(infoTable, 1, 4, f_getChangeText(r1w), text_color=f_getChangeColor(r1w), text_size=size.small)
 
     // 1M Change
     table.cell(infoTable, 0, 5, 'RS Rating (1M Change)', text_color=color.white, text_size=size.small)
-    table.cell(infoTable, 1, 5, f_getChangeText(ratingChange1m), text_color=f_getChangeColor(ratingChange1m), text_size=size.small)
+    table.cell(infoTable, 1, 5, f_getChangeText(r1m), text_color=f_getChangeColor(r1m), text_size=size.small)
 
     // Current State
     int barsSinceNH = ta.barssince(rs_nh_any)

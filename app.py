@@ -619,13 +619,13 @@ all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
         ["📈 Overview", "📊 Time Series", "🎯 Top Performers", "🔬 Deep Analysis",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions", "🔬 Deep Analysis",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder"])
 
 # ---------- TAB 1: Overview ----------
 with tab1:
@@ -1772,6 +1772,51 @@ with (tab8 if has_historical else tab7):
             st.download_button(f"Copy {industry}", ticker_string,
                                f"{industry.replace(' ','_')}_tickers.txt", "text/plain",
                                key=f"download_{industry}")
+
+# ---------- TAB 9 / 8: Pattern Finder ----------
+with (tab9 if has_historical else tab8):
+    st.subheader("🔍 Tweevest Pattern Finder")
+    st.markdown("Extract and view the latest pattern tickers from Tweevest.")
+    
+    # Run script button
+    if st.button("🔄 Rerun Extraction Script", key="run_tweevest_extract"):
+        with st.spinner("Extracting latest pattern tickers from Tweevest..."):
+            try:
+                script_path = Path(__file__).resolve().parent / "python" / "fetch_vcp_tickers.py"
+                result = subprocess.run([sys.executable, str(script_path)], cwd=str(Path(__file__).resolve().parent), capture_output=True, text=True)
+                if result.returncode == 0:
+                    st.success("✅ Extraction completed successfully!")
+                    st.cache_data.clear()
+                    rerun_app()
+                else:
+                    st.error(f"Extraction failed:\n{result.stderr}")
+            except Exception as e:
+                st.error(f"Error running extraction script: {e}")
+                
+    # Load and display JSON results
+    patterns_json_path = Path(__file__).resolve().parent / "python" / "all_patterns_tickers.json"
+    if patterns_json_path.exists():
+        try:
+            with open(patterns_json_path, 'r', encoding='utf-8') as f:
+                pattern_data = json.load(f)
+            
+            # Displays the patterns nicely
+            for pattern_name, tickers in pattern_data.items():
+                col_title, col_count = st.columns([6, 1])
+                with col_title:
+                    st.markdown(f"### {pattern_name.replace('-', ' ').title()}")
+                with col_count:
+                    st.markdown(f"**Count: {len(tickers)}**")
+                
+                if tickers:
+                    ticker_str = ",".join(tickers)
+                    st.code(ticker_str, language="text")
+                else:
+                    st.info("No tickers found for this pattern.")
+        except Exception as e:
+            st.error(f"Error loading pattern data: {e}")
+    else:
+        st.warning("No patterns data found. Click the button above to run the extraction script for the first time.")
 
 # Footer
 st.divider()

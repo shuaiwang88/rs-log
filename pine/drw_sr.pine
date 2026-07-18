@@ -1,0 +1,297 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © Amphibiantrading
+
+//@version=6
+indicator("Support & Resistance Levels (3+ Touches)", overlay = true)
+
+//----------types----------//
+type SRLine
+    float price
+    int startBar
+    int lastBar
+    int touches
+    bool isSupport
+    line ln
+    label lbl
+    bool active = true
+
+//----------settings----------//
+leftBars = input.int(5, 'Pivot Left Strength', minval = 1)
+rightBars = input.int(5, 'Pivot Right Strength', minval = 1)
+buffer = input.float(0.1, 'Price Buffer %', minval = 0.0, step = 0.05) / 100
+minTouches = input.int(3, 'Minimum Number of Touches', minval = 2)
+maxLines = input.int(10, 'Max Active Lines to Display (Per Type)', minval = 2)
+
+// Styling
+resCol = input.color(color.red, 'Resistance Color', inline = 'res')
+resWidth = input.int(2, 'Width', inline = 'res', minval = 1, maxval = 5)
+supCol = input.color(color.green, 'Support Color', inline = 'sup')
+supWidth = input.int(2, 'Width', inline = 'sup', minval = 1, maxval = 5)
+
+// Broken levels settings
+brokenStyle = input.string("Dotted", "Broken Line Style", options=["Solid", "Dashed", "Dotted", "Hide"])
+brokenColor = input.color(color.gray, "Broken Line Color")
+
+// Visual options
+showLabels = input.bool(true, 'Show Touch Count Labels')
+showBreakouts = input.bool(true, 'Show Breakout/Breakdown Marks')
+boCol = input.color(color.lime, 'Breakout Color', inline = 'bo')
+bdCol = input.color(color.orange, 'Breakdown Color', inline = 'bo')
+
+//----------variables----------//
+ph = ta.pivothigh(leftBars, rightBars)
+pl = ta.pivotlow(leftBars, rightBars)
+
+var srLines = array.new<SRLine>()
+bool isBreakout = false
+bool isBreakdown = false
+bool srFound = false
+
+//----------execution----------//
+
+// Helper function to update/create lines and labels
+updateVisuals(SRLine item) =>
+    if item.touches >= minTouches
+        line lnVal = na
+        if na(item.ln)
+            lnVal := line.new(
+                 x1 = item.startBar, y1 = item.price, 
+                 x2 = bar_index, y2 = item.price, 
+                 color = item.isSupport ? supCol : resCol, 
+                 width = item.isSupport ? supWidth : resWidth
+                 )
+        else
+            line.set_xy1(item.ln, item.startBar, item.price)
+            line.set_xy2(item.ln, bar_index, item.price)
+            lnVal := item.ln
+        item.ln := lnVal
+        
+        if showLabels
+            labelText = (item.isSupport ? "S (" : "R (") + str.tostring(item.touches) + ")"
+            label lblVal = na
+            if na(item.lbl)
+                lblVal := label.new(
+                     x = bar_index, y = item.price, 
+                     text = labelText, 
+                     color = color.new(color.white, 100), 
+                     textcolor = item.isSupport ? supCol : resCol, 
+                     style = label.style_label_left, 
+                     size = size.small
+                     )
+            else
+                label.set_xy(item.lbl, bar_index, item.price)
+                label.set_text(item.lbl, labelText)
+                lblVal := item.lbl
+            item.lbl := lblVal
+
+// Handle Pivot High (Resistance candidate)
+if not na(ph)
+    float pivotPrice = ph
+    int pivotBar = bar_index - rightBars
+    int bestIdx = -1
+    float minDiff = 1e10
+    
+    // Find closest matching active resistance line
+    if srLines.size() > 0
+        for i = 0 to srLines.size() - 1
+            SRLine item = srLines.get(i)
+            if not item.isSupport and item.active
+                float diff = math.abs(item.price - pivotPrice)
+                if diff <= pivotPrice * buffer and diff < minDiff
+                    minDiff := diff
+                    bestIdx := i
+                    
+    if bestIdx != -1
+        SRLine matched = srLines.get(bestIdx)
+        matched.touches := matched.touches + 1
+        matched.lastBar := pivotBar
+        // Dynamic price adjustments (average price of all touches)
+        matched.price := (matched.price * (matched.touches - 1) + pivotPrice) / matched.touches
+        if matched.touches == minTouches
+            srFound := true
+        updateVisuals(matched)
+    else
+        // Create new candidate level
+        srLines.push(SRLine.new(
+             price = pivotPrice, 
+             startBar = pivotBar, 
+             lastBar = pivotBar, 
+             touches = 1, 
+             isSupport = false, 
+             ln = na, 
+             lbl = na, 
+             active = true
+             ))
+
+// Handle Pivot Low (Support candidate)
+if not na(pl)
+    float pivotPrice = pl
+    int pivotBar = bar_index - rightBars
+    int bestIdx = -1
+    float minDiff = 1e10
+    
+    // Find closest matching active support line
+    if srLines.size() > 0
+        for i = 0 to srLines.size() - 1
+            SRLine item = srLines.get(i)
+            if item.isSupport and item.active
+                float diff = math.abs(item.price - pivotPrice)
+                if diff <= pivotPrice * buffer and diff < minDiff
+                    minDiff := diff
+                    bestIdx := i
+                    
+    if bestIdx != -1
+        SRLine matched = srLines.get(bestIdx)
+        matched.touches := matched.touches + 1
+        matched.lastBar := pivotBar
+        matched.price := (matched.price * (matched.touches - 1) + pivotPrice) / matched.touches
+        if matched.touches == minTouches
+            srFound := true
+        updateVisuals(matched)
+    else
+        // Create new candidate level
+        srLines.push(SRLine.new(
+             price = pivotPrice, 
+             startBar = pivotBar, 
+             lastBar = pivotBar, 
+             touches = 1, 
+             isSupport = true, 
+             ln = na, 
+             lbl = na, 
+             active = true
+             ))
+
+// Bar-by-bar update and breakout check
+if srLines.size() > 0
+    for i = 0 to srLines.size() - 1
+        SRLine item = srLines.get(i)
+        if item.active
+            if item.touches >= minTouches
+                // Extend active lines and labels to current bar
+                if not na(item.ln)
+                    line.set_xy2(item.ln, bar_index, item.price)
+                if showLabels and not na(item.lbl)
+                    label.set_xy(item.lbl, bar_index, item.price)
+            
+            // Check for breakout/breakdown (on close price)
+            if not item.isSupport
+                // Resistance breakout
+                if close > item.price
+                    item.active := false
+                    if item.touches >= minTouches
+                        isBreakout := true
+                        if not na(item.ln)
+                            label lblVal = na
+                            if brokenStyle == "Hide"
+                                line.delete(item.ln)
+                                item.ln := na
+                                if not na(item.lbl)
+                                    label.delete(item.lbl)
+                                    lblVal := na
+                            else
+                                line.set_color(item.ln, brokenColor)
+                                line.set_style(item.ln, brokenStyle == "Solid" ? line.style_solid : brokenStyle == "Dashed" ? line.style_dashed : line.style_dotted)
+                                if showLabels and not na(item.lbl)
+                                    label.set_textcolor(item.lbl, brokenColor)
+                                    label.set_text(item.lbl, "R (" + str.tostring(item.touches) + ") [BO]")
+                                    label.set_xy(item.lbl, bar_index, item.price)
+                                lblVal := item.lbl
+                            item.lbl := lblVal
+            else
+                // Support breakdown
+                if close < item.price
+                    item.active := false
+                    if item.touches >= minTouches
+                        isBreakdown := true
+                        if not na(item.ln)
+                            label lblVal = na
+                            if brokenStyle == "Hide"
+                                line.delete(item.ln)
+                                item.ln := na
+                                if not na(item.lbl)
+                                    label.delete(item.lbl)
+                                    lblVal := na
+                            else
+                                line.set_color(item.ln, brokenColor)
+                                line.set_style(item.ln, brokenStyle == "Solid" ? line.style_solid : brokenStyle == "Dashed" ? line.style_dashed : line.style_dotted)
+                                if showLabels and not na(item.lbl)
+                                    label.set_textcolor(item.lbl, brokenColor)
+                                    label.set_text(item.lbl, "S (" + str.tostring(item.touches) + ") [BD]")
+                                    label.set_xy(item.lbl, bar_index, item.price)
+                                lblVal := item.lbl
+                            item.lbl := lblVal
+
+// Maintain maximum active displayed lines
+int activeResCount = 0
+int activeSupCount = 0
+if srLines.size() > 0
+    for i = 0 to srLines.size() - 1
+        SRLine item = srLines.get(i)
+        if item.active and item.touches >= minTouches
+            if item.isSupport
+                activeSupCount += 1
+            else
+                activeResCount += 1
+
+if activeResCount > maxLines and srLines.size() > 0
+    int oldestIdx = -1
+    int oldestBar = 10000000
+    for i = 0 to srLines.size() - 1
+        SRLine item = srLines.get(i)
+        if not item.isSupport and item.active and item.touches >= minTouches
+            if item.startBar < oldestBar
+                oldestBar := item.startBar
+                oldestIdx := i
+    if oldestIdx != -1
+        SRLine toRemove = srLines.get(oldestIdx)
+        if not na(toRemove.ln)
+            line.delete(toRemove.ln)
+        if not na(toRemove.lbl)
+            label.delete(toRemove.lbl)
+        srLines.remove(oldestIdx)
+
+if activeSupCount > maxLines and srLines.size() > 0
+    int oldestIdx = -1
+    int oldestBar = 10000000
+    for i = 0 to srLines.size() - 1
+        SRLine item = srLines.get(i)
+        if item.isSupport and item.active and item.touches >= minTouches
+            if item.startBar < oldestBar
+                oldestBar := item.startBar
+                oldestIdx := i
+    if oldestIdx != -1
+        SRLine toRemove = srLines.get(oldestIdx)
+        if not na(toRemove.ln)
+            line.delete(toRemove.ln)
+        if not na(toRemove.lbl)
+            label.delete(toRemove.lbl)
+        srLines.remove(oldestIdx)
+
+// Keep candidate array small (clean up old broken or non-triggered levels)
+if srLines.size() > 100
+    int removeIdx = -1
+    int oldestBar = 10000000
+    for i = 0 to srLines.size() - 1
+        SRLine item = srLines.get(i)
+        if not item.active or item.touches < minTouches
+            if item.lastBar < oldestBar
+                oldestBar := item.lastBar
+                removeIdx := i
+    if removeIdx != -1
+        SRLine toRemove = srLines.get(removeIdx)
+        if not na(toRemove.ln)
+            line.delete(toRemove.ln)
+        if not na(toRemove.lbl)
+            label.delete(toRemove.lbl)
+        srLines.remove(removeIdx)
+
+// Plot breakout/breakdown visual markers
+if isBreakout and showBreakouts
+    label.new(bar_index, low, text="BO", style=label.style_triangleup, yloc=yloc.belowbar, size=size.small, color=color.new(boCol, 20), textcolor=boCol)
+if isBreakdown and showBreakouts
+    label.new(bar_index, high, text="BD", style=label.style_triangledown, yloc=yloc.abovebar, size=size.small, color=color.new(bdCol, 20), textcolor=bdCol)
+
+// Alerts
+alertcondition(isBreakout, 'Resistance Breakout', 'Resistance Level Broken Out')
+alertcondition(isBreakdown, 'Support Breakdown', 'Support Level Broken Down')
+alertcondition(srFound, 'S/R Level Formed', 'New Support/Resistance Level Formed')

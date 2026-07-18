@@ -377,21 +377,7 @@ for i = 0 to 6 by 1
         totalRsRating := -1
         totalRsRating
 
-isDaily = timeframe.isdaily
-labelText1 = ''
-labelText2 = ''
-if isDaily and totalRsRating != -1
-    labelText2 := '\n\n       ' + str.tostring(totalRsRating, '#0')
-    labelText2
-if ratingOnly
-    labelText1 := ''
-    labelText2 := '\n    ' + str.tostring(totalRsRating, '#0')
-    labelText2
-label1 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
-label2 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
 
-label.delete(label1[1])
-label.delete(label2[1])
 
 rsScore3m = perfTicker63  / perfComp63  * 100
 rsScore6m = perfTicker126 / perfComp126 * 100
@@ -441,6 +427,30 @@ for i = 0 to 6 by 1
     if nz(array.get(different_values, i)) == 0 and not allowReplay
         rsRating3m := -1
         rsRating6m := -1
+
+// Fetch daily ratings when on non-daily charts
+[t_t, t_3m, t_6m] = request.security(syminfo.tickerid, 'D', [totalRsRating, rsRating3m, rsRating6m])
+
+rToday  = timeframe.isdaily ? totalRsRating : t_t
+r3m     = timeframe.isdaily ? rsRating3m : t_3m
+r6m     = timeframe.isdaily ? rsRating6m : t_6m
+
+// Plot RS Rating Labels on Chart
+labelText1 = ''
+labelText2 = ''
+if (timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly) and rToday != -1
+    labelText2 := '\n\n       ' + str.tostring(rToday, '#0')
+    labelText2
+if ratingOnly
+    labelText1 := ''
+    labelText2 := '\n    ' + str.tostring(rToday, '#0')
+    labelText2
+
+label1 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
+label2 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
+
+label.delete(label1[1])
+label.delete(label2[1])
 
 WtClose = input(false, title = 'Weekly Tight Closes Detector', group = 'TIGHT CLOSES DETECTOR')
 colorTightCloses = input(color.aqua, title = 'Color of Tight Closes Boxes', group = 'TIGHT CLOSES DETECTOR')
@@ -1204,7 +1214,7 @@ scrAbove50sma  = close > sma50  ? 1 : 0
 scrAbove200sma = close > sma200 ? 1 : 0
 scrSma50vs200  = sma50  > sma200 ? 1 : 0
 
-scrRsRating    = totalRsRating
+scrRsRating    = rToday
 
 var int   scrStage          = 1
 var float lastBreakoutPrice = na
