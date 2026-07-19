@@ -1608,14 +1608,31 @@ with (tab8 if has_historical else tab7):
     numeric_cols_available = [col for col in display_df.columns if display_df[col].dtype in ['float64', 'int64']]
     for idx, col in enumerate(numeric_cols_available[:9]):
         with filter_cols[idx % 3]:
-            col_min, col_max = display_df[col].min(), display_df[col].max()
+            col_min = display_df[col].min()
+            col_max = display_df[col].max()
             if pd.notna(col_min) and pd.notna(col_max) and col_min < col_max:
-                rv = st.slider(f"{col}", min_value=float(col_min), max_value=float(col_max),
-                               value=(float(col_min), float(col_max)), key=f"filter_{col}")
-                filter_conditions.append((col, rv))
+                st.write(f"**{col}**")
+                c1, c2 = st.columns(2)
+                if np.issubdtype(display_df[col].dtype, np.integer):
+                    val_min = int(col_min)
+                    val_max = int(col_max)
+                    mn = c1.number_input("Min", min_value=val_min, max_value=val_max, value=val_min, step=1, key=f"filter_min_{col}")
+                    mx = c2.number_input("Max", min_value=val_min, max_value=val_max, value=val_max, step=1, key=f"filter_max_{col}")
+                else:
+                    val_min = float(col_min)
+                    val_max = float(col_max)
+                    step = 0.01 if (val_max - val_min) < 10 else None
+                    mn = c1.number_input("Min", min_value=val_min, max_value=val_max, value=val_min, step=step, key=f"filter_min_{col}")
+                    mx = c2.number_input("Max", min_value=val_min, max_value=val_max, value=val_max, step=step, key=f"filter_max_{col}")
+                filter_conditions.append((col, (mn, mx)))
     for col, (mn, mx) in filter_conditions:
         display_df = display_df[(display_df[col] >= mn) & (display_df[col] <= mx)]
     display_df = display_df.reset_index(drop=True)
+    filtered_table_df = table_df.copy()
+    if ticker_filter and 'Ticker' in filtered_table_df.columns:
+        filtered_table_df = filtered_table_df[filtered_table_df['Ticker'].astype(str).str.upper().str.contains(ticker_filter)]
+    for col, (mn, mx) in filter_conditions:
+        filtered_table_df = filtered_table_df[(filtered_table_df[col] >= mn) & (filtered_table_df[col] <= mx)]
     display_df_with_rank = pd.DataFrame({'Rank': range(1, len(display_df)+1)})
     for col in display_df.columns:
         display_df_with_rank[col] = display_df[col].values
@@ -1712,11 +1729,13 @@ with (tab8 if has_historical else tab7):
 
     st.divider()
     st.subheader("📋 Top Tickers by Relative Strength (Grouped by Strongest Industry)")
-    num_tickers = st.number_input("Number of top tickers to display", min_value=10,
-                                  max_value=len(table_df), value=150, step=10, key="num_top_tickers")
+    max_top_val = max(1, len(filtered_table_df))
+    default_top_val = min(150, max_top_val)
+    num_tickers = st.number_input("Number of top tickers to display", min_value=1,
+                                  max_value=max_top_val, value=default_top_val, step=10, key="num_top_tickers")
     max_per_industry = st.number_input("Max tickers per industry group", min_value=1, max_value=50, value=10, step=1, key="max_per_industry")
 
-    top_n = table_df.drop_duplicates(subset=['Ticker']).nlargest(int(num_tickers), 'Relative Strength')[['Ticker', 'Industry', 'Relative Strength']].copy()
+    top_n = filtered_table_df.drop_duplicates(subset=['Ticker']).nlargest(int(num_tickers), 'Relative Strength')[['Ticker', 'Industry', 'Relative Strength']].copy()
     if df_industry is not None and not df_industry.empty:
         industry_rs_map = dict(zip(df_industry['Industry'], df_industry['Relative Strength']))
     else:
