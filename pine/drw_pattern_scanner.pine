@@ -523,7 +523,12 @@ else if rsWindow and rsNH_any
 plot(signal      ? 1 : 0, title = 'Signal (0/1)',               display = display.all)
 plot(distPct,             title = 'Distance to Pivot %',         display = display.all)
 plot(barsSBO,             title = 'Bars Since Breakout',         display = display.all)
+plot(inBase ? bCount : na, title = 'Days in Base',                display = display.all)
 plot(rsCount,           title = 'RS NH Count',                    display = display.all)
+plot(rsNH_1y  ? 1 : 0, title = 'RS New High (1Y)',              display = display.all)
+plot(rsNH_6m  ? 1 : 0, title = 'RS New High (6M)',              display = display.all)
+plot(rsNH_3m  ? 1 : 0, title = 'RS New High (3M)',              display = display.all)
+plot(rsNH_any ? 1 : 0, title = 'RS New High (Any)',             display = display.all)
 plot(isFlatBase  ? 1 : 0, title = 'Is Flat Base (0/1)',         display = display.all)
 plot(isDeepBase  ? 1 : 0, title = 'Is Base-Deep (0/1)',         display = display.all)
 plot(isCup       ? 1 : 0, title = 'Is Cup (0/1)',               display = display.all)
@@ -532,12 +537,6 @@ plot(isDB        ? 1 : 0, title = 'Is Double Bottom (0/1)',     display = displa
 plot(isHTF       ? 1 : 0, title = 'Is High Tight Flag (0/1)',   display = display.all)
 plot(is6WkFlat   ? 1 : 0, title = 'Is 6-Wk Flat Base (0/1)',   display = display.all)
 plot(pCode,               title = 'Pattern Code',                display = display.all)
-// ── RS New High screener exports  ── ← NEW ───────────────────────────────────
-plot(rsNH_1y  ? 1 : 0, title = 'RS New High (1Y)',              display = display.all)
-plot(rsNH_6m  ? 1 : 0, title = 'RS New High (6M)',              display = display.all)
-plot(rsNH_3m  ? 1 : 0, title = 'RS New High (3M)',              display = display.all)
-plot(rsNH_any ? 1 : 0, title = 'RS New High (Any)',             display = display.all)
-plot(rsCount,           title = 'RS NH Count',                    display = display.all)
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  VISUAL OUTPUT
