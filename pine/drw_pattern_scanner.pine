@@ -126,6 +126,14 @@ i_touchThresh = input.float(0.5, 'Touch Tolerance %', step = 0.1,
                   group   = 'Breakout MA Touch Scanner',
                   tooltip = 'Price is considered touching if its range (high to low) comes within this percent of the MA. Set to 0 for strict touch.')
 
+// ── Breakout Volume & PP Scanner ─────────────────────────────────────────────
+i_vduLength   = input.int(50, 'VDU Average Volume Length',
+                  group   = 'Breakout Volume & PP Scanner',
+                  tooltip = 'SMA length of volume used for dry up calculations.')
+i_dryUpReq    = input.int(45, 'Volume Dry Up Level %',
+                  group   = 'Breakout Volume & PP Scanner',
+                  tooltip = 'Percentage below average volume to qualify as a dry up. E.g., 45% means volume is < 55% of average.')
+
 // ═════════════════════════════════════════════════════════════════════════════
 //  DERIVED CONSTANTS
 // ═════════════════════════════════════════════════════════════════════════════
@@ -541,6 +549,57 @@ else if rsWindow and rsNH_any
     rsCount := rsCount + 1
 
 // ═════════════════════════════════════════════════════════════════════════════
+//  POCKET PIVOT & VOLUME DRY UP (VDU) CALCULATIONS
+// ═════════════════════════════════════════════════════════════════════════════
+// Average volume calculation
+float avgVolPP = ta.sma(volume, i_vduLength)
+
+// Volume dry up definition (Level 1 from drw_volume.pine)
+float volRatioPct = not na(avgVolPP) and avgVolPP > 0 ? (volume / avgVolPP * 100) : na
+bool volDryUp1 = not na(volRatioPct) and volRatioPct < (100 - i_dryUpReq)
+
+// Pocket Pivot calculations (10-day and 5-day down day volume comparison)
+vols10 = array.new<float>()
+vols5  = array.new<float>()
+
+for i = 1 to 10
+    if not na(close[i]) and not na(close[i+1]) and close[i] < close[i+1]
+        array.push(vols10, volume[i])
+float maxDnVol10 = array.size(vols10) > 0 ? array.max(vols10) : na
+
+for i = 1 to 5
+    if not na(close[i]) and not na(close[i+1]) and close[i] < close[i+1]
+        array.push(vols5, volume[i])
+float maxDnVol5 = array.size(vols5) > 0 ? array.max(vols5) : na
+
+bool pp10 = close > close[1] and not na(maxDnVol10) and volume > maxDnVol10
+bool pp5  = close > close[1] and not na(maxDnVol5) and volume > maxDnVol5
+bool ppAny = pp10 or pp5
+
+// ── Condition 1: Within 10% to pivot, VDU or PP (Must be before breakout) ────
+bool nearPivot10 = inBase and not na(distPctInternal) and math.abs(distPctInternal) <= 10.0
+bool condNearPivotVDUorPP = nearPivot10 and (volDryUp1 or ppAny)
+
+
+// ── Condition 2: Breakout Pocket Pivot ───────────────────────────────────────
+bool boPP = not na(barsSBO) and barsSBO == 0 and ppAny
+
+var bool boWasPP = false
+if newBase or inBase
+    boWasPP := false
+else if not na(barsSBO) and barsSBO == 0
+    boWasPP := ppAny
+
+// ── Condition 3: Within 10 days after breakout, VDU ──────────────────────────
+bool postBODryUp = not inBase and not na(barsSBO) and barsSBO >= 1 and barsSBO <= 10 and volDryUp1
+
+var bool hasDriedUpPostBO = false
+if newBase or inBase or (not na(barsSBO) and barsSBO == 0)
+    hasDriedUpPostBO := false
+else if not inBase and not na(barsSBO) and barsSBO >= 1 and barsSBO <= 10 and volDryUp1
+    hasDriedUpPostBO := true
+
+// ═════════════════════════════════════════════════════════════════════════════
 //  BREAKOUT MA TOUCH SCANNER
 // ═════════════════════════════════════════════════════════════════════════════
 // Calculate moving averages
@@ -598,7 +657,14 @@ plot(isHTF       ? 1 : 0, title = 'Is High Tight Flag (0/1)',   display = displa
 plot(is6WkFlat   ? 1 : 0, title = 'Is 6-Wk Flat Base (0/1)',   display = display.all)
 plot(pCode,               title = 'Pattern Code',                display = display.all)
 plot(touchSignal ? 1 : 0,      title = 'Touch MA Post-BO (0/1)',     display = display.all)
-plot(hasTouchedPostBO ? 1 : 0,  title = 'Has Touched MA Post-BO (0/1)', display = display.all)
+plot(hasTouchedPostBO and not na(barsSBO) and barsSBO <= i_boTouchDays ? 1 : 0,  title = 'Has Touched MA Post-BO (0/1)', display = display.all)
+plot(condNearPivotVDUorPP ? 1 : 0, title = 'Near Pivot VDU or PP (0/1)',      display = display.all)
+
+plot(boPP ? 1 : 0,                 title = 'Breakout Pocket Pivot (0/1)',     display = display.all)
+plot(boWasPP ? 1 : 0,              title = 'Breakout Was Pocket Pivot (0/1)', display = display.all)
+plot(postBODryUp ? 1 : 0,          title = 'Post-BO VDU (0/1)',               display = display.all)
+plot(hasDriedUpPostBO and not na(barsSBO) and barsSBO <= 10 ? 1 : 0,      title = 'Has VDU Post-BO (0/1)',           display = display.all)
+
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  VISUAL OUTPUT
@@ -620,134 +686,137 @@ if i_showLabel and signal and barstate.islast
     // RS New High count  ── ← NEW ────────────────────────────────────────────
     lt := lt + '\nRS NH: ' + str.tostring(rsCount) + (rsNH_any ? '  [✦ ' + rsNH_per + ']' : '')
     if not inBase
-        lt := lt + '\nMA Touch: ' + (hasTouchedPostBO ? 'YES' : 'NO')
+        lt := lt + '\nMA Touch: ' + (hasTouchedPostBO and not na(barsSBO) and barsSBO <= i_boTouchDays ? 'YES' : 'NO')
+        lt := lt + '\nBO PP: ' + (boWasPP ? 'YES' : 'NO')
+        lt := lt + '\nPost-BO VDU: ' + (hasDriedUpPostBO and not na(barsSBO) and barsSBO <= 10 ? 'YES' : 'NO')
+    lt := lt + '\nNear Piv VDU/PP: ' + (condNearPivotVDUorPP ? 'YES' : 'NO')
     label.new(bar_index, high, lt,
               style = label.style_label_down,
               color = color.teal, textcolor = color.white, size = size.small)
 
-// ═════════════════════════════════════════════════════════════════════════════
-//  STATUS TABLE  (top-right corner)
-//  Row map (18 rows, 0-indexed):
-//    0  Header
-//    1  Flat Base
-//    2  Base (Deep)
-//    3  Cup
-//    4  Cup + Handle
-//    5  Double Bottom
-//    6  Hi Tight Flag
-//    7  6-Wk Flat Base
-//    8  ─── Metrics ───
-//    9  Dist to Pivot
-//   10  Since BO
-//   11  Base Depth
-//   12  Pivot Price
-//   13  RS NH Count        ← NEW
-//   14  ─── Result ────
-//   15  Active Pattern
-//   16  Pattern Code
-//   17  ▶  SIGNAL
-// ═════════════════════════════════════════════════════════════════════════════
-var table tbl = table.new(position.top_right, 2, 19,           // ← was 18, now 19
-                           frame_color  = color.gray,             frame_width  = 1,
-                           border_color = color.rgb(80, 80, 80),  border_width = 1)
+// // ═════════════════════════════════════════════════════════════════════════════
+// //  STATUS TABLE  (top-right corner)
+// //  Row map (18 rows, 0-indexed):
+// //    0  Header
+// //    1  Flat Base
+// //    2  Base (Deep)
+// //    3  Cup
+// //    4  Cup + Handle
+// //    5  Double Bottom
+// //    6  Hi Tight Flag
+// //    7  6-Wk Flat Base
+// //    8  ─── Metrics ───
+// //    9  Dist to Pivot
+// //   10  Since BO
+// //   11  Base Depth
+// //   12  Pivot Price
+// //   13  RS NH Count        ← NEW
+// //   14  ─── Result ────
+// //   15  Active Pattern
+// //   16  Pattern Code
+// //   17  ▶  SIGNAL
+// // ═════════════════════════════════════════════════════════════════════════════
+// var table tbl = table.new(position.top_right, 2, 19,           // ← was 18, now 19
+//                            frame_color  = color.gray,             frame_width  = 1,
+//                            border_color = color.rgb(80, 80, 80),  border_width = 1)
 
-// Helper: fill one table cell
-f_cell(t, c, r, txt, bg) =>
-    table.cell(t, c, r, txt,
-               bgcolor    = bg,
-               text_color = color.white,
-               text_size  = size.small)
+// // Helper: fill one table cell
+// f_cell(t, c, r, txt, bg) =>
+//     table.cell(t, c, r, txt,
+//                bgcolor    = bg,
+//                text_color = color.white,
+//                text_size  = size.small)
 
-// Helper: pattern row  (ON/OFF | active/inactive)
-f_pRow(t, row, label, enabled, active) =>
-    color C_G = color.rgb(20, 110, 60, 20)
-    color C_D = color.rgb(40, 40, 40, 20)
-    table.cell(t, 0, row, label,    bgcolor = C_D, text_color = color.white, text_size = size.small)
-    string s  = enabled ? (active ? '✓ ACTIVE' : '—') : 'OFF'
-    color  bg = enabled and active ? C_G : C_D
-    table.cell(t, 1, row, s,        bgcolor = bg,  text_color = color.white, text_size = size.small)
+// // Helper: pattern row  (ON/OFF | active/inactive)
+// f_pRow(t, row, label, enabled, active) =>
+//     color C_G = color.rgb(20, 110, 60, 20)
+//     color C_D = color.rgb(40, 40, 40, 20)
+//     table.cell(t, 0, row, label,    bgcolor = C_D, text_color = color.white, text_size = size.small)
+//     string s  = enabled ? (active ? '✓ ACTIVE' : '—') : 'OFF'
+//     color  bg = enabled and active ? C_G : C_D
+//     table.cell(t, 1, row, s,        bgcolor = bg,  text_color = color.white, text_size = size.small)
 
-if barstate.islast and i_showTable
-    color C_H = color.rgb(20, 50, 100)
-    color C_G = color.rgb(20, 110, 60, 20)
-    color C_R = color.rgb(160, 30, 30, 20)
-    color C_D = color.rgb(40, 40, 40, 20)
-    color C_S = color.rgb(30, 30, 60)
+// if barstate.islast and i_showTable
+//     color C_H = color.rgb(20, 50, 100)
+//     color C_G = color.rgb(20, 110, 60, 20)
+//     color C_R = color.rgb(160, 30, 30, 20)
+//     color C_D = color.rgb(40, 40, 40, 20)
+//     color C_S = color.rgb(30, 30, 60)
 
-    // ── Header ────────────────────────────────────────────────────────────────
-    f_cell(tbl, 0,  0, 'PATTERN',         C_H)
-    f_cell(tbl, 1,  0, 'STATUS',          C_H)
+//     // ── Header ────────────────────────────────────────────────────────────────
+//     f_cell(tbl, 0,  0, 'PATTERN',         C_H)
+//     f_cell(tbl, 1,  0, 'STATUS',          C_H)
 
-    // ── Pattern rows ──────────────────────────────────────────────────────────
-    f_pRow(tbl,  1, 'Flat Base',      i_flatBase,  isFlatBase)
-    f_pRow(tbl,  2, 'Base (Deep)',    i_deepBase,  isDeepBase)
-    f_pRow(tbl,  3, 'Cup',            i_cup,       isCup)
-    f_pRow(tbl,  4, 'Cup + Handle',   i_cupHandle, isCupH)
-    f_pRow(tbl,  5, 'Double Bottom',  i_db,        isDB)
-    f_pRow(tbl,  6, 'Hi Tight Flag',  i_htf,       isHTF)
+//     // ── Pattern rows ──────────────────────────────────────────────────────────
+//     f_pRow(tbl,  1, 'Flat Base',      i_flatBase,  isFlatBase)
+//     f_pRow(tbl,  2, 'Base (Deep)',    i_deepBase,  isDeepBase)
+//     f_pRow(tbl,  3, 'Cup',            i_cup,       isCup)
+//     f_pRow(tbl,  4, 'Cup + Handle',   i_cupHandle, isCupH)
+//     f_pRow(tbl,  5, 'Double Bottom',  i_db,        isDB)
+//     f_pRow(tbl,  6, 'Hi Tight Flag',  i_htf,       isHTF)
 
-    // ── 6-Wk Flat Base row — show bar count when active ──────────────────────
-    color C_G2 = color.rgb(20, 110, 60, 20)
-    color C_D2 = color.rgb(40, 40, 40, 20)
-    table.cell(tbl, 0, 7, '6-Wk Flat Base',
-               bgcolor = C_D2, text_color = color.white, text_size = size.small)
-    string _6wkStatus = i_6wkFlat
-                      ? (is6WkFlat
-                         ? '✓ ' + str.tostring(bCount) + ' bars (' + str.tostring(math.round(bCount / 5.0, 1)) + 'w)'
-                         : (isFlatBase
-                            ? '— flat (' + str.tostring(bCount) + ' bars)'
-                            : '—'))
-                      : 'OFF'
-    color _6wkBg = i_6wkFlat and is6WkFlat ? C_G2 : C_D2
-    table.cell(tbl, 1, 7, _6wkStatus,
-               bgcolor = _6wkBg, text_color = color.white, text_size = size.small)
+//     // ── 6-Wk Flat Base row — show bar count when active ──────────────────────
+//     color C_G2 = color.rgb(20, 110, 60, 20)
+//     color C_D2 = color.rgb(40, 40, 40, 20)
+//     table.cell(tbl, 0, 7, '6-Wk Flat Base',
+//                bgcolor = C_D2, text_color = color.white, text_size = size.small)
+//     string _6wkStatus = i_6wkFlat
+//                       ? (is6WkFlat
+//                          ? '✓ ' + str.tostring(bCount) + ' bars (' + str.tostring(math.round(bCount / 5.0, 1)) + 'w)'
+//                          : (isFlatBase
+//                             ? '— flat (' + str.tostring(bCount) + ' bars)'
+//                             : '—'))
+//                       : 'OFF'
+//     color _6wkBg = i_6wkFlat and is6WkFlat ? C_G2 : C_D2
+//     table.cell(tbl, 1, 7, _6wkStatus,
+//                bgcolor = _6wkBg, text_color = color.white, text_size = size.small)
 
-    // ── Separator ─────────────────────────────────────────────────────────────
-    f_cell(tbl, 0,  8, '─── Metrics ───', C_S)
-    f_cell(tbl, 1,  8, '',                C_S)
+//     // ── Separator ─────────────────────────────────────────────────────────────
+//     f_cell(tbl, 0,  8, '─── Metrics ───', C_S)
+//     f_cell(tbl, 1,  8, '',                C_S)
 
-    // ── Metrics ───────────────────────────────────────────────────────────────
-    string distStr = na(distPct) ? 'N/A' : str.tostring(distPct,  '#.##') + '%'
-    string pivStr  = na(pivRef)  ? 'N/A' : str.tostring(pivRef,   format.mintick)
-    string depStr  = na(bDepPct) ? 'N/A' : str.tostring(bDepPct,  '#.##') + '%'
-    string boStr   = inBase ? 'In base' : na(barsSBO) ? 'N/A' : str.tostring(barsSBO) + ' bars ago'
+//     // ── Metrics ───────────────────────────────────────────────────────────────
+//     string distStr = na(distPct) ? 'N/A' : str.tostring(distPct,  '#.##') + '%'
+//     string pivStr  = na(pivRef)  ? 'N/A' : str.tostring(pivRef,   format.mintick)
+//     string depStr  = na(bDepPct) ? 'N/A' : str.tostring(bDepPct,  '#.##') + '%'
+//     string boStr   = inBase ? 'In base' : na(barsSBO) ? 'N/A' : str.tostring(barsSBO) + ' bars ago'
 
-    f_cell(tbl, 0,  9, 'Dist to Pivot',  C_D)
-    f_cell(tbl, 1,  9, distStr,           na(distPct) ? C_D : (distOk ? C_G : C_R))
-    f_cell(tbl, 0, 10, 'Since BO',        C_D)
-    f_cell(tbl, 1, 10, boStr,             modeOk ? C_G : C_R)
-    f_cell(tbl, 0, 11, 'Base Depth',      C_D)
-    f_cell(tbl, 1, 11, depStr,            C_D)
-    f_cell(tbl, 0, 12, 'Pivot Price',     C_D)
-    f_cell(tbl, 1, 12, pivStr,            C_D)
+//     f_cell(tbl, 0,  9, 'Dist to Pivot',  C_D)
+//     f_cell(tbl, 1,  9, distStr,           na(distPct) ? C_D : (distOk ? C_G : C_R))
+//     f_cell(tbl, 0, 10, 'Since BO',        C_D)
+//     f_cell(tbl, 1, 10, boStr,             modeOk ? C_G : C_R)
+//     f_cell(tbl, 0, 11, 'Base Depth',      C_D)
+//     f_cell(tbl, 1, 11, depStr,            C_D)
+//     f_cell(tbl, 0, 12, 'Pivot Price',     C_D)
+//     f_cell(tbl, 1, 12, pivStr,            C_D)
 
-    // ── RS New High Count row  ── ← NEW ──────────────────────────────────────
-    //  Green when count > 0; appends the current NH period label when firing
-    string _rsStr = str.tostring(rsCount) + ' day' + (rsCount == 1 ? '' : 's')
-                  + (rsNH_any ? '  ✦ ' + rsNH_per : '')
-    f_cell(tbl, 0, 13, 'RS NH Count',    C_D)
-    f_cell(tbl, 1, 13, _rsStr,           rsCount > 0 ? C_G : C_D)
+//     // ── RS New High Count row  ── ← NEW ──────────────────────────────────────
+//     //  Green when count > 0; appends the current NH period label when firing
+//     string _rsStr = str.tostring(rsCount) + ' day' + (rsCount == 1 ? '' : 's')
+//                   + (rsNH_any ? '  ✦ ' + rsNH_per : '')
+//     f_cell(tbl, 0, 13, 'RS NH Count',    C_D)
+//     f_cell(tbl, 1, 13, _rsStr,           rsCount > 0 ? C_G : C_D)
 
-    // ── MA Touch Post-BO row  ── ← NEW ───────────────────────────────────────
-    string touchStatus = inBase ? '—' : (hasTouchedPostBO ? '✓ YES' : 'NO')
-    color  touchBg     = not inBase and hasTouchedPostBO ? C_G : C_D
-    f_cell(tbl, 0, 14, 'MA Touch Post-BO', C_D)
-    f_cell(tbl, 1, 14, touchStatus,       touchBg)
+//     // ── MA Touch Post-BO row  ── ← NEW ───────────────────────────────────────
+//     string touchStatus = inBase ? '—' : (hasTouchedPostBO ? '✓ YES' : 'NO')
+//     color  touchBg     = not inBase and hasTouchedPostBO ? C_G : C_D
+//     f_cell(tbl, 0, 14, 'MA Touch Post-BO', C_D)
+//     f_cell(tbl, 1, 14, touchStatus,       touchBg)
 
-    // ── Separator ─────────────────────────────────────────────────────────────
-    f_cell(tbl, 0, 15, '─── Result ────', C_S)          // ← was row 14
-    f_cell(tbl, 1, 15, '',                C_S)
+//     // ── Separator ─────────────────────────────────────────────────────────────
+//     f_cell(tbl, 0, 15, '─── Result ────', C_S)          // ← was row 14
+//     f_cell(tbl, 1, 15, '',                C_S)
 
-    // ── Active pattern & overall signal ───────────────────────────────────────
-    f_cell(tbl, 0, 16, 'Active Pattern',  C_D)           // ← was row 15
-    f_cell(tbl, 1, 16, pName,             pOn ? C_G : C_D)
+//     // ── Active pattern & overall signal ───────────────────────────────────────
+//     f_cell(tbl, 0, 16, 'Active Pattern',  C_D)           // ← was row 15
+//     f_cell(tbl, 1, 16, pName,             pOn ? C_G : C_D)
 
-    f_cell(tbl, 0, 17, 'Pattern Code',    C_D)           // ← was row 16
-    string _codeStr = str.tostring(pCode) + '  (0=None 1=Base 2=Flat 3=Cup 4=CwH 5=DB 6=HTF 7=6wF)'
-    f_cell(tbl, 1, 17, _codeStr,          C_D)
+//     f_cell(tbl, 0, 17, 'Pattern Code',    C_D)           // ← was row 16
+//     string _codeStr = str.tostring(pCode) + '  (0=None 1=Base 2=Flat 3=Cup 4=CwH 5=DB 6=HTF 7=6wF)'
+//     f_cell(tbl, 1, 17, _codeStr,          C_D)
 
-    f_cell(tbl, 0, 18, '▶  SIGNAL',      signal ? C_G : C_R)   // ← was row 17
-    f_cell(tbl, 1, 18, signal ? '✓  MATCH' : '✗  NO MATCH', signal ? C_G : C_R)
+//     f_cell(tbl, 0, 18, '▶  SIGNAL',      signal ? C_G : C_R)   // ← was row 17
+//     f_cell(tbl, 1, 18, signal ? '✓  MATCH' : '✗  NO MATCH', signal ? C_G : C_R)
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  ALERTS
