@@ -103,6 +103,29 @@ i_rsLB   = input.int(250, 'RS 1Y Lookback (bars)',
               tooltip = '250 ≈ 1 trading year on a daily chart. '
                       + '6M (÷ 2) and 3M (÷ 4) lookback windows are derived automatically.')
 
+// ── Breakout MA Touch Scanner ───────────────────────────────────────────────
+i_boTouchDays = input.int(12, 'Touch Lookback Days/Bars',
+                  group   = 'Breakout MA Touch Scanner',
+                  tooltip = 'Lookback window (number of bars) after breakout to check for MA touch.')
+i_maLength1   = input.int(10, 'MA Length 1',
+                  group   = 'Breakout MA Touch Scanner',
+                  tooltip = 'Length of the first moving average (default = 10).')
+i_maType1     = input.string('EMA', 'MA Type 1', options = ['EMA', 'SMA'],
+                  group   = 'Breakout MA Touch Scanner')
+i_maLength2   = input.int(21, 'MA Length 2',
+                  group   = 'Breakout MA Touch Scanner',
+                  tooltip = 'Length of the second moving average (default = 21).')
+i_maType2     = input.string('EMA', 'MA Type 2', options = ['EMA', 'SMA'],
+                  group   = 'Breakout MA Touch Scanner')
+i_maLength3   = input.int(34, 'MA Length 3',
+                  group   = 'Breakout MA Touch Scanner',
+                  tooltip = 'Length of the third moving average (default = 34).')
+i_maType3     = input.string('EMA', 'MA Type 3', options = ['EMA', 'SMA'],
+                  group   = 'Breakout MA Touch Scanner')
+i_touchThresh = input.float(0.5, 'Touch Tolerance %', step = 0.1,
+                  group   = 'Breakout MA Touch Scanner',
+                  tooltip = 'Price is considered touching if its range (high to low) comes within this percent of the MA. Set to 0 for strict touch.')
+
 // ═════════════════════════════════════════════════════════════════════════════
 //  DERIVED CONSTANTS
 // ═════════════════════════════════════════════════════════════════════════════
@@ -518,6 +541,43 @@ else if rsWindow and rsNH_any
     rsCount := rsCount + 1
 
 // ═════════════════════════════════════════════════════════════════════════════
+//  BREAKOUT MA TOUCH SCANNER
+// ═════════════════════════════════════════════════════════════════════════════
+// Calculate moving averages
+float ma1 = i_maType1 == 'EMA' ? ta.ema(close, i_maLength1) : ta.sma(close, i_maLength1)
+float ma2 = i_maType2 == 'EMA' ? ta.ema(close, i_maLength2) : ta.sma(close, i_maLength2)
+float ma3 = i_maType3 == 'EMA' ? ta.ema(close, i_maLength3) : ta.sma(close, i_maLength3)
+
+// Helper function to check if price touches or is near a moving average within tolerance
+f_touchesMA(maVal, threshPct) =>
+    if na(maVal) or maVal <= 0
+        false
+    else
+        float upperLimit = maVal * (1.0 + threshPct / 100.0)
+        float lowerLimit = maVal * (1.0 - threshPct / 100.0)
+        // Price touches if the bar's high-low range intersects the MA range
+        low <= upperLimit and high >= lowerLimit
+
+bool touchMA1 = f_touchesMA(ma1, i_touchThresh)
+bool touchMA2 = f_touchesMA(ma2, i_touchThresh)
+bool touchMA3 = f_touchesMA(ma3, i_touchThresh)
+bool touchedMA = touchMA1 or touchMA2 or touchMA3
+
+// Check if we are within the specified post-breakout window (e.g. 1 to 10 days)
+bool inTouchWindow = not inBase and not na(barsSBO) and barsSBO >= 1 and barsSBO <= i_boTouchDays
+
+// 1. Current bar touch signal (true only on the bar that touches within the window)
+bool touchSignal = inTouchWindow and touchedMA
+
+// 2. Persistent touch flag (tracks if any touch has occurred since the breakout, within the window)
+var bool hasTouchedPostBO = false
+
+if newBase or inBase or (not na(barsSBO) and barsSBO == 0)
+    hasTouchedPostBO := false
+else if inTouchWindow and touchedMA
+    hasTouchedPostBO := true
+
+// ═════════════════════════════════════════════════════════════════════════════
 //  PLOT OUTPUTS  — visible in the Data Window and usable in TradingView Screener
 // ═════════════════════════════════════════════════════════════════════════════
 plot(signal      ? 1 : 0, title = 'Signal (0/1)',               display = display.all)
@@ -537,6 +597,8 @@ plot(isDB        ? 1 : 0, title = 'Is Double Bottom (0/1)',     display = displa
 plot(isHTF       ? 1 : 0, title = 'Is High Tight Flag (0/1)',   display = display.all)
 plot(is6WkFlat   ? 1 : 0, title = 'Is 6-Wk Flat Base (0/1)',   display = display.all)
 plot(pCode,               title = 'Pattern Code',                display = display.all)
+plot(touchSignal ? 1 : 0,      title = 'Touch MA Post-BO (0/1)',     display = display.all)
+plot(hasTouchedPostBO ? 1 : 0,  title = 'Has Touched MA Post-BO (0/1)', display = display.all)
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  VISUAL OUTPUT
@@ -557,6 +619,8 @@ if i_showLabel and signal and barstate.islast
         lt := lt + '\nBars:  ' + str.tostring(bCount) + '/' + str.tostring(i_6wkMin) + '–' + str.tostring(i_6wkMax)
     // RS New High count  ── ← NEW ────────────────────────────────────────────
     lt := lt + '\nRS NH: ' + str.tostring(rsCount) + (rsNH_any ? '  [✦ ' + rsNH_per + ']' : '')
+    if not inBase
+        lt := lt + '\nMA Touch: ' + (hasTouchedPostBO ? 'YES' : 'NO')
     label.new(bar_index, high, lt,
               style = label.style_label_down,
               color = color.teal, textcolor = color.white, size = size.small)
@@ -583,7 +647,7 @@ if i_showLabel and signal and barstate.islast
 //   16  Pattern Code
 //   17  ▶  SIGNAL
 // ═════════════════════════════════════════════════════════════════════════════
-var table tbl = table.new(position.top_right, 2, 18,           // ← was 17, now 18
+var table tbl = table.new(position.top_right, 2, 19,           // ← was 18, now 19
                            frame_color  = color.gray,             frame_width  = 1,
                            border_color = color.rgb(80, 80, 80),  border_width = 1)
 
@@ -664,20 +728,26 @@ if barstate.islast and i_showTable
     f_cell(tbl, 0, 13, 'RS NH Count',    C_D)
     f_cell(tbl, 1, 13, _rsStr,           rsCount > 0 ? C_G : C_D)
 
+    // ── MA Touch Post-BO row  ── ← NEW ───────────────────────────────────────
+    string touchStatus = inBase ? '—' : (hasTouchedPostBO ? '✓ YES' : 'NO')
+    color  touchBg     = not inBase and hasTouchedPostBO ? C_G : C_D
+    f_cell(tbl, 0, 14, 'MA Touch Post-BO', C_D)
+    f_cell(tbl, 1, 14, touchStatus,       touchBg)
+
     // ── Separator ─────────────────────────────────────────────────────────────
-    f_cell(tbl, 0, 14, '─── Result ────', C_S)          // ← was row 13
-    f_cell(tbl, 1, 14, '',                C_S)
+    f_cell(tbl, 0, 15, '─── Result ────', C_S)          // ← was row 14
+    f_cell(tbl, 1, 15, '',                C_S)
 
     // ── Active pattern & overall signal ───────────────────────────────────────
-    f_cell(tbl, 0, 15, 'Active Pattern',  C_D)           // ← was row 14
-    f_cell(tbl, 1, 15, pName,             pOn ? C_G : C_D)
+    f_cell(tbl, 0, 16, 'Active Pattern',  C_D)           // ← was row 15
+    f_cell(tbl, 1, 16, pName,             pOn ? C_G : C_D)
 
-    f_cell(tbl, 0, 16, 'Pattern Code',    C_D)           // ← was row 15
+    f_cell(tbl, 0, 17, 'Pattern Code',    C_D)           // ← was row 16
     string _codeStr = str.tostring(pCode) + '  (0=None 1=Base 2=Flat 3=Cup 4=CwH 5=DB 6=HTF 7=6wF)'
-    f_cell(tbl, 1, 16, _codeStr,          C_D)
+    f_cell(tbl, 1, 17, _codeStr,          C_D)
 
-    f_cell(tbl, 0, 17, '▶  SIGNAL',      signal ? C_G : C_R)   // ← was row 16
-    f_cell(tbl, 1, 17, signal ? '✓  MATCH' : '✗  NO MATCH', signal ? C_G : C_R)
+    f_cell(tbl, 0, 18, '▶  SIGNAL',      signal ? C_G : C_R)   // ← was row 17
+    f_cell(tbl, 1, 18, signal ? '✓  MATCH' : '✗  NO MATCH', signal ? C_G : C_R)
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  ALERTS
