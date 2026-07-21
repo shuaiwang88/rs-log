@@ -1,30 +1,56 @@
 // ================================================================
-// IBD MARKET SCHOOL — STATE MACHINE CORE
-// Pine Script v6
+// IBD MARKET SCHOOL — MARKET NAVIGATOR EDITION
+// Pine Script v6 — full rewrite
 //
-// Architecture:
+// v2 changes (this pass):
+//   * Removed the 21 EMA / 50 SMA / 200 SMA plots (and the 200 SMA
+//     calculation, which was unused by any signal). The 21 EMA and
+//     50 SMA values themselves are KEPT — B3-B9, S5-S9, and the
+//     Power Trend engine all depend on them — they're just no
+//     longer drawn on the chart.
+//   * Added hover tooltips: on every signal label/arrow (dynamic,
+//     built from whichever signals fired that bar), on each
+//     dashboard row, and on each plotted structural level.
+//
+// Rule sources used for this rewrite:
+//   * IBD Market School Home Study Program (Webster / O'Neil)
+//     signal set B1-B10 / S1-S14 as documented publicly in the
+//     open-source ThinkOrSwim port (useThinkScript #748) and the
+//     tradeviZion / Amphibiantrading "Market Navigator" guides.
+//   * Market Navigator features referenced (Amphibiantrading):
+//     Dynamic Day 1 selection, 95% stall-volume rule toggle,
+//     stall closing-range < 33%, Power Trend "Under Pressure"
+//     states, volatility-adjusted FTD tiers, exposure arrows,
+//     option-expiration Friday volume handling, banked stall
+//     days, circuit-breaker swing-high reset.
+//
+// Architecture (state transitions, not independent booleans):
 //   1. Market Data Engine
-//   2. Volume Engine
-//   3. Distribution / Stalling Engine
-//   4. Rally Structure Engine
-//   5. Buy / Sell Signal State Machine
-//   6. Power Trend State Machine
-//   7. Exposure Engine
-//   8. Dashboard / Visuals
+//   2. Volume Engine (incl. Friday / OpEx handling)
+//   3. Volatility Engine (volatility-adjusted FTD requirement)
+//   4. Pivot Engine (marked highs/lows for B8 / S12 / S14 / HH)
+//   5. Distribution / Stalling Engine (expiry, banking, clusters)
+//   6. Rally Structure State Machine (R? / R / Rm? / Rm / Rt)
+//   7. Buy / Sell Signal State Machine (B1-B10, S1-S14, CB, HH)
+//   8. Buy Switch + Restraint Rule
+//   9. Power Trend State Machine (On / Resume / UP+Floor / UP
+//      No-Floor / Off)
+//  10. Exposure Engine (0..+5, +7 with Power Trend buffer)
+//  11. Dashboard / Visuals / Alerts
 //
-// IMPORTANT:
-// This implementation is designed around STATE TRANSITIONS rather
-// than treating B1-B10 / S1-S14 as independent Boolean conditions.
+// NOT FINANCIAL ADVICE. Educational implementation of published
+// rules; verify all signals against IBD's own analysis before
+// relying on them.
 // ================================================================
 
 //@version=6
 indicator(
-     title            = "IBD Market School — State Machine",
-     shorttitle       = "IBD MS",
+     title            = "IBD Market School — Market Navigator Edition",
+     shorttitle       = "IBD MS Nav",
      overlay          = true,
      max_labels_count = 500,
-     max_lines_count  = 500
-)
+     max_lines_count  = 500,
+     max_bars_back    = 500)
 
 // ================================================================
 // CONSTANTS
@@ -32,136 +58,129 @@ indicator(
 
 // Rally states
 const int RALLY_NONE            = 0
-const int RALLY_POTENTIAL_MAJOR = 1
-const int RALLY_MAJOR           = 2
-const int RALLY_POTENTIAL_MINOR = 3
-const int RALLY_MINOR           = 4
-const int RALLY_TRAILING        = 5
+const int RALLY_POTENTIAL_MAJOR = 1   // "R?"
+const int RALLY_MAJOR           = 2   // "R"
+const int RALLY_POTENTIAL_MINOR = 3   // "Rm?"
+const int RALLY_MINOR           = 4   // "Rm"
+const int RALLY_TRAILING        = 5   // "Rt"
 
 // Power Trend states
 const int PT_OFF      = 0
 const int PT_ON       = 1
 const int PT_RESUME   = 2
-const int PT_FLOOR    = 3
-const int PT_NO_FLOOR = 4
+const int PT_FLOOR    = 3   // Under Pressure with floor (+1)
+const int PT_NO_FLOOR = 4   // Under Pressure without floor
 
 // ================================================================
 // SETTINGS
 // ================================================================
 
-grpGeneral = "General"
+grpGeneral = "General / Display"
 
-showSignals = input.bool(
-     true,
-     "Show Signal Labels",
-     group = grpGeneral
-)
+signalDisplay = input.string("All Signals", "Signal Display",
+     options = ["All Signals", "Exposure Changes Only", "Arrows Only", "Hide"],
+     tooltip = "All Signals: label every B/S signal. Exposure Changes Only: label only when the count moves. Arrows Only: small up/down arrows on count changes (Market Navigator style).",
+     group = grpGeneral)
 
-showTable = input.bool(
-     true,
-     "Show Market Status",
-     group = grpGeneral
-)
+showRallyLevels  = input.bool(true, "Show Rally / Signal Levels", group = grpGeneral)
+showRallyDayLbl  = input.bool(true, "Show Rally Day 1 Marks", group = grpGeneral)
+showPTBackground = input.bool(true, "Highlight Power Trend Background", group = grpGeneral)
+colorDistBars    = input.bool(false, "Color Distribution / Stall Bars", group = grpGeneral)
 
-showRallyLevels = input.bool(
-     true,
-     "Show Rally Levels",
-     group = grpGeneral
-)
+buyLblColor  = input.color(color.new(color.green, 0), "Buy Label Color", group = grpGeneral)
+sellLblColor = input.color(color.new(color.red, 0), "Sell Label Color", group = grpGeneral)
+
+grpDay1 = "Dynamic Day 1 (Market Navigator style)"
+
+useManualDay1 = input.bool(false, "Use Selected Day 1 Anchor",
+     tooltip = "When enabled, the bar picked below is forced to be Day 1 of the current rally attempt (a Day 1 is the first up day in a downtrend, or a down day closing in the upper half of its range). Leave off for fully automatic detection.",
+     group = grpDay1)
+
+day1Time = input.time(timestamp("01 Jan 2024 00:00 +0000"), "Day 1 of Current Rally Attempt",
+     confirm = true, group = grpDay1)
 
 grpRules = "IBD Rules"
 
-fullDDCount = input.int(
-     6,
-     "Full Distribution Count",
-     minval = 4,
-     maxval = 10,
-     group = grpRules
-)
+fullDDCount = input.int(6, "Full Distribution Count", minval = 4, maxval = 10,
+     tooltip = "Pre-1992: 4. 1992-2004: 5. 2005-present: 6.", group = grpRules)
 
-ddExpiration = input.int(
-     25,
-     "DD / SD Expiration Days",
-     minval = 1,
-     group = grpRules
-)
+ddExpiration = input.int(25, "DD / SD Expiration (sessions)", minval = 1, group = grpRules)
 
-ddRiseExpiration = input.float(
-     6.0,
-     "DD / SD Price Rise Expiration %",
-     step = 0.1,
-     group = grpRules
-)
+ddRiseExpiration = input.float(6.0, "DD / SD Price-Rise Expiration %", step = 0.1,
+     tooltip = "A distribution/stall day falls off when the index rises this % intraday above that day's close.", group = grpRules)
 
-volatilityLookback = input.int(
-     200,
-     "IBD Volatility Lookback",
-     minval = 50,
-     group = grpRules
-)
+volatilityLookback = input.int(200, "IBD Volatility Lookback", minval = 50, group = grpRules)
+
+use95Rule = input.bool(true, "95% Volume Rule for Stall Days",
+     tooltip = "On: stalling counts when volume is within 95% of the prior day (later IBD addition, Market Navigator default). Off: stalling requires higher volume than the prior day.", group = grpRules)
+
+stallRangeMax = input.float(33.0, "Stall Day Max Closing Range %", minval = 10, maxval = 50, step = 1,
+     tooltip = "Close must be in the bottom part of the range. Market Navigator uses < 33%; the original workbook used the lower half (50%).", group = grpRules)
+
+useStallBanking = input.bool(true, "Bank Excess Stall Days",
+     tooltip = "Workbook rule: after the first stall day, additional stall days only join the count once there are more distribution days than stall days. Banked stall days are promoted when that condition is met.", group = grpRules)
+
+pivotLen = input.int(9, "Marked High/Low Pivot Length", minval = 3, maxval = 20,
+     tooltip = "Bars on each side used to mark pivot highs/lows for B8 (Higher High), S12 (Lower Low) and S14.", group = grpRules)
+
+grpWeights = "Signal Weights"
+
+b1InitialCount = input.int(1, "B1 Initial Exposure Count", minval = 1, maxval = 2,
+     tooltip = "Workbook: the FTD sets the count to +1 (30%). Some implementations start at +2 to bundle the first buy off the low.", group = grpWeights)
+
+s1Weight   = input.int(1, "S1 Weight (FTD Undercut)", minval = 1, maxval = 2, group = grpWeights)
+s2mlWeight = input.int(2, "S2ml Weight (Minor Low Undercut)", minval = 1, maxval = 3, group = grpWeights)
 
 grpVolume = "Volume"
 
-volumeMode = input.string(
-     "Chart Volume",
-     "Volume Source",
-     options = [
-         "Chart Volume",
-         "Custom Volume",
-         "Custom Close Proxy"
-     ],
-     group = grpVolume
-)
+volumeMode = input.string("Chart Volume", "Volume Source",
+     options = ["Chart Volume", "Custom Volume", "Custom Close Proxy"], group = grpVolume)
 
-customVolumeSymbol = input.symbol(
-     "NASDAQ:IXIC",
-     "Custom Volume Symbol",
-     group = grpVolume
-)
+customVolumeSymbol = input.symbol("NASDAQ:IXIC", "Custom Volume Symbol", group = grpVolume)
 
-specialVolumeMode = input.string(
-     "None",
-     "Special Friday Volume Handling",
-     options = [
-         "None",
-         "FTD Only",
-         "All Volume Signals"
-     ],
-     group = grpVolume
-)
+specialVolumeMode = input.string("FTD Only", "Special Friday Volume Handling",
+     options = ["None", "FTD Only", "All Volume Signals"],
+     tooltip = "When the prior day was a Friday (option-expiration proxy), compare volume with the average of the prior week's non-Friday sessions instead of the previous day. IBD default: FTD Only.", group = grpVolume)
 
-grpVisual = "Moving Averages"
+grpTable = "Market Status Table"
 
-showEMA21 = input.bool(true, "21 EMA", group = grpVisual)
-showSMA50 = input.bool(true, "50 SMA", group = grpVisual)
-showSMA200 = input.bool(true, "200 SMA", group = grpVisual)
+showTable = input.bool(true, "Show Market Status Table", group = grpTable)
+tablePosition = input.string("Top Right", "Table Position",
+     options = ["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Right", "Bottom Left", "Bottom Center", "Bottom Right"], group = grpTable)
+tableSize = input.string("Small", "Table Text Size",
+     options = ["Tiny", "Small", "Normal", "Large"], group = grpTable)
+tableBg = input.color(color.new(color.black, 10), "Table Background", group = grpTable)
 
 // ================================================================
-// FUNCTIONS
+// PURE FUNCTIONS
 // ================================================================
 
 f_pct_change(float currentValue, float previousValue) =>
-    previousValue != 0 ?
-         (currentValue / previousValue - 1.0) * 100.0 :
-         0.0
+    previousValue != 0 ? (currentValue / previousValue - 1.0) * 100.0 : 0.0
 
-
+// IBD closing-range with gap adjustment:
+//   gap up   -> (close - prevClose) / (high - prevClose)
+//   gap down -> (close - low) / (prevClose - low)
 f_range_location() =>
-    float barRange = high - low
-
-    barRange > 0 ?
-         (close - low) / barRange :
-         0.5
-
+    float loc = 0.5
+    if low > high[1]
+        float denomUp = high - close[1]
+        loc := denomUp > 0 ? (close - close[1]) / denomUp : 0.5
+    else if high < low[1]
+        float denomDn = close[1] - low
+        loc := denomDn > 0 ? (close - low) / denomDn : 0.5
+    else
+        float denomNm = high - low
+        loc := denomNm > 0 ? (close - low) / denomNm : 0.5
+    loc
 
 f_power_state_name(int state) =>
     switch state
-        PT_ON       => "ON"
-        PT_RESUME   => "RESUME"
-        PT_FLOOR    => "PRESSURE + FLOOR"
-        PT_NO_FLOOR => "PRESSURE / NO FLOOR"
+        PT_ON       => "ON (+7 max, +2 floor)"
+        PT_RESUME   => "RESUME (+7 max, +2 floor)"
+        PT_FLOOR    => "U.P. FLOOR (+5 max, +1 floor)"
+        PT_NO_FLOOR => "U.P. NO FLOOR (+5 max)"
         => "OFF"
-
 
 f_rally_state_name(int state) =>
     switch state
@@ -172,7 +191,6 @@ f_rally_state_name(int state) =>
         RALLY_TRAILING        => "Rt"
         => "NONE"
 
-
 f_exposure_text(int count) =>
     count <= 0 ? "0%" :
      count == 1 ? "30%" :
@@ -181,133 +199,146 @@ f_exposure_text(int count) =>
      count == 4 ? "90%" :
      "100%"
 
+f_table_pos(string p) =>
+    switch p
+        "Top Left"      => position.top_left
+        "Top Center"    => position.top_center
+        "Top Right"     => position.top_right
+        "Middle Left"   => position.middle_left
+        "Middle Right"  => position.middle_right
+        "Bottom Left"   => position.bottom_left
+        "Bottom Center" => position.bottom_center
+        "Bottom Right"  => position.bottom_right
+        => position.top_right
+
+f_text_size(string s) =>
+    switch s
+        "Tiny"   => size.tiny
+        "Small"  => size.small
+        "Normal" => size.normal
+        "Large"  => size.large
+        => size.small
+
+// ----------------------------------------------------------------
+// Hover-over explanations for each signal code. One-line, plain-
+// English definition per code — used to build the dynamic tooltip
+// on signal labels/arrows and to annotate the dashboard.
+// ----------------------------------------------------------------
+
+f_sig_desc(string code) =>
+    switch code
+        "B1"   => "B1 - Follow-Through Day: first qualifying FTD confirming a new rally attempt; turns the Buy Switch ON."
+        "B2"   => "B2 - Additional Follow-Through: a second FTD-quality day within 25 sessions of Day 1, closing above the initial FTD low."
+        "B3"   => "B3 - Low Above 21 EMA: first up/flat day with the low holding at or above the 21-day EMA."
+        "B4"   => "B4 - Trending Above EMA: 5th straight qualifying day with lows at or above the 21 EMA."
+        "B5"   => "B5 - Living Above EMA: 10th day (and every 5th after) with lows holding above the 21 EMA."
+        "B6"   => "B6 - Low Above Rising 50 SMA: an up/flat day with the low at or above a rising 50-day SMA."
+        "B7"   => "B7 - Accumulation Day: FTD-quality volume/gain more than 25 sessions after Day 1, closing strong above the EMA and initial FTD low."
+        "B8"   => "B8 - Higher High: close breaks above the last marked pivot high while the Buy Switch is already on."
+        "HH"   => "HH - Higher High (Switch Forcer): close breaks above the last marked pivot high while the Buy Switch was off, forcing it on."
+        "B9"   => "B9 - Downside Reversal Buyback: close reclaims the S11 reversal day's high within 2 sessions."
+        "B10"  => "B10 - Distribution Fall-Off: the distribution count drops back to (Full - 2) with close above the 21 EMA."
+        "S1"   => "S1 - FTD Low Undercut: close breaks below the initial follow-through day's low."
+        "S2"   => "S2 - Major Rally Low Undercut: close breaks the confirmed major rally low - hard reset, Buy Switch turns off."
+        "S2ml" => "S2ml - Minor Rally Low Undercut: close breaks the confirmed minor rally low."
+        "S3"   => "S3 - Distribution Count at Full-1: the count reaches one below the full-distribution threshold."
+        "S4"   => "S4 - Full Distribution: the count reaches the full-distribution threshold (or up to two above it)."
+        "S5"   => "S5 - EMA Break: close falls 0.2%+ below the 21 EMA within 30 sessions of the last B3."
+        "S6"   => "S6 - Overdue EMA Break: same as S5, but 30+ sessions after the last B3 without an S5 in between."
+        "S7"   => "S7 - Trending Below EMA: 5th straight down day with highs below the 21 EMA."
+        "S8"   => "S8 - Living Below EMA: 10th down day (and every 5th after) with highs below the 21 EMA."
+        "S9"   => "S9 - Break Below 50 SMA: close breaks a prior-qualifying 50 SMA, with no shakeout exception."
+        "S10"  => "S10 - Bad Break: a sharp decline (2.25%+) closing in the bottom quarter of its range."
+        "S11"  => "S11 - Downside Reversal: a new 13-week high reverses to a weak close on a wide daily spread."
+        "S12"  => "S12 - Lower Low: close breaks below the last marked pivot low."
+        "S13"  => "S13 - Distribution Cluster: 4 or more distribution/stall days inside a rolling 8-session window."
+        "S14"  => "S14 - Break Below Higher High: close falls back below the level of the last B8/HH signal."
+        "CB"   => "Circuit Breaker: 10%+ off the post-FTD high with an intraday low 5%+ below the 50 SMA - hard reset."
+        "DD"   => "Distribution Day: index down 0.2%+ on higher volume than the prior/reference session."
+        "SD"   => "Stalling Day: index up modestly near a 13-week high on qualifying volume with a weak (bottom-range) close."
+        "H"    => "Heavy Volume, No Progress: elevated volume with only a small gain and a middling close near a high."
+        => code
 
 // ================================================================
-// MARKET DATA ENGINE
+// 1. MARKET DATA ENGINE
 // ================================================================
 
-ema21 = ta.ema(close, 21)
-sma50 = ta.sma(close, 50)
-sma200 = ta.sma(close, 200)
+ema21  = ta.ema(close, 21)
+sma50  = ta.sma(close, 50)
 
-pctChange = f_pct_change(close, close[1])
+crossEmaSma = ta.crossunder(ema21, sma50)
+
+pctChange     = f_pct_change(close, close[1])
 rangeLocation = f_range_location()
+spreadPct     = low > 0 ? (high - low) / low * 100.0 : 0.0
 
-upDay = close > close[1]
-flatDay = close == close[1]
-downDay = close < close[1]
-
+upDay       = close > close[1]
+downDay     = close < close[1]
 upOrFlatDay = close >= close[1]
 
-plot(
-     showEMA21 ? ema21 : na,
-     "21 EMA",
-     color = color.green,
-     linewidth = 2
-)
+highest65 = ta.highest(high, 65)         // ~13 weeks
+low10     = ta.lowest(low, 10)           // backward low-search seed
+low10Bar  = bar_index + ta.lowestbars(low, 10)
 
-plot(
-     showSMA50 ? sma50 : na,
-     "50 SMA",
-     color = color.red,
-     linewidth = 2
-)
+near13WeekHigh = high >= highest65 * 0.97
+new13WeekHigh  = high >= highest65
 
-plot(
-     showSMA200 ? sma200 : na,
-     "200 SMA",
-     color = color.gray,
-     linewidth = 2
-)
-
+// NOTE: the 21 EMA / 50 SMA / 200 SMA plots have been removed per
+// request. ema21 and sma50 are still calculated above and remain
+// load-bearing for B3-B9, S5-S9, and the Power Trend engine below
+// — they're just no longer drawn on the chart. The 200 SMA was
+// only ever used for its plot (no signal referenced it), so it has
+// been dropped entirely along with the plot.
 
 // ================================================================
-// VOLUME ENGINE
+// 2. VOLUME ENGINE
 // ================================================================
 
-customVolume = request.security(
-     customVolumeSymbol,
-     timeframe.period,
-     volume
-)
-
-customCloseProxy = request.security(
-     customVolumeSymbol,
-     timeframe.period,
-     close
-)
+customVolume     = request.security(customVolumeSymbol, timeframe.period, volume)
+customCloseProxy = request.security(customVolumeSymbol, timeframe.period, close)
 
 analysisVolume =
-     volumeMode == "Custom Volume" ?
-         customVolume :
-     volumeMode == "Custom Close Proxy" ?
-         customCloseProxy :
-         volume
+     volumeMode == "Custom Volume" ? customVolume :
+     volumeMode == "Custom Close Proxy" ? customCloseProxy :
+     volume
 
 previousAnalysisVolume = analysisVolume[1]
 
-
-// ------------------------------------------------
-// Prior non-Friday volume average
-// ------------------------------------------------
-
+// Prior non-Friday weekly average (option-expiration handling)
 f_prior_non_friday_average() =>
     float volumeSum = 0.0
     int volumeCount = 0
-
     for offset = 2 to 8
         if dayofweek[offset] != dayofweek.friday
             volumeSum += analysisVolume[offset]
             volumeCount += 1
-
-    volumeCount > 0 ?
-         volumeSum / volumeCount :
-         previousAnalysisVolume
-
+    volumeCount > 0 ? volumeSum / volumeCount : previousAnalysisVolume
 
 priorNonFridayAverage = f_prior_non_friday_average()
-
-previousDayWasFriday =
-     dayofweek[1] == dayofweek.friday
-
+previousDayWasFriday  = dayofweek[1] == dayofweek.friday
 
 f_volume_reference(bool isFTDSignal) =>
     bool useSpecial =
          specialVolumeMode == "All Volume Signals" or
-         (
-             specialVolumeMode == "FTD Only" and
-             isFTDSignal
-         )
+         (specialVolumeMode == "FTD Only" and isFTDSignal)
+    useSpecial and previousDayWasFriday ? priorNonFridayAverage : previousAnalysisVolume
 
-    useSpecial and previousDayWasFriday ?
-         priorNonFridayAverage :
-         previousAnalysisVolume
-
-
-ftdReferenceVolume = f_volume_reference(true)
+ftdReferenceVolume     = f_volume_reference(true)
 generalReferenceVolume = f_volume_reference(false)
 
-ftdVolumeUp =
-     analysisVolume > ftdReferenceVolume
-
-generalVolumeUp =
-     analysisVolume > generalReferenceVolume
+ftdVolumeUp     = analysisVolume > ftdReferenceVolume
+generalVolumeUp = analysisVolume > generalReferenceVolume
 
 stallVolumeQualified =
-     analysisVolume >= generalReferenceVolume * 0.95
-
+     use95Rule ?
+         analysisVolume >= generalReferenceVolume * 0.95 :
+         analysisVolume > generalReferenceVolume
 
 // ================================================================
-// IBD VOLATILITY ENGINE
+// 3. IBD VOLATILITY ENGINE (volatility-adjusted FTD requirement)
 // ================================================================
 
-// Up-day percentage gain.
-// Zero is excluded from the average.
-
-upGainPct =
-     close > close[1] ?
-         f_pct_change(close, close[1]) :
-         na
+upGainPct = close > close[1] ? f_pct_change(close, close[1]) : na
 
 float volatilitySum = 0.0
 int volatilityCount = 0
@@ -317,366 +348,357 @@ for offset = 0 to volatilityLookback - 1
         volatilitySum += upGainPct[offset]
         volatilityCount += 1
 
-ibdVolatility =
-     volatilityCount > 0 ?
-         volatilitySum / volatilityCount :
-         0.0
+ibdVolatility = volatilityCount > 0 ? volatilitySum / volatilityCount : 0.0
 
-
+// Tiers per Market School / Market Navigator:
+//   < 0.40%       -> 0.70%
+//   0.40 - 0.55%  -> 0.85%
+//   0.55 - 1.00%  -> 1.00%
+//   > 1.00%       -> 1.245%
 ftdRequirement =
      ibdVolatility < 0.40 ? 0.70 :
      ibdVolatility < 0.55 ? 0.85 :
      ibdVolatility <= 1.00 ? 1.00 :
      1.245
 
+// ================================================================
+// 4. PIVOT ENGINE — marked highs / lows (B8 / HH / S12 / S14)
+// ================================================================
+
+phVal = ta.pivothigh(high, pivotLen, pivotLen)
+plVal = ta.pivotlow(low, pivotLen, pivotLen)
+
+var float lastPivotHigh = na
+var float lastPivotLow  = na
+var bool  b8Armed  = false
+var bool  s12Armed = false
+
+if not na(phVal)
+    lastPivotHigh := phVal
+    b8Armed := true
+
+if not na(plVal)
+    lastPivotLow := plVal
+    s12Armed := true
 
 // ================================================================
-// DISTRIBUTION / STALLING ENGINE
+// 5. DISTRIBUTION / STALLING ENGINE
 // ================================================================
 
+// Counted events (contribute to the distribution count)
 var float[] ddCloseArray = array.new_float()
-var int[] ddBarArray = array.new_int()
-var int[] ddTypeArray = array.new_int()
+var int[]   ddBarArray   = array.new_int()
+var int[]   ddTypeArray  = array.new_int()   // 0 = DD, 1 = Stall, 2 = HVWPPU
 
-// Type
-// 0 = Distribution
-// 1 = Stalling
-// 2 = Heavy Volume Without Price Progress
+// Banked stall days (detected but not yet counted)
+var float[] bankCloseArray = array.new_float()
+var int[]   bankBarArray   = array.new_int()
+var int[]   bankTypeArray  = array.new_int()
 
-near13WeekHigh =
-     high >= ta.highest(high, 65) * 0.97
+// Raw event bars for the rolling 8-day distribution cluster
+var int[] clusterBarArray = array.new_int()
 
+f_count_types() =>
+    int dCnt = 0
+    int sCnt = 0
+    if array.size(ddTypeArray) > 0
+        for i = 0 to array.size(ddTypeArray) - 1
+            if array.get(ddTypeArray, i) == 0
+                dCnt += 1
+            else
+                sCnt += 1
+    [dCnt, sCnt]
 
-isDistributionDay =
-     pctChange <= -0.20 and
-     generalVolumeUp
+// ---------------- Event detection ----------------
 
+isDistributionDay = pctChange <= -0.20 and generalVolumeUp
 
 isStallingDay =
      near13WeekHigh and
-     pctChange >= 0 and
-     pctChange <= 0.40 and
+     pctChange > 0 and pctChange <= 0.40 and
      stallVolumeQualified and
-     rangeLocation < 0.50
+     rangeLocation < stallRangeMax / 100.0 and
+     not isDistributionDay
 
-
+// Heavy Volume Without Further Price Progress Up ("H")
 isHeavyVolumeNoProgress =
      near13WeekHigh and
-     analysisVolume > generalReferenceVolume and
-     pctChange > 0 and
-     pctChange <= 0.20 and
-     rangeLocation < 0.50
+     generalVolumeUp and
+     pctChange > 0 and pctChange <= 0.20 and
+     rangeLocation < 0.50 and
+     not isStallingDay and not isDistributionDay
 
+newDistributionEvent = isDistributionDay or isStallingDay or isHeavyVolumeNoProgress
 
-newDistributionEvent =
-     isDistributionDay or
-     isStallingDay or
-     isHeavyVolumeNoProgress
-
-
-if newDistributionEvent
-    array.push(ddCloseArray, close)
-    array.push(ddBarArray, bar_index)
-
-    int eventType =
-         isDistributionDay ? 0 :
-         isStallingDay ? 1 :
-         2
-
-    array.push(ddTypeArray, eventType)
-
-
-// ------------------------------------------------
-// Expiration engine
-// ------------------------------------------------
+// ---------------- Expiration (age or intraday % rise) ----------------
 
 if array.size(ddBarArray) > 0
-
     int ddIndex = array.size(ddBarArray) - 1
-
     while ddIndex >= 0
-
-        int eventBar =
-             array.get(ddBarArray, ddIndex)
-
-        float eventClose =
-             array.get(ddCloseArray, ddIndex)
-
-        int eventAge =
-             bar_index - eventBar
-
-        bool ageExpired =
-             eventAge >= ddExpiration
-
-        bool priceExpired =
-             close >=
-             eventClose *
-             (
-                 1.0 +
-                 ddRiseExpiration / 100.0
-             )
-
+        int eventBar     = array.get(ddBarArray, ddIndex)
+        float eventClose = array.get(ddCloseArray, ddIndex)
+        bool ageExpired   = bar_index - eventBar >= ddExpiration
+        bool priceExpired = high >= eventClose * (1.0 + ddRiseExpiration / 100.0)
         if ageExpired or priceExpired
-
-            array.remove(
-                 ddBarArray,
-                 ddIndex
-            )
-
-            array.remove(
-                 ddCloseArray,
-                 ddIndex
-            )
-
-            array.remove(
-                 ddTypeArray,
-                 ddIndex
-            )
-
+            array.remove(ddBarArray, ddIndex)
+            array.remove(ddCloseArray, ddIndex)
+            array.remove(ddTypeArray, ddIndex)
         ddIndex -= 1
 
+if array.size(bankBarArray) > 0
+    int bkIndex = array.size(bankBarArray) - 1
+    while bkIndex >= 0
+        int bEventBar     = array.get(bankBarArray, bkIndex)
+        float bEventClose = array.get(bankCloseArray, bkIndex)
+        bool bAgeExpired   = bar_index - bEventBar >= ddExpiration
+        bool bPriceExpired = high >= bEventClose * (1.0 + ddRiseExpiration / 100.0)
+        if bAgeExpired or bPriceExpired
+            array.remove(bankBarArray, bkIndex)
+            array.remove(bankCloseArray, bkIndex)
+            array.remove(bankTypeArray, bkIndex)
+        bkIndex -= 1
 
-distributionCount =
-     array.size(ddBarArray)
+// ---------------- Insert today's event ----------------
 
-previousDistributionCount =
-     nz(distributionCount[1])
+if newDistributionEvent
+    int eventType = isDistributionDay ? 0 : isStallingDay ? 1 : 2
+    bool countIt = true
+    if eventType != 0 and useStallBanking
+        [dCntNow, sCntNow] = f_count_types()
+        countIt := sCntNow == 0 or dCntNow > sCntNow
+    if countIt
+        array.push(ddCloseArray, close)
+        array.push(ddBarArray, bar_index)
+        array.push(ddTypeArray, eventType)
+    else
+        array.push(bankCloseArray, close)
+        array.push(bankBarArray, bar_index)
+        array.push(bankTypeArray, eventType)
+    array.push(clusterBarArray, bar_index)
 
+// ---------------- Promote banked stall days ----------------
 
-// ------------------------------------------------
-// Distribution cluster
-// ------------------------------------------------
+if useStallBanking and array.size(bankBarArray) > 0
+    bool keepPromoting = true
+    while keepPromoting
+        keepPromoting := false
+        if array.size(bankBarArray) > 0
+            [dCntP, sCntP] = f_count_types()
+            if dCntP > sCntP
+                array.push(ddCloseArray, array.get(bankCloseArray, 0))
+                array.push(ddBarArray, array.get(bankBarArray, 0))
+                array.push(ddTypeArray, array.get(bankTypeArray, 0))
+                array.shift(bankCloseArray)
+                array.shift(bankBarArray)
+                array.shift(bankTypeArray)
+                keepPromoting := true
 
-int clusterCount = 0
+// ---------------- Counts / cluster ----------------
 
-if array.size(ddBarArray) > 0
+int distributionCount = array.size(ddBarArray)
+previousDistributionCount = nz(distributionCount[1])
+countIncreasedToday = distributionCount > previousDistributionCount
 
-    for arrayIndex = 0 to array.size(ddBarArray) - 1
+// rolling 8-session cluster window (all raw DD + SD apply)
+if array.size(clusterBarArray) > 0
+    while array.size(clusterBarArray) > 0 and bar_index - array.get(clusterBarArray, 0) > 7
+        array.shift(clusterBarArray)
 
-        int distributionBar =
-             array.get(
-                 ddBarArray,
-                 arrayIndex
-             )
+int clusterCount = array.size(clusterBarArray)
+distributionCluster = clusterCount >= 4
 
-        if bar_index - distributionBar <= 7
-            clusterCount += 1
+// S13 — fires at 4 and on each successive increase up to 8 within
+// the rolling window; resets when the window count falls below 4.
+isS13 = newDistributionEvent and clusterCount >= 4 and clusterCount <= 8 and clusterCount > nz(clusterCount[1])
 
-
-distributionCluster =
-     clusterCount >= 4
-
-newDistributionCluster =
-     distributionCluster and
-     not distributionCluster[1]
-
+newFullDistribution = distributionCount >= fullDDCount and previousDistributionCount < fullDDCount
 
 // ================================================================
-// RALLY STRUCTURE STATE MACHINE
+// 6. RALLY STRUCTURE STATE MACHINE
 // ================================================================
 
-var int rallyState = RALLY_POTENTIAL_MAJOR
+var int rallyState = RALLY_NONE
 
-var float majorLow = na
-var int majorLowBar = na
+var float majorLow    = na
+var int   majorLowBar = na
+var float minorLow    = na
+var int   minorLowBar = na
 
-var float minorLow = na
-var int minorLowBar = na
+var float potentialMajorLow    = na
+var int   potentialMajorLowBar = na
+var float potentialMinorLow    = na
+var int   potentialMinorLowBar = na
 
-var float potentialMajorLow = na
-var int potentialMajorLowBar = na
+var float trailingLow    = na
+var int   trailingLowBar = na
+var bool  trailingFromMinor = false
 
-var float potentialMinorLow = na
-var int potentialMinorLowBar = na
-
-var float trailingLow = na
-var int trailingLowBar = na
-
-var int rallyDayBar = na
+var int   rallyDayBar = na
 var float rallyDayLow = na
+var bool  rallyAttemptActive = false
 
-var bool rallyAttemptActive = false
+var bool day1Applied    = false
+var bool doConfirmRally = false
 
-var bool fullDistributionSeen = false
-
-
-// ------------------------------------------------
-// Full distribution event
-// ------------------------------------------------
-
-newFullDistribution =
-     distributionCount >= fullDDCount and
-     previousDistributionCount < fullDDCount
-
+// ---------------- Full distribution starts a new low search ----------------
 
 if newFullDistribution
-
-    fullDistributionSeen := true
-
-    // Existing confirmed major rally:
-    // Begin potential minor rally search.
-
-    if rallyState == RALLY_MAJOR or
-       rallyState == RALLY_MINOR
-
+    if rallyState == RALLY_MAJOR or rallyState == RALLY_MINOR
         rallyState := RALLY_POTENTIAL_MINOR
-
-        potentialMinorLow := low
-        potentialMinorLowBar := bar_index
-
-    else
-
+        potentialMinorLow := low10
+        potentialMinorLowBar := low10Bar
+        rallyAttemptActive := false
+        rallyDayBar := na
+        rallyDayLow := na
+    else if rallyState == RALLY_NONE
         rallyState := RALLY_POTENTIAL_MAJOR
+        potentialMajorLow := low10
+        potentialMajorLowBar := low10Bar
+        rallyAttemptActive := false
+        rallyDayBar := na
+        rallyDayLow := na
 
-        potentialMajorLow := low
-        potentialMajorLowBar := bar_index
+// ---------------- Manual Day 1 anchor (Dynamic Day 1) ----------------
 
-
-// ------------------------------------------------
-// Backward / forward low search framework
-// ------------------------------------------------
-
-if rallyState == RALLY_POTENTIAL_MAJOR
-
-    if na(potentialMajorLow) or
-       low < potentialMajorLow
-
-        potentialMajorLow := low
-        potentialMajorLowBar := bar_index
-
-
-if rallyState == RALLY_POTENTIAL_MINOR
-
-    if na(potentialMinorLow) or
-       low < potentialMinorLow
-
+if useManualDay1 and not day1Applied and time >= day1Time and (na(time[1]) or time[1] < day1Time)
+    day1Applied := true
+    if rallyState == RALLY_NONE
+        rallyState := RALLY_POTENTIAL_MAJOR
+    if rallyState == RALLY_MAJOR or rallyState == RALLY_MINOR
+        rallyState := RALLY_POTENTIAL_MINOR
+    if rallyState == RALLY_POTENTIAL_MINOR and (na(potentialMinorLow) or low < potentialMinorLow)
         potentialMinorLow := low
         potentialMinorLowBar := bar_index
-
-
-// ------------------------------------------------
-// Rally day qualification
-// ------------------------------------------------
-
-pinkRallyDay =
-     downDay and
-     rangeLocation >= 0.50
-
-
-rallyDayCandidate =
-     upDay or
-     pinkRallyDay
-
-
-if (
-     rallyState == RALLY_POTENTIAL_MAJOR or
-     rallyState == RALLY_POTENTIAL_MINOR
-   ) and
-   rallyDayCandidate
-
+    if rallyState == RALLY_POTENTIAL_MAJOR and (na(potentialMajorLow) or low < potentialMajorLow)
+        potentialMajorLow := low
+        potentialMajorLowBar := bar_index
     rallyDayBar := bar_index
     rallyDayLow := low
     rallyAttemptActive := true
 
+// ---------------- Potential low tracking ----------------
 
-// ------------------------------------------------
-// Rally low continues lower
-// ------------------------------------------------
+if rallyState == RALLY_POTENTIAL_MAJOR and (na(potentialMajorLow) or low < potentialMajorLow)
+    potentialMajorLow := low
+    potentialMajorLowBar := bar_index
 
-if rallyAttemptActive and
-   low < rallyDayLow
+if rallyState == RALLY_POTENTIAL_MINOR and (na(potentialMinorLow) or low < potentialMinorLow)
+    potentialMinorLow := low
+    potentialMinorLowBar := bar_index
 
-    rallyDayLow := low
+// ---------------- Rally attempt invalidation (low undercut) ----------------
+
+if rallyAttemptActive and rallyState != RALLY_TRAILING and not na(rallyDayLow) and low < rallyDayLow
+    rallyAttemptActive := false
+    rallyDayBar := na
+    rallyDayLow := na
+
+// ---------------- Day 1 qualification ----------------
+// Day 1 = up day, or a down day closing in the upper half of range.
+
+pinkRallyDay = downDay and rangeLocation >= 0.50
+rallyDayCandidate = upDay or pinkRallyDay
+
+if (rallyState == RALLY_POTENTIAL_MAJOR or rallyState == RALLY_POTENTIAL_MINOR) and not rallyAttemptActive and rallyDayCandidate
     rallyDayBar := bar_index
+    rallyDayLow := low
+    rallyAttemptActive := true
 
+newDay1 = rallyAttemptActive and not rallyAttemptActive[1]
 
-rallyDayCount =
-     rallyAttemptActive and
-     not na(rallyDayBar) ?
-         bar_index - rallyDayBar + 1 :
-         0
+// ---------------- Trailing low (no FTD within 25 sessions) ----------------
 
+rallyDayCount = rallyAttemptActive and not na(rallyDayBar) ? bar_index - rallyDayBar + 1 : 0
 
-// ------------------------------------------------
-// Trailing low
-// ------------------------------------------------
-
-if rallyAttemptActive and
-   rallyDayCount > 25 and
-   rallyState != RALLY_TRAILING
-
+if rallyAttemptActive and rallyDayCount > 25 and (rallyState == RALLY_POTENTIAL_MAJOR or rallyState == RALLY_POTENTIAL_MINOR)
+    trailingFromMinor := rallyState == RALLY_POTENTIAL_MINOR
     rallyState := RALLY_TRAILING
-
     trailingLow := rallyDayLow
     trailingLowBar := rallyDayBar
 
+if rallyState == RALLY_TRAILING and (na(trailingLow) or low < trailingLow)
+    trailingLow := low
+    trailingLowBar := bar_index
 
-if rallyState == RALLY_TRAILING
+// ---------------- Active rally reference ----------------
 
-    if na(trailingLow) or
-       low < trailingLow
+activeRallyReferenceBar = rallyState == RALLY_TRAILING ? trailingLowBar : rallyDayBar
+activeRallyReferenceLow = rallyState == RALLY_TRAILING ? trailingLow : rallyDayLow
 
-        trailingLow := low
-        trailingLowBar := bar_index
-
+daysFromActiveRally = rallyAttemptActive and not na(activeRallyReferenceBar) ?
+     bar_index - activeRallyReferenceBar + 1 : 0
 
 // ================================================================
-// SIGNAL STATE VARIABLES
+// 7. SIGNAL STATE VARIABLES
 // ================================================================
 
-var bool buySwitch = false
+var bool buySwitch     = false
 var bool restraintRule = false
-
-var int exposureCount = 0
+var float restraintRef = na
+var int exposureCount  = 0
 
 var float initialFTDLow = na
-var float initialFTDClose = na
-var int initialFTDBar = na
+var int   initialFTDBar = na
 
-var bool b3Armed = true
-var bool emaSellArmed = false
+var bool b3Armed      = true    // B3 allowed (reset by S5/S6)
+var bool emaSellArmed = false   // B3 occurred; S5/S6 armed
+var int  barsSinceB3  = na
+var bool b4Armed      = false
+var int  b5NextMilestone = 10
 
-var int barsSinceB3 = na
+var bool s5Active = false       // S5/S6 occurred; S7/S8 chain active
+var bool s7Armed  = false
+var int  s8NextMilestone = 10
 
-var bool b3SinceB1 = false
+var bool b6Active = false       // B6 occurred; S9 armed
 
-var bool s5SeenSinceB3 = false
+var float b8Level  = na
+var bool  s14Armed = false
+var bool  hhSwitchActive = false
+var float hhActivation   = na
 
-var int daysLowAbove21 = 0
-var int daysHighBelow21 = 0
-
-var bool b6Active = false
+var float s11High = na
+var int   s11Bar  = na
+var bool  b9Armed = false
 
 var float highestHighSinceFTD = na
 
 var int powerTrendState = PT_OFF
-
 var int daysSincePressureSignal = 0
+var int daysEMA21AboveSMA50 = 0
 
+var int daysLowAbove21  = 0
+var int daysHighBelow21 = 0
+
+int exposureAtOpen = exposureCount
 
 // ================================================================
-// B1 — FOLLOW THROUGH DAY
+// EMA21 / MA STREAK COUNTERS
 // ================================================================
 
-activeRallyReferenceBar =
-     rallyState == RALLY_TRAILING ?
-         trailingLowBar :
-         rallyDayBar
+if low >= ema21
+    daysLowAbove21 += 1
+else
+    daysLowAbove21 := 0
+    b5NextMilestone := 10
 
+if high < ema21
+    daysHighBelow21 += 1
+else
+    daysHighBelow21 := 0
+    s8NextMilestone := 10
 
-activeRallyReferenceLow =
-     rallyState == RALLY_TRAILING ?
-         trailingLow :
-         rallyDayLow
+if ema21 > sma50
+    daysEMA21AboveSMA50 += 1
+else
+    daysEMA21AboveSMA50 := 0
 
-
-daysFromActiveRally =
-     not na(activeRallyReferenceBar) ?
-         bar_index -
-         activeRallyReferenceBar +
-         1 :
-         0
-
+// ================================================================
+// B1 — FOLLOW-THROUGH DAY (initial FTD)
+// ================================================================
+// Day 4+ of the rally attempt, gain >= volatility-adjusted
+// requirement, volume above reference. Turns the Buy Switch on,
+// confirms the rally structure and resets the distribution count.
 
 isB1 =
      rallyAttemptActive and
@@ -684,613 +706,516 @@ isB1 =
      pctChange >= ftdRequirement and
      ftdVolumeUp
 
-
 if isB1
-
     initialFTDLow := low
-    initialFTDClose := close
     initialFTDBar := bar_index
-
+    if not buySwitch or exposureAtOpen == 0
+        restraintRule := true
     buySwitch := true
-    restraintRule := true
-
-    exposureCount := 2
-
+    hhSwitchActive := false
+    restraintRef := close
+    exposureCount := math.max(exposureCount, b1InitialCount)
     highestHighSinceFTD := high
-
     b3Armed := true
     emaSellArmed := false
-
+    b4Armed := false
+    b5NextMilestone := 10
+    s5Active := false
+    s7Armed := false
+    s8NextMilestone := 10
     barsSinceB3 := na
-
-    b3SinceB1 := false
-    s5SeenSinceB3 := false
-
     b6Active := false
-
-    // Confirm rally structure.
-
-    if rallyState == RALLY_POTENTIAL_MINOR
-
-        minorLow := potentialMinorLow
-        minorLowBar := potentialMinorLowBar
-
-        rallyState := RALLY_MINOR
-
-    else
-
-        majorLow :=
-             rallyState == RALLY_TRAILING ?
-                 trailingLow :
-                 potentialMajorLow
-
-        majorLowBar :=
-             rallyState == RALLY_TRAILING ?
-                 trailingLowBar :
-                 potentialMajorLowBar
-
-        rallyState := RALLY_MAJOR
-
-    rallyAttemptActive := false
-
+    doConfirmRally := true
+    // FTD starts a fresh distribution cycle
+    array.clear(ddCloseArray)
+    array.clear(ddBarArray)
+    array.clear(ddTypeArray)
+    array.clear(bankCloseArray)
+    array.clear(bankBarArray)
+    array.clear(bankTypeArray)
+    array.clear(clusterBarArray)
 
 // ================================================================
-// B2 — ADDITIONAL FOLLOW THROUGH
+// B2 — ADDITIONAL FOLLOW-THROUGH (within 25 days of Day 1,
+//      closing above the low of the initial FTD)
 // ================================================================
 
 isB2 =
-     buySwitch and
-     not isB1 and
-     not na(rallyDayBar) and
-     bar_index - rallyDayBar <= 24 and
-     pctChange >= ftdRequirement and
-     ftdVolumeUp and
-     not na(initialFTDLow) and
-     close > initialFTDLow
-
+     buySwitch and not isB1 and
+     not na(rallyDayBar) and bar_index - rallyDayBar <= 24 and
+     pctChange >= ftdRequirement and ftdVolumeUp and
+     not na(initialFTDLow) and close > initialFTDLow
 
 // ================================================================
-// EMA21 COUNTERS
+// B3 — LOW ABOVE EMA21 (up/flat day; reset by S5/S6)
 // ================================================================
 
-if low >= ema21
-    daysLowAbove21 += 1
-else
-    daysLowAbove21 := 0
-
-
-if high < ema21
-    daysHighBelow21 += 1
-else
-    daysHighBelow21 := 0
-
-
-// ================================================================
-// B3 — LOW ABOVE EMA21
-// ================================================================
-
-isB3 =
-     buySwitch and
-     b3Armed and
-     upOrFlatDay and
-     low >= ema21
-
+isB3 = buySwitch and b3Armed and upOrFlatDay and low >= ema21
 
 if isB3
-
     b3Armed := false
     emaSellArmed := true
-
+    b4Armed := true
     barsSinceB3 := 0
-
-    b3SinceB1 := true
-    s5SeenSinceB3 := false
-
-
+    s5Active := false
 else if not na(barsSinceB3)
-
     barsSinceB3 += 1
 
-
 // ================================================================
-// B4 — FIVE DAYS ABOVE EMA21
-// ================================================================
-
-isB4 =
-     buySwitch and
-     daysLowAbove21 == 5
-
-
-// ================================================================
-// B5 — LIVING ABOVE EMA21
+// B4 — TRENDING ABOVE EMA21 (5th consecutive day low >= EMA21;
+//      on a down day, wait for the next up/flat day)
 // ================================================================
 
-isB5 =
-     buySwitch and
-     daysLowAbove21 >= 10 and
-     daysLowAbove21 % 5 == 0
+isB4 = buySwitch and emaSellArmed and b4Armed and upOrFlatDay and daysLowAbove21 >= 5
 
+if isB4
+    b4Armed := false
 
 // ================================================================
-// B6 — ABOVE RISING SMA50
+// B5 — LIVING ABOVE EMA21 (10th day and every 5th after;
+//      on a down day, wait for the next up/flat day)
 // ================================================================
 
-isB6 =
-     buySwitch and
-     not b6Active and
-     close > sma50 and
-     sma50 > sma50[1]
+isB5 = buySwitch and emaSellArmed and upOrFlatDay and daysLowAbove21 >= b5NextMilestone
 
+if isB5
+    b5NextMilestone := int(daysLowAbove21 / 5) * 5 + 5
+
+// ================================================================
+// B6 — LOW ABOVE RISING SMA50 (up/flat day; reset by S9)
+// ================================================================
+
+isB6 = buySwitch and not b6Active and upOrFlatDay and low >= sma50 and sma50 > sma50[1]
 
 if isB6
     b6Active := true
 
-
 // ================================================================
-// B7 — ACCUMULATION DAY
+// B7 — ACCUMULATION DAY (FTD-quality day, >25 days after Day 1,
+//      close in top 25% of range, above EMA21 and initial FTD low)
 // ================================================================
 
 isB7 =
      buySwitch and
-     not na(rallyDayBar) and
-     bar_index - rallyDayBar > 25 and
+     not na(rallyDayBar) and bar_index - rallyDayBar > 25 and
      pctChange >= ftdRequirement and
      generalVolumeUp and
-     rangeLocation >= 0.75
+     rangeLocation >= 0.75 and
+     close > ema21 and
+     (na(initialFTDLow) or close > initialFTDLow)
 
+// ================================================================
+// B8 / HH — HIGHER HIGH (close above last marked pivot high)
+//   Buy Switch ON  -> B8 buy signal (+1), arms S14 at that level.
+//   Buy Switch OFF -> HH: forces the Buy Switch on (restraint
+//   applies); deactivates if the close drops back below the level.
+// ================================================================
+
+bool isB8 = false
+bool isHH = false
+
+if b8Armed and not na(lastPivotHigh) and close > lastPivotHigh
+    b8Armed := false
+    b8Level := lastPivotHigh
+    s14Armed := true
+    if buySwitch
+        isB8 := true
+    else
+        isHH := true
+        buySwitch := true
+        hhSwitchActive := true
+        hhActivation := lastPivotHigh
+        if exposureAtOpen == 0
+            restraintRule := true
+        restraintRef := close
+        doConfirmRally := true
+
+// ================================================================
+// B9 — DOWNSIDE REVERSAL BUYBACK (close above the S11 day's high
+//      within two sessions of the S11)
+// ================================================================
+
+isB9 =
+     buySwitch and b9Armed and
+     not na(s11Bar) and bar_index > s11Bar and bar_index - s11Bar <= 2 and
+     not na(s11High) and close > s11High
+
+if isB9
+    b9Armed := false
+
+if not na(s11Bar) and bar_index - s11Bar > 2
+    b9Armed := false
+
+// ================================================================
+// B10 — DISTRIBUTION DAY FALL-OFF (count drops back to full
+//       distribution minus two, close above EMA21, Buy Switch on)
+// ================================================================
+
+isB10 =
+     buySwitch and close > ema21 and
+     distributionCount == fullDDCount - 2 and
+     previousDistributionCount > fullDDCount - 2
 
 // ================================================================
 // S1 — FTD LOW UNDERCUT
 // ================================================================
 
 isS1 =
-     buySwitch and
-     not na(initialFTDLow) and
-     close < initialFTDLow and
-     close[1] >= initialFTDLow
-
+     buySwitch and not na(initialFTDLow) and
+     close < initialFTDLow and close[1] >= initialFTDLow
 
 // ================================================================
-// S2 / S2ml — RALLY LOW UNDERCUT
+// S2 / S2ml — RALLY LOW UNDERCUTS
+//   S2  (major low): exposure to zero, Buy Switch off (hard reset)
+//   S2ml (minor low): exposure -2, Buy Switch stays on
 // ================================================================
 
-isS2Minor =
-     buySwitch and
-     not na(minorLow) and
-     close < minorLow and
-     close[1] >= minorLow
+isS2 = not na(majorLow) and close < majorLow and close[1] >= majorLow
 
+isS2Minor = not isS2 and not na(minorLow) and close < minorLow and close[1] >= minorLow
 
-isS2 =
-     buySwitch and
-     not na(majorLow) and
-     close < majorLow and
-     close[1] >= majorLow
-
-
-// ================================================================
-// S3 / S4 — DISTRIBUTION
-// ================================================================
-
-isS3 =
-     distributionCount ==
-         fullDDCount - 1 and
-     distributionCount >
-         previousDistributionCount
-
-
-isS4 =
-     newFullDistribution
-
+if isS2Minor
+    // minor rally failed — restart the minor-low search
+    rallyState := RALLY_POTENTIAL_MINOR
+    potentialMinorLow := low
+    potentialMinorLowBar := bar_index
+    rallyAttemptActive := false
+    rallyDayBar := na
+    rallyDayLow := na
+    minorLow := na
+    minorLowBar := na
 
 // ================================================================
-// S5 / S6 — EMA21 BREAK STATE MACHINE
+// S3 / S4 — DISTRIBUTION COUNT
+//   S3: count increases to full - 1 (each new time)
+//   S4: count increases to full .. full + 2 (each increase)
 // ================================================================
 
-ema21Break =
-     close <= ema21 * 0.998
+isS3 = countIncreasedToday and distributionCount == fullDDCount - 1
 
+isS4 = countIncreasedToday and distributionCount >= fullDDCount and distributionCount <= fullDDCount + 2
 
-isS5 =
-     buySwitch and
-     emaSellArmed and
-     not na(barsSinceB3) and
-     barsSinceB3 <= 30 and
-     ema21Break
+// ================================================================
+// S5 / S6 — EMA21 BREAK (close 0.2%+ below EMA21; reset by B3)
+//   S6 = overdue break, 30+ days after the last B3 without an S5
+// ================================================================
 
+ema21Break = close <= ema21 * 0.998
 
-isS6 =
-     buySwitch and
-     emaSellArmed and
-     not na(barsSinceB3) and
-     barsSinceB3 > 30 and
-     ema21Break
-
+isS5 = emaSellArmed and not na(barsSinceB3) and barsSinceB3 <= 30 and ema21Break
+isS6 = emaSellArmed and not na(barsSinceB3) and barsSinceB3 > 30 and ema21Break
 
 if isS5 or isS6
-
     emaSellArmed := false
-
     b3Armed := true
-
-    s5SeenSinceB3 := true
-
-
-// ================================================================
-// S7 — TRENDING BELOW EMA21
-// ================================================================
-
-isS7 =
-     buySwitch and
-     b3SinceB1 and
-     s5SeenSinceB3 and
-     daysHighBelow21 == 5 and
-     downDay
-
+    b4Armed := false
+    s5Active := true
+    s7Armed := true
+    s8NextMilestone := 10
 
 // ================================================================
-// S8 — LIVING BELOW EMA21
+// S7 — TRENDING BELOW EMA21 (5th consecutive day high < EMA21,
+//      down day; after an S5/S6; reset by B3)
 // ================================================================
 
-isS8 =
-     buySwitch and
-     b3SinceB1 and
-     s5SeenSinceB3 and
-     daysHighBelow21 >= 10 and
-     daysHighBelow21 % 5 == 0
+isS7 = s5Active and s7Armed and downDay and daysHighBelow21 >= 5
 
+if isS7
+    s7Armed := false
 
 // ================================================================
-// S9 — BREAK BELOW SMA50
+// S8 — LIVING BELOW EMA21 (10th day and every 5th after, down day)
 // ================================================================
 
-isS9 =
-     buySwitch and
-     b6Active and
-     close < sma50 and
-     close[1] >= sma50
+isS8 = s5Active and downDay and daysHighBelow21 >= s8NextMilestone
 
+if isS8
+    s8NextMilestone := int(daysHighBelow21 / 5) * 5 + 5
+
+// ================================================================
+// S9 — BREAK BELOW SMA50 (requires a prior B6; reset by B6)
+//   Shakeout exception: skipped when the close is in the upper
+//   half of the range and within 1% of the SMA50.
+// ================================================================
+
+shakeout = rangeLocation >= 0.50 and close >= sma50 * 0.99
+
+isS9 = b6Active and close < sma50 and close[1] >= sma50 and not shakeout
 
 if isS9
     b6Active := false
 
-
 // ================================================================
-// S10 — BAD BREAK
-// ================================================================
-
-isS10 =
-     pctChange <= -2.25 and
-     rangeLocation <= 0.25 and
-     (
-         close < sma50 or
-         high < ema21
-     )
-
-
-// ================================================================
-// S11 — DOWNSIDE REVERSAL
+// S10 — BAD BREAK (down 2.25%+ in the bottom 25% of range, with
+//       close < SMA50 or intraday high < EMA21)
 // ================================================================
 
-spreadPct =
-     low > 0 ?
-         (high - low) / low * 100 :
-         0.0
-
-
-new13WeekHigh =
-     high >= ta.highest(high, 65)
-
-
-isS11 =
-     new13WeekHigh and
-     downDay and
-     rangeLocation <= 0.25 and
-     spreadPct >= 1.75
-
+isS10 = pctChange <= -2.25 and rangeLocation <= 0.25 and (close < sma50 or high < ema21)
 
 // ================================================================
-// S13 — DISTRIBUTION CLUSTER
+// S11 — DOWNSIDE REVERSAL (new 13-week high, down day, close in
+//       bottom quartile, spread >= 1.75%)
 // ================================================================
 
-isS13 =
-     newDistributionCluster
+isS11 = new13WeekHigh and downDay and rangeLocation <= 0.25 and spreadPct >= 1.75
 
+if isS11
+    s11High := high
+    s11Bar := bar_index
+    b9Armed := true
 
 // ================================================================
-// CIRCUIT BREAKER
+// S12 — LOWER LOW (close below the last marked pivot low)
+// ================================================================
+
+isS12 = s12Armed and not na(lastPivotLow) and close < lastPivotLow
+
+if isS12
+    s12Armed := false
+
+// ================================================================
+// S14 — BREAK BELOW HIGHER HIGH (close below the level that
+//       printed the last B8 / HH)
+// ================================================================
+
+isS14 = s14Armed and not na(b8Level) and close < b8Level
+
+if isS14
+    s14Armed := false
+
+// ================================================================
+// CIRCUIT BREAKER — 10% off the post-FTD high AND intraday low
+// 5%+ below the SMA50. Swing high resets when the switch is off.
 // ================================================================
 
 if isB1
-
     highestHighSinceFTD := high
-
-
 else if buySwitch
-
-    highestHighSinceFTD :=
-         math.max(
-             nz(
-                 highestHighSinceFTD,
-                 high
-             ),
-             high
-         )
-
-
+    highestHighSinceFTD := math.max(nz(highestHighSinceFTD, high), high)
 else
-
     highestHighSinceFTD := na
 
+tenPercentDecline = buySwitch and not na(highestHighSinceFTD) and low <= highestHighSinceFTD * 0.90
+fivePercentBelowSMA50 = low <= sma50 * 0.95
 
-tenPercentDecline =
-     buySwitch and
-     not na(highestHighSinceFTD) and
-     low <= highestHighSinceFTD * 0.90
-
-
-fivePercentBelowSMA50 =
-     low <= sma50 * 0.95
-
-
-isCircuitBreaker =
-     tenPercentDecline and
-     fivePercentBelowSMA50
-
+isCircuitBreaker = tenPercentDecline and fivePercentBelowSMA50
 
 // ================================================================
-// POWER TREND STATE MACHINE
+// 9. POWER TREND STATE MACHINE
+// ================================================================
+//  ON:        lows above EMA21 for 10+ days, EMA21 > SMA50 for 5+
+//             days (no S9 inside the window), rising SMA50, up or
+//             flat close. Forces the Buy Switch on. Max +7, floor +2.
+//  U.P. w/ floor:  S2ml or S13. Max +5, floor +1.
+//  U.P. no floor:  S9. Max +5, no floor.
+//  RESUME:    10 clean days (no S2ml / S9 / S13) + ON conditions.
+//  OFF:       EMA21 crosses under SMA50 on a down day, S2, or CB.
 // ================================================================
 
-var int daysEMA21AboveSMA50 = 0
-
-if ema21 > sma50
-    daysEMA21AboveSMA50 += 1
-else
+if isS9
     daysEMA21AboveSMA50 := 0
 
-
-initialPowerConditions =
-     daysLowAbove21 >= 10 and
-     daysEMA21AboveSMA50 >= 5 and
-     sma50 > sma50[1]
-
-
-pressureSignal =
-     isS2Minor or
-     isS9 or
-     isS13
-
+pressureSignal = isS2Minor or isS9 or isS13
 
 if pressureSignal
     daysSincePressureSignal := 0
 else
     daysSincePressureSignal += 1
 
+initialPowerConditions =
+     daysLowAbove21 >= 10 and
+     daysEMA21AboveSMA50 >= 5 and
+     sma50 > sma50[1] and
+     upOrFlatDay
 
-if isS2 or isCircuitBreaker
-
+if isS2 or isCircuitBreaker or (crossEmaSma and downDay)
     powerTrendState := PT_OFF
-
-
-else if isS9
-
+else if (powerTrendState == PT_ON or powerTrendState == PT_RESUME) and isS9
     powerTrendState := PT_NO_FLOOR
-
-
-else if isS2Minor or isS13
-
+else if (powerTrendState == PT_ON or powerTrendState == PT_RESUME) and (isS2Minor or isS13)
     powerTrendState := PT_FLOOR
-
-
 else if powerTrendState == PT_FLOOR or powerTrendState == PT_NO_FLOOR
-
     if daysSincePressureSignal >= 10 and initialPowerConditions
-
         powerTrendState := PT_RESUME
-
-
-else if initialPowerConditions
-
+else if powerTrendState == PT_OFF and initialPowerConditions
     powerTrendState := PT_ON
 
+// A live Power Trend forces the Buy Switch on
+if powerTrendState != PT_OFF and not buySwitch
+    buySwitch := true
+    if exposureAtOpen == 0
+        restraintRule := true
+    if na(restraintRef)
+        restraintRef := close
+    doConfirmRally := true
 
-if ta.crossunder(ema21, sma50) and
-   downDay
-
-    powerTrendState := PT_OFF
-
-
-// ================================================================
-// RESTRAINT RULE
-// ================================================================
-
-if restraintRule and
-   (
-       (
-           not na(initialFTDClose) and
-           close > initialFTDClose * 1.01
-       ) or
-       isB4
-   )
-
+// HH-based switch deactivation (close back below activation level)
+if hhSwitchActive and not na(hhActivation) and close < hhActivation and powerTrendState == PT_OFF
+    buySwitch := false
+    hhSwitchActive := false
     restraintRule := false
 
+// ================================================================
+// RALLY CONFIRMATION (B1 / HH / Power Trend confirm R? -> R,
+// Rm? -> Rm, Rt -> R or Rm)
+// ================================================================
+
+if doConfirmRally
+    if rallyState == RALLY_POTENTIAL_MINOR
+        minorLow := potentialMinorLow
+        minorLowBar := potentialMinorLowBar
+        rallyState := RALLY_MINOR
+    else if rallyState == RALLY_TRAILING
+        if trailingFromMinor
+            minorLow := trailingLow
+            minorLowBar := trailingLowBar
+            rallyState := RALLY_MINOR
+        else
+            majorLow := trailingLow
+            majorLowBar := trailingLowBar
+            rallyState := RALLY_MAJOR
+    else if rallyState == RALLY_POTENTIAL_MAJOR
+        majorLow := potentialMajorLow
+        majorLowBar := potentialMajorLowBar
+        rallyState := RALLY_MAJOR
+    rallyAttemptActive := false
+    doConfirmRally := false
 
 // ================================================================
-// EXPOSURE ENGINE
+// RESTRAINT RULE — cap +2 until significant progress (the FTD
+// percentage requirement above the switch-on close) or a B4.
+// ================================================================
+
+if restraintRule
+    bool significantProgress = not na(restraintRef) and close > restraintRef * (1.0 + ftdRequirement / 100.0)
+    if significantProgress or isB4 or not buySwitch
+        restraintRule := false
+
+// ================================================================
+// 10. EXPOSURE ENGINE
 // ================================================================
 
 int buySignalChange = 0
+buySignalChange += isB2 ? 1 : 0
+buySignalChange += isB3 ? 1 : 0
+buySignalChange += isB4 ? 1 : 0
+buySignalChange += isB5 ? 1 : 0
+buySignalChange += isB6 ? 1 : 0
+buySignalChange += isB7 ? 1 : 0
+buySignalChange += isB8 ? 1 : 0
+buySignalChange += isHH ? 1 : 0
+buySignalChange += isB9 ? 1 : 0
+buySignalChange += isB10 ? 1 : 0
+
 int sellSignalChange = 0
+sellSignalChange -= isS1 ? s1Weight : 0
+sellSignalChange -= isS2Minor ? s2mlWeight : 0
+sellSignalChange -= isS3 ? 1 : 0
+sellSignalChange -= isS4 ? 1 : 0
+sellSignalChange -= isS5 ? 1 : 0
+sellSignalChange -= isS6 ? 1 : 0
+sellSignalChange -= isS7 ? 1 : 0
+sellSignalChange -= isS8 ? 1 : 0
+sellSignalChange -= isS9 ? 1 : 0
+sellSignalChange -= isS10 ? 1 : 0
+sellSignalChange -= isS11 ? 1 : 0
+sellSignalChange -= isS12 ? 1 : 0
+sellSignalChange -= isS13 ? 1 : 0
+sellSignalChange -= isS14 ? 1 : 0
 
+// Buy Switch on: act on all signals. Off: act on sells only.
+if not isB1
+    if buySwitch
+        exposureCount += buySignalChange + sellSignalChange
+    else
+        exposureCount += sellSignalChange
 
-if isB2
-    buySignalChange += 1
+exposureCount := math.max(exposureCount, 0)
 
-if isB3
-    buySignalChange += 1
-
-if isB4
-    buySignalChange += 1
-
-if isB5
-    buySignalChange += 1
-
-if isB6
-    buySignalChange += 1
-
-if isB7
-    buySignalChange += 1
-
-
-if isS1
-    sellSignalChange -= 2
-
-if isS2Minor
-    sellSignalChange -= 2
-
-if isS3
-    sellSignalChange -= 1
-
-if isS4
-    sellSignalChange -= 1
-
-if isS5
-    sellSignalChange -= 1
-
-if isS6
-    sellSignalChange -= 1
-
-if isS7
-    sellSignalChange -= 1
-
-if isS8
-    sellSignalChange -= 1
-
-if isS9
-    sellSignalChange -= 1
-
-if isS10
-    sellSignalChange -= 1
-
-if isS11
-    sellSignalChange -= 1
-
-if isS13
-    sellSignalChange -= 1
-
-
-if buySwitch and
-   not isB1
-
-    exposureCount +=
-         buySignalChange +
-         sellSignalChange
-
-
-exposureCount :=
-     math.max(
-         exposureCount,
-         0
-     )
-
-
-// ------------------------------------------------
-// Power Trend floor / ceiling
-// ------------------------------------------------
-
-powerFloor =
-     powerTrendState == PT_ON ? 2 :
-     powerTrendState == PT_RESUME ? 2 :
+// Power Trend floors / ceilings
+int powerFloor =
+     powerTrendState == PT_ON or powerTrendState == PT_RESUME ? 2 :
      powerTrendState == PT_FLOOR ? 1 :
      0
 
-
-powerCeiling =
-     powerTrendState == PT_ON ? 7 :
-     powerTrendState == PT_RESUME ? 7 :
+int powerCeiling =
+     powerTrendState == PT_ON or powerTrendState == PT_RESUME ? 7 :
      5
 
-
 if buySwitch
-
-    exposureCount :=
-         math.max(
-             exposureCount,
-             powerFloor
-         )
-
-    exposureCount :=
-         math.min(
-             exposureCount,
-             powerCeiling
-         )
-
+    if powerFloor > 0 and nz(exposureCount[1]) >= powerFloor
+        exposureCount := math.max(exposureCount, powerFloor)
+    exposureCount := math.min(exposureCount, powerCeiling)
+else
+    exposureCount := math.min(exposureCount, 5)
 
 if restraintRule
-
-    exposureCount :=
-         math.min(
-             exposureCount,
-             2
-         )
-
+    exposureCount := math.min(exposureCount, 2)
 
 // ================================================================
-// HARD RESET
+// SOFT BUY SWITCH OFF — full distribution (S4) with the exposure
+// count at zero turns the switch off (unless a Power Trend forces
+// it on). Rally structure is preserved.
 // ================================================================
 
-if isS2 or
-   isCircuitBreaker
-
+if isS4 and exposureCount == 0 and buySwitch and powerTrendState == PT_OFF and not isB1
     buySwitch := false
-
+    hhSwitchActive := false
     restraintRule := false
-
-    exposureCount := 0
-
-    powerTrendState := PT_OFF
-
+    initialFTDLow := na
+    initialFTDBar := na
+    highestHighSinceFTD := na
     b3Armed := true
     emaSellArmed := false
-
+    b4Armed := false
+    s5Active := false
+    s7Armed := false
     barsSinceB3 := na
-
-    b3SinceB1 := false
-    s5SeenSinceB3 := false
-
     b6Active := false
 
+// ================================================================
+// HARD RESET — S2 (major low undercut) or Circuit Breaker:
+// exposure to zero, Buy Switch off, Power Trend off, and a new
+// potential-major-low search begins.
+// ================================================================
+
+if isS2 or isCircuitBreaker
+    buySwitch := false
+    hhSwitchActive := false
+    restraintRule := false
+    restraintRef := na
+    exposureCount := 0
+    powerTrendState := PT_OFF
+    b3Armed := true
+    emaSellArmed := false
+    b4Armed := false
+    s5Active := false
+    s7Armed := false
+    barsSinceB3 := na
+    b6Active := false
     initialFTDLow := na
-    initialFTDClose := na
     initialFTDBar := na
-
     highestHighSinceFTD := na
-
     rallyAttemptActive := false
-
-    rallyState := RALLY_POTENTIAL_MAJOR
-    potentialMajorLow := low
-    potentialMajorLowBar := bar_index
-    potentialMinorLow := na
-    potentialMinorLowBar := na
-    trailingLow := na
-    trailingLowBar := na
     rallyDayBar := na
     rallyDayLow := na
-    majorLow := na
-    majorLowBar := na
+    doConfirmRally := false
+    trailingLow := na
+    trailingLowBar := na
+    trailingFromMinor := false
     minorLow := na
     minorLowBar := na
-
+    rallyState := RALLY_POTENTIAL_MAJOR
+    potentialMajorLow := low10
+    potentialMajorLowBar := low10Bar
 
 // ================================================================
-// SIGNAL TEXT
+// 11. VISUALS
 // ================================================================
+
+// ---------------- Signal text + hover tooltip ----------------
 
 string signalText = ""
-
 signalText += isB1 ? "B1 " : ""
 signalText += isB2 ? "B2 " : ""
 signalText += isB3 ? "B3 " : ""
@@ -1298,7 +1223,10 @@ signalText += isB4 ? "B4 " : ""
 signalText += isB5 ? "B5 " : ""
 signalText += isB6 ? "B6 " : ""
 signalText += isB7 ? "B7 " : ""
-
+signalText += isB8 ? "B8 " : ""
+signalText += isHH ? "HH " : ""
+signalText += isB9 ? "B9 " : ""
+signalText += isB10 ? "B10 " : ""
 signalText += isS1 ? "S1 " : ""
 signalText += isS2 ? "S2 " : ""
 signalText += isS2Minor ? "S2ml " : ""
@@ -1311,409 +1239,214 @@ signalText += isS8 ? "S8 " : ""
 signalText += isS9 ? "S9 " : ""
 signalText += isS10 ? "S10 " : ""
 signalText += isS11 ? "S11 " : ""
+signalText += isS12 ? "S12 " : ""
 signalText += isS13 ? "S13 " : ""
-
+signalText += isS14 ? "S14 " : ""
 signalText += isCircuitBreaker ? "CB " : ""
+signalText += isDistributionDay ? "DD " : ""
+signalText += isStallingDay ? "SD " : ""
+signalText += isHeavyVolumeNoProgress ? "H " : ""
 
-signalText +=
-     isDistributionDay ? "DD " : ""
+// Dynamic hover text: one plain-English line per signal that fired
+// on this bar. Shown on the label/arrow itself and reused on the
+// dashboard's "Today" row.
+string signalTooltip = ""
+signalTooltip += isB1 ? f_sig_desc("B1") + "\n" : ""
+signalTooltip += isB2 ? f_sig_desc("B2") + "\n" : ""
+signalTooltip += isB3 ? f_sig_desc("B3") + "\n" : ""
+signalTooltip += isB4 ? f_sig_desc("B4") + "\n" : ""
+signalTooltip += isB5 ? f_sig_desc("B5") + "\n" : ""
+signalTooltip += isB6 ? f_sig_desc("B6") + "\n" : ""
+signalTooltip += isB7 ? f_sig_desc("B7") + "\n" : ""
+signalTooltip += isB8 ? f_sig_desc("B8") + "\n" : ""
+signalTooltip += isHH ? f_sig_desc("HH") + "\n" : ""
+signalTooltip += isB9 ? f_sig_desc("B9") + "\n" : ""
+signalTooltip += isB10 ? f_sig_desc("B10") + "\n" : ""
+signalTooltip += isS1 ? f_sig_desc("S1") + "\n" : ""
+signalTooltip += isS2 ? f_sig_desc("S2") + "\n" : ""
+signalTooltip += isS2Minor ? f_sig_desc("S2ml") + "\n" : ""
+signalTooltip += isS3 ? f_sig_desc("S3") + "\n" : ""
+signalTooltip += isS4 ? f_sig_desc("S4") + "\n" : ""
+signalTooltip += isS5 ? f_sig_desc("S5") + "\n" : ""
+signalTooltip += isS6 ? f_sig_desc("S6") + "\n" : ""
+signalTooltip += isS7 ? f_sig_desc("S7") + "\n" : ""
+signalTooltip += isS8 ? f_sig_desc("S8") + "\n" : ""
+signalTooltip += isS9 ? f_sig_desc("S9") + "\n" : ""
+signalTooltip += isS10 ? f_sig_desc("S10") + "\n" : ""
+signalTooltip += isS11 ? f_sig_desc("S11") + "\n" : ""
+signalTooltip += isS12 ? f_sig_desc("S12") + "\n" : ""
+signalTooltip += isS13 ? f_sig_desc("S13") + "\n" : ""
+signalTooltip += isS14 ? f_sig_desc("S14") + "\n" : ""
+signalTooltip += isCircuitBreaker ? f_sig_desc("CB") + "\n" : ""
+signalTooltip += isDistributionDay ? f_sig_desc("DD") + "\n" : ""
+signalTooltip += isStallingDay ? f_sig_desc("SD") + "\n" : ""
+signalTooltip += isHeavyVolumeNoProgress ? f_sig_desc("H") + "\n" : ""
 
-signalText +=
-     isStallingDay ? "SD " : ""
+int netSignalChange = buySignalChange + sellSignalChange + (isB1 ? b1InitialCount : 0)
+bool positiveSignal = netSignalChange > 0 or isB1 or isHH
 
-signalText +=
-     isHeavyVolumeNoProgress ? "H " : ""
+bool exposureChanged = exposureCount != nz(exposureCount[1])
 
+// ---------------- Labels / arrows ----------------
+
+if signalText != "" and signalDisplay == "All Signals"
+    label.new(bar_index, high, signalText,
+         color = color.new(positiveSignal ? buyLblColor : sellLblColor, 70),
+         textcolor = positiveSignal ? buyLblColor : sellLblColor,
+         style = label.style_label_down, size = size.tiny, tooltip = signalTooltip)
+
+if signalText != "" and signalDisplay == "Exposure Changes Only" and exposureChanged
+    label.new(bar_index, high, signalText,
+         color = color.new(positiveSignal ? buyLblColor : sellLblColor, 70),
+         textcolor = positiveSignal ? buyLblColor : sellLblColor,
+         style = label.style_label_down, size = size.tiny, tooltip = signalTooltip)
+
+if signalDisplay == "Arrows Only" and exposureChanged
+    bool exposureUp = exposureCount > nz(exposureCount[1])
+    if exposureUp
+        label.new(bar_index, low, "▲",
+             color = color.new(color.black, 100),
+             textcolor = buyLblColor,
+             style = label.style_label_up, size = size.tiny, tooltip = signalTooltip)
+    else
+        label.new(bar_index, high, "▼",
+             color = color.new(color.black, 100),
+             textcolor = sellLblColor,
+             style = label.style_label_down, size = size.tiny, tooltip = signalTooltip)
+
+// Rally Day 1 marker
+if showRallyDayLbl and newDay1
+    label.new(bar_index, low, "D1",
+         color = color.new(color.blue, 70),
+         textcolor = color.new(color.blue, 0),
+         style = label.style_label_up, size = size.tiny,
+         tooltip = "Day 1 of a new rally attempt: the first up day off the low, or a down day closing in the upper half of its range.")
+
+// ---------------- Bar coloring / Power Trend background ----------------
+
+barcolor(colorDistBars and isDistributionDay ? color.orange :
+     colorDistBars and (isStallingDay or isHeavyVolumeNoProgress) ? color.fuchsia :
+     na)
+
+color ptBg = not showPTBackground ? na :
+     powerTrendState == PT_ON or powerTrendState == PT_RESUME ? color.new(color.green, 88) :
+     powerTrendState == PT_FLOOR ? color.new(color.yellow, 85) :
+     powerTrendState == PT_NO_FLOOR ? color.new(color.orange, 85) :
+     na
+
+bgcolor(ptBg)
+
+// ---------------- Level plots ----------------
+
+plot(showRallyLevels ? majorLow : na, "Major Low (S2)", color = color.red, style = plot.style_stepline,
+     tooltip = "Confirmed major rally low. A close below this triggers S2 - hard reset (Buy Switch off, exposure to 0).")
+plot(showRallyLevels ? minorLow : na, "Minor Low (S2ml)", color = color.orange, style = plot.style_stepline,
+     tooltip = "Confirmed minor rally low. A close below this triggers S2ml - exposure reduced, Buy Switch stays on.")
+plot(showRallyLevels and rallyState == RALLY_TRAILING ? trailingLow : na, "Trailing Low (Rt)", color = color.purple, style = plot.style_stepline,
+     tooltip = "Trailing low tracked once a rally attempt goes 25+ sessions without a Follow-Through Day.")
+plot(showRallyLevels ? initialFTDLow : na, "Initial FTD Low (S1)", color = color.blue, style = plot.style_stepline,
+     tooltip = "Low of the initial Follow-Through Day. A close below this triggers S1.")
+plot(showRallyLevels and s14Armed ? b8Level : na, "B8 Higher-High Level (S14)", color = color.teal, style = plot.style_stepline,
+     tooltip = "Price level of the last confirmed Higher High (B8/HH). A close below this triggers S14.")
+plot(showRallyLevels and s12Armed ? lastPivotLow : na, "Marked Low (S12)", color = color.maroon, style = plot.style_stepline,
+     tooltip = "Last marked pivot low. A close below this triggers S12.")
 
 // ================================================================
-// LABELS
+// DASHBOARD (Market Navigator style status table)
 // ================================================================
 
-if showSignals and
-   signalText != ""
+var table dashboard = table.new(f_table_pos(tablePosition), 2, 14, bgcolor = tableBg, border_width = 1)
 
-    bool positiveSignal =
-         buySignalChange > 0 or
-         isB1
+int exposureBuffer = math.max(exposureCount - 5, 0)
 
-    color labelBackground =
-         positiveSignal ?
-             color.new(
-                 color.green,
-                 70
-             ) :
-             color.new(
-                 color.red,
-                 70
-             )
+if barstate.islast and showTable
+    string tSize = f_text_size(tableSize)
 
-    color labelText =
-         positiveSignal ?
-             color.green :
-             color.red
+    table.cell(dashboard, 0, 0, "IBD MARKET SCHOOL", bgcolor = color.blue, text_color = color.white, text_size = tSize)
+    table.cell(dashboard, 1, 0, syminfo.ticker, bgcolor = color.blue, text_color = color.white, text_size = tSize)
 
-    label.new(
-         bar_index,
-         high,
-         signalText,
-         color = labelBackground,
-         textcolor = labelText,
-         style = label.style_label_down,
-         size = size.tiny
-    )
+    table.cell(dashboard, 0, 1, "Buy Switch", text_color = color.white, text_size = tSize,
+         tooltip = "ON when a confirmed rally (FTD, Higher-High, or Power Trend) is active; OFF after a hard reset (S2 or Circuit Breaker).")
+    table.cell(dashboard, 1, 1, buySwitch ? (powerTrendState != PT_OFF ? "ON (forced)" : "ON") : "OFF",
+         bgcolor = buySwitch ? color.green : color.red, text_color = color.white, text_size = tSize)
 
+    table.cell(dashboard, 0, 2, "Exposure", text_color = color.white, text_size = tSize,
+         tooltip = "Suggested market exposure level based on the net signal count (0%, 30%, 55%, 75%, 90%, 100%).")
+    table.cell(dashboard, 1, 2, f_exposure_text(exposureCount), text_color = color.white, text_size = tSize)
 
-// ================================================================
-// RALLY LEVELS
-// ================================================================
+    table.cell(dashboard, 0, 3, "Count / Buffer", text_color = color.white, text_size = tSize,
+         tooltip = "Raw signal count, room remaining before the current Power Trend ceiling, and that ceiling.")
+    table.cell(dashboard, 1, 3, str.tostring(exposureCount) + " / (+" + str.tostring(exposureBuffer) + ")  max " + str.tostring(powerCeiling),
+         text_color = color.white, text_size = tSize)
 
-plot(
-     showRallyLevels ?
-         majorLow :
-         na,
-     "Major Low",
-     color = color.red,
-     style = plot.style_stepline
-)
+    table.cell(dashboard, 0, 4, "Dist. Days", text_color = color.white, text_size = tSize,
+         tooltip = "Current distribution/stalling day count vs. the full-distribution threshold that triggers a Buy Switch review.")
+    table.cell(dashboard, 1, 4, str.tostring(distributionCount) + " / " + str.tostring(fullDDCount),
+         text_color = distributionCount >= fullDDCount - 1 ? color.red : distributionCount >= 3 ? color.orange : color.white,
+         text_size = tSize)
 
-plot(
-     showRallyLevels ?
-         minorLow :
-         na,
-     "Minor Low",
-     color = color.orange,
-     style = plot.style_stepline
-)
+    table.cell(dashboard, 0, 5, "Cluster (8d)", text_color = color.white, text_size = tSize,
+         tooltip = "Number of distribution/stall events within the last 8 sessions; 4+ flags a distribution cluster (S13).")
+    table.cell(dashboard, 1, 5, str.tostring(clusterCount) + (distributionCluster ? " ⚠" : ""),
+         text_color = distributionCluster ? color.red : color.white, text_size = tSize)
 
-plot(
-     showRallyLevels and
-     rallyState == RALLY_TRAILING ?
-         trailingLow :
-         na,
-     "Trailing Low",
-     color = color.purple,
-     style = plot.style_stepline
-)
+    table.cell(dashboard, 0, 6, "Rally", text_color = color.white, text_size = tSize,
+         tooltip = "Rally-structure state: R?/R = major rally attempt/confirmed, Rm?/Rm = minor, Rt = trailing (no FTD within 25 sessions).")
+    table.cell(dashboard, 1, 6, f_rally_state_name(rallyState), text_color = color.white, text_size = tSize)
 
-plot(
-     showRallyLevels ?
-         initialFTDLow :
-         na,
-     "Initial FTD Low",
-     color = color.blue,
-     style = plot.style_stepline
-)
+    table.cell(dashboard, 0, 7, "Rally Day", text_color = color.white, text_size = tSize,
+         tooltip = "Session count since the active rally's Day 1 (or trailing-low) reference.")
+    table.cell(dashboard, 1, 7, str.tostring(daysFromActiveRally), text_color = color.white, text_size = tSize)
 
+    table.cell(dashboard, 0, 8, "Power Trend", text_color = color.white, text_size = tSize,
+         tooltip = "Sustained-uptrend state that sets a floor/ceiling on exposure and can force the Buy Switch on.")
+    table.cell(dashboard, 1, 8, f_power_state_name(powerTrendState),
+         bgcolor = powerTrendState == PT_ON or powerTrendState == PT_RESUME ? color.new(color.green, 40) :
+              powerTrendState == PT_FLOOR ? color.new(color.yellow, 40) :
+              powerTrendState == PT_NO_FLOOR ? color.new(color.orange, 40) :
+              color.new(color.gray, 40),
+         text_color = color.white, text_size = tSize)
 
-// ================================================================
-// DASHBOARD
-// ================================================================
+    table.cell(dashboard, 0, 9, "Restraint", text_color = color.white, text_size = tSize,
+         tooltip = "Caps exposure at +2 (55%) until the market shows significant progress off the switch-on close, or a B4 occurs.")
+    table.cell(dashboard, 1, 9, restraintRule ? "ON (max +2)" : "OFF",
+         text_color = restraintRule ? color.orange : color.white, text_size = tSize)
 
-var table dashboard =
-     table.new(
-         position.top_right,
-         2,
-         12,
-         bgcolor = color.new(
-             color.black,
-             10
-         ),
-         border_width = 1
-     )
+    table.cell(dashboard, 0, 10, "IBD Volatility", text_color = color.white, text_size = tSize,
+         tooltip = "Average daily % gain on up days over the volatility lookback window; sets the FTD gain requirement below.")
+    table.cell(dashboard, 1, 10, str.tostring(ibdVolatility, "#.###") + "%", text_color = color.white, text_size = tSize)
 
+    table.cell(dashboard, 0, 11, "FTD Req.", text_color = color.white, text_size = tSize,
+         tooltip = "Minimum % gain (volatility-adjusted) required for a day to qualify as a Follow-Through Day.")
+    table.cell(dashboard, 1, 11, str.tostring(ftdRequirement, "#.###") + "%", text_color = color.white, text_size = tSize)
 
-if barstate.islast and
-   showTable
+    table.cell(dashboard, 0, 12, "FTD Gain", text_color = color.white, text_size = tSize,
+         tooltip = "Current % change from the initial Follow-Through Day's low.")
+    table.cell(dashboard, 1, 12, not na(initialFTDLow) ? str.tostring(f_pct_change(close, initialFTDLow), "#.##") + "%" : "—",
+         text_color = color.white, text_size = tSize)
 
-    table.cell(
-         dashboard,
-         0,
-         0,
-         "IBD MARKET SCHOOL",
-         bgcolor = color.blue,
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         0,
-         syminfo.ticker,
-         bgcolor = color.blue,
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         1,
-         "Buy Switch",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         1,
-         buySwitch ? "ON" : "OFF",
-         bgcolor =
-             buySwitch ?
-                 color.green :
-                 color.red,
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         2,
-         "Exposure",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         2,
-         f_exposure_text(
-             exposureCount
-         ) +
-         " (" +
-         str.tostring(
-             exposureCount
-         ) +
-         ")",
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         3,
-         "Count / Max",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         3,
-         str.tostring(
-             exposureCount
-         ) +
-         " / " +
-         str.tostring(
-             powerCeiling
-         ),
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         4,
-         "Dist. Days",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         4,
-         str.tostring(
-             distributionCount
-         ) +
-         " / " +
-         str.tostring(
-             fullDDCount
-         ),
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         5,
-         "Cluster",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         5,
-         distributionCluster ?
-             "YES" :
-             "NO",
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         6,
-         "Rally",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         6,
-         f_rally_state_name(
-             rallyState
-         ),
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         7,
-         "Rally Day",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         7,
-         str.tostring(
-             daysFromActiveRally
-         ),
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         8,
-         "Power Trend",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         8,
-         f_power_state_name(
-             powerTrendState
-         ),
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         9,
-         "Restraint",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         9,
-         restraintRule ?
-             "ON" :
-             "OFF",
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         10,
-         "IBD Volatility",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         10,
-         str.tostring(
-             ibdVolatility,
-             "#.###"
-         ) +
-         "%",
-         text_color = color.white
-    )
-
-
-    table.cell(
-         dashboard,
-         0,
-         11,
-         "FTD Req.",
-         text_color = color.white
-    )
-
-    table.cell(
-         dashboard,
-         1,
-         11,
-         str.tostring(
-             ftdRequirement,
-             "#.###"
-         ) +
-         "%",
-         text_color = color.white
-    )
-
+    table.cell(dashboard, 0, 13, "Today", text_color = color.white, text_size = tSize,
+         tooltip = "Signal code(s) that fired on the most recent bar.")
+    table.cell(dashboard, 1, 13, signalText == "" ? "—" : signalText,
+         text_color = positiveSignal ? buyLblColor : signalText == "" ? color.white : sellLblColor,
+         text_size = tSize,
+         tooltip = signalText == "" ? "No signal fired on the last bar." : signalTooltip)
 
 // ================================================================
 // ALERTS
 // ================================================================
 
-alertcondition(
-     isB1,
-     "B1 — Follow Through Day",
-     "{{ticker}} B1 Follow Through Day"
-)
+alertcondition(isB1, "B1 — Follow-Through Day", "{{ticker}} B1 Follow-Through Day")
+alertcondition(isB8 or isHH, "B8 / HH — Higher High", "{{ticker}} close above last marked high")
+alertcondition(isS1, "S1 — FTD Undercut", "{{ticker}} S1 FTD low undercut")
+alertcondition(isS2, "S2 — Major Rally Low Undercut", "{{ticker}} S2 major rally low undercut — Buy Switch off")
+alertcondition(isS2Minor, "S2ml — Minor Rally Low Undercut", "{{ticker}} S2ml minor rally low undercut")
+alertcondition(isS4, "S4 — Full Distribution", "{{ticker}} S4 full distribution")
+alertcondition(isS13, "S13 — Distribution Cluster", "{{ticker}} S13 distribution cluster")
+alertcondition(isS14, "S14 — Break Below Higher High", "{{ticker}} S14 close below last B8 level")
+alertcondition(isCircuitBreaker, "Circuit Breaker", "{{ticker}} IBD Market School Circuit Breaker")
 
-alertcondition(
-     isS1,
-     "S1 — FTD Undercut",
-     "{{ticker}} S1 FTD low undercut"
-)
-
-alertcondition(
-     isS2,
-     "S2 — Major Rally Low Undercut",
-     "{{ticker}} S2 major rally low undercut"
-)
-
-alertcondition(
-     isS2Minor,
-     "S2ml — Minor Rally Low Undercut",
-     "{{ticker}} S2ml minor rally low undercut"
-)
-
-alertcondition(
-     isS4,
-     "S4 — Full Distribution",
-     "{{ticker}} S4 full distribution"
-)
-
-alertcondition(
-     isS13,
-     "S13 — Distribution Cluster",
-     "{{ticker}} S13 distribution cluster"
-)
-
-alertcondition(
-     isCircuitBreaker,
-     "Circuit Breaker",
-     "{{ticker}} IBD Market School Circuit Breaker"
-)
+// Dynamic market-exposure change alert (Market Navigator style)
+if exposureChanged and barstate.isconfirmed
+    string direction = exposureCount > nz(exposureCount[1]) ? "raised" : "reduced"
+    alert("Market exposure " + direction + " from " + f_exposure_text(nz(exposureCount[1])) + " to " + f_exposure_text(exposureCount) + " on " + syminfo.ticker + (signalText != "" ? " — signals: " + signalText : ""), alert.freq_once_per_bar_close)
