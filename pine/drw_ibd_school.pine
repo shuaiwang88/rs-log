@@ -82,7 +82,7 @@ signalDisplay = input.string("All Signals", "Signal Display",
      tooltip = "All Signals: label every B/S signal. Exposure Changes Only: label only when the count moves. Arrows Only: small up/down arrows on count changes (Market Navigator style).",
      group = grpGeneral)
 
-showRallyLevels  = input.bool(true, "Show Rally / Signal Levels", group = grpGeneral)
+// showRallyLevels  = input.bool(true, "Show Rally / Signal Levels", group = grpGeneral)
 showRallyDayLbl  = input.bool(true, "Show Rally Day 1 Marks", group = grpGeneral)
 showPTBackground = input.bool(true, "Highlight Power Trend Background", group = grpGeneral)
 colorDistBars    = input.bool(false, "Color Distribution / Stall Bars", group = grpGeneral)
@@ -1336,20 +1336,8 @@ color ptBg = not showPTBackground ? na :
 
 bgcolor(ptBg)
 
-// ---------------- Level plots ----------------
+// ---------------- Level plots removed ----------------
 
-plot(showRallyLevels ? majorLow : na, "Major Low (S2)", color = color.red, style = plot.style_stepline,
-     tooltip = "Confirmed major rally low. A close below this triggers S2 - hard reset (Buy Switch off, exposure to 0).")
-plot(showRallyLevels ? minorLow : na, "Minor Low (S2ml)", color = color.orange, style = plot.style_stepline,
-     tooltip = "Confirmed minor rally low. A close below this triggers S2ml - exposure reduced, Buy Switch stays on.")
-plot(showRallyLevels and rallyState == RALLY_TRAILING ? trailingLow : na, "Trailing Low (Rt)", color = color.purple, style = plot.style_stepline,
-     tooltip = "Trailing low tracked once a rally attempt goes 25+ sessions without a Follow-Through Day.")
-plot(showRallyLevels ? initialFTDLow : na, "Initial FTD Low (S1)", color = color.blue, style = plot.style_stepline,
-     tooltip = "Low of the initial Follow-Through Day. A close below this triggers S1.")
-plot(showRallyLevels and s14Armed ? b8Level : na, "B8 Higher-High Level (S14)", color = color.teal, style = plot.style_stepline,
-     tooltip = "Price level of the last confirmed Higher High (B8/HH). A close below this triggers S14.")
-plot(showRallyLevels and s12Armed ? lastPivotLow : na, "Marked Low (S12)", color = color.maroon, style = plot.style_stepline,
-     tooltip = "Last marked pivot low. A close below this triggers S12.")
 
 // ================================================================
 // DASHBOARD (Market Navigator style status table)
