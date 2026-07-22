@@ -1,0 +1,227 @@
+//@version=5
+
+// =============================================================================
+// HEAD & SHOULDERS PATTERN - SHORT SIGNAL
+//
+// Detects a classic bearish Head & Shoulders pattern (Left Shoulder, Head,
+// Right Shoulder, Neckline) using confirmed swing pivots, draws it on the
+// chart, and flags a short signal when price breaks the neckline.
+//
+// NOTES:
+// - Pivots only confirm "Pivot Bars" candles AFTER the actual swing point,
+//   so there is inherent lag before a pattern can be drawn. This is normal
+//   for pivot-based scripts and means confirmed pivots do not repaint.
+// - Only the most recently detected candidate pattern is tracked at a time.
+// - This is a pattern-recognition tool, not financial advice. Patterns can
+//   and do fail. Backtest before trading and always use your own risk
+//   management - the plotted "Stop" is a simple suggestion, not a guarantee.
+// =============================================================================
+
+indicator("Head & Shoulders Pattern (Short Signal)", shorttitle="H&S Short", overlay=true, max_lines_count=50, max_labels_count=50)
+
+// ---------------------------------------------------------------------------
+// INPUTS
+// ---------------------------------------------------------------------------
+gPivot = "Pivot Detection"
+pivotLen = input.int(5, "Pivot Bars (Left/Right)", minval=2, group=gPivot, tooltip="Bars required on each side to confirm a swing high/low. Higher = fewer, more significant swings.")
+
+gRules = "Pattern Rules"
+shoulderTolPct  = input.float(6.0, "Max Shoulder Height Diff (%)", minval=0.5, step=0.5, group=gRules, tooltip="Max % difference allowed between the two shoulders' peak prices.")
+headMinPct      = input.float(1.0, "Min Head Prominence Above Shoulders (%)", minval=0, step=0.5, group=gRules)
+minLegBars      = input.int(5, "Min Bars Between Peaks", minval=1, group=gRules)
+maxLegBars      = input.int(80, "Max Bars Between Peaks", minval=5, group=gRules)
+maxNeckSlopePct = input.float(15.0, "Max Neckline Slope (%)", minval=0, step=1, group=gRules, tooltip="Limits how steeply the neckline can tilt between its two low points.")
+
+gVol = "Volume Filter (Optional)"
+useVolFilter = input.bool(false, "Require Above-Average Volume on Breakdown", group=gVol)
+volMaLen     = input.int(20, "Volume MA Length", minval=1, group=gVol)
+
+gDisp = "Display"
+requireCloseBreak = input.bool(true, "Require Close Beyond Neckline (vs. Wick)", group=gDisp)
+showNeckline      = input.bool(true, "Draw Neckline", group=gDisp)
+extendNeckline    = input.bool(true, "Extend Neckline Forward", group=gDisp)
+showLabels        = input.bool(true, "Label LS / H / RS", group=gDisp)
+showStatusTable   = input.bool(true, "Show Status Table", group=gDisp)
+patternColor      = input.color(color.red, "Pattern Color", group=gDisp)
+
+// ---------------------------------------------------------------------------
+// PIVOT DETECTION & STORAGE
+// ---------------------------------------------------------------------------
+ph = ta.pivothigh(pivotLen, pivotLen)
+pl = ta.pivotlow(pivotLen, pivotLen)
+
+var phPrice = array.new_float()
+var phBar   = array.new_int()
+var plPrice = array.new_float()
+var plBar   = array.new_int()
+
+MAXSTORE = 50
+
+if not na(ph)
+    array.push(phPrice, ph)
+    array.push(phBar, bar_index - pivotLen)
+    if array.size(phPrice) > MAXSTORE
+        array.shift(phPrice)
+        array.shift(phBar)
+
+if not na(pl)
+    array.push(plPrice, pl)
+    array.push(plBar, bar_index - pivotLen)
+    if array.size(plPrice) > MAXSTORE
+        array.shift(plPrice)
+        array.shift(plBar)
+
+// Lowest pivot low with a bar index strictly between b1 and b2 (the neckline anchor)
+lowestLowBetween(b1, b2) =>
+    float bestP = na
+    int bestB = na
+    if array.size(plPrice) > 0
+        for i = 0 to array.size(plPrice) - 1
+            bb = array.get(plBar, i)
+            pp = array.get(plPrice, i)
+            if bb > b1 and bb < b2
+                if na(bestP) or pp < bestP
+                    bestP := pp
+                    bestB := bb
+    [bestP, bestB]
+
+// ---------------------------------------------------------------------------
+// PERSISTENT STATE
+// ---------------------------------------------------------------------------
+var float activeHeadPrice = na
+var float activeRSPrice   = na
+var float neckSlopePerBar = na
+var float neckStartPrice  = na
+var int   neckStartBar    = na
+var bool  waitingForBreak = false
+
+var line  lineLH   = na
+var line  lineHR   = na
+var line  neckLine = na
+var label lsLbl    = na
+var label hLbl     = na
+var label rsLbl    = na
+var label infoLbl  = na
+
+// ---------------------------------------------------------------------------
+// PATTERN DETECTION (runs on the bar where a new pivot high just confirmed)
+// ---------------------------------------------------------------------------
+newPatternThisBar = false
+float lsP = na
+float hP  = na
+float rsP = na
+int   lsB = na
+int   hB  = na
+int   rsB = na
+float neckLP = na
+float neckRP = na
+int   neckLB = na
+int   neckRB = na
+
+if not na(ph) and array.size(phPrice) >= 3
+    n = array.size(phPrice)
+    lsP := array.get(phPrice, n - 3)
+    hP  := array.get(phPrice, n - 2)
+    rsP := array.get(phPrice, n - 1)
+    lsB := array.get(phBar, n - 3)
+    hB  := array.get(phBar, n - 2)
+    rsB := array.get(phBar, n - 1)
+
+    headHigher  = hP > lsP * (1 + headMinPct / 100) and hP > rsP * (1 + headMinPct / 100)
+    shDiffPct   = math.abs(lsP - rsP) / math.max(lsP, rsP) * 100
+    shouldersOk = shDiffPct <= shoulderTolPct
+    leg1 = hB - lsB
+    leg2 = rsB - hB
+    spacingOk = leg1 >= minLegBars and leg1 <= maxLegBars and leg2 >= minLegBars and leg2 <= maxLegBars
+
+    if headHigher and shouldersOk and spacingOk
+        [nlP, nlB] = lowestLowBetween(lsB, hB)
+        [nrP, nrB] = lowestLowBetween(hB, rsB)
+        if not na(nlP) and not na(nrP)
+            neckDiffPct = math.abs(nlP - nrP) / math.max(nlP, nrP) * 100
+            if neckDiffPct <= maxNeckSlopePct
+                neckLP := nlP
+                neckLB := nlB
+                neckRP := nrP
+                neckRB := nrB
+                newPatternThisBar := true
+
+// ---------------------------------------------------------------------------
+// DRAW THE PATTERN
+// ---------------------------------------------------------------------------
+if newPatternThisBar
+    activeHeadPrice := hP
+    activeRSPrice   := rsP
+    neckSlopePerBar := (neckRP - neckLP) / (neckRB - neckLB)
+    neckStartPrice  := neckLP
+    neckStartBar    := neckLB
+    waitingForBreak := true
+
+    if not na(lineLH)
+        line.delete(lineLH)
+    if not na(lineHR)
+        line.delete(lineHR)
+    if not na(neckLine)
+        line.delete(neckLine)
+    if not na(lsLbl)
+        label.delete(lsLbl)
+    if not na(hLbl)
+        label.delete(hLbl)
+    if not na(rsLbl)
+        label.delete(rsLbl)
+
+    lineLH := line.new(lsB, lsP, hB, hP, color=patternColor, width=2)
+    lineHR := line.new(hB, hP, rsB, rsP, color=patternColor, width=2)
+
+    if showNeckline
+        neckExtend = extendNeckline ? extend.right : extend.none
+        neckLine := line.new(neckLB, neckLP, neckRB, neckRP, color=patternColor, width=2, style=line.style_dashed, extend=neckExtend)
+
+    if showLabels
+        lsLbl := label.new(lsB, lsP, "LS", style=label.style_label_down, color=color.new(patternColor, 20), textcolor=color.white, size=size.small)
+        hLbl  := label.new(hB, hP, "H", style=label.style_label_down, color=color.new(patternColor, 20), textcolor=color.white, size=size.small)
+        rsLbl := label.new(rsB, rsP, "RS", style=label.style_label_down, color=color.new(patternColor, 20), textcolor=color.white, size=size.small)
+
+// ---------------------------------------------------------------------------
+// NECKLINE BREAKDOWN -> SHORT SIGNAL
+// ---------------------------------------------------------------------------
+float necklineNow = na
+if waitingForBreak and not na(neckSlopePerBar)
+    necklineNow := neckStartPrice + neckSlopePerBar * (bar_index - neckStartBar)
+
+volMa = ta.sma(volume, volMaLen)
+volOk = not useVolFilter or volume > volMa
+
+breakdownSignal = false
+if waitingForBreak and not na(necklineNow)
+    priceRef = requireCloseBreak ? close : low
+    if ta.crossunder(priceRef, necklineNow) and volOk
+        breakdownSignal := true
+        waitingForBreak := false
+
+plotshape(breakdownSignal ? high : na, title="Short Entry", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.small)
+
+if breakdownSignal
+    patternHeight = activeHeadPrice - necklineNow
+    targetPrice   = necklineNow - patternHeight
+
+    if not na(infoLbl)
+        label.delete(infoLbl)
+    infoTxt = "SHORT\nEntry ~" + str.tostring(close, format.mintick) + "\nTarget " + str.tostring(targetPrice, format.mintick) + "\nStop " + str.tostring(activeRSPrice, format.mintick)
+    infoLbl := label.new(bar_index, low, infoTxt, style=label.style_label_up, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
+bgcolor(waitingForBreak ? color.new(color.red, 92) : na, title="Pattern Active")
+
+// ---------------------------------------------------------------------------
+// STATUS TABLE
+// ---------------------------------------------------------------------------
+if showStatusTable and barstate.islast
+    var table statusTable = table.new(position.top_right, 1, 1, bgcolor=color.new(color.black, 70), border_width=1)
+    statusTxt = waitingForBreak ? "H&S pattern active - watching neckline" : "No active H&S pattern"
+    table.cell(statusTable, 0, 0, statusTxt, text_color=color.white, text_size=size.small)
+
+// ---------------------------------------------------------------------------
+// ALERTS
+// ---------------------------------------------------------------------------
+alertcondition(newPatternThisBar, title="H&S Pattern Detected", message="Head & Shoulders pattern formed on {{ticker}} - watch for neckline breakdown.")
+alertcondition(breakdownSignal, title="H&S Neckline Breakdown (Short)", message="Head & Shoulders neckline breakdown on {{ticker}} at {{close}} - potential SHORT.")
