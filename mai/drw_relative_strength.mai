@@ -1,0 +1,106 @@
+{
+  Moomoo / Futu Mai Language (麦语言) Implementation
+  Indicator Name: Relative Strength (RS) Line & Signals (No RS Pattern / No Table)
+  Description: RS Line vs SPY, Moving Averages, New Highs, RS Leads Price, New Lows, Bullish Divergence
+}
+
+// ============================================================================
+// 1. Settings & Inputs
+// ============================================================================
+COMPARATIVE_SYMBOL := "SPY.US"; // Reference benchmark symbol
+SPX_VALUE          := 4200;      // Value scaling baseline
+OFFSET_PCT         := 130;       // Display offset %
+
+// ============================================================================
+// 2. Relative Strength Line Calculation
+// ============================================================================
+BENCH_CLOSE := "SPY.US"$CLOSE;
+RS_CURVE    := CLOSE / BENCH_CLOSE;
+RS_RATIO    := SPX_VALUE * OFFSET_PCT / 100.0;
+RS_LINE     : RS_CURVE * RS_RATIO, COLORRGB(24, 140, 202), LINETHICK1;
+
+// ============================================================================
+// 3. RS Moving Averages
+// ============================================================================
+EMA_QUICK     : EMA(RS_LINE, 21), COLORCYAN, LINETHICK1;
+EMA_QUICKSAND : EMA(RS_LINE, 34), COLORORANGE, LINETHICK1;
+EMA_GRATEFUL  : EMA(RS_LINE, 50), COLORMAGENTA, LINETHICK1;
+
+// ============================================================================
+// 4. RS New Highs & RS Leads Price Detection
+// ============================================================================
+LB_1Y := 250;
+LB_6M := 126;
+LB_3M := 63;
+
+// Historical Highs excluding current bar
+RS_H1Y := REF(HHV(RS_CURVE, LB_1Y), 1);
+RS_H6M := REF(HHV(RS_CURVE, LB_6M), 1);
+RS_H3M := REF(HHV(RS_CURVE, LB_3M), 1);
+
+RS_NH1Y := RS_CURVE > RS_H1Y;
+RS_NH6M := RS_CURVE > RS_H6M AND NOT(RS_NH1Y);
+RS_NH3M := RS_CURVE > RS_H3M AND NOT(RS_NH1Y) AND NOT(RS_NH6M);
+RS_NH_ANY := RS_NH1Y OR RS_NH6M OR RS_NH3M;
+
+PRICE_H1Y := REF(HHV(HIGH, LB_1Y), 1);
+PRICE_H6M := REF(HHV(HIGH, LB_6M), 1);
+PRICE_H3M := REF(HHV(HIGH, LB_3M), 1);
+
+PRICE_NH1Y := HIGH > PRICE_H1Y;
+PRICE_NH6M := HIGH > PRICE_H6M;
+PRICE_NH3M := HIGH > PRICE_H3M;
+
+PRICE_NH_MATCHING := IF(RS_NH1Y, PRICE_NH1Y, IF(RS_NH6M, PRICE_NH6M, PRICE_NH3M));
+RS_LEADS_PRICE    := RS_NH_ANY AND NOT(PRICE_NH_MATCHING);
+
+// Draw icons on chart for RS New Highs & Leading signals
+DRAWICON(RS_LEADS_PRICE, RS_LINE, 1);  // Green leading icon
+DRAWICON(RS_NH_ANY AND NOT(RS_LEADS_PRICE), RS_LINE, 2); // Blue RS NH icon
+
+// ============================================================================
+// 5. RS New Lows (250-bar lookback)
+// ============================================================================
+RS_L250    := REF(LLV(RS_CURVE, LB_1Y), 1);
+PRICE_L250 := REF(LLV(LOW, LB_1Y), 1);
+
+RS_NL    := RS_CURVE < RS_L250;
+PRICE_NL := LOW < PRICE_L250;
+
+DRAWICON(RS_NL, RS_LINE, 3); // Red dot for RS New Low
+
+// ============================================================================
+// 6. IBD-Style Weighted RS Score
+// ============================================================================
+PERF_63  := CLOSE / REF(CLOSE, 63);
+PERF_126 := CLOSE / REF(CLOSE, 126);
+PERF_189 := CLOSE / REF(CLOSE, 189);
+PERF_252 := CLOSE / REF(CLOSE, 252);
+
+BENCH_63  := BENCH_CLOSE / REF(BENCH_CLOSE, 63);
+BENCH_126 := BENCH_CLOSE / REF(BENCH_CLOSE, 126);
+BENCH_189 := BENCH_CLOSE / REF(BENCH_CLOSE, 189);
+BENCH_252 := BENCH_CLOSE / REF(BENCH_CLOSE, 252);
+
+STOCK_SCORE := 0.4 * PERF_63 + 0.2 * PERF_126 + 0.2 * PERF_189 + 0.2 * PERF_252;
+BENCH_SCORE := 0.4 * BENCH_63 + 0.2 * BENCH_126 + 0.2 * BENCH_189 + 0.2 * BENCH_252;
+
+RS_SCORE := (STOCK_SCORE / BENCH_SCORE) * 100;
+
+// ============================================================================
+// 7. RS / Price Bullish Divergence Detection
+// ============================================================================
+PIV_LEN := 9;
+RS_PL1  := TROUGH(RS_LINE, PIV_LEN, 1);
+RS_PL2  := TROUGH(RS_LINE, PIV_LEN, 2);
+
+PRICE_PL1 := TROUGH(LOW, PIV_LEN, 1);
+PRICE_PL2 := TROUGH(LOW, PIV_LEN, 2);
+
+BULLISH_DIV := (RS_PL1 > RS_PL2) AND (PRICE_PL1 < PRICE_PL2);
+
+DRAWTEXT(BULLISH_DIV, RS_LINE, 'Bull Div'), COLORBLUE;
+
+// ============================================================================
+// End of Moomoo Mai Language Indicator
+// ============================================================================
