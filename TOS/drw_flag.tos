@@ -1,0 +1,167 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Flag Finder Study (Bull Flag & Bear Flag Pattern Recognition)
+# Converted from Pine Script (drw_flag.pine) to ThinkScript
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   Identifies High Tight / Bull Flags and Bear Flags on chart timeframes.
+#   - Bull Flag: Requires prior uptrend pole (default >= 80% gain in <= 40 bars),
+#     followed by a 2-4 week consolidation with <= 25% max pullback.
+#   - Bear Flag: Requires prior downtrend pole (default >= 15% loss in <= 15 bars),
+#     followed by a 4-10 bar consolidation with <= 10% max rally.
+# ══════════════════════════════════════════════════════════════════════════════
+
+declare upper;
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS - BULL FLAG CRITERIA
+# ─────────────────────────────────────────────────────────────────────────────
+input max_depth   = 25.0;  # Max Flag Depth % (pullback from flag high)
+input max_flag    = 20;    # Max Flag Length (bars, 4 weeks = 20 bars)
+input min_flag    = 10;    # Min Flag Length (bars, 2 weeks = 10 bars)
+input poleMin     = 80.0;  # Prior Uptrend Minimum % (pole gain)
+input poleMaxLen  = 40;    # Max Flag Pole Length (bars, 8 weeks = 40 bars)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS - BEAR FLAG CRITERIA
+# ─────────────────────────────────────────────────────────────────────────────
+input max_rally      = 10.0;  # Max Flag Rally % (rally from flag low)
+input max_flagBear   = 10;    # Max Bear Flag Length (bars)
+input min_flagBear   = 4;     # Min Bear Flag Length (bars)
+input poleMinBear    = 15.0;  # Prior Downtrend Minimum % (pole loss)
+input poleMaxLenBear = 15;    # Max Bear Flag Pole Length (bars)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS - DISPLAY OPTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+input showF  = yes;  # Show Bull Flags
+input showBO = yes;  # Show Bull Flag Breakouts
+input showBF = yes;  # Show Bear Flags
+input showBD = yes;  # Show Bear Flag Breakdowns
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COLORS & STYLES
+# ─────────────────────────────────────────────────────────────────────────────
+DefineGlobalColor("BullColor", Color.GREEN);
+DefineGlobalColor("BullSupportColor", Color.DARK_GREEN);
+DefineGlobalColor("BearColor", Color.RED);
+DefineGlobalColor("BearResistanceColor", Color.DARK_RED);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BULL FLAG STATE ENGINE
+# ─────────────────────────────────────────────────────────────────────────────
+def poleLow     = Lowest(low, poleMaxLen);
+def poleGainOK  = high >= poleLow * (1.0 + poleMin / 100.0);
+def freshHi     = high >= Highest(high, 10);
+def newPole     = showF and poleGainOK and freshHi;
+
+rec flagTop;
+rec flagAge;
+rec flagLowPt;
+rec poleLowVal;
+
+if newPole {
+    flagTop    = high;
+    flagAge    = 0;
+    flagLowPt  = high;
+    poleLowVal = poleLow;
+} else if flagTop[1] > 0 and flagAge[1] < max_flag and low >= flagTop[1] * (1.0 - max_depth / 100.0) and high <= flagTop[1] * 1.01 {
+    flagTop    = flagTop[1];
+    flagAge    = flagAge[1] + 1;
+    flagLowPt  = Min(flagLowPt[1], low);
+    poleLowVal = poleLowVal[1];
+} else {
+    flagTop    = 0;
+    flagAge    = 0;
+    flagLowPt  = 0;
+    poleLowVal = 0;
+}
+
+def flagForming  = flagTop > 0 and flagAge >= min_flag and flagAge <= max_flag;
+def flagBreakout = flagTop[1] > 0 and flagAge[1] >= min_flag and close > flagTop[1];
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BEAR FLAG STATE ENGINE
+# ─────────────────────────────────────────────────────────────────────────────
+def poleHighBear = Highest(high, poleMaxLenBear);
+def poleLossOK   = low <= poleHighBear * (1.0 - poleMinBear / 100.0);
+def freshLo      = low <= Lowest(low, 10);
+def newPoleBear  = showBF and poleLossOK and freshLo;
+
+rec bearBottom;
+rec bearAge;
+rec bearHighPt;
+
+if newPoleBear {
+    bearBottom = low;
+    bearAge    = 0;
+    bearHighPt = low;
+} else if bearBottom[1] > 0 and bearAge[1] < max_flagBear and high <= bearBottom[1] * (1.0 + max_rally / 100.0) and low >= bearBottom[1] * 0.99 {
+    bearBottom = bearBottom[1];
+    bearAge    = bearAge[1] + 1;
+    bearHighPt = Max(bearHighPt[1], high);
+} else {
+    bearBottom = 0;
+    bearAge    = 0;
+    bearHighPt = 0;
+}
+
+def bearFlagForming = bearBottom > 0 and bearAge >= min_flagBear and bearAge <= max_flagBear;
+def isBearBreakdown = bearBottom[1] > 0 and bearAge[1] >= min_flagBear and close < bearBottom[1];
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLOTS - BREAKOUT & PATTERN SIGNALS
+# ─────────────────────────────────────────────────────────────────────────────
+plot BullFlagPivot = if showF and flagForming then flagTop else Double.NaN;
+BullFlagPivot.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+BullFlagPivot.SetStyle(Curve.SHORT_DASH);
+BullFlagPivot.AssignValueColor(GlobalColor("BullColor"));
+BullFlagPivot.SetLineWeight(2);
+
+plot BullFlagFloor = if showF and flagForming and flagLowPt > 0 then flagLowPt else Double.NaN;
+BullFlagFloor.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+BullFlagFloor.SetStyle(Curve.SHORT_DASH);
+BullFlagFloor.AssignValueColor(GlobalColor("BullSupportColor"));
+BullFlagFloor.SetLineWeight(2);
+
+plot BullBreakout = if showBO and showF and flagBreakout then low - (high - low) * 0.4 else Double.NaN;
+BullBreakout.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_UP);
+BullBreakout.AssignValueColor(GlobalColor("BullColor"));
+BullBreakout.SetLineWeight(4);
+
+plot BearFlagPivot = if showBF and bearFlagForming then bearBottom else Double.NaN;
+BearFlagPivot.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+BearFlagPivot.SetStyle(Curve.SHORT_DASH);
+BearFlagPivot.AssignValueColor(GlobalColor("BearColor"));
+BearFlagPivot.SetLineWeight(2);
+
+plot BearFlagCeiling = if showBF and bearFlagForming and bearHighPt > 0 then bearHighPt else Double.NaN;
+BearFlagCeiling.SetPaintingStrategy(PaintingStrategy.HORIZONTAL);
+BearFlagCeiling.SetStyle(Curve.SHORT_DASH);
+BearFlagCeiling.AssignValueColor(GlobalColor("BearResistanceColor"));
+BearFlagCeiling.SetLineWeight(2);
+
+plot BearBreakdown = if showBD and showBF and isBearBreakdown then high + (high - low) * 0.4 else Double.NaN;
+BearBreakdown.SetPaintingStrategy(PaintingStrategy.BOOLEAN_ARROW_DOWN);
+BearBreakdown.AssignValueColor(GlobalColor("BearColor"));
+BearBreakdown.SetLineWeight(4);
+
+# Plots for scanner reference
+plot ScanBullFlag = if flagForming then 1 else Double.NaN;
+ScanBullFlag.Hide();
+
+plot ScanBullBreakout = if flagBreakout then 1 else Double.NaN;
+ScanBullBreakout.Hide();
+
+plot ScanBearFlag = if bearFlagForming then 1 else Double.NaN;
+ScanBearFlag.Hide();
+
+plot ScanBearBreakdown = if isBearBreakdown then 1 else Double.NaN;
+ScanBearBreakdown.Hide();
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALERTS
+# ─────────────────────────────────────────────────────────────────────────────
+Alert(flagBreakout, "Bull Flag Breakout on " + GetSymbol(), Alert.BAR, Sound.Ding);
+Alert(flagForming and !flagForming[1], "New Bull Flag formed on " + GetSymbol(), Alert.BAR, Sound.Ring);
+Alert(isBearBreakdown, "Bear Flag Breakdown on " + GetSymbol(), Alert.BAR, Sound.Bell);
+Alert(bearFlagForming and !bearFlagForming[1], "New Bear Flag formed on " + GetSymbol(), Alert.BAR, Sound.Ring);

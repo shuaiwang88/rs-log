@@ -185,17 +185,17 @@ if newPatternThisBar
 // ---------------------------------------------------------------------------
 // NECKLINE BREAKDOWN -> SHORT SIGNAL
 // ---------------------------------------------------------------------------
-float necklineNow = na
-if waitingForBreak and not na(neckSlopePerBar)
-    necklineNow := neckStartPrice + neckSlopePerBar * (bar_index - neckStartBar)
+float necklineNow = (waitingForBreak and not na(neckSlopePerBar)) ? (neckStartPrice + neckSlopePerBar * (bar_index - neckStartBar)) : na
 
 volMa = ta.sma(volume, volMaLen)
 volOk = not useVolFilter or volume > volMa
 
+priceRef = requireCloseBreak ? close : low
+isCrossunder = ta.crossunder(priceRef, necklineNow)
+
 breakdownSignal = false
 if waitingForBreak and not na(necklineNow)
-    priceRef = requireCloseBreak ? close : low
-    if ta.crossunder(priceRef, necklineNow) and volOk
+    if isCrossunder and volOk
         breakdownSignal := true
         waitingForBreak := false
 
@@ -209,8 +209,6 @@ if breakdownSignal
         label.delete(infoLbl)
     infoTxt = "SHORT\nEntry ~" + str.tostring(close, format.mintick) + "\nTarget " + str.tostring(targetPrice, format.mintick) + "\nStop " + str.tostring(activeRSPrice, format.mintick)
     infoLbl := label.new(bar_index, low, infoTxt, style=label.style_label_up, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
-
-bgcolor(waitingForBreak ? color.new(color.red, 92) : na, title="Pattern Active")
 
 // ---------------------------------------------------------------------------
 // STATUS TABLE

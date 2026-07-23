@@ -1,0 +1,39 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Flag Finder Scanner Script for ThinkOrSwim
+# References "drw_flag" study
+# ══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   Dedicated scanner script to find stocks forming a Bull Flag / High Tight Flag,
+#   breaking out of a Bull Flag, or forming / breaking down from a Bear Flag.
+#
+# HOW TO USE IN THINKORSWIM SCANNER:
+#   1. Import `drw_flag` study into ThinkOrSwim.
+#   2. Create a new custom Scan study named `drw_flag_scan`.
+#   3. Select the desired `scanMode` option in the inputs tab.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ─────────────────────────────────────────────────────────────────────────────
+input scanMode = {default "Bull Flag Breakout", "Active Bull Flag", "Bear Flag Breakdown", "Active Bear Flag"};
+input max_depth   = 25.0;  # Max Flag Depth % (pullback from flag high)
+input max_flag    = 20;    # Max Flag Length (bars)
+input min_flag    = 10;    # Min Flag Length (bars)
+input poleMin     = 80.0;  # Prior Uptrend Minimum % (pole gain)
+input poleMaxLen  = 40;    # Max Flag Pole Length (bars)
+
+# Reference study plots from drw_flag
+def bullBO   = !IsNaN(reference drw_flag(max_depth = max_depth, max_flag = max_flag, min_flag = min_flag, poleMin = poleMin, poleMaxLen = poleMaxLen).ScanBullBreakout);
+def bullFlag = !IsNaN(reference drw_flag(max_depth = max_depth, max_flag = max_flag, min_flag = min_flag, poleMin = poleMin, poleMaxLen = poleMaxLen).ScanBullFlag);
+def bearBD   = !IsNaN(reference drw_flag(max_depth = max_depth, max_flag = max_flag, min_flag = min_flag, poleMin = poleMin, poleMaxLen = poleMaxLen).ScanBearBreakdown);
+def bearFlag = !IsNaN(reference drw_flag(max_depth = max_depth, max_flag = max_flag, min_flag = min_flag, poleMin = poleMin, poleMaxLen = poleMaxLen).ScanBearFlag);
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCAN TRIGGER
+# ─────────────────────────────────────────────────────────────────────────────
+plot scan = switch (scanMode) {
+    case "Bull Flag Breakout": bullBO
+    case "Active Bull Flag": bullFlag
+    case "Bear Flag Breakdown": bearBD
+    case "Active Bear Flag": bearFlag
+};

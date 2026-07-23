@@ -537,6 +537,10 @@ i_baseDepth = input(50, title = 'Base: Depth (%)', group = 'Chart Pattern Recogn
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_dbDepth = input(50, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
 i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
+i_cupDepth = input(35, title = 'Cup: Max Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Cup')
+i_dbPriorUptrend = input.float(15.0, title = 'Min Prior Uptrend (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum prior uptrend percentage before Double Bottom forms')
+i_dbMinLengthWeeks = input.int(7, title = 'Min Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum total length in weeks for Double Bottom')
+i_dbRequireUndercut = input.bool(true, title = 'Require 2nd Bottom Undercut', group = 'Chart Pattern Recognition', tooltip = 'If enabled, 2nd bottom low must undercut (be strictly lower than) 1st bottom low')
 i_showPatternTooltip = input(true, title = 'Show Pattern Hover Label', group = 'Chart Pattern Recognition')
 i_showCupHandleSep = input(true, title = 'Show Sep Cup-with-Handle (Early Handle)', group = 'Chart Pattern Recognition')
 i_handleMinBars = input(5, title = 'Handle: Min Bars', group = 'Chart Pattern Recognition')
@@ -550,16 +554,17 @@ i_volContractionMax  = input.float(50.0,  'Max Avg Vol % in Handle',            
 i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         group = 'Chart Pattern Recognition', minval = 1, step = 0.1, tooltip = 'Breakout bar volume must be ≥ this times volume MA')
 
 i_htfOn      = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
-i_htfDepth   = input.float(7.5,   'HTF: Max Flag Depth %',              group = 'Chart Pattern Recognition', step = .25, minval = .25, tooltip = 'Maximum pullback allowed from flag high to flag low')
-i_htfFMax    = input.int(10,      'HTF: Max Flag Length',               group = 'Chart Pattern Recognition', tooltip = 'The maximum number of bars the flag can last')
-i_htfFMin    = input.int(4,       'HTF: Min Flag Length',               group = 'Chart Pattern Recognition', tooltip = 'The minimum number of bars required for the flag')
-i_htfPole    = input.float(20.0,  'HTF: Prior Uptrend Minimum %',       group = 'Chart Pattern Recognition', step = .50, minval = .25, tooltip = 'The minimum percentage gain required before a flag forms')
-i_htfPB      = input.int(15,      'HTF: Max Flag Pole Length',          group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The maximum number of bars the flagpole can be')
+i_htfDepth   = input.float(25.0,  'HTF: Max Flag Depth %',              group = 'Chart Pattern Recognition', step = .25, minval = .25, tooltip = 'Maximum pullback allowed from flag high to flag low (less than 25%)')
+i_htfFMax    = input.int(20,      'HTF: Max Flag Length (bars)',        group = 'Chart Pattern Recognition', tooltip = 'The maximum number of bars the flag can last (4 weeks = 20 bars)')
+i_htfFMin    = input.int(10,      'HTF: Min Flag Length (bars)',        group = 'Chart Pattern Recognition', tooltip = 'The minimum number of bars required for the flag (2 weeks = 10 bars)')
+i_htfPole    = input.float(80.0,  'HTF: Prior Uptrend Minimum %',       group = 'Chart Pattern Recognition', step = .50, minval = .25, tooltip = 'The minimum percentage gain required before a flag forms (at least 80%)')
+i_htfPB      = input.int(40,      'HTF: Max Flag Pole Length (bars)',   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The maximum number of bars the flagpole can be (less than 8 weeks = 40 bars)')
 i_htfPBMin   = input.int(5,       'HTF: Min Flag Pole Length',          group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag pole')
 i_htfVol     = input.float(1.2,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
 
 i_baseDepth := i_baseDepth / 100
 i_dbDepth := i_dbDepth / 100
+i_cupDepth := i_cupDepth / 100
 i_baseLength := i_baseLength * 5
 i_dbLength := i_dbLength * 5
 
@@ -654,15 +659,15 @@ if isBase
         scndPivLow   = array.get(pivotLowPrices,  0)
 
         priorLow      = _priorLowFull
-        condPriorTrend = firstPivHigh >= priorLow * 1.20
+        condPriorTrend = firstPivHigh >= priorLow * (1.0 + i_dbPriorUptrend / 100.0)
 
         condPricesH = true
         if array.size(startBasePrice) > 0
             condPricesH := firstPivHigh == array.get(startBasePrice, 0)
 
-        condPricesA = scndPivLow <= firstPivLow * 1.03
+        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow * 1.03)
 
-        condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh
+        condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh and firstPivLow >= (1 - i_dbDepth) * firstPivHigh
 
         condPricesC = scndPivLow <= firstPivHigh * 0.90
 
@@ -692,7 +697,8 @@ if isBase
 
         condTimeB = frthPivTime - firstPivTime <= i_dbLength
 
-        condTimeC = frthPivTime - firstPivTime >= 10
+        int minDbBars = timeframe.isweekly ? i_dbMinLengthWeeks : (i_dbMinLengthWeeks * 5)
+        condTimeC = (bar_index - firstPivTime) >= minDbBars
 
         condTimeD = (scndPivTime - firstPivTime) >= 3 and
           (thrdPivTime - scndPivTime)  >= 3 and
@@ -745,7 +751,7 @@ if isBase
         lowCup := array.get(lowBasePrice, 0)
         lowCup
     middleOfCup := lowCup + (highCup - lowCup) * 0.5
-    condMaxDepth = lowCup >= (1 - i_baseDepth) * highCup
+    condMaxDepth = lowCup >= (1 - i_cupDepth) * highCup
     condMinDepth = lowCup <= 0.92 * highCup
     condMaxLength = bar_index - startBaseBar <= i_baseLength
     condMinLength = bar_index - startBaseBar >= 30
@@ -833,9 +839,10 @@ if rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep > 0
     volAvgHandle := math.sum(volume, handleBarCountSep) / handleBarCountSep
 
 bool volContractionOK = not i_useVolHandle or (handleBarCountSep > 0 and volAvgHandle <= volMaHandle * i_volContractionMax / 100)
-bool requireCupOK     = not i_requireCupForHandle or isCup
+bool requireCupOK     = not i_requireCupForHandle or isCup or isDoubleBottom
+bool handleBaseDepthOK = not na(_baseTop) and not na(_baseLow) and _baseLow >= (1 - i_cupDepth) * _baseTop
 
-bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK
+bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK and handleBaseDepthOK
 
 bool volBreakoutOK    = not i_useVolHandle or volume >= i_volBreakoutMult * volMaHandle
 bool handleBreakoutSep = handleFormingSep and close > handlePeakLockedSep and volBreakoutOK
@@ -850,6 +857,10 @@ var bool flag_flagBool = false
 var float flag_poleLow = na
 var int flag_poleLowIndex = na
 
+var line flagHLine = na
+var line flagLLine = na
+var line flagPLine = na
+
 var bool isHTF = false
 var int htfPoleLowBar = na
 var float htfPoleLowPrice = na
@@ -859,7 +870,7 @@ var float htfFlagHighPrice = na
 var float htfFlagLowPrice = na
 
 if i_htfOn and bar_index > 30
-    // find bull flag highs
+    // find bull flag highs (from drw_flag.pine)
     if high > flag_baseHigh or na(flag_baseHigh)
         flag_baseHigh := high
         flag_startIndex := bar_index
@@ -876,7 +887,7 @@ if i_htfOn and bar_index > 30
         flag_lowIndex := bar_index
 
     // calculations
-    float findDepth = flag_baseHigh > 0 ? math.abs(((flag_baseLow / flag_baseHigh) - 1) * 100) : 0.0
+    float findDepth = flag_baseHigh > 0 ? math.abs(((flag_baseLow / flag_baseHigh) - 1.0) * 100.0) : 0.0
     bool lower_close = close < close[1]
 
     // start the counters
@@ -885,15 +896,20 @@ if i_htfOn and bar_index > 30
     else
         flag_flagLength := 0
 
-    // check for prior uptrend
-    if high == flag_baseHigh
-        for i = i_htfPBMin to i_htfPB
-            if i < bar_index
-                if ((high / low[i]) - 1) * 100 >= i_htfPole
-                    flag_flagBool := true
-                    flag_poleLow := low[i]
-                    flag_poleLowIndex := bar_index - i
-                    break
+    // check for prior uptrend (pole gain >= 80% in <= 40 bars)
+    if not flag_flagBool or high == flag_baseHigh
+        float minLow = low[1]
+        int minLowIdx = bar_index - 1
+        int searchBars = math.min(i_htfPB, bar_index - 1)
+        if searchBars >= i_htfPBMin
+            for i = 1 to searchBars
+                if low[i] < minLow
+                    minLow := low[i]
+                    minLowIdx := bar_index - i
+            if minLow > 0 and ((flag_baseHigh / minLow) - 1.0) * 100.0 >= i_htfPole
+                flag_flagBool := true
+                flag_poleLow := minLow
+                flag_poleLowIndex := minLowIdx
 
     // reset variables if criteria is broken
     if findDepth >= i_htfDepth or flag_flagLength > i_htfFMax
@@ -913,10 +929,21 @@ if i_htfOn and bar_index > 30
         flag_baseLow := low
 
     // define the flag forming state
-    bool is_flag = flag_flagBool == true and flag_flagLength < i_htfFMax and findDepth < i_htfDepth and flag_flagLength >= i_htfFMin and flag_startIndex - flag_poleLowIndex <= i_htfPB
+    bool is_flag = flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfDepth and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
 
-    // define breakout
+    // live line drawing from drw_flag.pine
+    if is_flag and i_displayPattern
+        if is_flag[1]
+            line.delete(flagHLine)
+            line.delete(flagLLine)
+            line.delete(flagPLine)
+        flagHLine := line.new(flag_startIndex, flag_baseHigh, bar_index, flag_baseHigh, color = color.green, width = 2)
+        flagLLine := line.new(flag_startIndex, flag_baseLow, bar_index, flag_baseLow, color = color.green, width = 2)
+        flagPLine := line.new(flag_poleLowIndex, flag_poleLow, flag_startIndex, flag_baseLow, color = color.green, width = 2)
+
+    // define breakout & breakdown
     bool breakout = high > nz(flag_baseHigh[1]) and flag_flagLength >= i_htfFMin and flag_flagBool == true
+    bool breakdown = findDepth >= i_htfDepth or flag_flagLength > i_htfFMax
     bool plotBO = is_flag[1] and high > nz(flag_baseHigh[1]) and flag_flagLength[1] >= i_htfFMin and flag_flagBool == true
 
     // apply volume confirmation if set
@@ -945,7 +972,6 @@ if i_htfOn and bar_index > 30
         flag_baseLow := low
 
     // reset from a failed flag (breakdown)
-    bool breakdown = findDepth >= i_htfDepth or flag_flagLength > i_htfFMax
     float highest = ta.highest(high, 10)
     if breakdown or flag_flagLength == i_htfFMax
         flag_flagBool := false
@@ -953,6 +979,11 @@ if i_htfOn and bar_index > 30
         flag_startIndex := bar_index
         flag_lowIndex := bar_index
         flag_baseLow := low
+
+    if breakdown and is_flag[1]
+        line.delete(flagHLine)
+        line.delete(flagLLine)
+        line.delete(flagPLine)
 else
     isHTF := false
 
@@ -1052,11 +1083,11 @@ if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_disp
     line.delete(highLine)
     line.delete(lowLine)
     bottomDBBar := array.get(pivotLowBars, 0)
-    highLine := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bar_index, y2 = array.get(pivotHighPrices, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
-    dbLine1 := line.new(x1 = array.get(pivotHighBars, 1), y1 = array.get(lowOfpivotHighPrices, 1) * (100 - 1) / 100, x2 = array.get(pivotLowBars, 1), y2 = array.get(pivotLowPrices, 1) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
-    dbLine2 := line.new(x1 = array.get(pivotLowBars, 1), y1 = array.get(pivotLowPrices, 1) * (100 - 1) / 100, x2 = array.get(pivotHighBars, 0), y2 = array.get(lowOfpivotHighPrices, 0) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
-    dbLine3 := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(lowOfpivotHighPrices, 0) * (100 - 1) / 100, x2 = bottomDBBar, y2 = array.get(bottomDBPrice, 0) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
-    lowLine := line.new(x1 = bottomDBBar, y1 = array.get(bottomDBPrice, 0) * (100 - 1) / 100, x2 = bar_index, y2 = low * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
+    highLine := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bar_index, y2 = array.get(pivotHighPrices, 0), width = 2, style = line.style_dashed, color = color.green)
+    dbLine1 := line.new(x1 = array.get(pivotHighBars, 1), y1 = array.get(pivotHighPrices, 1), x2 = array.get(pivotLowBars, 1), y2 = array.get(pivotLowPrices, 1), width = 2, style = line.style_solid, color = color.green)
+    dbLine2 := line.new(x1 = array.get(pivotLowBars, 1), y1 = array.get(pivotLowPrices, 1), x2 = array.get(pivotHighBars, 0), y2 = array.get(pivotHighPrices, 0), width = 2, style = line.style_solid, color = color.green)
+    dbLine3 := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bottomDBBar, y2 = array.get(bottomDBPrice, 0), width = 2, style = line.style_solid, color = color.green)
+    lowLine := line.new(x1 = bottomDBBar, y1 = array.get(bottomDBPrice, 0), x2 = bar_index, y2 = high, width = 2, style = line.style_solid, color = color.green)
     select = i_displayHistoricalBoxes ? false : boxOver
     if select
         box.delete(entryBox)
@@ -1121,7 +1152,7 @@ if high <= line.get_y1(highLine) and low >= line.get_y1(lowLine) and isBase
     line.set_x2(highLine, bar_index)
     line.set_x2(lowLine, bar_index)
     if isDoubleBottom
-        line.set_y2(lowLine, low * (100 - 1) / 100)
+        line.set_y2(lowLine, high)
         line.set_x2(lowLine, bar_index)
     if handleFormingSep and timeframe.isdaily and i_displayPattern
         if na(handleSepLine)

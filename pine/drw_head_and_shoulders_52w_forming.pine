@@ -1,4 +1,4 @@
-//@version=5
+//@version=6
 
 // =============================================================================
 // HEAD & SHOULDERS - LONG-TERM / FORMING PATTERN - SHORT SIGNAL
@@ -30,34 +30,40 @@
 // - Pattern-recognition tool, not financial advice. Backtest before trading.
 // =============================================================================
 
-indicator("Head & Shoulders - Long-Term (Short Signal)", shorttitle="H&S LT Short", overlay=true, max_lines_count=50, max_labels_count=50)
+indicator('Head & Shoulders - Long-Term (Short Signal)', shorttitle = 'H&S LT Short', overlay = true, max_lines_count = 50, max_labels_count = 50)
 
 // ---------------------------------------------------------------------------
 // INPUTS
 // ---------------------------------------------------------------------------
-gPivot = "Pivot Detection"
-pivotLen = input.int(5, "Pivot Bars (Left/Right)", minval=2, group=gPivot, tooltip="Bars required on each side to confirm a swing high/low.")
+gPivot = 'Pivot Detection'
+pivotLen = input.int(5, 'Pivot Bars (Left/Right)', minval = 2, group = gPivot, tooltip = 'Bars required on each side to confirm a swing high/low.')
 
-gHead = "Head Significance"
-headLookback     = input.int(252, "Head Lookback (bars)", minval=20, group=gHead, tooltip="~252 for a 52-week high on a daily chart. A pivot high must be near the highest high of this many trailing bars to qualify as the Head.")
-headTolerancePct = input.float(3.0, "Head Tolerance (%)", minval=0, step=0.5, group=gHead, tooltip="How close a pivot must be to the Head Lookback high to qualify as the Head. Lower = only true cycle tops count.")
+gHead = 'Head Significance'
+headLookback = input.int(252, 'Head Lookback (bars)', minval = 20, group = gHead, tooltip = '~252 for a 52-week high on a daily chart. A pivot high must be near the highest high of this many trailing bars to qualify as the Head.')
+headTolerancePct = input.float(3.0, 'Head Tolerance (%)', minval = 0, step = 0.5, group = gHead, tooltip = 'How close a pivot must be to the Head Lookback high to qualify as the Head. Lower = only true cycle tops count.')
 
-gRules = "Pattern Rules"
-shoulderTolPct  = input.float(12.0, "Max Shoulder Height Diff (%)", minval=0.5, step=0.5, group=gRules, tooltip="Max % difference allowed between the two shoulders' peak prices.")
-headMinPct      = input.float(1.0, "Min Head Prominence Above Shoulders (%)", minval=0, step=0.5, group=gRules)
-minLegBars      = input.int(10, "Min Bars Between Peaks", minval=1, group=gRules)
-maxLegBars      = input.int(300, "Max Bars Between Peaks", minval=10, group=gRules, tooltip="Also acts as a timeout: if a Head doesn't develop a confirmed Right Shoulder within this many bars, tracking resets.")
-maxNeckSlopePct = input.float(20.0, "Max Neckline Slope (%)", minval=0, step=1, group=gRules)
+gRules = 'Pattern Rules'
+shoulderTolPct = input.float(12.0, 'Max Shoulder Height Diff (%)', minval = 0.5, step = 0.5, group = gRules, tooltip = 'Max % difference allowed between the two shoulders\' peak prices.')
+headMinPct = input.float(1.0, 'Min Head Prominence Above Shoulders (%)', minval = 0, step = 0.5, group = gRules)
+minLegBars = input.int(10, 'Min Bars Between Peaks', minval = 1, group = gRules)
+maxLegBars = input.int(300, 'Max Bars Between Peaks', minval = 10, group = gRules, tooltip = 'Also acts as a timeout: if a Head doesn\'t develop a confirmed Right Shoulder within this many bars, tracking resets.')
+maxNeckSlopePct = input.float(20.0, 'Max Neckline Slope (%)', minval = 0, step = 1, group = gRules)
 
-gVol = "Volume Filter (Optional)"
-useVolFilter = input.bool(false, "Require Above-Average Volume on Breakdown", group=gVol)
-volMaLen     = input.int(20, "Volume MA Length", minval=1, group=gVol)
+gVol = 'Volume Filter (Optional)'
+useVolFilter = input.bool(false, 'Require Above-Average Volume on Breakdown', group = gVol)
+volMaLen = input.int(20, 'Volume MA Length', minval = 1, group = gVol)
 
-gDisp = "Display"
-requireCloseBreak = input.bool(true, "Require Close Beyond Neckline (vs. Wick)", group=gDisp)
-showLabels        = input.bool(true, "Label LS / H / RS", group=gDisp)
-showStatusTable   = input.bool(true, "Show Status Table", group=gDisp)
-patternColor      = input.color(color.red, "Pattern Color", group=gDisp)
+gLSBF = 'Late Stage Base Failure (Short Setup)'
+enableLSBF = input.bool(true, 'Enable Late Stage Base Failure (LSBF)', group = gLSBF, tooltip = 'Uncheck to turn OFF Late Stage Base Failure signals and status completely.')
+lsbfBaseLen = input.int(40, 'Base Lookback (bars)', minval = 10, group = gLSBF, tooltip = 'Lookback period to identify the late-stage base high/low range.')
+lsbfNearHighPct = input.float(15.0, 'Max % Below 52w High for Late Base', minval = 1.0, group = gLSBF, tooltip = 'Base high must be within this % of the 52-week high to qualify as a late-stage base.')
+lsbfMaxFailBars = input.int(10, 'Max Bars After Breakout for Failure', minval = 1, maxval = 30, group = gLSBF, tooltip = 'Max bars elapsed after breakout before a reversal under pivot is flagged as a Failed Breakout.')
+
+gDisp = 'Display'
+requireCloseBreak = input.bool(true, 'Require Close Beyond Neckline (vs. Wick)', group = gDisp)
+showLabels = input.bool(true, 'Label LS / H / RS', group = gDisp)
+showStatusTable = input.bool(true, 'Show Status Table', group = gDisp)
+patternColor = input.color(color.red, 'Pattern Color', group = gDisp)
 
 // ---------------------------------------------------------------------------
 // PIVOTS + 52-WEEK-HIGH REFERENCE
@@ -67,11 +73,11 @@ pl = ta.pivotlow(pivotLen, pivotLen)
 
 float headRefRaw = ta.highest(high, headLookback)
 
-var phPrice   = array.new_float()
-var phBar     = array.new_int()
+var phPrice = array.new_float()
+var phBar = array.new_int()
 var phHeadRef = array.new_float()
-var plPrice   = array.new_float()
-var plBar     = array.new_int()
+var plPrice = array.new_float()
+var plBar = array.new_int()
 
 MAXSTORE = 50
 
@@ -103,13 +109,14 @@ lowestLowBetween(b1, b2) =>
     float bestP = na
     int bestB = na
     if array.size(plPrice) > 0
-        for i = 0 to array.size(plPrice) - 1
+        for i = 0 to array.size(plPrice) - 1 by 1
             bb = array.get(plBar, i)
             pp = array.get(plPrice, i)
             if bb > b1 and bb < b2
                 if na(bestP) or pp < bestP
                     bestP := pp
                     bestB := bb
+                    bestB
     [bestP, bestB]
 
 // For the most recent pivot high that qualifies as a Head (near the
@@ -122,15 +129,15 @@ findLSHCandidate() =>
     int outLSBar = na
     n = array.size(phPrice)
     if n >= 2
-        for i = 0 to n - 1
+        for i = 0 to n - 1 by 1
             priceI = array.get(phPrice, i)
-            refI   = array.get(phHeadRef, i)
+            refI = array.get(phHeadRef, i)
             isHead = priceI >= refI * (1 - headTolerancePct / 100)
             if isHead
                 barI = array.get(phBar, i)
                 float bestLS = na
                 int bestLSBar = na
-                for j = 0 to i - 1
+                for j = 0 to i - 1 by 1
                     pCand = array.get(phPrice, j)
                     bCand = array.get(phBar, j)
                     gap = barI - bCand
@@ -138,11 +145,13 @@ findLSHCandidate() =>
                         if na(bestLS) or pCand > bestLS
                             bestLS := pCand
                             bestLSBar := bCand
-                if not na(bestLS) and (priceI >= bestLS * (1 + headMinPct / 100))
+                            bestLSBar
+                if not na(bestLS) and priceI >= bestLS * (1 + headMinPct / 100)
                     outH := priceI
                     outHBar := barI
                     outLS := bestLS
                     outLSBar := bestLSBar
+                    outLSBar
     [outLS, outLSBar, outH, outHBar]
 
 deleteLineIfExists(id) =>
@@ -156,31 +165,31 @@ deleteLabelIfExists(id) =>
 // ---------------------------------------------------------------------------
 // PERSISTENT STATE
 // ---------------------------------------------------------------------------
-var float activeLSPrice        = na
-var int   activeLSBar          = na
-var float activeHeadPrice      = na
-var int   activeHeadBar        = na
-var float activeNeckLeftPrice  = na
-var int   activeNeckLeftBar    = na
+var float activeLSPrice = na
+var int activeLSBar = na
+var float activeHeadPrice = na
+var int activeHeadBar = na
+var float activeNeckLeftPrice = na
+var int activeNeckLeftBar = na
 var float activeNeckRightPrice = na
-var int   activeNeckRightBar   = na
-var float runningRSHigh        = na
-var float activeRSPrice        = na
-var int   activeRSBar          = na
-var bool  rsConfirmed          = false
+var int activeNeckRightBar = na
+var float runningRSHigh = na
+var float activeRSPrice = na
+var int activeRSBar = na
+var bool rsConfirmed = false
 
 var float neckSlopePerBar = na
-var float neckStartPrice  = na
-var int   neckStartBar    = na
-var bool  waitingForBreak = false
+var float neckStartPrice = na
+var int neckStartBar = na
+var bool waitingForBreak = false
 
-var line  lineLH      = na
-var line  lineHR      = na
-var line  neckLine    = na
-var line  lineForming = na
-var label lsLbl   = na
-var label hLbl    = na
-var label rsLbl   = na
+var line lineLH = na
+var line lineHR = na
+var line neckLine = na
+var line lineForming = na
+var label lsLbl = na
+var label hLbl = na
+var label rsLbl = na
 var label infoLbl = na
 
 // ---------------------------------------------------------------------------
@@ -191,11 +200,11 @@ var label infoLbl = na
 doReset = false
 doStartFresh = false
 float newLS = na
-int   newLSBar = na
+int newLSBar = na
 float newH = na
-int   newHBar = na
+int newHBar = na
 float newNeckLeftPrice = na
-int   newNeckLeftBar = na
+int newNeckLeftBar = na
 rsJustConfirmed = false
 
 if not na(ph)
@@ -204,6 +213,7 @@ if not na(ph)
         thisHighBar = bar_index - pivotLen
         if thisHighPrice > activeHeadPrice
             doReset := true
+            doReset
         else
             shDiff = math.abs(activeLSPrice - thisHighPrice) / math.max(activeLSPrice, thisHighPrice) * 100
             neckDiff = math.abs(activeNeckLeftPrice - activeNeckRightPrice) / math.max(activeNeckLeftPrice, activeNeckRightPrice) * 100
@@ -217,6 +227,7 @@ if not na(ph)
                 neckSlopePerBar := (activeNeckRightPrice - activeNeckLeftPrice) / (activeNeckRightBar - activeNeckLeftBar)
                 neckStartPrice := activeNeckLeftPrice
                 neckStartBar := activeNeckLeftBar
+                neckStartBar
 
     if not rsJustConfirmed
         [candLS, candLSBar, candH, candHBar] = findLSHCandidate()
@@ -231,6 +242,7 @@ if not na(ph)
                 newHBar := candHBar
                 newNeckLeftPrice := candNlP
                 newNeckLeftBar := candNlB
+                newNeckLeftBar
 
 // ---------------------------------------------------------------------------
 // STEP 2: on a new pivot LOW, establish the neckline's right point (only if
@@ -243,6 +255,7 @@ if not na(pl) and not na(activeHeadBar) and na(activeNeckRightBar) and not rsCon
         activeNeckRightPrice := pl
         activeNeckRightBar := thisLowBar
         neckRightJustSet := true
+        neckRightJustSet
 
 // ---------------------------------------------------------------------------
 // APPLY (in order): RS confirmed -> reset -> start fresh -> neckline right
@@ -252,14 +265,16 @@ if rsJustConfirmed
     lineForming := na
     deleteLineIfExists(lineHR)
     deleteLineIfExists(neckLine)
-    lineHR := line.new(activeHeadBar, activeHeadPrice, activeRSBar, activeRSPrice, color=patternColor, width=2)
-    neckLine := line.new(activeNeckLeftBar, activeNeckLeftPrice, activeNeckRightBar, activeNeckRightPrice, color=patternColor, width=2, style=line.style_dashed, extend=extend.right)
+    lineHR := line.new(activeHeadBar, activeHeadPrice, activeRSBar, activeRSPrice, color = patternColor, width = 2)
+    neckLine := line.new(activeNeckLeftBar, activeNeckLeftPrice, activeNeckRightBar, activeNeckRightPrice, color = patternColor, width = 2, style = line.style_dashed, extend = extend.right)
     if showLabels
         deleteLabelIfExists(rsLbl)
-        rsLbl := label.new(activeRSBar, activeRSPrice, "RS", style=label.style_label_down, color=color.new(patternColor, 20), textcolor=color.white, size=size.small)
+        rsLbl := label.new(activeRSBar, activeRSPrice, 'RS', style = label.style_label_down, color = color.new(patternColor, 20), textcolor = color.white, size = size.small)
+        rsLbl
 
-if not na(activeHeadBar) and not rsConfirmed and not doStartFresh and (bar_index - activeHeadBar) > maxLegBars
+if not na(activeHeadBar) and not rsConfirmed and not doStartFresh and bar_index - activeHeadBar > maxLegBars
     doReset := true
+    doReset
 
 if doReset
     activeLSPrice := na
@@ -289,6 +304,7 @@ if doReset
     lsLbl := na
     hLbl := na
     rsLbl := na
+    rsLbl
 
 if doStartFresh
     deleteLineIfExists(lineLH)
@@ -318,16 +334,19 @@ if doStartFresh
     rsConfirmed := false
     waitingForBreak := false
 
-    lineLH := line.new(newLSBar, newLS, newHBar, newH, color=patternColor, width=2)
+    lineLH := line.new(newLSBar, newLS, newHBar, newH, color = patternColor, width = 2)
     if showLabels
-        lsLbl := label.new(newLSBar, newLS, "LS", style=label.style_label_down, color=color.new(patternColor, 20), textcolor=color.white, size=size.small)
-        hLbl := label.new(newHBar, newH, "H", style=label.style_label_down, color=color.new(patternColor, 20), textcolor=color.white, size=size.small)
-    neckLine := line.new(newNeckLeftBar, newNeckLeftPrice, newNeckLeftBar + 1, newNeckLeftPrice, color=color.new(patternColor, 40), width=2, style=line.style_dashed, extend=extend.right)
+        lsLbl := label.new(newLSBar, newLS, 'LS', style = label.style_label_down, color = color.new(patternColor, 20), textcolor = color.white, size = size.small)
+        hLbl := label.new(newHBar, newH, 'H', style = label.style_label_down, color = color.new(patternColor, 20), textcolor = color.white, size = size.small)
+        hLbl
+    neckLine := line.new(newNeckLeftBar, newNeckLeftPrice, newNeckLeftBar + 1, newNeckLeftPrice, color = color.new(patternColor, 40), width = 2, style = line.style_dashed, extend = extend.right)
+    neckLine
 
 if neckRightJustSet
     deleteLineIfExists(neckLine)
-    neckLine := line.new(activeNeckLeftBar, activeNeckLeftPrice, activeNeckRightBar, activeNeckRightPrice, color=color.new(patternColor, 40), width=2, style=line.style_dashed, extend=extend.right)
+    neckLine := line.new(activeNeckLeftBar, activeNeckLeftPrice, activeNeckRightBar, activeNeckRightPrice, color = color.new(patternColor, 40), width = 2, style = line.style_dashed, extend = extend.right)
     runningRSHigh := high
+    runningRSHigh
 
 // ---------------------------------------------------------------------------
 // STEP 3: every bar - update the live "right shoulder so far" preview line
@@ -335,57 +354,103 @@ if neckRightJustSet
 if not na(activeNeckRightBar) and not rsConfirmed
     runningRSHigh := math.max(runningRSHigh, high)
     deleteLineIfExists(lineForming)
-    lineForming := line.new(activeHeadBar, activeHeadPrice, bar_index, runningRSHigh, color=color.new(patternColor, 45), width=1, style=line.style_dashed)
+    lineForming := line.new(activeHeadBar, activeHeadPrice, bar_index, runningRSHigh, color = color.new(patternColor, 45), width = 1, style = line.style_dashed)
+    lineForming
 
 // ---------------------------------------------------------------------------
 // STEP 4: neckline breakdown -> SHORT signal (once RS is confirmed)
 // ---------------------------------------------------------------------------
-float necklineNow = na
-if waitingForBreak and not na(neckSlopePerBar)
-    necklineNow := neckStartPrice + neckSlopePerBar * (bar_index - neckStartBar)
+float necklineNow = waitingForBreak and not na(neckSlopePerBar) ? neckStartPrice + neckSlopePerBar * (bar_index - neckStartBar) : na
 
 volMa = ta.sma(volume, volMaLen)
 volOk = not useVolFilter or volume > volMa
 
+priceRef = requireCloseBreak ? close : low
+isCrossunder = ta.crossunder(priceRef, necklineNow)
+
 breakdownSignal = false
 if waitingForBreak and not na(necklineNow)
-    priceRef = requireCloseBreak ? close : low
-    if ta.crossunder(priceRef, necklineNow) and volOk
+    if isCrossunder and volOk
         breakdownSignal := true
         waitingForBreak := false
+        waitingForBreak
 
-plotshape(breakdownSignal ? high : na, title="Short Entry", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0), size=size.small)
+plotshape(breakdownSignal ? high : na, title = 'Short Entry', style = shape.triangledown, location = location.abovebar, color = color.new(color.red, 0), size = size.small)
 
 if breakdownSignal
     patternHeight = activeHeadPrice - necklineNow
-    targetPrice   = necklineNow - patternHeight
+    targetPrice = necklineNow - patternHeight
     deleteLabelIfExists(infoLbl)
-    infoTxt = "SHORT\nEntry ~" + str.tostring(close, format.mintick) + "\nTarget " + str.tostring(targetPrice, format.mintick) + "\nStop " + str.tostring(activeRSPrice, format.mintick)
-    infoLbl := label.new(bar_index, low, infoTxt, style=label.style_label_up, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+    infoTxt = 'SHORT\nEntry ~' + str.tostring(close, format.mintick) + '\nTarget ' + str.tostring(targetPrice, format.mintick) + '\nStop ' + str.tostring(activeRSPrice, format.mintick)
+    infoLbl := label.new(bar_index, low, infoTxt, style = label.style_label_up, color = color.new(color.red, 0), textcolor = color.white, size = size.small)
+    infoLbl
 
-bgcolor(waitingForBreak ? color.new(color.red, 92) : na, title="Confirmed - Watching Neckline")
-bgcolor((not na(activeHeadBar) and not rsConfirmed) ? color.new(color.orange, 92) : na, title="Pattern Forming")
+// ---------------------------------------------------------------------------
+// LATE STAGE BASE FAILURE (SHORT SETUP MODULE)
+// ---------------------------------------------------------------------------
+float baseHigh = ta.highest(high, lsbfBaseLen)[1]
+float baseLow = ta.lowest(low, lsbfBaseLen)[1]
+float high52w = ta.highest(high, headLookback)
+
+bool isLateStageBase = enableLSBF and not na(baseHigh) and baseHigh >= high52w * (1 - lsbfNearHighPct / 100)
+bool hadBreakout = ta.highest(high, lsbfMaxFailBars) > baseHigh
+
+bool crossUnderBaseHigh = ta.crossunder(priceRef, baseHigh)
+bool crossUnderBaseLow = ta.crossunder(priceRef, baseLow)
+
+lsbfFailSignal = enableLSBF and isLateStageBase and hadBreakout and crossUnderBaseHigh and volOk
+lsbfFloorBreakSignal = enableLSBF and isLateStageBase and crossUnderBaseLow and volOk
+
+plotshape(lsbfFailSignal ? high : na, title = 'LSBF Failed Breakout Short', style = shape.diamond, location = location.abovebar, color = color.new(color.maroon, 0), size = size.small)
+plotshape(lsbfFloorBreakSignal ? low : na, title = 'LSBF Floor Breakdown Short', style = shape.xcross, location = location.belowbar, color = color.new(color.purple, 0), size = size.small)
+
+var label lsbfLbl = na
+if lsbfFailSignal
+    deleteLabelIfExists(lsbfLbl)
+    infoTxt = 'LSBF FAIL SHORT\nEntry ~' + str.tostring(close, format.mintick) + '\nStop ~' + str.tostring(high, format.mintick)
+    lsbfLbl := label.new(bar_index, high, infoTxt, style = label.style_label_down, color = color.new(color.maroon, 0), textcolor = color.white, size = size.small)
+
+if lsbfFloorBreakSignal
+    deleteLabelIfExists(lsbfLbl)
+    infoTxt = 'LSBF FLOOR BREAK SHORT\nEntry ~' + str.tostring(close, format.mintick) + '\nStop ~' + str.tostring(baseHigh, format.mintick)
+    lsbfLbl := label.new(bar_index, low, infoTxt, style = label.style_label_up, color = color.new(color.purple, 0), textcolor = color.white, size = size.small)
 
 // ---------------------------------------------------------------------------
 // STATUS TABLE
 // ---------------------------------------------------------------------------
 if showStatusTable and barstate.islast
-    var table statusTable = table.new(position.top_right, 1, 1, bgcolor=color.new(color.black, 70), border_width=1)
-    statusTxt = "No active pattern"
+    var table statusTable = table.new(position.top_right, 1, 1, bgcolor = color.new(color.black, 70), border_width = 1)
+    statusTxt = 'No active pattern'
     if not na(activeHeadBar)
         if rsConfirmed and waitingForBreak
-            statusTxt := "Pattern confirmed - watching neckline"
+            statusTxt := 'H&S confirmed - watching neckline'
+            statusTxt
         else if rsConfirmed and not waitingForBreak
-            statusTxt := "Pattern confirmed - short signal already fired"
+            statusTxt := 'H&S confirmed - short signal already fired'
+            statusTxt
         else if not na(activeNeckRightBar)
-            statusTxt := "Right shoulder forming (high so far " + str.tostring(runningRSHigh, format.mintick) + ")"
+            statusTxt := 'H&S Right shoulder forming (high so far ' + str.tostring(runningRSHigh, format.mintick) + ')'
+            statusTxt
         else
-            statusTxt := "Head confirmed near 52w high - watching for pullback"
-    table.cell(statusTable, 0, 0, statusTxt, text_color=color.white, text_size=size.small)
+            statusTxt := 'H&S Head confirmed near 52w high - watching for pullback'
+            statusTxt
+    else if enableLSBF
+        if lsbfFailSignal
+            statusTxt := 'LSBF: Failed Breakout Short Signal Fired!'
+            statusTxt
+        else if lsbfFloorBreakSignal
+            statusTxt := 'LSBF: Base Support Floor Breakdown Fired!'
+            statusTxt
+        else if isLateStageBase
+            statusTxt := 'LSBF: Late-Stage Base near 52w high - watching for failure'
+            statusTxt
+    table.cell(statusTable, 0, 0, statusTxt, text_color = color.white, text_size = size.small)
 
 // ---------------------------------------------------------------------------
 // ALERTS
 // ---------------------------------------------------------------------------
-alertcondition(doStartFresh, title="H&S Head Confirmed", message="Potential Head & Shoulders Head confirmed near the 52-week high on {{ticker}}.")
-alertcondition(rsJustConfirmed, title="H&S Right Shoulder Confirmed", message="Head & Shoulders pattern confirmed on {{ticker}} - watch for neckline breakdown.")
-alertcondition(breakdownSignal, title="H&S Neckline Breakdown (Short)", message="Head & Shoulders neckline breakdown on {{ticker}} at {{close}} - potential SHORT.")
+alertcondition(doStartFresh, title = 'H&S Head Confirmed', message = 'Potential Head & Shoulders Head confirmed near the 52-week high on {{ticker}}.')
+alertcondition(rsJustConfirmed, title = 'H&S Right Shoulder Confirmed', message = 'Head & Shoulders pattern confirmed on {{ticker}} - watch for neckline breakdown.')
+alertcondition(breakdownSignal, title = 'H&S Neckline Breakdown (Short)', message = 'Head & Shoulders neckline breakdown on {{ticker}} at {{close}} - potential SHORT.')
+alertcondition(lsbfFailSignal, title = 'LSBF Failed Breakout (Short)', message = 'Late Stage Base Failed Breakout on {{ticker}} at {{close}} - potential SHORT.')
+alertcondition(lsbfFloorBreakSignal, title = 'LSBF Support Floor Breakdown (Short)', message = 'Late Stage Base Support Floor Breakdown on {{ticker}} at {{close}} - potential SHORT.')

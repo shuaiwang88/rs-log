@@ -71,11 +71,12 @@ i_6wkTarget  = input.int(6,  '6-Wk Flat – Target Weeks (±1)', group = 'Patter
 
 // ── High Tight Flag ───────────────────────────────────────────────────────────
 i_htfOn   = input.bool(true,   'Enable HTF Detection',  group = 'High Tight Flag')
-i_htfPole = input.float(100.0, 'Min Pole Gain %',       group = 'High Tight Flag', step = 5.0)
-i_htfPB   = input.int(20,      'Max Pole Bars',         group = 'High Tight Flag')
-i_htfFMin = input.int(3,       'Min Flag Bars',         group = 'High Tight Flag')
-i_htfFMax = input.int(10,      'Max Flag Bars',         group = 'High Tight Flag')
-i_htfRet  = input.float(38.2,  'Max Flag Retrace %',    group = 'High Tight Flag')
+i_htfPole = input.float(80.0,  'Min Pole Gain %',       group = 'High Tight Flag', step = 5.0, tooltip = 'At least 80% prior uptrend.')
+i_htfPB   = input.int(40,      'Max Pole Bars',         group = 'High Tight Flag', tooltip = 'Less than 8 weeks = 40 bars.')
+i_htfPBMin= input.int(5,       'Min Pole Bars',         group = 'High Tight Flag')
+i_htfFMin = input.int(10,      'Min Flag Bars',         group = 'High Tight Flag', tooltip = '2 weeks = 10 bars.')
+i_htfFMax = input.int(20,      'Max Flag Bars',         group = 'High Tight Flag', tooltip = '4 weeks = 20 bars.')
+i_htfRet  = input.float(25.0,  'Max Flag Retrace %',    group = 'High Tight Flag', tooltip = 'Less than 25% correction.')
 i_htfVol  = input.float(1.2,   'BO Volume × Avg',       group = 'High Tight Flag')
 
 // ── Display ───────────────────────────────────────────────────────────────────
@@ -378,53 +379,114 @@ if isCup and not na(bTop) and not na(bLow) and not na(cupMid) and bCount > handl
     isCupH := inTop and depOk
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  HIGH TIGHT FLAG DETECTION
+//  HIGH TIGHT FLAG DETECTION (drw_flag.pine engine)
 // ═════════════════════════════════════════════════════════════════════════════
+var float flag_baseHigh = na
+var int flag_startIndex = na
+var int flag_flagLength = 0
+var float flag_baseLow = na
+var int flag_lowIndex = na
+var bool flag_flagBool = false
+var float flag_poleLow = na
+var int flag_poleLowIndex = na
+
 var bool isHTF = false
 
 if i_htfOn and bar_index > 30
-    bool found = false
-    for fLen = i_htfFMin to i_htfFMax
-        if not found
-            // ── Find flagpole high ────────────────────────────────────────────
-            int   pHi = fLen + 1
-            float pH2 = high[pHi]
-            for k = fLen to math.min(fLen + 5, bar_index - 1)
-                if high[k] > pH2
-                    pH2 := high[k]
-                    pHi := k
+    // find bull flag highs (from drw_flag.pine)
+    if high > flag_baseHigh or na(flag_baseHigh)
+        flag_baseHigh := high
+        flag_startIndex := bar_index
+        flag_flagLength := 0
+        flag_baseLow := low
+        flag_lowIndex := bar_index
 
-            // ── Find flagpole low ─────────────────────────────────────────────
-            float pL2 = low[pHi + 1]
-            int   pLi = pHi + 1
-            for k = 1 to i_htfPB
-                if pHi + k < bar_index
-                    if low[pHi + k] < pL2
-                        pL2 := low[pHi + k]
-                        pLi := pHi + k
+    if high <= flag_baseHigh and low < flag_baseLow
+        flag_baseLow := low
+        flag_lowIndex := bar_index
 
-            float poleGain = pL2 > 0 ? (pH2 / pL2 - 1) * 100 : 0.0
-            int   poleBars = pLi - pHi
+    if high <= flag_baseHigh and flag_lowIndex == flag_startIndex
+        flag_baseLow := low
+        flag_lowIndex := bar_index
 
-            if poleGain >= i_htfPole and poleBars <= i_htfPB and pLi > pHi
-                // ── Measure the flag consolidation ────────────────────────────
-                float fH2 = high[1]
-                float fL2 = low[1]
-                if pHi > 1
-                    for m = 1 to pHi - 1
-                        if high[m] > fH2
-                            fH2 := high[m]
-                        if low[m] < fL2
-                            fL2 := low[m]
+    // calculations
+    float findDepth = flag_baseHigh > 0 ? math.abs(((flag_baseLow / flag_baseHigh) - 1.0) * 100.0) : 0.0
+    bool lower_close = close < close[1]
 
-                float maxRet = pH2 - (i_htfRet / 100) * (pH2 - pL2)
-                bool  flagOk = fH2 <= pH2 * 1.01 and fL2 >= maxRet
-                bool  bo     = close > fH2 and volume > avgVol * i_htfVol
+    // start the counters
+    if high < flag_baseHigh and findDepth <= i_htfRet or (high == flag_baseHigh and lower_close)
+        flag_flagLength += 1
+    else
+        flag_flagLength := 0
 
-                if flagOk and bo
-                    found := true
+    // check for prior uptrend (pole gain >= 80% in <= 40 bars)
+    if not flag_flagBool or high == flag_baseHigh
+        float minLow = low[1]
+        int minLowIdx = bar_index - 1
+        int searchBars = math.min(i_htfPB, bar_index - 1)
+        if searchBars >= i_htfPBMin
+            for i = 1 to searchBars
+                if low[i] < minLow
+                    minLow := low[i]
+                    minLowIdx := bar_index - i
+            if minLow > 0 and ((flag_baseHigh / minLow) - 1.0) * 100.0 >= i_htfPole
+                flag_flagBool := true
+                flag_poleLow := minLow
+                flag_poleLowIndex := minLowIdx
 
-    isHTF := found
+    // reset variables if criteria is broken
+    if findDepth >= i_htfRet or flag_flagLength > i_htfFMax
+        flag_flagBool := false
+        flag_flagLength := 0
+        flag_baseHigh := na
+        flag_startIndex := na
+        flag_lowIndex := na
+        flag_baseLow := na
+
+    // reset and look for new flag if price continues higher before minimum length
+    if high > nz(flag_baseHigh[1]) and flag_flagLength < i_htfFMin
+        flag_baseHigh := high
+        flag_flagLength := 0
+        flag_startIndex := bar_index
+        flag_lowIndex := bar_index
+        flag_baseLow := low
+
+    // define the flag forming state
+    bool is_flag = flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfRet and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
+
+    // define breakout & breakdown
+    bool breakout = high > nz(flag_baseHigh[1]) and flag_flagLength >= i_htfFMin and flag_flagBool == true
+    bool breakdown = findDepth >= i_htfRet or flag_flagLength > i_htfFMax
+    bool plotBO = is_flag[1] and high > nz(flag_baseHigh[1]) and flag_flagLength[1] >= i_htfFMin and flag_flagBool == true
+
+    // apply volume confirmation if set
+    bool volOK = true
+    if i_htfVol > 0
+        volOK := volume >= avgVol * i_htfVol
+
+    if plotBO and volOK
+        isHTF := true
+    else
+        isHTF := false
+
+    // reset variables if a breakout occurs
+    if breakout
+        flag_flagLength := 0
+        flag_baseHigh := high
+        flag_startIndex := bar_index
+        flag_lowIndex := bar_index
+        flag_baseLow := low
+
+    // reset from a failed flag (breakdown)
+    float highest = ta.highest(high, 10)
+    if breakdown or flag_flagLength == i_htfFMax
+        flag_flagBool := false
+        flag_baseHigh := highest
+        flag_startIndex := bar_index
+        flag_lowIndex := bar_index
+        flag_baseLow := low
+else
+    isHTF := false
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  BREAKOUT & PIVOT TRACKING

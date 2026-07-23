@@ -92,8 +92,8 @@ sellLblColor = input.color(color.new(color.red, 0), "Sell Label Color", group = 
 
 grpDay1 = "Dynamic Day 1 (Market Navigator style)"
 
-useManualDay1 = input.bool(false, "Use Selected Day 1 Anchor",
-     tooltip = "When enabled, the bar picked below is forced to be Day 1 of the current rally attempt (a Day 1 is the first up day in a downtrend, or a down day closing in the upper half of its range). Leave off for fully automatic detection.",
+useManualDay1 = input.bool(true, "Use Selected Day 1 Anchor",
+     tooltip = "When enabled, TradingView will prompt to pick Day 1 of the current rally attempt on the chart when loading or switching tickers. Turn off for fully automatic detection.",
      group = grpDay1)
 
 day1Time = input.time(timestamp("01 Jan 2024 00:00 +0000"), "Day 1 of Current Rally Attempt",
@@ -147,7 +147,7 @@ grpTable = "Market Status Table"
 showTable = input.bool(true, "Show Market Status Table", group = grpTable)
 tablePosition = input.string("Top Right", "Table Position",
      options = ["Top Left", "Top Center", "Top Right", "Middle Left", "Middle Right", "Bottom Left", "Bottom Center", "Bottom Right"], group = grpTable)
-tableSize = input.string("Small", "Table Text Size",
+tableSize = input.string("Normal", "Table Text Size",
      options = ["Tiny", "Small", "Normal", "Large"], group = grpTable)
 tableBg = input.color(color.new(color.black, 10), "Table Background", group = grpTable)
 
@@ -218,6 +218,24 @@ f_text_size(string s) =>
         "Normal" => size.normal
         "Large"  => size.large
         => size.small
+
+f_wrap_text(string txt, int maxLen) =>
+    string[] words = str.split(txt, " ")
+    string result = ""
+    string currentLine = ""
+    if array.size(words) > 0
+        for i = 0 to array.size(words) - 1 by 1
+            string word = array.get(words, i)
+            if str.length(currentLine) == 0
+                currentLine := word
+            else if str.length(currentLine) + 1 + str.length(word) <= maxLen
+                currentLine := currentLine + " " + word
+            else
+                result := result + (str.length(result) > 0 ? "\n" : "") + currentLine
+                currentLine := word
+        if str.length(currentLine) > 0
+            result := result + (str.length(result) > 0 ? "\n" : "") + currentLine
+    result != "" ? result : txt
 
 // ----------------------------------------------------------------
 // Hover-over explanations for each signal code. One-line, plain-
@@ -1293,13 +1311,13 @@ if signalText != "" and signalDisplay == "All Signals"
     label.new(bar_index, high, signalText,
          color = color.new(positiveSignal ? buyLblColor : sellLblColor, 70),
          textcolor = positiveSignal ? buyLblColor : sellLblColor,
-         style = label.style_label_down, size = size.tiny, tooltip = signalTooltip)
+         style = label.style_label_down, size = size.small, tooltip = signalTooltip)
 
 if signalText != "" and signalDisplay == "Exposure Changes Only" and exposureChanged
     label.new(bar_index, high, signalText,
          color = color.new(positiveSignal ? buyLblColor : sellLblColor, 70),
          textcolor = positiveSignal ? buyLblColor : sellLblColor,
-         style = label.style_label_down, size = size.tiny, tooltip = signalTooltip)
+         style = label.style_label_down, size = size.small, tooltip = signalTooltip)
 
 if signalDisplay == "Arrows Only" and exposureChanged
     bool exposureUp = exposureCount > nz(exposureCount[1])
@@ -1307,19 +1325,19 @@ if signalDisplay == "Arrows Only" and exposureChanged
         label.new(bar_index, low, "▲",
              color = color.new(color.black, 100),
              textcolor = buyLblColor,
-             style = label.style_label_up, size = size.tiny, tooltip = signalTooltip)
+             style = label.style_label_up, size = size.small, tooltip = signalTooltip)
     else
         label.new(bar_index, high, "▼",
              color = color.new(color.black, 100),
              textcolor = sellLblColor,
-             style = label.style_label_down, size = size.tiny, tooltip = signalTooltip)
+             style = label.style_label_down, size = size.small, tooltip = signalTooltip)
 
 // Rally Day 1 marker
 if showRallyDayLbl and newDay1
     label.new(bar_index, low, "D1",
          color = color.new(color.blue, 70),
          textcolor = color.new(color.blue, 0),
-         style = label.style_label_up, size = size.tiny,
+         style = label.style_label_up, size = size.small,
          tooltip = "Day 1 of a new rally attempt: the first up day off the low, or a down day closing in the upper half of its range.")
 
 // ---------------- Bar coloring / Power Trend background ----------------
@@ -1413,9 +1431,18 @@ if barstate.islast and showTable
     table.cell(dashboard, 1, 12, not na(initialFTDLow) ? str.tostring(f_pct_change(close, initialFTDLow), "#.##") + "%" : "—",
          text_color = color.white, text_size = tSize)
 
+    string wrappedTooltip = ""
+    string[] descLines = str.split(str.trim(signalTooltip), "\n")
+    if array.size(descLines) > 0
+        for i = 0 to array.size(descLines) - 1 by 1
+            string lineItem = array.get(descLines, i)
+            if lineItem != ""
+                wrappedTooltip := wrappedTooltip + (wrappedTooltip != "" ? "\n" : "") + f_wrap_text(lineItem, 35)
+
+    string todayText = signalText == "" ? "—" : (signalText + "\n" + wrappedTooltip)
     table.cell(dashboard, 0, 13, "Today", text_color = color.white, text_size = tSize,
          tooltip = "Signal code(s) that fired on the most recent bar.")
-    table.cell(dashboard, 1, 13, signalText == "" ? "—" : signalText,
+    table.cell(dashboard, 1, 13, todayText,
          text_color = positiveSignal ? buyLblColor : signalText == "" ? color.white : sellLblColor,
          text_size = tSize,
          tooltip = signalText == "" ? "No signal fired on the last bar." : signalTooltip)

@@ -537,6 +537,9 @@ i_baseDepth = input(50, title = 'Base: Depth (%)', group = 'Chart Pattern Recogn
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_dbDepth = input(50, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
 i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
+i_dbPriorUptrend = input.float(15.0, title = 'Min Prior Uptrend (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum prior uptrend percentage before Double Bottom forms')
+i_dbMinLengthWeeks = input.int(7, title = 'Min Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum total length in weeks for Double Bottom')
+i_dbRequireUndercut = input.bool(true, title = 'Require 2nd Bottom Undercut', group = 'Chart Pattern Recognition', tooltip = 'If enabled, 2nd bottom low must undercut (be strictly lower than) 1st bottom low')
 i_showPatternTooltip = input(true, title = 'Show Pattern Hover Label', group = 'Chart Pattern Recognition')
 i_showCupHandleSep = input(true, title = 'Show Sep Cup-with-Handle (Early Handle)', group = 'Chart Pattern Recognition')
 i_handleMinBars = input(5, title = 'Handle: Min Bars', group = 'Chart Pattern Recognition')
@@ -551,11 +554,11 @@ i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         
 i_lockFirstHandle    = input.bool(true,   'Lock First Valid Handle (no shift)', group = 'Chart Pattern Recognition', tooltip = 'IBD update #2: lock the FIRST valid handle/pivot instead of shifting to a later or higher one. Gives a consistent pivot point. Turn OFF for the legacy "best handle" behavior.')
 i_requirePriorUptrend = input.bool(true,  'Require Prior Uptrend for Base',     group = 'Chart Pattern Recognition', tooltip = 'Legacy filter: base must sit ~20% above its prior ~20-week low. ON preserves current behavior. Turn OFF to match the new IBD left-side rule (13-week high OR prior-base breakout only) — flags more bases, including some in downtrends.')
 i_htfOn   = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
-i_htfPole = input.float(100.0, 'HTF: Min Pole Gain %',               group = 'Chart Pattern Recognition', step = 5.0, tooltip = 'Minimum advance of the pole (low → peak). Classic high tight flag ≈ 90–120%; default 100%.')
-i_htfPB   = input.int(20,      'HTF: Max Pole Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Pole must run from its low to its peak within this many bars.')
-i_htfFMin = input.int(3,       'HTF: Min Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Minimum bars in the flag.')
-i_htfFMax = input.int(10,      'HTF: Max Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Maximum bars in the flag.')
-i_htfRet  = input.float(38.2,  'HTF: Max Flag Retrace %',            group = 'Chart Pattern Recognition', tooltip = 'Maximum pullback of the flag below the pole high.')
+i_htfPole = input.float(80.0,  'HTF: Min Pole Gain %',               group = 'Chart Pattern Recognition', step = 5.0, tooltip = 'Minimum advance of the pole (low → peak). At least 80% prior uptrend.')
+i_htfPB   = input.int(40,      'HTF: Max Pole Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Pole must run from its low to its peak within this many bars (less than 8 weeks = 40 bars).')
+i_htfFMin = input.int(10,      'HTF: Min Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Minimum bars in the flag (2 weeks = 10 bars).')
+i_htfFMax = input.int(20,      'HTF: Max Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Maximum bars in the flag (4 weeks = 20 bars).')
+i_htfRet  = input.float(25.0,  'HTF: Max Flag Retrace %',            group = 'Chart Pattern Recognition', tooltip = 'Maximum pullback of the flag below the pole high (less than 25%).')
 i_htfVol  = input.float(1.2,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
 
 i_baseDepth := i_baseDepth / 100
@@ -663,15 +666,15 @@ if isBase
         scndPivLow   = array.get(pivotLowPrices,  0)
 
         priorLow      = _priorLowFull
-        condPriorTrend = firstPivHigh >= priorLow * 1.20
+        condPriorTrend = firstPivHigh >= priorLow * (1.0 + i_dbPriorUptrend / 100.0)
 
         condPricesH = true
         if array.size(startBasePrice) > 0
             condPricesH := firstPivHigh == array.get(startBasePrice, 0)
 
-        condPricesA = scndPivLow <= firstPivLow * 1.03
+        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow * 1.03)
 
-        condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh
+        condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh and firstPivLow >= (1 - i_dbDepth) * firstPivHigh
 
         condPricesC = scndPivLow <= firstPivHigh * 0.90
 
@@ -701,7 +704,8 @@ if isBase
 
         condTimeB = frthPivTime - firstPivTime <= i_dbLength
 
-        condTimeC = frthPivTime - firstPivTime >= 10
+        int minDbBars = timeframe.isweekly ? i_dbMinLengthWeeks : (i_dbMinLengthWeeks * 5)
+        condTimeC = (bar_index - firstPivTime) >= minDbBars
 
         condTimeD = (scndPivTime - firstPivTime) >= 3 and
           (thrdPivTime - scndPivTime)  >= 3 and
@@ -896,7 +900,7 @@ if i_htfOn and bar_index > 30
                         if low[m] < fL2
                             fL2 := low[m]
 
-                float maxRet = pH2 - (i_htfRet / 100) * (pH2 - pL2)
+                float maxRet = pH2 * (1.0 - i_htfRet / 100.0)
                 bool  flagOk = fH2 <= pH2 * 1.01 and fL2 >= maxRet
                 bool  bo     = close > fH2 and volume > htfAvgVol * i_htfVol
 
@@ -1008,11 +1012,11 @@ if detectDoubleBottom and not isDoubleBottom[1] and tfDraw and i_displayPattern
     line.delete(highLine)
     line.delete(lowLine)
     bottomDBBar := array.get(pivotLowBars, 0)
-    highLine := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bar_index, y2 = array.get(pivotHighPrices, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
-    dbLine1 := line.new(x1 = array.get(pivotHighBars, 1), y1 = array.get(lowOfpivotHighPrices, 1) * (100 - 1) / 100, x2 = array.get(pivotLowBars, 1), y2 = array.get(pivotLowPrices, 1) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
-    dbLine2 := line.new(x1 = array.get(pivotLowBars, 1), y1 = array.get(pivotLowPrices, 1) * (100 - 1) / 100, x2 = array.get(pivotHighBars, 0), y2 = array.get(lowOfpivotHighPrices, 0) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
-    dbLine3 := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(lowOfpivotHighPrices, 0) * (100 - 1) / 100, x2 = bottomDBBar, y2 = array.get(bottomDBPrice, 0) * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
-    lowLine := line.new(x1 = bottomDBBar, y1 = array.get(bottomDBPrice, 0) * (100 - 1) / 100, x2 = bar_index, y2 = low * (100 - 1) / 100, width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
+    highLine := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bar_index, y2 = array.get(pivotHighPrices, 0), width = 2, style = line.style_dashed, color = color.green)
+    dbLine1 := line.new(x1 = array.get(pivotHighBars, 1), y1 = array.get(pivotHighPrices, 1), x2 = array.get(pivotLowBars, 1), y2 = array.get(pivotLowPrices, 1), width = 2, style = line.style_solid, color = color.green)
+    dbLine2 := line.new(x1 = array.get(pivotLowBars, 1), y1 = array.get(pivotLowPrices, 1), x2 = array.get(pivotHighBars, 0), y2 = array.get(pivotHighPrices, 0), width = 2, style = line.style_solid, color = color.green)
+    dbLine3 := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bottomDBBar, y2 = array.get(bottomDBPrice, 0), width = 2, style = line.style_solid, color = color.green)
+    lowLine := line.new(x1 = bottomDBBar, y1 = array.get(bottomDBPrice, 0), x2 = bar_index, y2 = high, width = 2, style = line.style_solid, color = color.green)
     select = i_displayHistoricalBoxes ? false : boxOver
     if select
         box.delete(entryBox)
