@@ -537,7 +537,6 @@ i_baseDepth = input(50, title = 'Base: Depth (%)', group = 'Chart Pattern Recogn
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_dbDepth = input(50, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
 i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
-i_cupDepth = input(35, title = 'Cup: Max Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Cup')
 i_dbPriorUptrend = input.float(15.0, title = 'Min Prior Uptrend (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum prior uptrend percentage before Double Bottom forms')
 i_dbMinLengthWeeks = input.int(7, title = 'Min Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum total length in weeks for Double Bottom')
 i_dbRequireUndercut = input.bool(true, title = 'Require 2nd Bottom Undercut', group = 'Chart Pattern Recognition', tooltip = 'If enabled, 2nd bottom low must undercut (be strictly lower than) 1st bottom low')
@@ -564,7 +563,6 @@ i_htfVol     = input.float(1.2,   'HTF: BO Volume × Avg',               group =
 
 i_baseDepth := i_baseDepth / 100
 i_dbDepth := i_dbDepth / 100
-i_cupDepth := i_cupDepth / 100
 i_baseLength := i_baseLength * 5
 i_dbLength := i_dbLength * 5
 
@@ -665,7 +663,7 @@ if isBase
         if array.size(startBasePrice) > 0
             condPricesH := firstPivHigh == array.get(startBasePrice, 0)
 
-        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow * 1.03)
+        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow )
 
         condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh and firstPivLow >= (1 - i_dbDepth) * firstPivHigh
 
@@ -751,7 +749,7 @@ if isBase
         lowCup := array.get(lowBasePrice, 0)
         lowCup
     middleOfCup := lowCup + (highCup - lowCup) * 0.5
-    condMaxDepth = lowCup >= (1 - i_cupDepth) * highCup
+    condMaxDepth = lowCup >= (1 - i_baseDepth) * highCup
     condMinDepth = lowCup <= 0.92 * highCup
     condMaxLength = bar_index - startBaseBar <= i_baseLength
     condMinLength = bar_index - startBaseBar >= 30
@@ -840,9 +838,8 @@ if rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep > 0
 
 bool volContractionOK = not i_useVolHandle or (handleBarCountSep > 0 and volAvgHandle <= volMaHandle * i_volContractionMax / 100)
 bool requireCupOK     = not i_requireCupForHandle or isCup or isDoubleBottom
-bool handleBaseDepthOK = not na(_baseTop) and not na(_baseLow) and _baseLow >= (1 - i_cupDepth) * _baseTop
 
-bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK and handleBaseDepthOK
+bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK
 
 bool volBreakoutOK    = not i_useVolHandle or volume >= i_volBreakoutMult * volMaHandle
 bool handleBreakoutSep = handleFormingSep and close > handlePeakLockedSep and volBreakoutOK
