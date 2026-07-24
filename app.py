@@ -712,6 +712,358 @@ def create_lightweight_candlestick_html(df, title="", height=600, markers=None, 
     """
     return html
 
+# ---------------------- EquiCharts (Equivolume) Helper ----------------------
+def create_equicharts_html(df, height=650, title="", ticker="", rs_label=None):
+    if df is None or df.empty:
+        return "<div style='padding:20px; color:#999;'>No data available</div>"
+
+    df_calc = df.copy()
+    
+    if 'MA10' not in df_calc.columns:
+        df_calc['MA10'] = df_calc['Close'].ewm(span=10, adjust=False).mean()
+    if 'MA21' not in df_calc.columns:
+        df_calc['MA21'] = df_calc['Close'].ewm(span=21, adjust=False).mean()
+    if 'MA50' not in df_calc.columns:
+        df_calc['MA50'] = df_calc['Close'].ewm(span=50, adjust=False).mean()
+    if 'AvgVol50' not in df_calc.columns:
+        df_calc['AvgVol50'] = df_calc['Volume'].rolling(50, min_periods=1).mean()
+
+    bars = []
+    for idx, row in df_calc.iterrows():
+        try:
+            date_str = idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx)
+            bars.append({
+                'date': date_str,
+                'open': float(row['Open']),
+                'high': float(row['High']),
+                'low': float(row['Low']),
+                'close': float(row['Close']),
+                'volume': float(row['Volume']),
+                'avg_vol': float(row['AvgVol50']) if pd.notna(row.get('AvgVol50')) else float(row['Volume']),
+                'ma10': float(row['MA10']) if pd.notna(row.get('MA10')) else None,
+                'ma21': float(row['MA21']) if pd.notna(row.get('MA21')) else None,
+                'ma50': float(row['MA50']) if pd.notna(row.get('MA50')) else None,
+                'rs_raw': float(row['rs_raw']) if 'rs_raw' in row and pd.notna(row['rs_raw']) else None,
+                'rs_quick': float(row['rs_ema_quick']) if 'rs_ema_quick' in row and pd.notna(row['rs_ema_quick']) else None,
+                'rs_quicksand': float(row['rs_ema_quicksand']) if 'rs_ema_quicksand' in row and pd.notna(row['rs_ema_quicksand']) else None,
+                'rs_gd': float(row['rs_ema_gd']) if 'rs_ema_gd' in row and pd.notna(row['rs_ema_gd']) else None,
+            })
+        except Exception:
+            continue
+
+    if not bars:
+        return "<div style='padding:20px; color:#999;'>No valid bar data for EquiCharts</div>"
+
+    bars_json = json.dumps(bars)
+    chart_id = f"equichart_{uuid.uuid4().hex[:8]}"
+
+    html = f"""
+    <div id="{chart_id}_wrapper" style="width:100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#131722; color:#d1d4dc; padding:12px; border-radius:8px; box-sizing:border-box;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="font-weight:bold; font-size:16px; color:#fff;">📊 EquiCharts (Equivolume) — {ticker}</span>
+                <span style="font-size:12px; background:#2a2e39; padding:2px 8px; border-radius:4px; color:#2962ff;">Box Width = Volume</span>
+                {f'<span style="font-size:12px; background:#636efa; padding:2px 8px; border-radius:4px; color:#fff;">RS Rating: {rs_label}</span>' if rs_label else ''}
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button id="{chart_id}_zoom_in" style="background:#2a2e39; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">+ Zoom</button>
+                <button id="{chart_id}_zoom_out" style="background:#2a2e39; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">- Zoom</button>
+                <button id="{chart_id}_reset" style="background:#2a2e39; color:#fff; border:none; padding:4px 10px; border-radius:4px; cursor:pointer;">Reset</button>
+            </div>
+        </div>
+        <div style="position:relative; width:100%; height:{height}px;">
+            <canvas id="{chart_id}_canvas" style="width:100%; height:100%; display:block; cursor:crosshair;"></canvas>
+            <div id="{chart_id}_tooltip" style="position:absolute; top:10px; left:10px; background:rgba(19, 23, 34, 0.9); border:1px solid #363c4e; border-radius:4px; padding:8px 12px; font-size:12px; pointer-events:none; display:none; z-index:100;"></div>
+        </div>
+    </div>
+
+    <script>
+    (function() {{
+        const rawBars = {bars_json};
+        const canvas = document.getElementById('{chart_id}_canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('{chart_id}_tooltip');
+
+        let dpr = window.devicePixelRatio || 1;
+        let baseWidth = 14;
+        let scrollX = 0;
+        let isDragging = false;
+        let startMouseX = 0;
+        let startScrollX = 0;
+        let hoverIndex = -1;
+
+        function resizeCanvas() {{
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            draw();
+        }}
+
+        function computeLayout() {{
+            let currentX = 10 + scrollX;
+            const layoutBars = [];
+            for (let i = 0; i < rawBars.length; i++) {{
+                const b = rawBars[i];
+                const volRatio = b.avg_vol > 0 ? (b.volume / b.avg_vol) : 1.0;
+                const width = Math.max(4, Math.min(60, baseWidth * volRatio));
+                const xStart = currentX;
+                const xEnd = currentX + width;
+                const xCenter = (xStart + xEnd) / 2;
+                currentX += width + 3;
+                layoutBars.push({{ ...b, xStart, xEnd, xCenter, width }});
+            }}
+            return layoutBars;
+        }}
+
+        function draw() {{
+            const rect = canvas.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            ctx.clearRect(0, 0, width, height);
+
+            const layoutBars = computeLayout();
+            if (layoutBars.length === 0) return;
+
+            const priceHeight = height * 0.7;
+            const rsHeight = height * 0.25;
+            const rsTop = height * 0.72;
+
+            let minPrice = Infinity, maxPrice = -Infinity;
+            let minRS = Infinity, maxRS = -Infinity;
+            let hasVisible = false;
+
+            layoutBars.forEach(b => {{
+                if (b.xEnd >= 0 && b.xStart <= width) {{
+                    hasVisible = true;
+                    if (b.low < minPrice) minPrice = b.low;
+                    if (b.high > maxPrice) maxPrice = b.high;
+                    if (b.ma10 && b.ma10 < minPrice) minPrice = b.ma10;
+                    if (b.ma50 && b.ma50 > maxPrice) maxPrice = b.ma50;
+
+                    if (b.rs_raw !== null) {{
+                        if (b.rs_raw < minRS) minRS = b.rs_raw;
+                        if (b.rs_raw > maxRS) maxRS = b.rs_raw;
+                    }}
+                }}
+            }});
+
+            if (!hasVisible || minPrice === Infinity) {{
+                minPrice = Math.min(...rawBars.map(b => b.low));
+                maxPrice = Math.max(...rawBars.map(b => b.high));
+            }}
+
+            const pricePadding = (maxPrice - minPrice) * 0.05 || 1;
+            minPrice -= pricePadding;
+            maxPrice += pricePadding;
+
+            if (minRS === Infinity) {{ minRS = 0; maxRS = 100; }}
+            const rsPadding = (maxRS - minRS) * 0.05 || 1;
+            minRS -= rsPadding;
+            maxRS += rsPadding;
+
+            function getYPrice(p) {{
+                return priceHeight - 20 - ((p - minPrice) / (maxPrice - minPrice)) * (priceHeight - 40);
+            }}
+
+            function getYRS(r) {{
+                return rsTop + rsHeight - 10 - ((r - minRS) / (maxRS - minRS)) * (rsHeight - 20);
+            }}
+
+            // Horizontal Grid Lines
+            ctx.strokeStyle = '#2a2e39';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 1; i <= 5; i++) {{
+                let y = (priceHeight / 6) * i;
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                let pVal = maxPrice - ((maxPrice - minPrice) / 6) * i;
+                ctx.fillStyle = '#787b86';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(pVal.toFixed(2), width - 50, y - 4);
+            }}
+            ctx.stroke();
+
+            // RS Subpane Divider
+            ctx.strokeStyle = '#363c4e';
+            ctx.beginPath();
+            ctx.moveTo(0, priceHeight);
+            ctx.lineTo(width, priceHeight);
+            ctx.stroke();
+
+            ctx.fillStyle = '#2962ff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('Relative Strength (Raw & EMAs)', 10, priceHeight + 15);
+
+            // Draw EquiVolume Boxes
+            layoutBars.forEach((b) => {{
+                if (b.xEnd < -50 || b.xStart > width + 50) return;
+
+                const isUp = b.close >= b.open;
+                const strokeColor = isUp ? '#26a69a' : '#ef5350';
+                const fillColor   = isUp ? 'rgba(38, 166, 154, 0.35)' : 'rgba(239, 83, 80, 0.35)';
+
+                const yHigh = getYPrice(b.high);
+                const yLow  = getYPrice(b.low);
+                const yOpen = getYPrice(b.open);
+                const yClose = getYPrice(b.close);
+
+                // High-Low Wick
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(b.xCenter, yHigh);
+                ctx.lineTo(b.xCenter, yLow);
+                ctx.stroke();
+
+                // Box Body (Height: Open to Close, Width: Volume)
+                const bodyTop = Math.min(yOpen, yClose);
+                const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
+
+                ctx.fillStyle = fillColor;
+                ctx.fillRect(b.xStart, bodyTop, b.width, bodyHeight);
+
+                ctx.strokeStyle = strokeColor;
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(b.xStart, bodyTop, b.width, bodyHeight);
+
+                // Open tick (left)
+                ctx.beginPath();
+                ctx.moveTo(b.xStart - 2, yOpen);
+                ctx.lineTo(b.xStart + Math.min(6, b.width / 2), yOpen);
+                ctx.stroke();
+
+                // Close tick (right)
+                ctx.beginPath();
+                ctx.moveTo(b.xEnd - Math.min(6, b.width / 2), yClose);
+                ctx.lineTo(b.xEnd + 2, yClose);
+                ctx.stroke();
+            }});
+
+            // Moving Averages
+            function drawMA(key, color, widthLine = 1.5) {{
+                ctx.strokeStyle = color;
+                ctx.lineWidth = widthLine;
+                ctx.beginPath();
+                let started = false;
+                layoutBars.forEach(b => {{
+                    if (b[key] !== null) {{
+                        const y = getYPrice(b[key]);
+                        if (!started) {{ ctx.moveTo(b.xCenter, y); started = true; }}
+                        else {{ ctx.lineTo(b.xCenter, y); }}
+                    }}
+                }});
+                ctx.stroke();
+            }}
+
+            drawMA('ma10', '#FF9800', 2);
+            drawMA('ma21', '#2196F3', 2);
+            drawMA('ma50', '#F44336', 2);
+
+            // RS Lines
+            function drawRS(key, color, widthLine = 1.5) {{
+                ctx.strokeStyle = color;
+                ctx.lineWidth = widthLine;
+                ctx.beginPath();
+                let started = false;
+                layoutBars.forEach(b => {{
+                    if (b[key] !== null) {{
+                        const y = getYRS(b[key]);
+                        if (!started) {{ ctx.moveTo(b.xCenter, y); started = true; }}
+                        else {{ ctx.lineTo(b.xCenter, y); }}
+                    }}
+                }});
+                ctx.stroke();
+            }}
+
+            drawRS('rs_raw',       '#2962ff', 2);
+            drawRS('rs_quick',     '#56b8e6', 1.5);
+            drawRS('rs_quicksand', '#ff8c00', 1.5);
+            drawRS('rs_gd',        '#2ca02c', 1.5);
+
+            // Hover crosshair & tooltip
+            if (hoverIndex >= 0 && hoverIndex < layoutBars.length) {{
+                const hb = layoutBars[hoverIndex];
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(hb.xCenter, 0);
+                ctx.lineTo(hb.xCenter, height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const volPct = hb.avg_vol > 0 ? ((hb.volume / hb.avg_vol) * 100).toFixed(0) : 100;
+                const changePct = (((hb.close - hb.open) / hb.open) * 100).toFixed(2);
+                const sign = changePct >= 0 ? '+' : '';
+
+                tooltip.style.display = 'block';
+                tooltip.innerHTML = `
+                    <div style="font-weight:bold; color:#fff; margin-bottom:4px;">${{hb.date}}</div>
+                    <div style="color:${{hb.close >= hb.open ? '#26a69a' : '#ef5350'}};">Open: $${{hb.open.toFixed(2)}} | High: $${{hb.high.toFixed(2)}}</div>
+                    <div style="color:${{hb.close >= hb.open ? '#26a69a' : '#ef5350'}};">Low: $${{hb.low.toFixed(2)}} | Close: $${{hb.close.toFixed(2)}} (${{sign}}${{changePct}}%)</div>
+                    <div style="color:#e0e0e0; margin-top:2px;">Volume: ${{hb.volume.toLocaleString()}} (${{volPct}}% of 50d avg)</div>
+                    ${{hb.ma10 ? `<div style="color:#FF9800;">MA(10): $${{hb.ma10.toFixed(2)}} | MA(21): $${{hb.ma21 ? hb.ma21.toFixed(2) : 'N/A'}} | MA(50): $${{hb.ma50 ? hb.ma50.toFixed(2) : 'N/A'}}</div>` : ''}}
+                `;
+            }} else {{
+                tooltip.style.display = 'none';
+            }}
+        }}
+
+        // Controls & Events
+        canvas.addEventListener('mousedown', e => {{
+            isDragging = true;
+            startMouseX = e.clientX;
+            startScrollX = scrollX;
+        }});
+
+        window.addEventListener('mousemove', e => {{
+            const rect = canvas.getBoundingClientRect();
+            if (isDragging) {{
+                scrollX = startScrollX + (e.clientX - startMouseX);
+                draw();
+            }}
+            if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {{
+                const mouseX = e.clientX - rect.left;
+                const layoutBars = computeLayout();
+                let closestIdx = -1;
+                let minDistance = Infinity;
+                layoutBars.forEach((b, idx) => {{
+                    const dist = Math.abs(b.xCenter - mouseX);
+                    if (dist < minDistance && mouseX >= b.xStart - 5 && mouseX <= b.xEnd + 5) {{
+                        minDistance = dist;
+                        closestIdx = idx;
+                    }}
+                }});
+                if (closestIdx !== hoverIndex) {{
+                    hoverIndex = closestIdx;
+                    draw();
+                }}
+            }} else if (hoverIndex !== -1) {{
+                hoverIndex = -1;
+                draw();
+            }}
+        }});
+
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        canvas.addEventListener('wheel', e => {{
+            e.preventDefault();
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            baseWidth = Math.max(4, Math.min(50, baseWidth * zoomFactor));
+            draw();
+        }}, {{ passive: false }});
+
+        document.getElementById('{chart_id}_zoom_in').addEventListener('click', () => {{ baseWidth = Math.min(50, baseWidth * 1.25); draw(); }});
+        document.getElementById('{chart_id}_zoom_out').addEventListener('click', () => {{ baseWidth = Math.max(4, baseWidth * 0.8); draw(); }});
+        document.getElementById('{chart_id}_reset').addEventListener('click', () => {{ baseWidth = 14; scrollX = 0; draw(); }});
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+    }})();
+    </script>
+    """
+    return html
 # ---------------------- Page configuration ----------------------
 st.set_page_config(page_title="RS Analysis Dashboard", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 
@@ -1344,6 +1696,7 @@ with (tab6 if has_historical else tab5):
         
         combined_tickers = []
         tv_combined_lines = []
+        ibkr_combined_lines = []
         for industry in filtered_data['Industry']:
             tickers_df = latest_snapshot[latest_snapshot['Industry'] == industry][['Ticker', 'Relative Strength']].dropna()
             top_tickers = tickers_df.sort_values('Relative Strength', ascending=False).head(max_tickers_per_ind)['Ticker'].tolist()
@@ -1351,9 +1704,12 @@ with (tab6 if has_historical else tab5):
             if top_tickers:
                 tv_combined_lines.append(f"###{industry}")
                 tv_combined_lines.extend(top_tickers)
+                for t in top_tickers:
+                    ibkr_combined_lines.append(f"SYM, {t.upper()}, SMART/ARCA")
             
         combined_tickers_str = ','.join(combined_tickers)
         tv_combined_str = "\n".join(tv_combined_lines)
+        ibkr_combined_str = "\n".join(ibkr_combined_lines)
         
         st.write(f"**Industries Combined (Sorted by Table Order First, then by Strongest Ticker)** ({len(combined_tickers)} tickers)")
         col1_cp, col2_cp = st.columns([4, 1])
@@ -1368,11 +1724,18 @@ with (tab6 if has_historical else tab5):
                 key="download_selected_ind_tickers"
             )
             st.download_button(
-                "TradingView List", 
+                "TradingView", 
                 tv_combined_str,
                 "selected_industries_tv_watchlist.txt", 
                 "text/plain",
                 key="download_selected_ind_tv_watchlist"
+            )
+            st.download_button(
+                "IBKR", 
+                ibkr_combined_str,
+                "selected_industries_ibkr_watchlist.txt", 
+                "text/plain",
+                key="download_selected_ind_ibkr_watchlist"
             )
     else:
         st.warning("Industry RS data not found.")
@@ -1648,8 +2011,84 @@ with (tab7 if has_historical else tab6):
                             rs_label = f"{int(round(rs_value))}" if rs_value and not np.isnan(rs_value) else None
 
                             chart_type = st.radio("📊 Daily Chart Type",
-                                                  ["Plotly (Advanced)", "TradingView Lightweight"],
+                                                  ["Plotly (Advanced)", "TradingView Lightweight", "EquiCharts (Equivolume)"],
                                                   horizontal=True, key="daily_chart_type")
+
+                            if chart_type == "EquiCharts (Equivolume)":
+                                st.subheader(f"📈 {selected_ticker_company} Daily EquiCharts (Equivolume)")
+                                st_html(create_equicharts_html(
+                                    df_daily, height=650, ticker=selected_ticker_company, rs_label=rs_label
+                                ), height=710)
+                            elif chart_type == "TradingView Lightweight":
+                                st.subheader(f"📈 {selected_ticker_company} Daily (TradingView Lightweight Charts)")
+                                with st.expander("🎯 Add Chart Markers", expanded=False):
+                                    col_m1, col_m2 = st.columns(2)
+                                    with col_m1: marker_date = st.date_input("Marker Date", key="daily_marker_date")
+                                    with col_m2: marker_price = st.number_input("Marker Price ($)", min_value=0.0, step=0.01, key="daily_marker_price")
+                                    col_m3, col_m4, col_m5 = st.columns(3)
+                                    with col_m3: marker_position = st.selectbox("Position", ["aboveBar", "belowBar"], key="daily_marker_pos")
+                                    with col_m4: marker_shape    = st.selectbox("Shape", ["circle", "square", "arrowUp", "arrowDown"], key="daily_marker_shape")
+                                    with col_m5: marker_color    = st.color_picker("Color", "#FF0000", key="daily_marker_color")
+                                    marker_text = st.text_input("Marker Label", "", key="daily_marker_text")
+                                    add_marker = st.button("➕ Add Marker", key="daily_add_marker")
+                                    session_key = f"daily_markers_{selected_ticker_company}"
+                                    if session_key not in st.session_state:
+                                        st.session_state[session_key] = load_markers(selected_ticker_company, "daily")
+                                    if add_marker and marker_date and marker_price > 0:
+                                        import datetime as dt
+                                        ts = int(dt.datetime.combine(marker_date, dt.time()).timestamp())
+                                        st.session_state[session_key].append({'time': ts, 'position': marker_position,
+                                                                               'color': marker_color, 'shape': marker_shape,
+                                                                               'text': marker_text or f"${marker_price:.2f}"})
+                                        save_markers(selected_ticker_company, st.session_state[session_key], "daily")
+                                        st.success(f"✅ Marker saved for {selected_ticker_company} at {marker_date}")
+                                        rerun_app()
+                                    current_markers = st.session_state.get(session_key, [])
+                                    if current_markers:
+                                        st.write(f"**Active Markers for {selected_ticker_company}:**")
+                                        for i, m in enumerate(current_markers):
+                                            col_a, col_b = st.columns([4, 1])
+                                            with col_a: st.caption(f"🎯 {m['text']} ({m['shape']}) - {m['position']}")
+                                            with col_b:
+                                                if st.button("❌", key=f"delete_daily_marker_{i}"):
+                                                    st.session_state[session_key].pop(i)
+                                                    save_markers(selected_ticker_company, st.session_state[session_key], "daily")
+                                                    rerun_app()
+
+                                vol_colored = []
+                                for idx, row in df_daily.iterrows():
+                                    ts = int(idx.timestamp())
+                                    val = float(row['Volume'])
+                                    col = ('rgba(247,153,2,0.7)' if dry_lvl2.loc[idx]
+                                           else 'rgba(225,181,69,0.6)' if dry_lvl1.loc[idx]
+                                           else '#26a69a' if up_day.loc[idx] else '#ef5350')
+                                    vol_colored.append({'time': ts, 'value': val, 'color': col})
+                                df_daily['volume_sma50'] = df_daily['Volume'].rolling(50).mean()
+                                volume_sma50_data = [{'time': int(idx.timestamp()), 'value': float(v)}
+                                                     for idx, v in df_daily['volume_sma50'].items() if pd.notna(v)]
+                                pp10_dates  = [int(idx.timestamp()) for idx in df_daily.index if pp10.loc[idx]]
+                                pp5_dates   = [int(idx.timestamp()) for idx in df_daily.index if pp5_only.loc[idx]]
+                                churn_dates = [int(idx.timestamp()) for idx in df_daily.index if churn_day.loc[idx]]
+                                stall_dates = [int(idx.timestamp()) for idx in df_daily.index if stall_day.loc[idx]]
+                                ll3_dates   = [int(idx.timestamp()) for idx in df_daily.index if ll3_signal.loc[idx]]
+                                lw_pattern_data = daily_painter.get_lightweight_data()
+                                patt_js = build_lw_pattern_js(lw_pattern_data, chart_var="priceChart")
+
+                                st_html(create_lightweight_candlestick_html(
+                                    df_daily, height=600,
+                                    markers=st.session_state.get(session_key, []),
+                                    rs_label=rs_label,
+                                    rs_raw=df_daily['rs_raw'],
+                                    rs_quick=df_daily['rs_ema_quick'],
+                                    rs_quicksand=df_daily['rs_ema_quicksand'],
+                                    rs_gd=df_daily['rs_ema_gd'],
+                                    volume_data=vol_colored,
+                                    volume_sma50=volume_sma50_data,
+                                    pp10_dates=pp10_dates, pp5_dates=pp5_dates,
+                                    churn_dates=churn_dates, stall_dates=stall_dates,
+                                    ll3_dates=ll3_dates,
+                                    pattern_js=patt_js,
+                                ), height=620)
 
                             def create_daily_chart_with_patterns(df, percentile, snapshot_text):
                                 ema10 = df['Close'].ewm(span=10, adjust=False).mean()
@@ -1858,8 +2297,14 @@ with (tab7 if has_historical else tab6):
                             st.divider()
                             st.subheader("📊 Weekly Chart")
                             chart_type_weekly = st.radio("Weekly Chart Type",
-                                                         ["Plotly (Advanced)", "TradingView Lightweight"],
+                                                         ["Plotly (Advanced)", "TradingView Lightweight", "EquiCharts (Equivolume)"],
                                                          horizontal=True, key="weekly_chart_type")
+
+                            if chart_type_weekly == "EquiCharts (Equivolume)":
+                                st.subheader(f"📊 {selected_ticker_company} Weekly EquiCharts (Equivolume)")
+                                st_html(create_equicharts_html(
+                                    df_weekly, height=550, ticker=selected_ticker_company
+                                ), height=600)
                             vol_w = df_weekly['Volume'].astype(float)
                             close_w = df_weekly['Close'].astype(float)
                             avg_vol_w = vol_w.rolling(10, min_periods=1).mean()
@@ -2077,11 +2522,18 @@ with (tab8 if has_historical else tab7):
                        "rs_analysis_filtered.csv", "text/csv")
 
     st.divider()
-    st.subheader("📋 Custom TradingView Watchlist Generator")
-    st.markdown("Paste a comma-separated list of tickers below to generate a TradingView Watchlist grouped by their industries mapped from IBD data.")
+    st.subheader("📋 Custom Watchlist Generator (TradingView & IBKR)")
+    st.markdown("Paste a list of tickers below to generate a Watchlist in **TradingView** or official **IBKR TWS** format (`.txt`).")
     
-    pasted_input = st.text_area("Paste tickers here (separated by commas, spaces, or newlines):", value="", key="custom_pasted_watchlist_tickers")
-    
+    col_input1, col_input2 = st.columns([3, 1])
+    with col_input1:
+        pasted_input = st.text_area("Paste tickers here (separated by commas, spaces, or newlines):", value="", key="custom_pasted_watchlist_tickers")
+    with col_input2:
+        ibkr_exchange = st.text_input("IBKR Exchange", value="SMART/ARCA", key="custom_ibkr_exchange").strip().upper()
+        if not ibkr_exchange:
+            ibkr_exchange = "SMART/ARCA"
+        ibkr_fmt = st.selectbox("IBKR Line Format", ["SYM (SYM, TICKER, EXCHANGE)", "DES (DES, TICKER, STK, EXCHANGE,,,,)"], index=0, key="custom_ibkr_fmt")
+
     if pasted_input.strip():
         # Parse the tickers using regex to handle multiple delimiters
         import re
@@ -2135,32 +2587,53 @@ with (tab8 if has_historical else tab7):
                 key=lambda g: get_group_rank(g, custom_industry_groups[g])
             )
 
-            # Construct TradingView Watchlist format in sorted order
+            # Construct TradingView & IBKR Watchlist formats in sorted order
             custom_tv_lines = []
+            custom_ibkr_lines = []
+            use_des = "DES" in ibkr_fmt
+
             for ind_group in sorted_groups:
                 ind_tickers = custom_industry_groups[ind_group]
                 custom_tv_lines.append(f"###{ind_group}")
                 custom_tv_lines.extend(ind_tickers)
+                
+                for t in ind_tickers:
+                    sym = t.upper()
+                    if use_des:
+                        custom_ibkr_lines.append(f"DES, {sym}, STK, {ibkr_exchange},,,,")
+                    else:
+                        custom_ibkr_lines.append(f"SYM, {sym}, {ibkr_exchange}")
             
             custom_tv_watchlist_str = "\n".join(custom_tv_lines)
-            
-            # Show only a preview of the first 15 lines in the UI
-            lines = custom_tv_watchlist_str.split("\n")
-            preview_str = custom_tv_watchlist_str
-            if len(lines) > 15:
-                preview_str = "\n".join(lines[:5]) + "\n... (truncated, download to get the full list)"
+            custom_ibkr_watchlist_str = "\n".join(custom_ibkr_lines)
             
             st.write(f"**Custom Watchlist** ({len(pasted_tickers)} tickers in {len(custom_industry_groups)} industries)")
-            c1, c2 = st.columns([4, 1])
+            
+            preview_mode = st.radio("Format Preview", ["TradingView", "IBKR"], horizontal=True, key="custom_watchlist_preview_mode")
+            selected_str = custom_tv_watchlist_str if preview_mode == "TradingView" else custom_ibkr_watchlist_str
+            
+            lines = selected_str.split("\n")
+            preview_str = selected_str
+            if len(lines) > 15:
+                preview_str = "\n".join(lines[:15]) + "\n... (truncated, download to get the full list)"
+            
+            c1, c2 = st.columns([3, 1])
             with c1:
                 st.code(preview_str, language="text")
             with c2:
                 st.download_button(
-                    "Download Watchlist",
+                    "TradingView",
                     custom_tv_watchlist_str,
                     "custom_tradingview_watchlist.txt",
                     "text/plain",
                     key="download_custom_tv_watchlist"
+                )
+                st.download_button(
+                    "IBKR",
+                    custom_ibkr_watchlist_str,
+                    "custom_ibkr_watchlist.txt",
+                    "text/plain",
+                    key="download_custom_ibkr_watchlist"
                 )
 
     st.divider()
@@ -2188,8 +2661,9 @@ with (tab8 if has_historical else tab7):
 
     all_tickers_string = ','.join(all_tickers_by_industry)
     
-    # Construct TradingView Watchlist format
+    # Construct TradingView & IBKR Watchlist format
     tv_lines = []
+    ibkr_lines = []
     for industry in industries_sorted:
         industry_tickers = top_n[top_n['Industry'] == industry]['Ticker'].tolist()
         if max_per_industry > 0:
@@ -2197,7 +2671,11 @@ with (tab8 if has_historical else tab7):
         if industry_tickers:
             tv_lines.append(f"###{industry}")
             tv_lines.extend(industry_tickers)
+            
+            for t in industry_tickers:
+                ibkr_lines.append(f"SYM, {t.upper()}, {ibkr_exchange}")
     tv_watchlist_string = "\n".join(tv_lines)
+    ibkr_watchlist_string = "\n".join(ibkr_lines)
 
     st.write(f"**All Industries Combined (Sorted by Strongest Industry First)** ({len(all_tickers_by_industry)} tickers)")
     col1, col2 = st.columns([4, 1])
@@ -2207,9 +2685,12 @@ with (tab8 if has_historical else tab7):
         st.download_button("Copy All", all_tickers_string,
                            f"top{int(num_tickers)}_tickers_by_industry.txt", "text/plain",
                            key="download_all_tickers")
-        st.download_button("TradingView List", tv_watchlist_string,
+        st.download_button("TradingView", tv_watchlist_string,
                            f"top{int(num_tickers)}_tickers_tv_watchlist.txt", "text/plain",
                            key="download_tv_watchlist")
+        st.download_button("IBKR", ibkr_watchlist_string,
+                           f"top{int(num_tickers)}_tickers_ibkr_watchlist.txt", "text/plain",
+                           key="download_ibkr_watchlist")
 
     st.divider()
     st.write("**By Industry (Strongest First):**")
