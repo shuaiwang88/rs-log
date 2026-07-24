@@ -14,6 +14,10 @@ from datetime import datetime, timedelta
 import json
 import uuid
 import os
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from pattern_recognition import PatternRecognizer
 from pattern_painter import PatternPainter, build_lw_pattern_js
 
@@ -49,6 +53,435 @@ def save_markers(ticker, markers, chart_type="daily"):
         return True
     except Exception:
         return False
+
+# ---------------------- Daily Report Card (DRC) & GMI PDF Helpers ----------------------
+DAILY_DIR = Path(__file__).resolve().parent / "daily"
+CHARTS_DIR = DAILY_DIR / "charts"
+SCREENSHOTS_DIR = DAILY_DIR / "screenshots"
+
+def ensure_daily_dirs():
+    DAILY_DIR.mkdir(parents=True, exist_ok=True)
+    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
+    SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+
+def get_effective_pdf_date(selected_date):
+    """
+    Checks if selected_date is today in EST.
+    If before 7:00 PM EST (19:00), fallback to previous trading day for PDF.
+    """
+    try:
+        import zoneinfo
+        est_tz = zoneinfo.ZoneInfo("America/New_York")
+        now_est = datetime.now(est_tz)
+    except Exception:
+        now_est = datetime.utcnow() - timedelta(hours=4)
+        
+    today_est = now_est.date()
+    
+    if selected_date == today_est and now_est.hour < 19:
+        yesterday = selected_date - timedelta(days=1)
+        while yesterday.weekday() in (5, 6):
+            yesterday -= timedelta(days=1)
+        reason = f"Today's report will be published after 7:00 PM EST (current EST: {now_est.strftime('%I:%M %p')}). Showing report from previous trading day ({yesterday.strftime('%m/%d/%Y')})."
+        return yesterday, True, reason
+        
+    return selected_date, False, ""
+
+def fetch_daily_gmi_pdf(selected_date):
+    ensure_daily_dirs()
+    yyyy = selected_date.strftime("%Y")
+    mm = selected_date.strftime("%m")
+    dd = selected_date.strftime("%d")
+    yy = selected_date.strftime("%y")
+    
+    pdf_filename = f"DailyGMI_{mm}{dd}{yy}.pdf"
+    local_pdf_path = DAILY_DIR / pdf_filename
+    url = f"https://www.investors.com/wp-content/uploads/{yyyy}/{mm}/{pdf_filename}"
+    
+    if local_pdf_path.exists() and local_pdf_path.stat().st_size > 1000:
+        return str(local_pdf_path), url, True, "Loaded PDF from local daily folder."
+        
+    try:
+        import requests
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code == 200 and res.content.startswith(b"%PDF"):
+            with open(local_pdf_path, 'wb') as f:
+                f.write(res.content)
+            return str(local_pdf_path), url, True, "Downloaded PDF successfully from Investors.com!"
+        else:
+            return str(local_pdf_path), url, False, f"HTTP {res.status_code}: File not found on Investors.com (may be a weekend or non-trading day)."
+    except Exception as e:
+        return str(local_pdf_path), url, False, f"Download error: {e}"
+
+def generate_ticker_png_chart(ticker: str, date_str: str) -> str:
+    ticker = ticker.strip().upper()
+    if not ticker:
+        return None
+    
+    ensure_daily_dirs()
+    safe_date = date_str.replace("-", "")
+    output_png = CHARTS_DIR / f"{ticker}_{safe_date}.png"
+    
+    df = load_or_fetch_ticker(ticker, interval="1d", period="1y")
+    if df is None or df.empty:
+        return None
+    
+    sub = df.tail(120).copy()
+    if len(sub) < 5:
+        return None
+        
+    close = sub['Close']
+    sub['EMA10'] = close.ewm(span=10, adjust=False).mean()
+    sub['EMA21'] = close.ewm(span=21, adjust=False).mean()
+    sub['SMA50'] = close.rolling(50, min_periods=1).mean()
+    sub['Vol_SMA50'] = sub['Volume'].rolling(50, min_periods=1).mean()
+    
+    fig, (ax_price, ax_vol) = plt.subplots(
+        2, 1, figsize=(9, 5.5), gridspec_kw={'height_ratios': [3, 1]}, sharex=True
+    )
+    fig.patch.set_facecolor('#1e1e1e')
+    for ax in (ax_price, ax_vol):
+        ax.set_facecolor('#1e1e1e')
+        ax.tick_params(colors='#d1d4dc')
+        ax.spines['bottom'].set_color('#363c4e')
+        ax.spines['top'].set_color('#363c4e')
+        ax.spines['left'].set_color('#363c4e')
+        ax.spines['right'].set_color('#363c4e')
+        ax.grid(True, color='#2a2e39', linestyle='--', alpha=0.5)
+
+    dates = sub.index
+    up_mask = sub['Close'] >= sub['Open']
+    down_mask = sub['Close'] < sub['Open']
+    
+    ax_price.vlines(dates[up_mask], sub['Low'][up_mask], sub['High'][up_mask], color='#26a69a', linewidth=1)
+    ax_price.vlines(dates[down_mask], sub['Low'][down_mask], sub['High'][down_mask], color='#ef5350', linewidth=1)
+    
+    body_bottom = np.where(up_mask, sub['Open'], sub['Close'])
+    body_height = np.abs(sub['Close'] - sub['Open'])
+    body_height = np.where(body_height == 0, 0.01, body_height)
+    
+    ax_price.bar(dates[up_mask], body_height[up_mask], bottom=body_bottom[up_mask], color='#26a69a', width=0.6, align='center')
+    ax_price.bar(dates[down_mask], body_height[down_mask], bottom=body_bottom[down_mask], color='#ef5350', width=0.6, align='center')
+    
+    ax_price.plot(dates, sub['EMA10'], color='#FF9800', label='EMA 10', linewidth=1.5)
+    ax_price.plot(dates, sub['EMA21'], color='#2196F3', label='EMA 21', linewidth=1.5)
+    ax_price.plot(dates, sub['SMA50'], color='#F44336', label='SMA 50', linewidth=1.5)
+    
+    latest_close = sub['Close'].iloc[-1]
+    ax_price.set_title(f"{ticker} Daily Chart - ${latest_close:.2f}", color='#ffffff', fontsize=13, fontweight='bold', pad=8)
+    ax_price.legend(loc='upper left', facecolor='#2a2e39', edgecolor='none', labelcolor='#ffffff', fontsize=8)
+    
+    ax_vol.bar(dates[up_mask], sub['Volume'][up_mask], color='#26a69a', alpha=0.7, width=0.6)
+    ax_vol.bar(dates[down_mask], sub['Volume'][down_mask], color='#ef5350', alpha=0.7, width=0.6)
+    ax_vol.plot(dates, sub['Vol_SMA50'], color='#FF9800', label='Vol SMA 50', linewidth=1.2)
+    ax_vol.set_ylabel('Volume', color='#d1d4dc', fontsize=8)
+    
+    ax_vol.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
+    fig.autofmt_xdate()
+    
+    plt.tight_layout()
+    plt.savefig(output_png, dpi=150, facecolor=fig.get_facecolor(), bbox_inches='tight')
+    plt.close(fig)
+    
+    return str(output_png)
+
+def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
+    tk = ticker.strip().upper()
+    df_daily = load_or_fetch_ticker(tk)
+    if df_daily is None or df_daily.empty:
+        st.warning(f"Could not load market data for ticker {tk}.")
+        return
+
+    # Trim to 9 months daily worth of data (~190 trading days)
+    if len(df_daily) > max_days:
+        df_daily = df_daily.tail(max_days).copy()
+    else:
+        df_daily = df_daily.copy()
+
+    # Look up IBD Industry Group / Sector
+    ibd_map = load_ibd_ticker_industry_mapping()
+    ibd_sector = ibd_map.get(tk) or ibd_map.get(tk.replace(".", "").replace("-", "").replace("/", ""))
+    
+    # Look up RS Rating & Company metrics from main dataset if available
+    rs_rating_str = "N/A"
+    sector_str = ibd_sector or ""
+    latest_price = df_daily['Close'].iloc[-1] if not df_daily.empty else 0.0
+    
+    try:
+        main_df = globals().get('df') if 'df' in globals() else globals().get('filtered_df')
+        if main_df is not None and not main_df.empty and 'Ticker' in main_df.columns:
+            m_rows = main_df[main_df['Ticker'] == tk]
+            if not m_rows.empty:
+                r_row = m_rows.iloc[-1]
+                p_val = r_row.get('Percentile') if 'Percentile' in r_row else r_row.get('Relative Strength')
+                if pd.notna(p_val):
+                    try:
+                        rs_rating_str = f"{int(round(float(p_val)))}"
+                    except Exception:
+                        rs_rating_str = str(p_val)
+                if not sector_str:
+                    s_val = r_row.get('Sector') or r_row.get('Industry')
+                    if pd.notna(s_val):
+                        sector_str = str(s_val)
+    except Exception:
+        pass
+
+    # Display RS metrics header banner
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1:
+        st.metric("Ticker", tk)
+    with m_col2:
+        st.metric("RS Rating", f"{rs_rating_str} / 99")
+    with m_col3:
+        st.metric("Latest Price", f"${latest_price:.2f}")
+    with m_col4:
+        st.metric("IBD Industry / Sector", sector_str or "N/A")
+
+    # Look up Company Description from IBD
+    desc_map = load_company_descriptions()
+    tk_norm = tk.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
+    comp_desc = desc_map.get(tk) or desc_map.get(tk_norm)
+    if comp_desc and comp_desc != 'nan':
+        st.markdown(
+            f"""
+            <div style="background-color: #f0f2f6; border-left: 5px solid #1f77b4; padding: 12px 16px; border-radius: 4px; margin-bottom: 12px;">
+                <span style="font-size: 16px; color: #000000; line-height: 1.5; display: inline-block;">{comp_desc}</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Load SPY for RS calculation
+    spy_df = load_or_fetch_ticker("SPY")
+    if spy_df is not None and not spy_df.empty:
+        spy_aligned = spy_df.reindex(df_daily.index).ffill().bfill()
+        df_daily['rs_raw'] = (df_daily['Close'] / df_daily['Close'].iloc[0]) / (spy_aligned['Close'] / spy_aligned['Close'].iloc[0])
+    else:
+        df_daily['rs_raw'] = df_daily['Close'] / df_daily['Close'].iloc[0]
+
+    df_daily['rs_ema_quick']     = df_daily['rs_raw'].ewm(span=21, adjust=False).mean()
+    df_daily['rs_ema_quicksand'] = df_daily['rs_raw'].ewm(span=34, adjust=False).mean()
+    df_daily['rs_ema_gd']        = df_daily['rs_raw'].ewm(span=50, adjust=False).mean()
+
+    ema10 = df_daily['Close'].ewm(span=10, adjust=False).mean()
+    ema21 = df_daily['Close'].ewm(span=21, adjust=False).mean()
+    sma50 = df_daily['Close'].rolling(50).mean()
+    sma200 = df_daily['Close'].rolling(200).mean()
+
+    vol = df_daily['Volume'].astype(float)
+    close = df_daily['Close'].astype(float)
+    avg_vol = vol.rolling(50, min_periods=1).mean()
+    avg_vol_safe = avg_vol.replace(0, np.nan)
+    vol_ratio = (vol / avg_vol_safe * 100).fillna(0)
+
+    dry_lvl1 = (vol_ratio < 50).astype(bool)
+    dry_lvl2 = (vol_ratio < 30).astype(bool)
+    up_day   = (close > close.shift(1)).astype(bool)
+
+    vol_colors = [
+        'rgba(247,153,2,0.7)' if dry_lvl2.loc[idx]
+        else 'rgba(225,181,69,0.6)' if dry_lvl1.loc[idx]
+        else '#26a69a' if up_day.loc[idx] else '#ef5350'
+        for idx in df_daily.index
+    ]
+
+    fig = make_subplots(
+        rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.03,
+        subplot_titles=(f"{tk} Daily Price", 'Volume with Indicators', f'Relative Strength vs SPY (RS Rating: {rs_rating_str})'),
+        row_heights=[0.5, 0.2, 0.3]
+    )
+
+    # Row 1: Price Candlesticks & Moving Averages
+    fig.add_trace(go.Candlestick(
+        x=df_daily.index, open=df_daily['Open'], high=df_daily['High'],
+        low=df_daily['Low'], close=df_daily['Close'],
+        name='Price', showlegend=False
+    ), row=1, col=1)
+
+    fig.add_trace(go.Scatter(x=df_daily.index, y=ema10, mode='lines', name='EMA(10)', line=dict(color='#FF9800', width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=ema21, mode='lines', name='EMA(21)', line=dict(color='#2196F3', width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=sma50, mode='lines', name='SMA(50)', line=dict(color='#4CAF50', width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=sma200, mode='lines', name='SMA(200)', line=dict(color='#E91E63', width=1.5)), row=1, col=1)
+
+    # Row 2: Volume Bars & SMA50
+    fig.add_trace(go.Bar(x=df_daily.index, y=df_daily['Volume'], marker=dict(color=vol_colors), name='Volume', showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=avg_vol, name='Volume SMA(50)', line=dict(color='orange', width=1.5)), row=2, col=1)
+
+    # Row 3: Relative Strength & EMAs
+    fig.add_trace(go.Scatter(x=df_daily.index, y=df_daily['rs_raw'], name='Raw RS', line=dict(color='blue', width=2)), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=df_daily['rs_ema_quick'], name='Quick EMA (21)', line=dict(color='#56b8e6', width=2)), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=df_daily['rs_ema_quicksand'], name='Quicksand EMA (34)', line=dict(color='#ff8c00', width=2)), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df_daily.index, y=df_daily['rs_ema_gd'], name='GD EMA (50)', line=dict(color='#2ca02c', width=2)), row=3, col=1)
+
+    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
+    fig.update_layout(
+        xaxis_rangeslider_visible=False,
+        height=height,
+        margin=dict(l=20, r=20, t=40, b=20),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+        template="plotly_dark"
+    )
+
+    st.plotly_chart(fig, width="stretch")
+
+def load_daily_notes(date_obj):
+    ensure_daily_dirs()
+    date_str = date_obj.strftime("%Y%m%d")
+    notes_path = DAILY_DIR / f"notes_{date_str}.json"
+    
+    empty_segments = [
+        {"Segment": "Temp", "Grade": "", "PTD Only": "", "Sizing": "", "In My Favor": "", "Comments": ""},
+        {"Segment": "9:30-11", "Grade": "", "PTD Only": "", "Sizing": "", "In My Favor": "", "Comments": ""},
+        {"Segment": "11-12", "Grade": "", "PTD Only": "", "Sizing": "", "In My Favor": "", "Comments": ""},
+        {"Segment": "12-2", "Grade": "", "PTD Only": "", "Sizing": "", "In My Favor": "", "Comments": ""},
+        {"Segment": "2-4", "Grade": "", "PTD Only": "", "Sizing": "", "In My Favor": "", "Comments": ""}
+    ]
+    
+    empty_data = {
+        "date": date_obj.strftime("%Y-%m-%d"),
+        "grade": "-",
+        "pnl": "",
+        "goal": "",
+        "checklist": {
+            "3_trades": False,
+            "no_phone": False,
+            "fill_drc": False,
+            "afterhours": False
+        },
+        "segments": empty_segments,
+        "learned": "",
+        "changes": "",
+        "overview": "",
+        "easiest_50k": "",
+        "tags": [],
+        "trades": []
+    }
+    
+    if notes_path.exists():
+        try:
+            with open(notes_path, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                for k, v in empty_data.items():
+                    if k not in saved:
+                        saved[k] = v
+                return saved
+        except Exception as e:
+            print(f"Error loading notes for {date_str}: {e}")
+            
+    return empty_data
+
+
+def get_template_sample_notes(date_obj):
+    return {
+        "date": date_obj.strftime("%Y-%m-%d"),
+        "grade": "A",
+        "pnl": "+$50k",
+        "goal": "Cement habit of selectivity aiming for 3 trades per segment unless truly exceptional. Think mindset of 'is this trade worth writing up at end of day?'",
+        "checklist": {
+            "3_trades": True,
+            "no_phone": True,
+            "fill_drc": True,
+            "afterhours": True
+        },
+        "segments": [
+            {"Segment": "Temp", "Grade": "-A", "PTD Only": "-", "Sizing": "-", "In My Favor": "-", "Comments": "Great sleep and feeling good although I think today might be less opportunistic than prior days. Will be taking it a bit more reserved and ultimately focus is on selectivity and the chart right now."},
+            {"Segment": "9:30-11", "Grade": "-A", "PTD Only": "-A", "Sizing": "-A", "In My Favor": "-B", "Comments": "Pretty difficult segment, I think I rightly sized down on most things and relaly was fairly hands off. I think this remains the strategy as today definitely had potential to thus far be a -$50k day. Being near flat is great."},
+            {"Segment": "11-12", "Grade": "-A", "PTD Only": "-A", "Sizing": "-A", "In My Favor": "-A", "Comments": "Really solid segment taking some big picture nibbles, then adding as things started to work. Never took much risk on and stayed selective."},
+            {"Segment": "12-2", "Grade": "-A", "PTD Only": "-", "Sizing": "-", "In My Favor": "-", "Comments": "Very hands off, pretty slow segment. Going to stay selective into the close as today was slow as I had expected."},
+            {"Segment": "2-4", "Grade": "-", "PTD Only": "-", "Sizing": "-", "In My Favor": "-", "Comments": "-"}
+        ],
+        "learned": "Researching NYSE halt print priority.\nWorking more on my home setup.",
+        "changes": "I want to be more attentive.\nWant to keep on working on these ultra small swing trades and key is NOT GETTING TOO MUCH SIZE!\nBe more attentive to when a ticker starts to become a churn and the chart's reality is saying it won't have a good bounce (PBI prior day, BA today)",
+        "overview": "Today I felt would be a bit less opportunistic for me and indeed it was. I had some decent SPY trades, however I also took some losses in BA and MAR.\n\nMy only meaningful trade in the end was CZR which made up most of my day.\n\nThere wasn't anything I got too aggressive in and I think that was fine for my playbook. Even retrospectively there was nothing that I LOVED or would have even put above an A- for me.\n\nAt this point the plan continues to be to avoid whammies while waiting for the stuff that screams out to me. It has been a strong stretch of many back-to-back solid days,",
+        "easiest_50k": "Nothing so standout",
+        "tags": ["A+ Day", "Selectivity", "Sample Template"],
+        "trades": [
+            {
+                "ticker": "CZR",
+                "pnl": "+$40k",
+                "entry_price": "3.50",
+                "exit_price": "5.50",
+                "shares": "20,000",
+                "tags": ["Buyout", "Reversal", "Win"],
+                "notes": "CZR was just getting wrecked beyond belief. It is in a buyout w ERI which is also getting wrecked and was selling off hard.\n\nERI was bouncing, but CZR was still struggling big time. We were getting to the point where I was going to be okay holding a core so I bought 20k around $3.50 and was going to be a bit loose with that.\n\nOnce we finally broke trend though, I added bigger. Unfortunately, the setup wasn't so nice in a way that the risk was super small. I technically had to risk way back to prior bars, so I wanted to not get massive size.\n\nUnfortunately we really had issues gaining traction initially and the bids were shockingly poor. Some bounces just have the worst liquidity I've ever seen. We did eventually firm up and I was able to hold a chunk for a nice bounce. I think I did about as well as I could have expected here given everything."
+            }
+        ]
+    }
+
+
+
+def save_daily_notes(date_obj, data):
+    ensure_daily_dirs()
+    date_str = date_obj.strftime("%Y%m%d")
+    notes_path = DAILY_DIR / f"notes_{date_str}.json"
+    try:
+        with open(notes_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving notes for {date_str}: {e}")
+        return False
+
+def get_all_drc_tags_and_entries():
+    ensure_daily_dirs()
+    all_day_tags = set()
+    all_trade_tags = set()
+    tag_to_dates = {}
+    trade_tag_to_trades = {}
+    
+    for notes_file in DAILY_DIR.glob("notes_*.json"):
+        try:
+            with open(notes_file, "r", encoding="utf-8") as f:
+                notes = json.load(f)
+                d_str = notes.get("date", "")
+                
+                # Day-level tags
+                tags = notes.get("tags", [])
+                for t in tags:
+                    clean_t = t.strip()
+                    if clean_t:
+                        all_day_tags.add(clean_t)
+                        if clean_t not in tag_to_dates:
+                            tag_to_dates[clean_t] = []
+                        tag_to_dates[clean_t].append({
+                            "date": d_str,
+                            "grade": notes.get("grade", "-"),
+                            "pnl": notes.get("pnl", "-"),
+                            "file": notes_file.name
+                        })
+                        
+                # Trade-level tags
+                trades = notes.get("trades", [])
+                for tr in trades:
+                    tk = tr.get("ticker", "").upper()
+                    tr_tags = tr.get("tags", [])
+                    tr_pnl = tr.get("pnl", "")
+                    tr_notes = tr.get("notes", "")
+                    for tt in tr_tags:
+                        clean_tt = tt.strip()
+                        if clean_tt:
+                            all_trade_tags.add(clean_tt)
+                            if clean_tt not in trade_tag_to_trades:
+                                trade_tag_to_trades[clean_tt] = []
+                            trade_tag_to_trades[clean_tt].append({
+                                "date": d_str,
+                                "ticker": tk,
+                                "pnl": tr_pnl,
+                                "entry_price": tr.get("entry_price", ""),
+                                "exit_price": tr.get("exit_price", ""),
+                                "shares": tr.get("shares", ""),
+                                "tags": tr_tags,
+                                "notes": tr_notes,
+                                "file": notes_file.name
+                            })
+        except Exception:
+            continue
+            
+    return sorted(list(all_day_tags)), tag_to_dates, sorted(list(all_trade_tags)), trade_tag_to_trades
+
 
 # ---------------------- Lightweight Charts Helper (3 panes) ----------------------
 def create_lightweight_candlestick_html(df, title="", height=600, markers=None, rs_label=None,
@@ -619,13 +1052,16 @@ all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(
         ["📈 Overview", "📊 Time Series", "🎯 Top Performers", "🔬 Deep Analysis",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions", "🔬 Deep Analysis",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card"])
+
+tab_drc = tab10 if has_historical else tab9
+
 
 # ---------- TAB 1: Overview ----------
 with tab1:
@@ -648,13 +1084,13 @@ with tab1:
         sector_counts = filtered_df.drop_duplicates(subset=['Ticker'])['Sector'].value_counts().head(10)
         fig = px.bar(x=sector_counts.values, y=sector_counts.index, orientation='h',
                      title="Top 10 Sectors by Stock Count", labels={'x': 'Count', 'y': 'Sector'})
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     with col2:
         avg_rs_by_sector = filtered_df.drop_duplicates(subset=['Ticker']).groupby('Sector')['Relative Strength'].mean().sort_values(ascending=False).head(10)
         fig = px.bar(x=avg_rs_by_sector.values, y=avg_rs_by_sector.index, orientation='h',
                      title="Top 10 Sectors by Avg RS", labels={'x': 'Avg RS', 'y': 'Sector'},
                      color=avg_rs_by_sector.values, color_continuous_scale='Viridis')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 # ---------- TAB 2: Time Series ----------
 if has_historical:
@@ -667,22 +1103,22 @@ if has_historical:
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['mean'],   name='Mean RS',   mode='lines'))
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['median'], name='Median RS', mode='lines'))
             fig.update_layout(title="Daily Average RS Trend", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         with col2:
             daily_percentile = filtered_df.groupby('date')['Percentile'].mean().reset_index()
             fig = px.line(daily_percentile, x='date', y='Percentile', title="Daily Average Percentile Trend")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
             daily_count         = filtered_df.groupby('date')['Ticker'].nunique().reset_index()
             daily_count.columns = ['date', 'stock_count']
             fig = px.line(daily_count, x='date', y='stock_count', title="Number of Stocks in Universe Over Time")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         with col2:
             daily_price = filtered_df.groupby('date')['Price'].mean().reset_index()
             fig = px.line(daily_price, x='date', y='Price', title="Average Stock Price Over Time")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         st.divider()
         st.subheader("📊 Sector RS Trends")
         selected_sector_trend = st.selectbox("Select sector for trend", filtered_df['Sector'].unique(), key="sector_trend")
@@ -692,16 +1128,16 @@ if has_historical:
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['max'],  name='Max RS',  fill='tozeroy', mode='lines', opacity=0.2))
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['min'],  name='Min RS',  fill='tonexty', mode='lines', opacity=0.2))
         fig.update_layout(title=f"{selected_sector_trend} - RS Trend", hovermode='x unified')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 else:
     with tab2:
         col1, col2 = st.columns(2)
         with col1:
             fig = px.histogram(filtered_df, x='Relative Strength', nbins=50, title="Distribution of Relative Strength")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         with col2:
             fig = px.histogram(filtered_df, x='Percentile', nbins=50, title="Distribution of Percentile Rank")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
 # ---------- TAB 3: Top Performers ----------
 with tab3:
@@ -709,23 +1145,23 @@ with tab3:
     with col1:
         st.subheader("🏆 Top 15 by Relative Strength")
         top_rs = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Relative Strength')[['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile', 'Price']].copy()
-        st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(top_rs.reset_index(drop=True), width="stretch", hide_index=True)
     with col2:
         st.subheader("⭐ Top 15 by Percentile")
         top_percentile = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Percentile')[['Rank', 'Ticker', 'Sector', 'Percentile', 'Relative Strength', 'Price']].copy()
-        st.dataframe(top_percentile.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(top_percentile.reset_index(drop=True), width="stretch", hide_index=True)
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("💰 Top 15 by Market Cap")
         top_mcap = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'MarketCap')[['Ticker', 'Sector', 'MarketCap', 'Relative Strength', 'Percentile']].copy()
         top_mcap['MarketCap'] = top_mcap['MarketCap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "N/A")
-        st.dataframe(top_mcap.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(top_mcap.reset_index(drop=True), width="stretch", hide_index=True)
     with col2:
         st.subheader("📈 Highest 6M")
         top_6m = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, '6M_RS_Percentile')[['Ticker', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile']].copy()
         top_6m = top_6m.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
-        st.dataframe(top_6m.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(top_6m.reset_index(drop=True), width="stretch", hide_index=True)
 
 # ---------- TAB 4: Deep Analysis ----------
 with tab4:
@@ -734,7 +1170,7 @@ with tab4:
         fig = px.scatter(filtered_df, x='Price', y='Relative Strength', color='Percentile',
                          hover_data=['Ticker', 'Sector'], title="Relative Strength vs Price",
                          color_continuous_scale='Viridis')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     with col2:
         percentile_data = filtered_df[['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile']].mean()
         fig = go.Figure(data=[
@@ -743,24 +1179,24 @@ with tab4:
             go.Bar(name='6M', x=['6M'], y=[percentile_data['6M_RS_Percentile']]),
         ])
         fig.update_layout(title="Average RS Percentile Comparison", barmode='group')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         fig = px.histogram(filtered_df.dropna(subset=['PctFrom52WkHigh']), x='PctFrom52WkHigh',
                            nbins=40, title="Distribution of % from 52W High")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     with col2:
         fig = px.scatter(filtered_df.dropna(subset=['RevenueGrowth']), x='RevenueGrowth',
                          y='Relative Strength', color='Percentile', hover_data=['Ticker', 'Sector'],
                          title="Revenue Growth vs Relative Strength", color_continuous_scale='Viridis')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     st.divider()
     st.subheader("Key Statistics Summary")
     summary_stats = filtered_df[['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
                                   '6M_RS_Percentile', 'Price', 'AvgVol10', 'AvgVol30', 'AvgVol50',
                                   'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']].describe()
-    st.dataframe(summary_stats, use_container_width=True)
+    st.dataframe(summary_stats, width="stretch")
 
 # ---------- TAB 5: Trends ----------
 if has_historical:
@@ -776,7 +1212,7 @@ if has_historical:
             fig = px.bar(x=momentum.values, y=momentum.index, orientation='h',
                          title=f"RS Change by Sector ({oldest_date.date()} to {latest_date.date()})",
                          color=momentum.values, color_continuous_scale='RdYlGn')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         with col2:
             latest_stocks  = filtered_df[filtered_df['date'] == latest_date][['Ticker', 'Sector', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
             oldest_stocks  = filtered_df[filtered_df['date'] == oldest_date][['Ticker', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
@@ -786,7 +1222,7 @@ if has_historical:
                 top_gainers = merged.nlargest(10, 'RS_change')[['Ticker', 'Sector', 'RS_change']]
                 fig = px.bar(top_gainers, x='RS_change', y='Ticker', orientation='h',
                              title="Top 10 RS Gainers", color='RS_change', color_continuous_scale='Greens')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
 # ---------- TAB 6: Industry Rotation (corrected delta calculations) ----------
 with (tab6 if has_historical else tab5):
@@ -1416,7 +1852,7 @@ with (tab7 if has_historical else tab6):
                                                     save_markers(selected_ticker_company, st.session_state[session_key], "daily")
                                                     rerun_app()
                                 st.plotly_chart(create_daily_chart_with_patterns(df_daily, latest_row.get('Percentile'), snapshot_text),
-                                                use_container_width=True)
+                                                width="stretch")
 
                             # Weekly chart
                             st.divider()
@@ -1575,7 +2011,7 @@ with (tab7 if has_historical else tab6):
                                                     st.session_state[session_key_w].pop(i)
                                                     save_markers(selected_ticker_company, st.session_state[session_key_w], "weekly")
                                                     rerun_app()
-                                st.plotly_chart(create_weekly_chart_plotly(), use_container_width=True)
+                                st.plotly_chart(create_weekly_chart_plotly(), width="stretch")
 
                 except Exception as e:
                     st.error(f"Error fetching data: {e}")
@@ -1636,7 +2072,7 @@ with (tab8 if has_historical else tab7):
     display_df_with_rank = pd.DataFrame({'Rank': range(1, len(display_df)+1)})
     for col in display_df.columns:
         display_df_with_rank[col] = display_df[col].values
-    st.dataframe(display_df_with_rank, use_container_width=True, hide_index=True)
+    st.dataframe(display_df_with_rank, width="stretch", hide_index=True)
     st.download_button("Download filtered data as CSV", display_df_with_rank.to_csv(index=False),
                        "rs_analysis_filtered.csv", "text/csv")
 
@@ -1836,6 +2272,512 @@ with (tab9 if has_historical else tab8):
             st.error(f"Error loading pattern data: {e}")
     else:
         st.warning("No patterns data found. Click the button above to run the extraction script for the first time.")
+
+# ---------- TAB: Daily Report Card ----------
+with tab_drc:
+    st.subheader("📝 Daily Report Card (DRC) & GMI Journal")
+    
+    # Top Control Bar: Date selection & Tag Explorer
+    existing_day_tags, tag_map, existing_trade_tags, trade_tag_map = get_all_drc_tags_and_entries()
+
+    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([2, 2, 2])
+    with ctrl_col1:
+        drc_date = st.date_input("📅 Select Date", value=datetime.today().date(), key="drc_date_picker")
+    
+    with ctrl_col2:
+        selected_tag_filter = st.selectbox("🏷️ Filter Reports by Day Tag", ["All Tags"] + existing_day_tags, key="drc_tag_filter_select")
+        
+    with ctrl_col3:
+        if selected_tag_filter != "All Tags" and selected_tag_filter in tag_map:
+            matching_items = tag_map[selected_tag_filter]
+            matching_dates = [item["date"] for item in matching_items if item.get("date")]
+            if matching_dates:
+                jump_date_str = st.selectbox("📅 Jump to Tagged Date", matching_dates, key="drc_jump_date_select")
+                if jump_date_str:
+                    try:
+                        parsed_d = datetime.strptime(jump_date_str, "%Y-%m-%d").date()
+                        if parsed_d != drc_date:
+                            st.session_state["drc_date_picker"] = parsed_d
+                            rerun_app()
+                    except Exception:
+                        pass
+        else:
+            st.caption("Select a tag to filter past DRC entries.")
+
+    with st.expander("🔍 Search & Filter Trade Execution Logs (by Trade Tag or Ticker)", expanded=False):
+        t_col1, t_col2 = st.columns([1, 1])
+        with t_col1:
+            sel_tr_tag = st.selectbox("🎯 Select Trade Tag", ["All Trade Tags"] + existing_trade_tags, key="drc_tr_tag_search")
+        with t_col2:
+            sel_tr_ticker = st.text_input("🔍 Search Ticker Name", value="", key="drc_tr_ticker_search").strip().upper()
+            
+        matched_trades = []
+        if sel_tr_tag != "All Trade Tags" and sel_tr_tag in trade_tag_map:
+            matched_trades = trade_tag_map[sel_tr_tag]
+            if sel_tr_ticker:
+                matched_trades = [item for item in matched_trades if item.get("ticker") == sel_tr_ticker]
+        elif sel_tr_ticker:
+            for tt_list in trade_tag_map.values():
+                for item in tt_list:
+                    if item.get("ticker") == sel_tr_ticker and item not in matched_trades:
+                        matched_trades.append(item)
+                        
+        if matched_trades:
+            st.markdown(f"**Found {len(matched_trades)} trade log(s):**")
+            for mt in matched_trades:
+                m_date = mt.get("date", "")
+                m_tk = mt.get("ticker", "")
+                m_pnl = mt.get("pnl", "")
+                m_tags = ", ".join(mt.get("tags", []))
+                m_notes = mt.get("notes", "")
+                c_m1, c_m2 = st.columns([4, 1])
+                with c_m1:
+                    st.markdown(f"- **{m_date}** | Ticker: **{m_tk}** | PnL: `{m_pnl}` | Tags: `{m_tags}` — *{m_notes[:80]}...*")
+                with c_m2:
+                    if st.button(f"Jump to {m_date}", key=f"jump_{m_date}_{m_tk}_{uuid.uuid4().hex[:4]}"):
+                        try:
+                            parsed_d = datetime.strptime(m_date, "%Y-%m-%d").date()
+                            st.session_state["drc_date_picker"] = parsed_d
+                            rerun_app()
+                        except Exception:
+                            pass
+        elif sel_tr_tag != "All Trade Tags" or sel_tr_ticker:
+            st.info("No trade execution logs match your search criteria.")
+
+    st.divider()
+
+    # Load DRC data for selected date
+    drc_data = load_daily_notes(drc_date)
+    drc_date_str = drc_date.strftime("%Y-%m-%d")
+
+    # ------------------ TOP SECTION: Daily GMI PDF Report ------------------
+    st.subheader("📄 Daily GMI Report (PDF)")
+    effective_pdf_date, is_fallback, fallback_msg = get_effective_pdf_date(drc_date)
+    if is_fallback:
+        st.info(f"ℹ️ {fallback_msg}")
+
+    pdf_path, pdf_url, is_pdf_ok, pdf_msg = fetch_daily_gmi_pdf(effective_pdf_date)
+    
+    if is_pdf_ok and os.path.exists(pdf_path):
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+        import base64
+        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        st.download_button(
+            "⬇️ Download PDF",
+            pdf_bytes,
+            file_name=Path(pdf_path).name,
+            mime="application/pdf",
+            key=f"dl_pdf_{drc_date_str}"
+        )
+            
+        pdf_js_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+            <style>
+                html, body {{
+                    margin: 0;
+                    padding: 0;
+                    background-color: #1e1e1e;
+                    color: #ffffff;
+                    font-family: system-ui, -apple-system, sans-serif;
+                    height: 100%;
+                    overflow: hidden;
+                }}
+                #toolbar {{
+                    padding: 8px 16px;
+                    background: #2a2a2a;
+                    border-bottom: 1px solid #3a3a3a;
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                    justify-content: center;
+                }}
+                .zoom-btn {{
+                    background: #3a3a3a;
+                    color: #fff;
+                    border: 1px solid #555;
+                    padding: 5px 14px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: 600;
+                    transition: background 0.2s;
+                }}
+                .zoom-btn:hover {{
+                    background: #4a4a4a;
+                }}
+                #pdf-scroll-container {{
+                    width: 100%;
+                    height: 1250px;
+                    overflow-y: auto;
+                    overflow-x: auto;
+                    box-sizing: border-box;
+                    padding: 12px;
+                    text-align: center;
+                }}
+                .pdf-page-canvas {{
+                    display: block;
+                    margin: 14px auto;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+                    border-radius: 4px;
+                    max-width: 100%;
+                    height: auto;
+                }}
+                #loading-info {{
+                    padding: 30px;
+                    color: #aaa;
+                    font-size: 15px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div id="toolbar">
+                <button class="zoom-btn" onclick="zoomIn()">🔍+ Zoom In</button>
+                <button class="zoom-btn" onclick="zoomOut()">🔍- Zoom Out</button>
+                <button class="zoom-btn" onclick="resetZoom()">🔄 Reset Zoom</button>
+                <span id="zoom-val" style="font-size:13px; color:#4CAF50; font-weight:bold;">200%</span>
+            </div>
+            <div id="pdf-scroll-container">
+                <div id="loading-info">⏳ Rendering PDF pages...</div>
+            </div>
+            <script>
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                const base64Data = "{b64_pdf}";
+                const raw = atob(base64Data);
+                const uint8Array = new Uint8Array(raw.length);
+                for (let i = 0; i < raw.length; i++) {{
+                    uint8Array[i] = raw.charCodeAt(i);
+                }}
+
+                let pdfDoc = null;
+                let currentScale = 2.0;
+
+                function renderAllPages() {{
+                    const container = document.getElementById('pdf-scroll-container');
+                    container.innerHTML = '';
+                    document.getElementById('zoom-val').textContent = Math.round(currentScale * 100) + '%';
+
+                    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {{
+                        (function(num) {{
+                            pdfDoc.getPage(num).then(function(page) {{
+                                const viewport = page.getViewport({{ scale: currentScale }});
+                                const canvas = document.createElement('canvas');
+                                canvas.className = 'pdf-page-canvas';
+                                const context = canvas.getContext('2d');
+                                canvas.height = viewport.height;
+                                canvas.width = viewport.width;
+                                container.appendChild(canvas);
+
+                                page.render({{
+                                    canvasContext: context,
+                                    viewport: viewport
+                                }});
+                            }});
+                        }})(pageNum);
+                    }}
+                }}
+
+                function zoomIn() {{
+                    currentScale += 0.25;
+                    renderAllPages();
+                }}
+
+                function zoomOut() {{
+                    if (currentScale > 0.8) {{
+                        currentScale -= 0.25;
+                        renderAllPages();
+                    }}
+                }}
+
+                function resetZoom() {{
+                    currentScale = 2.0;
+                    renderAllPages();
+                }}
+
+                pdfjsLib.getDocument({{ data: uint8Array }}).promise.then(function(pdf) {{
+                    document.getElementById('loading-info').style.display = 'none';
+                    pdfDoc = pdf;
+                    renderAllPages();
+                }}).catch(function(err) {{
+                    document.getElementById('pdf-scroll-container').innerHTML = '<span style="color:#ef5350; padding:20px;">Failed to render PDF: ' + err.message + '</span>';
+                }});
+            </script>
+        </body>
+        </html>
+        """
+        st_html(pdf_js_html, height=1300)
+    else:
+        st.warning(f"⚠️ {pdf_msg}")
+        st.info("You can manually upload a PDF for this date below if available:")
+        uploaded_pdf = st.file_uploader("Upload Daily PDF", type=["pdf"], key=f"upload_pdf_{drc_date_str}")
+        if uploaded_pdf is not None:
+            ensure_daily_dirs()
+            with open(pdf_path, "wb") as f:
+                f.write(uploaded_pdf.getbuffer())
+            st.success("✅ PDF uploaded and saved into daily folder!")
+            rerun_app()
+
+    st.divider()
+
+    # ------------------ BOTTOM SECTION: Daily Journal & Notes ------------------
+    st.subheader("📋 Daily Journal & Notes")
+        
+    h_c1, h_c2, h_c3, h_c4 = st.columns([1, 1, 1, 1])
+    with h_c1:
+        grade_options = ["-", "A+", "A", "-A", "B+", "B", "-B", "C+", "C", "D", "F"]
+        saved_grade = drc_data.get("grade", "-")
+        idx_g = grade_options.index(saved_grade) if saved_grade in grade_options else 0
+        curr_grade = st.selectbox("Overall Grade", grade_options, index=idx_g, key=f"drc_grade_{drc_date_str}")
+    with h_c2:
+        curr_pnl = st.text_input("Daily PnL / Summary", value=drc_data.get("pnl", ""), key=f"drc_pnl_{drc_date_str}")
+    with h_c3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        save_btn = st.button("💾 Save", key=f"save_drc_{drc_date_str}", type="primary", width="stretch")
+    with h_c4:
+        st.markdown("<br>", unsafe_allow_html=True)
+        load_tpl_btn = st.button("📋 Template", key=f"load_tpl_{drc_date_str}", help="Fill form with sample template from 3/17/2020", width="stretch")
+
+    if load_tpl_btn:
+        sample_data = get_template_sample_notes(drc_date)
+        save_daily_notes(drc_date, sample_data)
+        st.success("✅ Loaded sample template notes!")
+        rerun_app()
+
+    header_parts = [drc_date.strftime('%m/%d/%Y')]
+    if curr_grade and curr_grade != "-":
+        header_parts.append(f"Grade: {curr_grade}")
+    if curr_pnl and curr_pnl.strip():
+        header_parts.append(curr_pnl.strip())
+
+    st.markdown(f"### `{' | '.join(header_parts)}`")
+
+    # Goal & Checklist
+    st.markdown("**🎯 GOAL:**")
+    curr_goal = st.text_area(
+        "Goal Statement",
+        value=drc_data.get("goal", ""),
+        height=65,
+        key=f"drc_goal_{drc_date_str}",
+        label_visibility="collapsed"
+    )
+
+    chk = drc_data.get("checklist", {})
+    c_c1, c_c2 = st.columns(2)
+    with c_c1:
+        chk_3trades = st.checkbox("-3 Trades per Segment, stay selective.", value=chk.get("3_trades", False), key=f"chk_3trades_{drc_date_str}")
+        chk_nophone = st.checkbox("-No Risk Monitor / phone.", value=chk.get("no_phone", False), key=f"chk_nophone_{drc_date_str}")
+    with c_c2:
+        chk_filldrc = st.checkbox("-Each break must consciously fill out DRC.", value=chk.get("fill_drc", False), key=f"chk_filldrc_{drc_date_str}")
+        chk_afterhours = st.checkbox("-Afterhours schedule", value=chk.get("afterhours", False), key=f"chk_afterhours_{drc_date_str}")
+
+    st.divider()
+
+    # Segment Table
+    st.markdown("**📊 Segment Performance Table:**")
+    seg_data = drc_data.get("segments", [])
+    seg_df = pd.DataFrame(seg_data)
+    edited_seg_df = st.data_editor(
+        seg_df,
+        num_rows="fixed",
+        width="stretch",
+        key=f"drc_seg_editor_{drc_date_str}",
+        column_config={
+            "Segment": st.column_config.TextColumn("Segment", disabled=True, width="medium"),
+            "Grade": st.column_config.TextColumn("Grade", width="small"),
+            "PTD Only": st.column_config.TextColumn("PTD Only", width="small"),
+            "Sizing": st.column_config.TextColumn("Sizing", width="small"),
+            "In My Favor": st.column_config.TextColumn("In My Favor", width="small"),
+            "Comments": st.column_config.TextColumn("Comments", width="large")
+        }
+    )
+
+    st.divider()
+
+    # Daily Reflections
+    st.markdown("**💡 WHAT I LEARNED / IMPROVED UPON TODAY:**")
+    curr_learned = st.text_area(
+        "What I learned",
+        value=drc_data.get("learned", ""),
+        height=70,
+        key=f"drc_learned_{drc_date_str}",
+        label_visibility="collapsed"
+    )
+
+    st.markdown("**🔄 CHANGES I NEED TO MAKE FROM TODAY:**")
+    curr_changes = st.text_area(
+        "Changes to make",
+        value=drc_data.get("changes", ""),
+        height=90,
+        key=f"drc_changes_{drc_date_str}",
+        label_visibility="collapsed"
+    )
+
+    st.markdown("**📝 OVERVIEW:**")
+    curr_overview = st.text_area(
+        "Overview",
+        value=drc_data.get("overview", ""),
+        height=110,
+        key=f"drc_overview_{drc_date_str}",
+        label_visibility="collapsed"
+    )
+
+    st.markdown("**⚡ EASIEST $50K:**")
+    curr_easiest = st.text_input(
+        "Easiest $50k",
+        value=drc_data.get("easiest_50k", ""),
+        key=f"drc_easiest_{drc_date_str}",
+        label_visibility="collapsed"
+    )
+
+    st.divider()
+
+    # Tag Manager
+    st.markdown("**🏷️ TAGS FOR THIS DAY:**")
+    curr_tags = drc_data.get("tags", [])
+    all_avail_tags = sorted(list(set(curr_tags + existing_day_tags + ["A+ Day", "Trend Day", "Breakout", "Choppy", "Reversal", "FOMC", "Loss Day"])))
+    selected_tags = st.multiselect("Select Tags", all_avail_tags, default=curr_tags, key=f"drc_tags_{drc_date_str}")
+    new_custom_tag = st.text_input("➕ Add custom tag", key=f"drc_new_tag_{drc_date_str}").strip()
+    if new_custom_tag and new_custom_tag not in selected_tags:
+        selected_tags.append(new_custom_tag)
+
+    st.divider()
+
+    # Trading Execution Log & Ticker PNG Chart Auto-Insertion
+    st.subheader("📈 Trading Execution Log")
+    st.caption("Type ticker symbols to auto-generate and include basic PNG charts from Company Details.")
+    
+    with st.expander("📊 Quick Chart Viewer (Interactive 9-Month TradingView Chart - No Saved Images)", expanded=False):
+        q_ticker = st.text_input("🔍 Enter ticker to review (e.g. NVDA, TSLA, AAPL)", value="", key=f"drc_quick_chart_{drc_date_str}").strip().upper()
+        if q_ticker:
+            st.markdown(f"**Interactive 9-Month TradingView Chart for {q_ticker}:**")
+            render_tradingview_ticker_chart(q_ticker, max_days=190, height=550)
+
+    typed_ticker_input = st.text_input(
+        "🔍 Type ticker(s) for auto PNG chart (comma separated, e.g. CZR, SPY, NVDA)",
+        value="",
+        key=f"drc_typed_tickers_{drc_date_str}"
+    )
+    
+    trades_list = drc_data.get("trades", [])
+    existing_trade_tickers = [tr.get("ticker", "").upper() for tr in trades_list]
+    
+    if typed_ticker_input:
+        new_tickers = [t.strip().upper() for t in typed_ticker_input.split(",") if t.strip()]
+        for nt in new_tickers:
+            if nt not in existing_trade_tickers:
+                trades_list.append({
+                    "ticker": nt,
+                    "pnl": "",
+                    "tags": [],
+                    "notes": ""
+                })
+                existing_trade_tickers.append(nt)
+
+    updated_trades = []
+    for i, trade_item in enumerate(trades_list):
+        tk = trade_item.get("ticker", "").upper()
+        if not tk:
+            continue
+        
+        exp_header = f"📌 Trade: **{tk}**"
+        if trade_item.get('pnl'):
+            exp_header += f" | PnL: `{trade_item.get('pnl')}`"
+        if trade_item.get('entry_price'):
+            exp_header += f" | Entry: `{trade_item.get('entry_price')}`"
+        if trade_item.get('exit_price'):
+            exp_header += f" | Exit: `{trade_item.get('exit_price')}`"
+        if trade_item.get('shares'):
+            exp_header += f" | Shares: `{trade_item.get('shares')}`"
+
+        with st.expander(exp_header, expanded=True):
+            r1_c1, r1_c2, r1_c3, r1_c4, r1_c5 = st.columns([1.2, 1, 1, 1, 1])
+            with r1_c1:
+                tk_pnl = st.text_input(f"PnL / Realized", value=trade_item.get("pnl", ""), key=f"tr_pnl_{tk}_{i}_{drc_date_str}")
+            with r1_c2:
+                tk_entry = st.text_input(f"Entry Price ($)", value=trade_item.get("entry_price", ""), key=f"tr_entry_{tk}_{i}_{drc_date_str}")
+            with r1_c3:
+                tk_exit = st.text_input(f"Exit Price ($)", value=trade_item.get("exit_price", ""), key=f"tr_exit_{tk}_{i}_{drc_date_str}")
+            with r1_c4:
+                tk_shares = st.text_input(f"Shares / Size", value=trade_item.get("shares", ""), key=f"tr_shares_{tk}_{i}_{drc_date_str}")
+            with r1_c5:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button(f"🗑️ Remove Log", key=f"del_tr_{tk}_{i}_{drc_date_str}"):
+                    drc_data["trades"] = [t for t in drc_data.get("trades", []) if t.get("ticker", "").upper() != tk]
+                    save_daily_notes(drc_date, drc_data)
+                    st.success(f"🗑️ Removed trade log entry for {tk}!")
+                    rerun_app()
+            
+            # Trade-level tags
+            tk_tags = trade_item.get("tags", [])
+            all_tr_tag_options = sorted(list(set(tk_tags + existing_trade_tags + ["Breakout", "EP", "Pullback", "VCP", "H&S", "Flag", "Reversal", "Win", "Loss"])))
+            selected_tr_tags = st.multiselect(f"🏷️ Trade Tags for {tk}", all_tr_tag_options, default=tk_tags, key=f"tr_tags_{tk}_{i}_{drc_date_str}")
+            new_tr_tag = st.text_input(f"➕ Add custom trade tag for {tk}", key=f"tr_new_tag_{tk}_{i}_{drc_date_str}").strip()
+            if new_tr_tag and new_tr_tag not in selected_tr_tags:
+                selected_tr_tags.append(new_tr_tag)
+                
+            tk_notes = st.text_area(f"Notes for {tk}", value=trade_item.get("notes", ""), height=100, key=f"tr_notes_{tk}_{i}_{drc_date_str}")
+
+            st.markdown(f"**Auto-generated PNG Chart for {tk}:**")
+            png_chart_path = generate_ticker_png_chart(tk, drc_date_str)
+            if png_chart_path and os.path.exists(png_chart_path):
+                st.image(png_chart_path, width="stretch", caption=f"{tk} Daily Chart (PNG)")
+            else:
+                st.warning(f"Could not generate PNG chart for {tk}. Ensure market data is available.")
+
+            user_img = st.file_uploader(f"Upload Execution Screenshot for {tk}", type=["png", "jpg", "jpeg"], key=f"upload_sc_{tk}_{i}_{drc_date_str}")
+            saved_sc_path = trade_item.get("screenshot", "")
+            if user_img is not None:
+                ensure_daily_dirs()
+                sc_filename = f"{tk}_{drc_date_str}_{uuid.uuid4().hex[:6]}.png"
+                sc_full_path = SCREENSHOTS_DIR / sc_filename
+                with open(sc_full_path, "wb") as f:
+                    f.write(user_img.getbuffer())
+                saved_sc_path = str(sc_full_path)
+                st.success("✅ Screenshot uploaded!")
+            
+            if saved_sc_path and os.path.exists(saved_sc_path):
+                st.image(saved_sc_path, width="stretch", caption=f"{tk} Execution Screenshot")
+
+            updated_trades.append({
+                "ticker": tk,
+                "pnl": tk_pnl,
+                "entry_price": tk_entry,
+                "exit_price": tk_exit,
+                "shares": tk_shares,
+                "tags": selected_tr_tags,
+                "notes": tk_notes,
+                "screenshot": saved_sc_path
+            })
+
+    if save_btn:
+        new_notes_data = {
+            "date": drc_date_str,
+            "grade": curr_grade,
+            "pnl": curr_pnl,
+            "goal": curr_goal,
+            "checklist": {
+                "3_trades": chk_3trades,
+                "no_phone": chk_nophone,
+                "fill_drc": chk_filldrc,
+                "afterhours": chk_afterhours
+            },
+            "segments": edited_seg_df.to_dict(orient="records"),
+            "learned": curr_learned,
+            "changes": curr_changes,
+            "overview": curr_overview,
+            "easiest_50k": curr_easiest,
+            "tags": selected_tags,
+            "trades": updated_trades
+        }
+        if save_daily_notes(drc_date, new_notes_data):
+            st.success(f"✅ Daily Report Card saved successfully for {drc_date_str}!")
+        else:
+            st.error("Failed to save Daily Report Card.")
 
 # Footer
 st.divider()

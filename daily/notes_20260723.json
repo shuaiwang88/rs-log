@@ -1,0 +1,60 @@
+{
+  "date": "2026-07-23",
+  "grade": "-",
+  "pnl": "",
+  "goal": "",
+  "checklist": {
+    "3_trades": false,
+    "no_phone": false,
+    "fill_drc": false,
+    "afterhours": false
+  },
+  "segments": [
+    {
+      "Segment": "Temp",
+      "Grade": "",
+      "PTD Only": "",
+      "Sizing": "",
+      "In My Favor": "",
+      "Comments": ""
+    },
+    {
+      "Segment": "9:30-11",
+      "Grade": "",
+      "PTD Only": "",
+      "Sizing": "",
+      "In My Favor": "",
+      "Comments": ""
+    },
+    {
+      "Segment": "11-12",
+      "Grade": "",
+      "PTD Only": "",
+      "Sizing": "",
+      "In My Favor": "",
+      "Comments": ""
+    },
+    {
+      "Segment": "12-2",
+      "Grade": "",
+      "PTD Only": "",
+      "Sizing": "",
+      "In My Favor": "",
+      "Comments": ""
+    },
+    {
+      "Segment": "2-4",
+      "Grade": "",
+      "PTD Only": "",
+      "Sizing": "",
+      "In My Favor": "",
+      "Comments": ""
+    }
+  ],
+  "learned": "",
+  "changes": "",
+  "overview": "",
+  "easiest_50k": "",
+  "tags": [],
+  "trades": []
+}
