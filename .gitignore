@@ -5,3 +5,41 @@
 # Ignore large generated historical files and metadata
 output/*_historical.csv
 output/*_metadata.json
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Environment & Credentials
+.env
+*.env
+
+# Playwright User Data & Browser Profiles
+playwright_profile/
+playwright_profile*/
+.playwright_profile/
+test_profile/
+user_data/
+user_data_dir/
+browser_profile/
+.browser_profile/
+
+# Playwright Test Artifacts, Traces, & Reports
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+screenshots/
+ticker_cache/
+
+# Saved Authentication States & Sessions
+storage_state.json
+*.auth.json
+state.json
+
+# Chromium / Browser Profile Lock & Temp Files
+SingletonLock
+SingletonCookie
+SingletonSocket
+DevToolsActivePort
+Default/

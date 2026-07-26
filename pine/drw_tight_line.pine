@@ -1,0 +1,260 @@
+//@version=5
+// ═══════════════════════════════════════════════════════════════════════════════
+// Relative Measured Volatility (RMV) Tightness Lines Overlay
+// Inspired by Deepvue's Relative Measured Volatility indicator:
+// https://deepvue.com/indicators/relative-measured-volatility/
+//
+// What it does:
+//   Monitors price action for Deepvue Relative Measured Volatility (RMV) tightness
+//   (RMV <= 15, Rank 1/2/3 setups). When at least 2 tight days occur within a 5-day
+//   window, price is above 21 SMA, and 21 SMA is >= 50 SMA * 1.02, it draws a yellow
+//   horizontal line anchored at the High of the first bar of the tight window with
+//   the text "tight".
+//
+//   No other plots, histograms, or background colors are drawn ("do not plot any other").
+// ═══════════════════════════════════════════════════════════════════════════════
+indicator("RMV Tightness Lines", shorttitle="RMV Tight Lines", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP 0 — Tight Line Logic & Display Settings
+// ─────────────────────────────────────────────────────────────────────────────
+g_line             = "Tight Line Logic & Display"
+
+minTightDays       = input.int(2, title="Min tight days threshold", minval=1, group=g_line,
+     tooltip="Number of tight days required. Default 2 days.")
+
+strictThreshold    = input.bool(false, title="Strict threshold (> minTightDays)", group=g_line,
+     tooltip="When checked, requires strictly > minTightDays. When unchecked, requires >= minTightDays.")
+
+windowLen          = input.int(5, title="Rolling window length (days)", minval=1, group=g_line,
+     tooltip="Window length for counting tight days. Default 5 days.")
+
+lookbackLen        = input.int(5, title="Lookback horizon (days)", minval=1, group=g_line,
+     tooltip="Total lookback horizon to evaluate the tight pattern and nearby high. Default 5 days.")
+
+rankFilter         = input.string("Rank 1, 2, or 3 (Confluence, A+, Trough)", title="Rank filter",
+     options=["Rank 1, 2, or 3 (Confluence, A+, Trough)", "Any rank (1, 2, 3, or 4)", "Rank 1 or 2 only"], group=g_line,
+     tooltip="Which rank tiers qualify:\n• Rank 1, 2, or 3 — DEFAULT: Rank 1 (Confluence), Rank 2 (A+), or Rank 3 (Trough)\n• Any rank (1, 2, 3, or 4) — Includes Rank 4 (Viable)\n• Rank 1 or 2 only — A+ / Confluence tightness only")
+
+scanMode           = input.string("Rolling window (N-day)", title="Pattern evaluation mode",
+     options=["Rolling window (N-day)", "Window within lookback horizon", "Total count in lookback horizon"], group=g_line,
+     tooltip="Method used to evaluate tight days count.")
+
+requireAboveSma21  = input.bool(true, title="Require close above 21 SMA", group=g_line,
+     tooltip="Only draw tight horizontal lines when price close is above the 21-day Simple Moving Average")
+smaLen             = input.int(21, minval=1, title="SMA Length", group=g_line)
+
+requireMaGap       = input.bool(true, title="Require MA Gap filter (2%)", group=g_line,
+     tooltip="Requires 21 SMA and 50 SMA to meet the percentage gap requirement")
+maGapPct           = input.float(2.0, minval=0.0, step=0.5, title="MA Gap Percentage (%)", group=g_line)
+maGapMode          = input.string("21 MA >= 50 MA * 1.02", title="MA Gap Rule",
+     options=["21 MA >= 50 MA * 1.02", "50 MA >= 21 MA * 1.02"], group=g_line,
+     tooltip="Choose whether 21 MA is >= 50 MA by X% or 50 MA is >= 21 MA by X%")
+
+levelSource        = input.string("First Bar High", title="Line Price Level",
+     options=["First Bar High", "Highest High of Window"], group=g_line,
+     tooltip="Source price level for drawing the horizontal line:\n• First Bar High — DEFAULT: line is anchored at the High of the first bar of the tight window\n• Highest High of Window — line is drawn at the peak high of the tight window")
+
+lineColor          = input.color(color.yellow, title="Horizontal Line Color", group=g_line)
+lineWidth          = input.int(2, title="Line Width", minval=1, maxval=5, group=g_line)
+lineStyleStr       = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group=g_line)
+extendRight        = input.bool(false, title="Extend Line Right", group=g_line, tooltip="Extend the horizontal line infinitely to the right until broken")
+labelText          = input.string("tight", title="Line Label Text", group=g_line)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP 1 — Core RMV engine (Deepvue standard)
+// ─────────────────────────────────────────────────────────────────────────────
+g_core             = "Core RMV engine"
+
+atrLen             = input.int(15, minval=2, title="RMV Baseline Lookback (bars)", group=g_core,
+     tooltip="Deepvue RMV lookback period:\n• 15 bars = Deepvue default swing trading lookback\n• 5 bars = Deepvue day trading / quick coil lookback\n• 50 bars = Deepvue position trading lookback")
+closePosThreshold  = input.int(50, minval=1, maxval=99, title="Strong rejection threshold (%)", group=g_core)
+absTightAtrLen     = input.int(5, minval=2, title="Absolute-tightness ATR length (prior N bars)", group=g_core)
+absTightMult       = input.float(0.75, minval=0.1, step=0.05, title="Absolute-tightness ATR multiplier", group=g_core)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP 2 — Thresholds & zones (Deepvue standard: RMV <= 15)
+// ─────────────────────────────────────────────────────────────────────────────
+g_zones            = "Thresholds & zones"
+
+veryTightLevel     = input.int(10, minval=1, maxval=99, title="Very-tight level", group=g_zones)
+tightLevel         = input.int(15, minval=1, maxval=99, title="Tight level (Deepvue threshold)", group=g_zones,
+     tooltip="Deepvue standard tightness threshold (RMV <= 15)")
+warmLevel          = input.int(20, minval=1, maxval=99, title="Warm level", group=g_zones)
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP 3 — A+ setup
+// ─────────────────────────────────────────────────────────────────────────────
+g_aplus            = "A+ setup"
+
+showAplus          = input.bool(true, title="Show A+ setup marker", group=g_aplus)
+aplusMode          = input.string("OR (either scan)", title="A+ trigger mode",
+     options=["AND (both scans)", "OR (either scan)", "Tightness only", "VDU only"], group=g_aplus)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GROUP 4 — Tightness recognition aids
+// ─────────────────────────────────────────────────────────────────────────────
+g_tight            = "Tightness recognition"
+
+troughLookback     = input.int(5, minval=2, title="Trough lookback (bars)", group=g_tight)
+showTrough         = input.bool(true, title="Enable trough detection (rank 3)", group=g_tight)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORE RMV CALCULATION
+// ─────────────────────────────────────────────────────────────────────────────
+rangeToday         = high - low
+bodyToday          = math.abs(open - close)
+rangeSafe          = math.max(rangeToday, syminfo.mintick)
+openPosPct         = (open  - low) / rangeSafe * 100
+closePosPct        = (close - low) / rangeSafe * 100
+
+absTightAtrPrior   = ta.atr(absTightAtrLen)[1]
+isAbsTight         = rangeToday <= absTightAtrPrior * absTightMult
+strongOC           = (openPosPct > closePosThreshold) and (closePosPct > closePosThreshold)
+useBody            = isAbsTight or strongOC
+numerator          = useBody ? bodyToday : rangeToday
+
+atrPrior           = ta.atr(atrLen)[1]
+maxHlPrior         = ta.highest(rangeToday, atrLen)[1]
+denominator        = math.max(atrPrior, maxHlPrior)
+
+epsilon            = math.max(0.001, close * 0.0001)
+ratio              = numerator / math.max(denominator, epsilon)
+rmv                = math.min(ratio * 50, 100)
+
+// Tightness trough — bars where RMV is the lowest in N bars
+isTrough           = rmv == ta.lowest(rmv, troughLookback)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHARTINK SCAN SETUPS — Tightness + VDU
+// ─────────────────────────────────────────────────────────────────────────────
+ema7s              = ta.ema(close, 7)
+ema10s             = ta.ema(close, 10)
+ema21s             = ta.ema(close, 21)
+ema50s             = ta.ema(close, 50)
+ema200s            = ta.ema(close, 200)
+pctChg             = (close - close[1]) / close[1] * 100
+pctChgPrev         = (close[1] - close[2]) / close[2] * 100
+notRunaway         = not (math.sum(open  == low  ? 1 : 0, 10) >= 3 and
+                           math.sum(close == high ? 1 : 0, 10) >= 3)
+todayPctLe4        = pctChg <= 4
+
+tightnessSetup     = (high - low) <= ta.atr(3)
+     and low   <= ema10s * 1.04
+     and close >= ema10s * 0.99
+     and close >= ema21s and close >= ema50s and close >= ema200s
+     and notRunaway
+     and close >= open * 0.985
+     and todayPctLe4
+     and pctChg     >= -1
+     and pctChgPrev <= 7.5
+     and (pctChg + pctChgPrev) <= 7
+     and close >= ta.highest(high[1], 7) * 0.9
+     and math.sum(close > close[1] ? 1 : 0, 9) != 9
+
+volEma21s          = ta.ema(volume, 21)
+isVdu              = volume    <= volEma21s * 0.5
+                  or volume[1] <= volEma21s * 0.5
+                  or volume[2] <= volEma21s * 0.6
+                  or volume == ta.lowest(volume, 90)
+                  or volume == ta.lowest(volume, 365)
+
+vduSetup           = isVdu
+     and ema21s >= ema50s * 1.03
+     and ema50s >= ema200s
+     and close  <= ema10s * 1.06
+     and notRunaway
+     and todayPctLe4
+     and pctChg     >= -2
+     and pctChgPrev <= 4
+     and pctChgPrev >  -3
+     and ema10s > ema10s[3]
+     and ema7s  > ema10s and ema10s > ema21s and ema21s > ema50s and ema50s > ema200s
+     and math.sum(pctChg <= -5 ? 1 : 0, 7) == 0
+
+aPlusRaw           = aplusMode == "AND (both scans)" ? (tightnessSetup and vduSetup) : aplusMode == "OR (either scan)" ? (tightnessSetup or vduSetup) : aplusMode == "Tightness only" ? tightnessSetup : vduSetup
+aPlusSetup         = showAplus and aPlusRaw and rmv <= tightLevel
+
+isTroughActive     = showTrough and isTrough
+rankTier           = aPlusSetup and isTroughActive ? 1 : aPlusSetup ? 2 : isTroughActive ? 3 : rmv <= warmLevel ? 4 : 0
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TIGHT PATTERN DETECTION & HORIZONTAL LINE DRAWING
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Qualifying tight day condition (Rank 1, 2, 3 vs Any rank vs Rank 1 or 2 only)
+isQualifyingTight  = rankFilter == "Rank 1, 2, or 3 (Confluence, A+, Trough)" ? (rankTier >= 1 and rankTier <= 3) : rankFilter == "Any rank (1, 2, 3, or 4)" ? (rankTier > 0) : (rankTier == 1 or rankTier == 2)
+
+
+// Rolling tight day counts
+countWindow        = math.sum(isQualifyingTight ? 1 : 0, windowLen)
+countLookback      = math.sum(isQualifyingTight ? 1 : 0, lookbackLen)
+
+// Maximum window count within lookback horizon
+lookbackOffset     = math.max(1, lookbackLen - windowLen + 1)
+maxCountInLookback = ta.highest(countWindow, lookbackOffset)
+
+// Select count based on user-configured mode
+tightCount         = scanMode == "Window within lookback horizon" ? maxCountInLookback : scanMode == "Total count in lookback horizon" ? countLookback : countWindow
+
+// Moving Averages & Filters (21 SMA and 50 SMA)
+sma21Val           = ta.sma(close, smaLen)
+sma50Val           = ta.sma(close, 50)
+aboveSma           = close >= sma21Val
+
+maGapPass          = maGapMode == "21 MA >= 50 MA * 1.02" ? (sma21Val >= sma50Val * (1.0 + maGapPct / 100.0)) : (sma50Val >= sma21Val * (1.0 + maGapPct / 100.0))
+
+hasTightPattern    = (strictThreshold ? (tightCount > minTightDays) : (tightCount >= minTightDays)) and (not requireAboveSma21 or aboveSma) and (not requireMaGap or maGapPass)
+
+
+
+
+
+
+// Price level calculation (First Bar High vs Highest High)
+firstBarHigh       = high[windowLen - 1]
+nearbyHigh         = ta.highest(high, lookbackLen)
+linePrice          = levelSource == "First Bar High" ? firstBarHigh : nearbyHigh
+
+// Line style mapping
+lineStyle          = lineStyleStr == "Dashed" ? line.style_dashed : lineStyleStr == "Dotted" ? line.style_dotted : line.style_solid
+
+// Line and label creation/updating
+var line activeLine = na
+var label activeLabel = na
+var float activeLevel = na
+
+if hasTightPattern
+    firstBarIdx = bar_index - (windowLen - 1)
+    if not hasTightPattern[1] or na(activeLine)
+        activeLevel := linePrice
+        activeLine  := line.new(
+             x1     = firstBarIdx,
+             y1     = activeLevel,
+             x2     = bar_index,
+             y2     = activeLevel,
+             color  = lineColor,
+             width  = lineWidth,
+             style  = lineStyle,
+             extend = extendRight ? extend.right : extend.none
+          )
+        activeLabel := label.new(
+             x         = bar_index,
+             y         = activeLevel,
+             text      = labelText,
+             style     = label.style_none,
+             textcolor = lineColor,
+             size      = size.normal
+          )
+    else
+        line.set_x2(activeLine, bar_index)
+        line.set_y1(activeLine, activeLevel)
+        line.set_y2(activeLine, activeLevel)
+        label.set_xy(activeLabel, bar_index, activeLevel)
+        if extendRight
+            line.set_extend(activeLine, extend.right)
+
+
+

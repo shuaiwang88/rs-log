@@ -1006,7 +1006,8 @@ if detectCup and isBase and tfDraw and i_displayPattern and not isDoubleBottom[1
                 cupLineRightLive := line.new(x1 = x1, y1 = y1, x2 = x2, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 array.unshift(linesRight, cupLineRightLive)
 
-_lowCompareFull = ta.lowest(low, math.max(1, bar_index - topDBBar))
+_lowCompareFull = ta.lowest(low, math.min(14999, math.max(1, bar_index - topDBBar)))
+
 lowCompare = bar_index - topDBBar > 0 ? _lowCompareFull : low
 if detectDoubleBottom and not isDoubleBottom[1] and tfDraw and i_displayPattern
     line.delete(highLine)

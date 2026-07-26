@@ -229,16 +229,67 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
     except Exception:
         pass
 
+    # Look up Company metrics from IBD Data Tables if available
+    ibd_comp = "N/A"
+    ibd_rs = rs_rating_str  # default to the local RS
+    ibd_ind_rank = "N/A"
+    ibd_eps_rating = "N/A"
+    ibd_smr_rating = "N/A"
+    ibd_last_qtr_eps = "N/A"
+    ibd_last_qtr_sales = "N/A"
+    ibd_curr_qtr_est = "N/A"
+    ibd_curr_yr_est = "N/A"
+    
+    ibd_full_map = load_ibd_data_tables_full()
+    ibd_info = ibd_full_map.get(tk) or ibd_full_map.get(tk_norm)
+    if ibd_info:
+        if pd.notna(ibd_info.get('IBD Comp. Rating')):
+            ibd_comp = str(int(ibd_info['IBD Comp. Rating']))
+        if pd.notna(ibd_info.get('RS Rating')):
+            ibd_rs = str(int(ibd_info['RS Rating']))
+        if pd.notna(ibd_info.get('Industry Group Rank')):
+            ibd_ind_rank = str(int(ibd_info['Industry Group Rank']))
+        if pd.notna(ibd_info.get('EPS Rating')):
+            ibd_eps_rating = str(int(ibd_info['EPS Rating']))
+        if pd.notna(ibd_info.get('SMR Rating')):
+            ibd_smr_rating = str(ibd_info['SMR Rating'])
+        if pd.notna(ibd_info.get('Last Qtr EPS % Chg.')):
+            ibd_last_qtr_eps = f"{ibd_info['Last Qtr EPS % Chg.']}%"
+        if pd.notna(ibd_info.get('Last Qtr Sales % Chg.')):
+            ibd_last_qtr_sales = f"{ibd_info['Last Qtr Sales % Chg.']}%"
+        if pd.notna(ibd_info.get('Curr Qtr EPS Est. % Chg.')):
+            ibd_curr_qtr_est = f"{ibd_info['Curr Qtr EPS Est. % Chg.']}%"
+        if pd.notna(ibd_info.get('Curr Yr EPS Est. % Chg.')):
+            ibd_curr_yr_est = f"{ibd_info['Curr Yr EPS Est. % Chg.']}%"
+
     # Display RS metrics header banner
-    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
     with m_col1:
         st.metric("Ticker", tk)
     with m_col2:
-        st.metric("RS Rating", f"{rs_rating_str} / 99")
-    with m_col3:
         st.metric("Latest Price", f"${latest_price:.2f}")
+    with m_col3:
+        st.metric("IBD Comp Rating", f"{ibd_comp} / 99")
     with m_col4:
+        st.metric("RS Rating", f"{ibd_rs} / 99")
+    with m_col5:
+        st.metric("Ind Grp Rank", f"{ibd_ind_rank} / 197")
+    with m_col6:
         st.metric("IBD Industry / Sector", sector_str or "N/A")
+
+    e_col1, e_col2, e_col3, e_col4, e_col5, e_col6 = st.columns(6)
+    with e_col1:
+        st.metric("EPS Rating", f"{ibd_eps_rating} / 99")
+    with e_col2:
+        st.metric("SMR Rating", ibd_smr_rating)
+    with e_col3:
+        st.metric("Last Qtr EPS Chg", ibd_last_qtr_eps)
+    with e_col4:
+        st.metric("Last Qtr Sales Chg", ibd_last_qtr_sales)
+    with e_col5:
+        st.metric("Curr Qtr EPS Est", ibd_curr_qtr_est)
+    with e_col6:
+        st.metric("Curr Yr EPS Est", ibd_curr_yr_est)
 
     # Look up Company Description from IBD
     desc_map = load_company_descriptions()
@@ -325,7 +376,7 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
         template="plotly_dark"
     )
 
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 def load_daily_notes(date_obj):
     ensure_daily_dirs()
@@ -1212,6 +1263,38 @@ def load_ibd_data_tables_ranks():
 
 
 @st.cache_data
+def load_ibd_data_tables_full():
+    ibd_tables_path = Path(__file__).resolve().parent / "IBD" / "IBD Data Tables.csv"
+    if not ibd_tables_path.exists():
+        return {}
+    try:
+        df_ibd = pd.read_csv(ibd_tables_path)
+        df_ibd.columns = [c.strip() for c in df_ibd.columns]
+        if 'Symbol' in df_ibd.columns:
+            df_ibd['Symbol'] = df_ibd['Symbol'].astype(str).str.strip('"').str.strip()
+            df_ibd = df_ibd.drop_duplicates(subset=['Symbol'])
+            # Convert numeric columns where possible
+            for col in ['IBD Comp. Rating', 'RS Rating', 'Industry Group Rank', 'EPS Rating']:
+                if col in df_ibd.columns:
+                    df_ibd[col] = pd.to_numeric(df_ibd[col], errors='coerce')
+            
+            # create dictionary mapping symbol -> dict of stats
+            df_ibd.set_index('Symbol', inplace=True)
+            info_dict = df_ibd.to_dict(orient='index')
+            
+            # add normalized symbols
+            expanded_dict = {}
+            for sym, data in info_dict.items():
+                expanded_dict[sym] = data
+                norm = sym.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
+                expanded_dict[norm] = data
+            return expanded_dict
+    except Exception as e:
+        print(f"Error loading IBD Data Tables full: {e}")
+    return {}
+
+
+@st.cache_data
 def get_industry_ranks(ibd_industry_mapping, symbol_ranks):
     industry_ranks = {}
     for sym, rank in symbol_ranks.items():
@@ -1404,15 +1487,16 @@ all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(
         ["📈 Overview", "📊 Time Series", "🎯 Top Performers", "🔬 Deep Analysis",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card", "📸 MarketSurge Screenshots"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions", "🔬 Deep Analysis",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card", "📸 MarketSurge Screenshots"])
 
 tab_drc = tab10 if has_historical else tab9
+tab_ms = tab11 if has_historical else tab10
 
 
 # ---------- TAB 1: Overview ----------
@@ -1436,13 +1520,13 @@ with tab1:
         sector_counts = filtered_df.drop_duplicates(subset=['Ticker'])['Sector'].value_counts().head(10)
         fig = px.bar(x=sector_counts.values, y=sector_counts.index, orientation='h',
                      title="Top 10 Sectors by Stock Count", labels={'x': 'Count', 'y': 'Sector'})
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     with col2:
         avg_rs_by_sector = filtered_df.drop_duplicates(subset=['Ticker']).groupby('Sector')['Relative Strength'].mean().sort_values(ascending=False).head(10)
         fig = px.bar(x=avg_rs_by_sector.values, y=avg_rs_by_sector.index, orientation='h',
                      title="Top 10 Sectors by Avg RS", labels={'x': 'Avg RS', 'y': 'Sector'},
                      color=avg_rs_by_sector.values, color_continuous_scale='Viridis')
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 
 # ---------- TAB 2: Time Series ----------
 if has_historical:
@@ -1455,22 +1539,22 @@ if has_historical:
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['mean'],   name='Mean RS',   mode='lines'))
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['median'], name='Median RS', mode='lines'))
             fig.update_layout(title="Daily Average RS Trend", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             daily_percentile = filtered_df.groupby('date')['Percentile'].mean().reset_index()
             fig = px.line(daily_percentile, x='date', y='Percentile', title="Daily Average Percentile Trend")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
             daily_count         = filtered_df.groupby('date')['Ticker'].nunique().reset_index()
             daily_count.columns = ['date', 'stock_count']
             fig = px.line(daily_count, x='date', y='stock_count', title="Number of Stocks in Universe Over Time")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             daily_price = filtered_df.groupby('date')['Price'].mean().reset_index()
             fig = px.line(daily_price, x='date', y='Price', title="Average Stock Price Over Time")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         st.divider()
         st.subheader("📊 Sector RS Trends")
         selected_sector_trend = st.selectbox("Select sector for trend", filtered_df['Sector'].unique(), key="sector_trend")
@@ -1480,16 +1564,16 @@ if has_historical:
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['max'],  name='Max RS',  fill='tozeroy', mode='lines', opacity=0.2))
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['min'],  name='Min RS',  fill='tonexty', mode='lines', opacity=0.2))
         fig.update_layout(title=f"{selected_sector_trend} - RS Trend", hovermode='x unified')
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
 else:
     with tab2:
         col1, col2 = st.columns(2)
         with col1:
             fig = px.histogram(filtered_df, x='Relative Strength', nbins=50, title="Distribution of Relative Strength")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             fig = px.histogram(filtered_df, x='Percentile', nbins=50, title="Distribution of Percentile Rank")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
 
 # ---------- TAB 3: Top Performers ----------
 with tab3:
@@ -1497,23 +1581,23 @@ with tab3:
     with col1:
         st.subheader("🏆 Top 15 by Relative Strength")
         top_rs = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Relative Strength')[['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile', 'Price']].copy()
-        st.dataframe(top_rs.reset_index(drop=True), width="stretch", hide_index=True)
+        st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
         st.subheader("⭐ Top 15 by Percentile")
         top_percentile = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Percentile')[['Rank', 'Ticker', 'Sector', 'Percentile', 'Relative Strength', 'Price']].copy()
-        st.dataframe(top_percentile.reset_index(drop=True), width="stretch", hide_index=True)
+        st.dataframe(top_percentile.reset_index(drop=True), use_container_width=True, hide_index=True)
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("💰 Top 15 by Market Cap")
         top_mcap = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'MarketCap')[['Ticker', 'Sector', 'MarketCap', 'Relative Strength', 'Percentile']].copy()
         top_mcap['MarketCap'] = top_mcap['MarketCap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "N/A")
-        st.dataframe(top_mcap.reset_index(drop=True), width="stretch", hide_index=True)
+        st.dataframe(top_mcap.reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
         st.subheader("📈 Highest 6M")
         top_6m = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, '6M_RS_Percentile')[['Ticker', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile']].copy()
         top_6m = top_6m.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
-        st.dataframe(top_6m.reset_index(drop=True), width="stretch", hide_index=True)
+        st.dataframe(top_6m.reset_index(drop=True), use_container_width=True, hide_index=True)
 
 # ---------- TAB 4: Deep Analysis ----------
 with tab4:
@@ -1522,7 +1606,7 @@ with tab4:
         fig = px.scatter(filtered_df, x='Price', y='Relative Strength', color='Percentile',
                          hover_data=['Ticker', 'Sector'], title="Relative Strength vs Price",
                          color_continuous_scale='Viridis')
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     with col2:
         percentile_data = filtered_df[['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile']].mean()
         fig = go.Figure(data=[
@@ -1531,24 +1615,24 @@ with tab4:
             go.Bar(name='6M', x=['6M'], y=[percentile_data['6M_RS_Percentile']]),
         ])
         fig.update_layout(title="Average RS Percentile Comparison", barmode='group')
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
         fig = px.histogram(filtered_df.dropna(subset=['PctFrom52WkHigh']), x='PctFrom52WkHigh',
                            nbins=40, title="Distribution of % from 52W High")
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = px.scatter(filtered_df.dropna(subset=['RevenueGrowth']), x='RevenueGrowth',
                          y='Relative Strength', color='Percentile', hover_data=['Ticker', 'Sector'],
                          title="Revenue Growth vs Relative Strength", color_continuous_scale='Viridis')
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, use_container_width=True)
     st.divider()
     st.subheader("Key Statistics Summary")
     summary_stats = filtered_df[['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
                                   '6M_RS_Percentile', 'Price', 'AvgVol10', 'AvgVol30', 'AvgVol50',
                                   'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']].describe()
-    st.dataframe(summary_stats, width="stretch")
+    st.dataframe(summary_stats, use_container_width=True)
 
 # ---------- TAB 5: Trends ----------
 if has_historical:
@@ -1564,7 +1648,7 @@ if has_historical:
             fig = px.bar(x=momentum.values, y=momentum.index, orientation='h',
                          title=f"RS Change by Sector ({oldest_date.date()} to {latest_date.date()})",
                          color=momentum.values, color_continuous_scale='RdYlGn')
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
             latest_stocks  = filtered_df[filtered_df['date'] == latest_date][['Ticker', 'Sector', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
             oldest_stocks  = filtered_df[filtered_df['date'] == oldest_date][['Ticker', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
@@ -1574,7 +1658,7 @@ if has_historical:
                 top_gainers = merged.nlargest(10, 'RS_change')[['Ticker', 'Sector', 'RS_change']]
                 fig = px.bar(top_gainers, x='RS_change', y='Ticker', orientation='h',
                              title="Top 10 RS Gainers", color='RS_change', color_continuous_scale='Greens')
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
 
 # ---------- TAB 6: Industry Rotation (corrected delta calculations) ----------
 with (tab6 if has_historical else tab5):
@@ -2291,7 +2375,7 @@ with (tab7 if has_historical else tab6):
                                                     save_markers(selected_ticker_company, st.session_state[session_key], "daily")
                                                     rerun_app()
                                 st.plotly_chart(create_daily_chart_with_patterns(df_daily, latest_row.get('Percentile'), snapshot_text),
-                                                width="stretch")
+                                                use_container_width=True)
 
                             # Weekly chart
                             st.divider()
@@ -2456,7 +2540,7 @@ with (tab7 if has_historical else tab6):
                                                     st.session_state[session_key_w].pop(i)
                                                     save_markers(selected_ticker_company, st.session_state[session_key_w], "weekly")
                                                     rerun_app()
-                                st.plotly_chart(create_weekly_chart_plotly(), width="stretch")
+                                st.plotly_chart(create_weekly_chart_plotly(), use_container_width=True)
 
                 except Exception as e:
                     st.error(f"Error fetching data: {e}")
@@ -2517,7 +2601,7 @@ with (tab8 if has_historical else tab7):
     display_df_with_rank = pd.DataFrame({'Rank': range(1, len(display_df)+1)})
     for col in display_df.columns:
         display_df_with_rank[col] = display_df[col].values
-    st.dataframe(display_df_with_rank, width="stretch", hide_index=True)
+    st.dataframe(display_df_with_rank, use_container_width=True, hide_index=True)
     st.download_button("Download filtered data as CSV", display_df_with_rank.to_csv(index=False),
                        "rs_analysis_filtered.csv", "text/csv")
 
@@ -3018,10 +3102,10 @@ with tab_drc:
         curr_pnl = st.text_input("Daily PnL / Summary", value=drc_data.get("pnl", ""), key=f"drc_pnl_{drc_date_str}")
     with h_c3:
         st.markdown("<br>", unsafe_allow_html=True)
-        save_btn = st.button("💾 Save", key=f"save_drc_{drc_date_str}", type="primary", width="stretch")
+        save_btn = st.button("💾 Save", key=f"save_drc_{drc_date_str}", type="primary", use_container_width=True)
     with h_c4:
         st.markdown("<br>", unsafe_allow_html=True)
-        load_tpl_btn = st.button("📋 Template", key=f"load_tpl_{drc_date_str}", help="Fill form with sample template from 3/17/2020", width="stretch")
+        load_tpl_btn = st.button("📋 Template", key=f"load_tpl_{drc_date_str}", help="Fill form with sample template from 3/17/2020", use_container_width=True)
 
     if load_tpl_btn:
         sample_data = get_template_sample_notes(drc_date)
@@ -3065,7 +3149,7 @@ with tab_drc:
     edited_seg_df = st.data_editor(
         seg_df,
         num_rows="fixed",
-        width="stretch",
+        use_container_width=True,
         key=f"drc_seg_editor_{drc_date_str}",
         column_config={
             "Segment": st.column_config.TextColumn("Segment", disabled=True, width="medium"),
@@ -3206,7 +3290,7 @@ with tab_drc:
             st.markdown(f"**Auto-generated PNG Chart for {tk}:**")
             png_chart_path = generate_ticker_png_chart(tk, drc_date_str)
             if png_chart_path and os.path.exists(png_chart_path):
-                st.image(png_chart_path, width="stretch", caption=f"{tk} Daily Chart (PNG)")
+                st.image(png_chart_path, use_container_width=True, caption=f"{tk} Daily Chart (PNG)")
             else:
                 st.warning(f"Could not generate PNG chart for {tk}. Ensure market data is available.")
 
@@ -3222,7 +3306,7 @@ with tab_drc:
                 st.success("✅ Screenshot uploaded!")
             
             if saved_sc_path and os.path.exists(saved_sc_path):
-                st.image(saved_sc_path, width="stretch", caption=f"{tk} Execution Screenshot")
+                st.image(saved_sc_path, use_container_width=True, caption=f"{tk} Execution Screenshot")
 
             updated_trades.append({
                 "ticker": tk,
@@ -3259,6 +3343,24 @@ with tab_drc:
             st.success(f"✅ Daily Report Card saved successfully for {drc_date_str}!")
         else:
             st.error("Failed to save Daily Report Card.")
+
+# ---------- TAB 11: Chart Gallery ----------
+with tab_ms:
+    st.header("📸 Chart Gallery")
+    st.markdown("Generate interactive Plotly charts for a custom list of tickers.")
+    
+    ms_tickers_input = st.text_area("Tickers (comma or newline separated)", "AAPL, WAB")
+    
+    if st.button("Generate Gallery", type="primary"):
+        import re
+        tickers_list = [t.strip().upper() for t in re.split(r'[,\n]+', ms_tickers_input) if t.strip()]
+        
+        if not tickers_list:
+            st.warning("Please enter at least one ticker.")
+        else:
+            for ticker in tickers_list:
+                st.divider()
+                render_tradingview_ticker_chart(ticker)
 
 # Footer
 st.divider()

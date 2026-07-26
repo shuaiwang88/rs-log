@@ -74,10 +74,13 @@ i_htfOn   = input.bool(true,   'Enable HTF Detection',  group = 'High Tight Flag
 i_htfPole = input.float(80.0,  'Min Pole Gain %',       group = 'High Tight Flag', step = 5.0, tooltip = 'At least 80% prior uptrend.')
 i_htfPB   = input.int(40,      'Max Pole Bars',         group = 'High Tight Flag', tooltip = 'Less than 8 weeks = 40 bars.')
 i_htfPBMin= input.int(5,       'Min Pole Bars',         group = 'High Tight Flag')
-i_htfFMin = input.int(10,      'Min Flag Bars',         group = 'High Tight Flag', tooltip = '2 weeks = 10 bars.')
+i_htfFMin = input.int(6,       'Min Flag Bars',         group = 'High Tight Flag', minval = 1, tooltip = 'Default 3 bars for earlier detection.')
+
 i_htfFMax = input.int(20,      'Max Flag Bars',         group = 'High Tight Flag', tooltip = '4 weeks = 20 bars.')
 i_htfRet  = input.float(25.0,  'Max Flag Retrace %',    group = 'High Tight Flag', tooltip = 'Less than 25% correction.')
 i_htfVol  = input.float(1.2,   'BO Volume × Avg',       group = 'High Tight Flag')
+
+
 
 // ── Display ───────────────────────────────────────────────────────────────────
 i_showBg    = input.bool(true, 'Highlight signal bar',  group = 'Display')
@@ -274,7 +277,8 @@ bool is6WkFlat = isFlatBase and bCount >= i_6wkMin and bCount <= i_6wkMax
 // ═════════════════════════════════════════════════════════════════════════════
 
 // Pre-compute ta.highest with dynamic length unconditionally
-int   _dbFL  = array.size(aLB) > 0 ? math.max(1, bar_index - array.get(aLB, 0) + 1) : 1
+int   _dbFL  = array.size(aLB) > 0 ? math.min(14999, math.max(1, bar_index - array.get(aLB, 0) + 1)) : 1
+
 float _dbHFL = ta.highest(high, _dbFL)
 
 bool detectDB = false
@@ -391,6 +395,9 @@ var float flag_poleLow = na
 var int flag_poleLowIndex = na
 
 var bool isHTF = false
+var bool is_flag = false
+var int  htfBoBar = na
+float _scanHighest10 = ta.highest(high, 10)
 
 if i_htfOn and bar_index > 30
     // find bull flag highs (from drw_flag.pine)
@@ -452,7 +459,7 @@ if i_htfOn and bar_index > 30
         flag_baseLow := low
 
     // define the flag forming state
-    bool is_flag = flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfRet and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
+    is_flag := flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfRet and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
 
     // define breakout & breakdown
     bool breakout = high > nz(flag_baseHigh[1]) and flag_flagLength >= i_htfFMin and flag_flagBool == true
@@ -465,9 +472,15 @@ if i_htfOn and bar_index > 30
         volOK := volume >= avgVol * i_htfVol
 
     if plotBO and volOK
+        htfBoBar := bar_index
+
+    bool htfPostBOActive = not na(htfBoBar) and (bar_index - htfBoBar) <= i_bsoMax
+
+    if (plotBO and volOK) or is_flag or htfPostBOActive
         isHTF := true
     else
         isHTF := false
+
 
     // reset variables if a breakout occurs
     if breakout
@@ -478,15 +491,18 @@ if i_htfOn and bar_index > 30
         flag_baseLow := low
 
     // reset from a failed flag (breakdown)
-    float highest = ta.highest(high, 10)
     if breakdown or flag_flagLength == i_htfFMax
         flag_flagBool := false
-        flag_baseHigh := highest
+        flag_baseHigh := _scanHighest10
         flag_startIndex := bar_index
         flag_lowIndex := bar_index
         flag_baseLow := low
 else
     isHTF := false
+    is_flag := false
+    htfBoBar := na
+
+
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  BREAKOUT & PIVOT TRACKING
@@ -495,8 +511,8 @@ bool   pOn   = false
 string pName = 'None'
 int    pCode = 0
 
-bool inBase  = isBase or isDB or isCup or isCupH
-bool wasBase = isBase[1] or isDB[1] or isCup[1] or isCupH[1]
+bool inBase  = isBase or isDB or isCup or isCupH or isHTF
+bool wasBase = isBase[1] or isDB[1] or isCup[1] or isCupH[1] or isHTF[1]
 
 var float boPivot = na   // price level of the most recent breakout pivot
 var int   boBar   = na   // bar index of the most recent breakout
@@ -504,8 +520,9 @@ var int   boPatternCode = 0
 var string boPatternName = 'None'
 
 // Detect breakout: was in a pattern last bar, is not now, and high cleared the top
-if wasBase and not inBase and not na(lastBTop) and high > lastBTop
-    boPivot := lastBTop
+float activeBTop = isHTF[1] ? flag_baseHigh[1] : lastBTop
+if wasBase and not inBase and not na(activeBTop) and high > activeBTop
+    boPivot := activeBTop
     boBar   := bar_index
     // Capture the pattern that just broke out (from previous bar's state)
     boPatternCode := pCode[1]
@@ -519,7 +536,8 @@ if newBase
     boPatternName := 'None'
 
 // ── Key metrics ───────────────────────────────────────────────────────────────
-float pivRef  = inBase ? bTop : boPivot
+float pivRef  = inBase ? (isHTF ? flag_baseHigh : bTop) : boPivot
+
 float distPctInternal = not na(pivRef) and pivRef > 0 ? (close - pivRef) / pivRef * 100 : na
 float distPct = inBase and not na(pivRef) and pivRef > 0 ? (close - pivRef) / pivRef * 100 : na
 int   barsSBO = not na(boBar) ? bar_index - boBar : na
@@ -620,6 +638,10 @@ float avgVolPP = ta.sma(volume, i_vduLength)
 float volRatioPct = not na(avgVolPP) and avgVolPP > 0 ? (volume / avgVolPP * 100) : na
 bool volDryUp1 = not na(volRatioPct) and volRatioPct < (100 - i_dryUpReq)
 
+// Track if in dry up (current bar is volume dry up or dry up occurred within last 5 bars)
+int barsSinceVDU = ta.barssince(volDryUp1)
+bool inDryUp = volDryUp1 or (not na(barsSinceVDU) and barsSinceVDU <= 5)
+
 // Pocket Pivot calculations (10-day and 5-day down day volume comparison)
 vols10 = array.new<float>()
 vols5  = array.new<float>()
@@ -637,6 +659,9 @@ float maxDnVol5 = array.size(vols5) > 0 ? array.max(vols5) : na
 bool pp10 = close > close[1] and not na(maxDnVol10) and volume > maxDnVol10
 bool pp5  = close > close[1] and not na(maxDnVol5) and volume > maxDnVol5
 bool ppAny = pp10 or pp5
+
+// PP5 or PP10 while in dry up (even if current bar itself is a dry bar)
+bool dryUpPP = inDryUp and ppAny
 
 // ── Condition 1: Within 10% to pivot, VDU or PP (Must be before breakout) ────
 bool nearPivot10 = inBase and not na(distPctInternal) and math.abs(distPctInternal) <= 10.0
@@ -710,13 +735,14 @@ plot(rsNH_1y  ? 1 : 0, title = 'RS New High (1Y)',              display = displa
 plot(rsNH_6m  ? 1 : 0, title = 'RS New High (6M)',              display = display.all)
 plot(rsNH_3m  ? 1 : 0, title = 'RS New High (3M)',              display = display.all)
 plot(rsNH_any ? 1 : 0, title = 'RS New High (Any)',             display = display.all)
-plot(isFlatBase  ? 1 : 0, title = 'Is Flat Base (0/1)',         display = display.all)
-plot(isDeepBase  ? 1 : 0, title = 'Is Base-Deep (0/1)',         display = display.all)
-plot(isCup       ? 1 : 0, title = 'Is Cup (0/1)',               display = display.all)
-plot(isCupH      ? 1 : 0, title = 'Is Cup+Handle (0/1)',        display = display.all)
-plot(isDB        ? 1 : 0, title = 'Is Double Bottom (0/1)',     display = display.all)
-plot(isHTF       ? 1 : 0, title = 'Is High Tight Flag (0/1)',   display = display.all)
-plot(is6WkFlat   ? 1 : 0, title = 'Is 6-Wk Flat Base (0/1)',   display = display.all)
+plot((isFlatBase or pCode == 2) ? 1 : 0, title = 'Is Flat Base (0/1)',         display = display.all)
+plot((isDeepBase or pCode == 1) ? 1 : 0, title = 'Is Base-Deep (0/1)',         display = display.all)
+plot((isCup      or pCode == 3) ? 1 : 0, title = 'Is Cup (0/1)',               display = display.all)
+plot((isCupH     or pCode == 4) ? 1 : 0, title = 'Is Cup+Handle (0/1)',        display = display.all)
+plot((isDB       or pCode == 5) ? 1 : 0, title = 'Is Double Bottom (0/1)',     display = display.all)
+plot((isHTF      or pCode == 6) ? 1 : 0, title = 'Is High Tight Flag (0/1)',   display = display.all)
+plot((is6WkFlat  or pCode == 7) ? 1 : 0, title = 'Is 6-Wk Flat Base (0/1)',   display = display.all)
+
 plot(pCode,               title = 'Pattern Code',                display = display.all)
 plot(touchSignal ? 1 : 0,      title = 'Touch MA Post-BO (0/1)',     display = display.all)
 plot(hasTouchedPostBO and not na(barsSBO) and barsSBO <= i_boTouchDays ? 1 : 0,  title = 'Has Touched MA Post-BO (0/1)', display = display.all)
@@ -726,6 +752,7 @@ plot(boPP ? 1 : 0,                 title = 'Breakout Pocket Pivot (0/1)',     di
 plot(boWasPP ? 1 : 0,              title = 'Breakout Was Pocket Pivot (0/1)', display = display.all)
 plot(postBODryUp ? 1 : 0,          title = 'Post-BO VDU (0/1)',               display = display.all)
 plot(hasDriedUpPostBO and not na(barsSBO) and barsSBO <= 10 ? 1 : 0,      title = 'Has VDU Post-BO (0/1)',           display = display.all)
+plot(dryUpPP ? 1 : 0,              title = 'In Dry Up with PP5/PP10 (0/1)',   display = display.all)
 
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -885,13 +912,14 @@ if i_showLabel and signal and barstate.islast
 // ═════════════════════════════════════════════════════════════════════════════
 alertcondition(signal,                              'Any Pattern Match',     'Pattern scanner: match')
 alertcondition(signal and not signal[1],            'New Signal',            'Pattern scanner: new signal')
-alertcondition(isFlatBase  and distOk and modeOk,  'Flat Base',             'Pattern scanner: Flat Base')
-alertcondition(isDeepBase  and distOk and modeOk,  'Base (Deep)',           'Pattern scanner: Base (Deep)')
-alertcondition(isCup       and distOk and modeOk,  'Cup',                   'Pattern scanner: Cup')
-alertcondition(isCupH      and distOk and modeOk,  'Cup + Handle',          'Pattern scanner: Cup with Handle')
-alertcondition(isDB        and distOk and modeOk,  'Double Bottom',         'Pattern scanner: Double Bottom')
-alertcondition(isHTF       and distOk and modeOk,  'High Tight Flag',       'Pattern scanner: High Tight Flag')
-alertcondition(is6WkFlat   and distOk and modeOk,  '6-Wk Flat Base',       'Pattern scanner: 6-Wk Flat Base')
+alertcondition((isFlatBase  or pCode == 2) and distOk and modeOk,  'Flat Base',             'Pattern scanner: Flat Base')
+alertcondition((isDeepBase  or pCode == 1) and distOk and modeOk,  'Base (Deep)',           'Pattern scanner: Base (Deep)')
+alertcondition((isCup       or pCode == 3) and distOk and modeOk,  'Cup',                   'Pattern scanner: Cup')
+alertcondition((isCupH      or pCode == 4) and distOk and modeOk,  'Cup + Handle',          'Pattern scanner: Cup with Handle')
+alertcondition((isDB        or pCode == 5) and distOk and modeOk,  'Double Bottom',         'Pattern scanner: Double Bottom')
+alertcondition((isHTF       or pCode == 6) and distOk and modeOk,  'High Tight Flag',       'Pattern scanner: High Tight Flag')
+alertcondition((is6WkFlat   or pCode == 7) and distOk and modeOk,  '6-Wk Flat Base',       'Pattern scanner: 6-Wk Flat Base')
+
 // ── RS New High alerts  ── ← NEW ─────────────────────────────────────────────
 alertcondition(rsNH_any and rsWindow,               'RS New High in Base/BO',
                'Pattern scanner: RS New High (any period) during base or post-BO window')

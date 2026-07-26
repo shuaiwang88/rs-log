@@ -35,6 +35,7 @@ iSmaV40We = input(40, title = 'Lenght', group = '----------SMAs We----------', i
 iExp40We = input(false, title = 'Exponential', group = '----------SMAs We----------', inline = 'sma40We')
 iCol40We = input(color.rgb(0, 0, 0, 0), title = '', group = '----------SMAs We----------', inline = 'sma40We')
 
+
 sma10 = iExp10 ? ta.ema(close, iSmaV10) : ta.sma(close, iSmaV10)
 sma21 = iExp21 ? ta.ema(close, iSmaV21) : ta.sma(close, iSmaV21)
 sma50 = iExp50 ? ta.ema(close, iSmaV50) : ta.sma(close, iSmaV50)
@@ -533,7 +534,7 @@ if i_displayHL and not tfWeekly
 i_displayPattern = input(true, title = 'Display Pattern', group = 'Chart Pattern Recognition')
 i_displayBoxes = input(true, title = 'Display Trade Boxes', group = 'Chart Pattern Recognition')
 i_displayHistoricalBoxes = input(true, title = 'Display Historical Trade Boxes', group = 'Chart Pattern Recognition')
-i_baseDepth = input(50, title = 'Base: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
+i_baseDepth = input(35, title = 'Base: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_dbDepth = input(50, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
 i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
@@ -555,7 +556,8 @@ i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         
 i_htfOn      = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
 i_htfDepth   = input.float(25.0,  'HTF: Max Flag Depth %',              group = 'Chart Pattern Recognition', step = .25, minval = .25, tooltip = 'Maximum pullback allowed from flag high to flag low (less than 25%)')
 i_htfFMax    = input.int(20,      'HTF: Max Flag Length (bars)',        group = 'Chart Pattern Recognition', tooltip = 'The maximum number of bars the flag can last (4 weeks = 20 bars)')
-i_htfFMin    = input.int(10,      'HTF: Min Flag Length (bars)',        group = 'Chart Pattern Recognition', tooltip = 'The minimum number of bars required for the flag (2 weeks = 10 bars)')
+i_htfFMin    = input.int(3,       'HTF: Min Flag Length (bars)',        group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag (default 3 bars for earlier detection)')
+
 i_htfPole    = input.float(80.0,  'HTF: Prior Uptrend Minimum %',       group = 'Chart Pattern Recognition', step = .50, minval = .25, tooltip = 'The minimum percentage gain required before a flag forms (at least 80%)')
 i_htfPB      = input.int(40,      'HTF: Max Flag Pole Length (bars)',   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The maximum number of bars the flagpole can be (less than 8 weeks = 40 bars)')
 i_htfPBMin   = input.int(5,       'HTF: Min Flag Pole Length',          group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag pole')
@@ -603,14 +605,22 @@ var baseCond = false
 isBase = false
 
 _highest65shifted = ta.highest(high, 65)[26]
+_dynamicHighestPrior = ta.highest(high, math.min(14999, math.max(1, bar_index - 25)))[26]
+_dynamicLegLookback = math.min(103, math.max(1, bar_index - 25))
+_dynamicLowestIPOLeg = ta.lowest(low, _dynamicLegLookback)
 
-if array.size(pivotHighPrices) > 2
-    boolHighbase := high[25] == array.get(pivotHighPrices, 0) or high[25] == array.get(pivotHighPrices, 1) or high[25] == array.get(pivotHighPrices, 2)
-    bool13wkHigh    = high[25] > _highest65shifted
+if array.size(pivotHighPrices) > 0
+    int pivCount = array.size(pivotHighPrices)
+    boolHighbase := high[25] == array.get(pivotHighPrices, 0) or (pivCount > 1 and high[25] == array.get(pivotHighPrices, 1)) or (pivCount > 2 and high[25] == array.get(pivotHighPrices, 2))
+    float highestPrior = na(_highest65shifted) ? _dynamicHighestPrior : _highest65shifted
+
+    bool13wkHigh    = high[25] >= highestPrior
     float _priorTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
     boolPriorBaseBO = not na(_priorTop) and high[25] > _priorTop
     boolHigherPiv  := bool13wkHigh or boolPriorBaseBO
-    legUp = lowestPointLeg * 1.20
+    float lowestPointIPOLeg = _dynamicLowestIPOLeg
+
+    legUp = lowestPointIPOLeg * 1.20
     legUpCond = high[25] >= legUp
     firstBaseDepth = high[25] * (1 - i_baseDepth) <= lowestBaseLow
     noCandleAbove = highestOfBase <= high[25]
@@ -832,9 +842,12 @@ float _baseTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) :
 bool handleMidOKSep   = not na(_baseTop) and not na(_baseLow) and handleLowPointSep > (_baseTop + _baseLow) * 0.5
 
 float volMaHandle  = ta.sma(volume, i_volMaLengthHandle)
+int safeHandleBars = math.max(1, handleBarCountSep)
+float sumVolHandle = math.sum(volume, safeHandleBars)
 float volAvgHandle = na
 if rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep > 0
-    volAvgHandle := math.sum(volume, handleBarCountSep) / handleBarCountSep
+    volAvgHandle := sumVolHandle / handleBarCountSep
+
 
 bool volContractionOK = not i_useVolHandle or (handleBarCountSep > 0 and volAvgHandle <= volMaHandle * i_volContractionMax / 100)
 bool requireCupOK     = not i_requireCupForHandle or isCup or isDoubleBottom
@@ -865,6 +878,8 @@ var int htfPoleHighBar = na
 var float htfPoleHighPrice = na
 var float htfFlagHighPrice = na
 var float htfFlagLowPrice = na
+var bool is_flag = false
+float _flagHighest10 = ta.highest(high, 10)
 
 if i_htfOn and bar_index > 30
     // find bull flag highs (from drw_flag.pine)
@@ -926,7 +941,7 @@ if i_htfOn and bar_index > 30
         flag_baseLow := low
 
     // define the flag forming state
-    bool is_flag = flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfDepth and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
+    is_flag := flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfDepth and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
 
     // live line drawing from drw_flag.pine
     if is_flag and i_displayPattern
@@ -948,8 +963,8 @@ if i_htfOn and bar_index > 30
     if i_htfVol > 0
         volOK := volume >= htfAvgVol * i_htfVol
 
-    // update state variables when breakout is triggered
-    if plotBO and volOK
+    // update state variables when breakout or flag forming is triggered
+    if (plotBO and volOK) or is_flag
         isHTF := true
         htfPoleLowBar := flag_poleLowIndex
         htfPoleLowPrice := flag_poleLow
@@ -960,6 +975,7 @@ if i_htfOn and bar_index > 30
     else
         isHTF := false
 
+
     // reset variables if a breakout occurs
     if breakout
         flag_flagLength := 0
@@ -969,10 +985,9 @@ if i_htfOn and bar_index > 30
         flag_baseLow := low
 
     // reset from a failed flag (breakdown)
-    float highest = ta.highest(high, 10)
     if breakdown or flag_flagLength == i_htfFMax
         flag_flagBool := false
-        flag_baseHigh := highest
+        flag_baseHigh := _flagHighest10
         flag_startIndex := bar_index
         flag_lowIndex := bar_index
         flag_baseLow := low
@@ -983,6 +998,8 @@ if i_htfOn and bar_index > 30
         line.delete(flagPLine)
 else
     isHTF := false
+    is_flag := false
+
 
 var line highLine = na
 var line lowLine = na
@@ -1068,13 +1085,15 @@ if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDou
                 cupLineRightLive := line.new(x1 = x1, y1 = y1, x2 = x2, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 array.unshift(linesRight, cupLineRightLive)
 
-if isHTF and not isHTF[1] and timeframe.isdaily and i_displayPattern
-    line.new(x1 = htfPoleLowBar, y1 = htfPoleLowPrice, x2 = htfPoleHighBar, y2 = htfPoleHighPrice, width = 3, color = color.green)
-    line.new(x1 = htfPoleHighBar, y1 = htfFlagHighPrice, x2 = bar_index - 1, y2 = htfFlagHighPrice, width = 2, style = line.style_dashed, color = color.green)
-    line.new(x1 = htfPoleHighBar, y1 = htfFlagLowPrice, x2 = bar_index - 1, y2 = htfFlagLowPrice, width = 2, style = line.style_dashed, color = color.green)
-    label.new(x = htfPoleHighBar, y = htfPoleHighPrice, text = "HTF +" + str.tostring((htfPoleHighPrice / htfPoleLowPrice - 1) * 100, "0") + "%", style = label.style_label_down, color = color.green, textcolor = color.white, size = size.small)
+// HTF breakout drawing disabled per request
+// if isHTF and not isHTF[1] and timeframe.isdaily and i_displayPattern
+//     line.new(x1 = htfPoleLowBar, y1 = htfPoleLowPrice, x2 = htfPoleHighBar, y2 = htfPoleHighPrice, width = 3, color = color.green)
+//     line.new(x1 = htfPoleHighBar, y1 = htfFlagHighPrice, x2 = bar_index - 1, y2 = htfFlagHighPrice, width = 2, style = line.style_dashed, color = color.green)
+//     line.new(x1 = htfPoleHighBar, y1 = htfFlagLowPrice, x2 = bar_index - 1, y2 = htfFlagLowPrice, width = 2, style = line.style_dashed, color = color.green)
+//     label.new(x = htfPoleHighBar, y = htfPoleHighPrice, text = "HTF +" + str.tostring((htfPoleHighPrice / htfPoleLowPrice - 1) * 100, "0") + "%", style = label.style_label_down, color = color.green, textcolor = color.white, size = size.small)
 
-_lowCompareFull = ta.lowest(low, math.max(1, bar_index - topDBBar))
+_lowCompareFull = ta.lowest(low, math.min(14999, math.max(1, bar_index - topDBBar)))
+
 lowCompare = bar_index - topDBBar > 0 ? _lowCompareFull : low
 if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_displayPattern
     line.delete(highLine)
@@ -1265,6 +1284,7 @@ i_arrowSize = input.string('Small', title = 'Arrow Size', options = ['Tiny', 'Sm
 i_arrowColor = input(color.rgb(0, 0, 0, 0), title = 'Arrow Colors', inline = '4', group = 'Arrows')
 i_posArrowColor = input(color.rgb(13, 7, 201, 0), title = '%Pos', inline = '4', group = 'Arrows')
 i_negArrowColor = input(color.red, title = '%Neg', inline = '4', group = 'Arrows')
+i_showEarningsTable = input.bool(false, title = 'Show Earnings Table', group = 'Table Settings')
 // i_tableStyle = input.string('Table', title = 'Type of Table', options = ['Table', 'HeadBand'], group = 'Table Settings', inline = '0')
 var string i_tableStyle = 'Table'
 i_tableSize = input.string('Tiny', title = 'Table Size   ', options = ['Tiny', 'Small', 'Normal', 'Large'], group = 'Table Settings', inline = '5')
@@ -1329,7 +1349,7 @@ if i_MarketSu
     i_resultBackgroundColorEven := color.rgb(255, 255, 255)
     i_resultBackgroundColorEven
 
-var table epsTable = table.new(i_posTable, 5, 15, frame_color = i_frameColor, frame_width = i_frameWidth, border_width = i_tableBorder ? 1 : 0, border_color = i_borderColor)
+var table epsTable = i_showEarningsTable ? table.new(i_posTable, 5, 15, frame_color = i_frameColor, frame_width = i_frameWidth, border_width = i_tableBorder ? 1 : 0, border_color = i_borderColor) : na
 // var table epsTableDa = table.new(position.bottom_center, 17, 4, frame_color = i_frameColor, frame_width = i_frameWidth, border_width = i_tableBorder ? 1 : 0, border_color = i_borderColor)
 
 EPS = request.earnings(syminfo.tickerid, earnings.actual, ignore_invalid_symbol = true, lookahead = barmerge.lookahead_on)
@@ -1989,7 +2009,7 @@ f_fillCellCompDa(_table, _column, _row, _value) =>
     table.cell(_table, _column, _row, _cellText, bgcolor = myColor, text_color = _cellText == '0% |' or _cellText == 'N/A |' ? i_RowAndColumnTextColor : _c_color, text_size = tableSize)
 
 condRepeatSameValueAtLastLine = actualEPS == actualEPS1 and standardEPS == standardEPS1 and EPS_Estimate == EPS_Estimate[1]
-if barstate.islast and i_tableStyle == 'Table'
+if barstate.islast and i_showEarningsTable and i_tableStyle == 'Table'
 //    table.set_frame_color(epsTableDa, color.rgb(0, 0, 0, 100))
 //    table.set_border_color(epsTableDa, color.rgb(0, 0, 0, 100))
     if i_compare == true
