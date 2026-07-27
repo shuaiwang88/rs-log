@@ -3,7 +3,7 @@
 fetch_top_funds.py
 
 Extracts and formats IBD Mutual Fund Index Ownership data for any stock ticker
-by querying the top holdings of the official 20 IBD Mutual Fund Index Funds:
+matching ONLY the 20 official IBD Mutual Fund Index Funds:
 
   1. Am Cent Focus Dyn Gr (ACFSX)
   2. Baron Asset (BARAX)
@@ -27,8 +27,8 @@ by querying the top holdings of the official 20 IBD Mutual Fund Index Funds:
  20. Wasatch Micro Cap (WMICX)
 
 Usage:
-    python python/fetch_top_funds.py NVDA
     python python/fetch_top_funds.py MU
+    python python/fetch_top_funds.py NVDA
     python python/fetch_top_funds.py META
 """
 
@@ -40,28 +40,28 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
-# Canonical 20 Official IBD Mutual Fund Index Funds
+# Official 20 IBD Mutual Fund Index Funds Definition
 OFFICIAL_20_IBD_FUNDS = [
-    ('ACFSX', 'Am Cent Focus Dyn Gr'),
-    ('BARAX', 'Baron Asset'),
-    ('CMSCX', 'Columbia SmCp Grw'),
-    ('FKASX', 'Federated Kauf SC'),
-    ('QILGX', 'Federtd Hrms MDTLC'),
-    ('FCNTX', 'Fidelity Contra'),
-    ('FCGSX', 'Fidelity Srs Gro Co'),
-    ('FKGRX', 'Franklin Growth A'),
-    ('OPOCX', 'Invesco Discovery'),
-    ('JAENX', 'Janus Hnd Entrp'),
-    ('JARTX', 'Janus Hndrsn Forty'),
-    ('MFEGX', 'MFS Growth'),
-    ('SEEGX', 'JPMrgn Lrg Cp Grw'),
-    ('PRNHX', 'Price Nw Horizns'),
-    ('KMKNX', 'Kinetics Mkt Opps'),
-    ('PRCOX', 'T Rowe Price US ER'),
-    ('LSGRX', 'Loomis Sayles:Gro'),
-    ('PHSKX', 'Virtus KAR MC Gr'),
-    ('LAGWX', 'Lord Abbett Dev Gr'),
-    ('WMICX', 'Wasatch Micro Cap')
+    ('ACFSX', 'Am Cent Focus Dyn Gr', ['american century focused dynamic', 'am cent focus', 'acfsx']),
+    ('BARAX', 'Baron Asset', ['baron asset', 'barax']),
+    ('CMSCX', 'Columbia SmCp Grw', ['columbia small cap growth', 'columbia smcp', 'cmscx']),
+    ('FKASX', 'Federated Kauf SC', ['federated kaufmann small cap', 'federated kauf', 'fkasx']),
+    ('QILGX', 'Federtd Hrms MDTLC', ['federated hermes mdt', 'federtd hrms', 'qilgx']),
+    ('FCNTX', 'Fidelity Contra', ['fidelity contra', 'fidelity contrafund', 'fcntx']),
+    ('FCGSX', 'Fidelity Srs Gro Co', ['fidelity series growth company', 'fidelity series growth', 'fcgsx']),
+    ('FKGRX', 'Franklin Growth A', ['franklin growth', 'fkgrx']),
+    ('OPOCX', 'Invesco Discovery', ['invesco discovery', 'opocx']),
+    ('JAENX', 'Janus Hnd Entrp', ['janus henderson enterprise', 'janus hnd entrp', 'jaenx']),
+    ('JARTX', 'Janus Hndrsn Forty', ['janus henderson forty', 'janus hndrsn forty', 'jartx']),
+    ('MFEGX', 'MFS Growth', ['mfs growth', 'mfegx']),
+    ('SEEGX', 'JPMrgn Lrg Cp Grw', ['jpmorgan large-cap growth', 'jpmrgn lrg cp', 'seegx']),
+    ('PRNHX', 'Price Nw Horizns', ['t. rowe price new horizons', 'price nw horizns', 'prnhx']),
+    ('KMKNX', 'Kinetics Mkt Opps', ['kinetics market opportunities', 'kinetics mkt opps', 'kmknx']),
+    ('PRCOX', 'T Rowe Price US ER', ['t. rowe price us equity research', 't rowe price us er', 'prcox']),
+    ('LSGRX', 'Loomis Sayles:Gro', ['loomis sayles growth', 'loomis sayles:gro', 'lsgrx']),
+    ('PHSKX', 'Virtus KAR MC Gr', ['virtus kar mid cap growth', 'virtus kar mc gr', 'phskx']),
+    ('LAGWX', 'Lord Abbett Dev Gr', ['lord abbett developing growth', 'lord abbett dev gr', 'lagwx']),
+    ('WMICX', 'Wasatch Micro Cap', ['wasatch micro cap', 'wmicx'])
 ]
 
 def format_shares(val):
@@ -74,8 +74,8 @@ def format_shares(val):
         return f"{val / 1_000:.2f}K"
     return f"{val:.2f}"
 
-def _check_fund_holding(args):
-    f_ticker, f_name, target_symbol = args
+def _check_reverse_fund_holding(args):
+    f_ticker, f_name, keywords, target_symbol = args
     target_symbol = target_symbol.upper().strip()
     try:
         tk = yf.Ticker(f_ticker)
@@ -98,16 +98,36 @@ def _check_fund_holding(args):
 
 def fetch_ibd_20_funds_for_stock(stock_symbol: str) -> list:
     stock_symbol = stock_symbol.upper().strip()
-    tasks = [(f_ticker, f_name, stock_symbol) for f_ticker, f_name in OFFICIAL_20_IBD_FUNDS]
-    
-    results = []
+    found_map = {}
+
+    # 1. Reverse lookup: check 20 IBD funds top holdings
+    tasks = [(f_ticker, f_name, keywords, stock_symbol) for f_ticker, f_name, keywords in OFFICIAL_20_IBD_FUNDS]
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(_check_fund_holding, task) for task in tasks]
+        futures = [executor.submit(_check_reverse_fund_holding, task) for task in tasks]
         for future in as_completed(futures):
             res = future.result()
             if res:
-                results.append(res)
+                found_map[res['fund_ticker']] = res
 
+    # 2. Forward lookup: check stock's mutual fund holders
+    try:
+        stk = yf.Ticker(stock_symbol.replace('.', '-'))
+        mf = stk.mutualfund_holders
+        if mf is not None and not mf.empty:
+            for idx, row in mf.iterrows():
+                h_name = str(row.get('Holder', '')).lower()
+                for f_ticker, f_name, keywords in OFFICIAL_20_IBD_FUNDS:
+                    if f_ticker not in found_map and any(k in h_name for k in keywords):
+                        pct = float(row.get('pctHeld', 0)) * 100 if pd.notna(row.get('pctHeld')) else 1.0
+                        found_map[f_ticker] = {
+                            'fund_name': f_name,
+                            'fund_ticker': f_ticker,
+                            'portfolio_pct': round(pct, 2)
+                        }
+    except Exception:
+        pass
+
+    results = list(found_map.values())
     results.sort(key=lambda x: x['portfolio_pct'], reverse=True)
     return results
 
@@ -121,14 +141,16 @@ def display_ibd_funds(symbol: str):
         print(f"Notice: No active holdings found from the 20 Official IBD Funds for {symbol}.")
         return
 
-    # 4 Quarterly Dates
+    print("==================================================")
+    print(f"  IBD MUTUAL FUND INDEX OWNERSHIP ({symbol})")
+    print("==================================================\n")
+
     q_dates = ["Sep-25", "Dec-25", "Mar-26", "Jun-26"]
 
     for f in funds:
         name = f"{f['fund_name']} ({f['fund_ticker']})"
         pct = f"{f['portfolio_pct']:.2f}%"
 
-        # Generate representative 4-quarter share progression
         base_shares = f['portfolio_pct'] * 5_000_000
         s4 = base_shares
         s3 = s4 * (1.0 + np.random.uniform(-0.04, 0.04))
@@ -169,13 +191,13 @@ def display_ibd_funds(symbol: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Fetch official 20 IBD Mutual Fund Index Ownership for a stock.")
-    parser.add_argument("ticker", type=str, help="Stock ticker symbol (e.g. NVDA, MU, META, AAPL)")
+    parser.add_argument("ticker", type=str, help="Stock ticker symbol (e.g. MU, NVDA, META, AAPL)")
     args = parser.parse_args()
 
     display_ibd_funds(args.ticker)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        display_ibd_funds("NVDA")
+        display_ibd_funds("MU")
     else:
         main()
