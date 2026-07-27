@@ -61,11 +61,11 @@ indicator("Earnings & Ratings Table", overlay=true, max_labels_count=0)
 // INPUTS
 // ═══════════════════════════════════════════════════════════════════════════════
 grpTbl = "Table"
-tablePos   = input.string("Top Right", "Table Position", options=["Top Right","Top Left","Bottom Right","Bottom Left"], group=grpTbl)
+tablePos   = input.string("Top Left", "Table Position", options=["Top Right","Top Left","Bottom Right","Bottom Left"], group=grpTbl)
 showAnnual = input.bool(true, "Show Annual Table", group=grpTbl)
 showQtrly  = input.bool(true, "Show Quarterly Table", group=grpTbl)
 showRating = input.bool(true, "Show Ratings Table", group=grpTbl)
-txtSize    = input.string("small", "Text Size", options=["tiny","small","normal"], group=grpTbl)
+txtSize    = input.string("tiny", "Text Size", options=["tiny","small","normal"], group=grpTbl)
 
 grpAD = "A/D Rating"
 adLookback = input.int(65, "A/D Lookback (trading days, ~65 = 13 weeks)", minval=10, group=grpAD)
@@ -435,13 +435,26 @@ compRaw   = -15.94 + (0.5794 * rsForComp) + (0.3766 * epsRating) + (0.2166 * smr
 compRating = math.max(1, math.min(99, math.round(compRaw)))
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PLOT OUTPUTS  — visible in Data Window, usable in TradingView Screener
+// ═══════════════════════════════════════════════════════════════════════════════
+plot(compRating,         title = 'Comp Rating',         display = display.data_window)
+plot(epsRating,          title = 'EPS Rating',          display = display.data_window)
+plot(adRating,           title = 'AD Rating',           display = display.data_window)
+plot(smrScore,           title = 'SMR Score',           display = display.data_window)
+plot(rsRatingFinal == -1 ? na : rsRatingFinal, title = 'RS Rating', display = display.data_window)
+plot(rsRating3m   == -1 ? na : rsRating3m,   title = 'RS 3M',      display = display.data_window)
+plot(rsRating6m   == -1 ? na : rsRating6m,   title = 'RS 6M',      display = display.data_window)
+plot(groupRsRating == -1 ? na : groupRsRating, title = 'Group RS',  display = display.data_window)
+plot(pctOff52wHigh,      title = '% Off 52W High',     display = display.data_window)
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TABLE DRAWING (only on the last bar)
 // ═══════════════════════════════════════════════════════════════════════════════
 posMap(p) =>
     result = p == "Top Right" ? position.top_right : p == "Top Left" ? position.top_left : p == "Bottom Right" ? position.bottom_right : position.bottom_left
     result
 
-var table tbl = table.new(posMap(tablePos), 5, 40, border_width=1)
+var table tbl = table.new(posMap(tablePos), 5, 30, border_width=0)
 
 f_growthColor(g) =>
     na(g) ? color.gray : g >= 0 ? color.new(color.green, 75) : color.new(color.red, 80)
@@ -459,19 +472,16 @@ fmtPct(v) =>
     na(v) ? "n/a" : str.tostring(int(math.round(v))) + "%"
 
 if barstate.islast
-    table.clear(tbl, 0, 0, 4, 39)
-    row = 0
+    table.clear(tbl, 0, 0, 4, 29)
+    row = 3
 
-    // ---------------- ANNUAL TABLE ----------------
+    // ---------------- ANNUAL TABLE (left) ----------------
     if showAnnual and array.size(fyEPS) > 0
-        table.cell(tbl, 0, row, "Annual", text_color=color.white, bgcolor=color.new(color.gray, 40), text_size=size)
-        table.merge_cells(tbl, 0, row, 4, row)
-        row += 1
-        table.cell(tbl, 0, row, "Period", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 1, row, "EPS",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 2, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 3, row, "Rev",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 4, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 0, row, "Year", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 1, row, "EPS", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 2, row, "EPS\nGth%", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 3, row, "Rev", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 4, row, "Sales\nGth%", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
         row += 1
 
         nY = array.size(fyEPS)
@@ -488,29 +498,19 @@ if barstate.islast
             table.cell(tbl, 4, row, fmtPct(revG), text_color=f_growthText(revG), bgcolor=f_growthColor(revG), text_size=size)
             row += 1
 
-    // ---------------- QUARTERLY TABLE ----------------
+    // Divider between annual and quarterly
+    if showAnnual and showQtrly and array.size(fyEPS) > 0 and array.size(fqEPS) > 0
+        table.cell(tbl, 0, row, "─────────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 1, row, "─────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 2, row, "──────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 3, row, "─────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 4, row, "──────", text_color=color.gray, text_size=size)
+        row += 1
+
+    // ---------------- QUARTERLY TABLE (left, below annual) ----------------
     if showQtrly and array.size(fqEPS) > 0
-        table.cell(tbl, 0, row, "Quarterly", text_color=color.white, bgcolor=color.new(color.gray, 40), text_size=size)
-        table.merge_cells(tbl, 0, row, 4, row)
-        row += 1
-        table.cell(tbl, 0, row, "Period", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 1, row, "EPS",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 2, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 3, row, "Rev",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        table.cell(tbl, 4, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
-        row += 1
-
-        // forward consensus row for the next upcoming quarter (analyst estimates)
-        if not na(EPS_Estimate) or not na(SALES_Estimate)
-            table.cell(tbl, 0, row, "Next Q (E)", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
-            table.cell(tbl, 1, row, na(EPS_Estimate) ? "n/a" : "$" + str.tostring(EPS_Estimate, "#.##"), text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
-            table.cell(tbl, 2, row, "est.", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
-            table.cell(tbl, 3, row, na(SALES_Estimate) ? "n/a" : fmtMoney(SALES_Estimate), text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
-            table.cell(tbl, 4, row, "est.", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
-            row += 1
-
         nQ = array.size(fqEPS)
-        showN = math.min(nQ - 4, MAX_QTR) // need i+4 available for YoY compare
+        showN = math.min(nQ - 4, MAX_QTR)
         showN := math.max(showN, 0)
         for idx = showN - 1 to 0
             e    = array.get(fqEPS, idx)
@@ -527,53 +527,85 @@ if barstate.islast
             table.cell(tbl, 4, row, fmtPct(revG), text_color=f_growthText(revG), bgcolor=f_growthColor(revG), text_size=size)
             row += 1
 
-    // ---------------- RATINGS TABLE ----------------
+        // forward consensus row at the bottom
+        if not na(EPS_Estimate) or not na(SALES_Estimate)
+            table.cell(tbl, 0, row, "Next Q (E)", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 1, row, na(EPS_Estimate) ? "n/a" : "$" + str.tostring(EPS_Estimate, "#.##"), text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 2, row, "est.", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 3, row, na(SALES_Estimate) ? "n/a" : fmtMoney(SALES_Estimate), text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 4, row, "est.", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            row += 1
+
+    // ---------------- RATINGS TABLE (below earnings) ----------------
     if showRating
-        table.cell(tbl, 0, row, "RATINGS", text_color=color.white, bgcolor=color.new(color.gray, 40), text_size=size)
-        table.merge_cells(tbl, 0, row, 4, row)
+        // Divider before ratings
+        table.cell(tbl, 0, row, "─────────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 1, row, "─────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 2, row, "──────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 3, row, "─────", text_color=color.gray, text_size=size)
+        table.cell(tbl, 4, row, "──────", text_color=color.gray, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "Comp", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, str.tostring(math.round(compRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // Composite Rating
+        table.cell(tbl, 0, row, "Composite Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, str.tostring(math.round(compRating)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "EPS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, str.tostring(math.round(epsRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // EPS Rating
+        table.cell(tbl, 0, row, "EPS Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, str.tostring(math.round(epsRating)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "A/D", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, str.tostring(math.round(adRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // RS Rating
+        table.cell(tbl, 0, row, "RS Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, rsRatingFinal == -1 ? "n/a" : str.tostring(math.round(rsRatingFinal)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "SMR", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, smrGrade, text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // 3 Month RS Rating
+        table.cell(tbl, 0, row, "3 Month RS Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, rsRating3m == -1 ? "n/a" : str.tostring(math.round(rsRating3m)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, rsRatingFinal == -1 ? "n/a" : str.tostring(math.round(rsRatingFinal)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // 6 Month RS Rating
+        table.cell(tbl, 0, row, "6 Month RS Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, rsRating6m == -1 ? "n/a" : str.tostring(math.round(rsRating6m)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "3M RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, rsRating3m == -1 ? "n/a" : str.tostring(math.round(rsRating3m)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // Group RS Rating
+        table.cell(tbl, 0, row, "Group RS Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, groupRsRating == -1 ? "n/a" : str.tostring(math.round(groupRsRating)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "6M RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, rsRating6m == -1 ? "n/a" : str.tostring(math.round(rsRating6m)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // Acc/Dis Rating (converted to letter grade)
+        string adGrade = adRating >= 80 ? "A" : adRating >= 65 ? "B" : adRating >= 50 ? "C" : adRating >= 35 ? "D" : "E"
+        table.cell(tbl, 0, row, "Acc/Dis Rating", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, adGrade, text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "Group RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, groupRsRating == -1 ? "n/a" : str.tostring(math.round(groupRsRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // Earnings Stability
+        table.cell(tbl, 0, row, "Earnings Stability", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, str.tostring(math.round(negRatio * 100)), text_color=color.black, text_size=size)
         row += 1
 
-        table.cell(tbl, 0, row, "% Off 52W Hi", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
-        table.merge_cells(tbl, 0, row, 3, row)
-        table.cell(tbl, 4, row, str.tostring(pctOff52wHigh, "#.#") + "%", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        // Sales Growth Rate
+        if array.size(fqRev) > 4
+            latestRevG := (array.get(fqRev, 0) - array.get(fqRev, 4)) / math.abs(array.get(fqRev, 4)) * 100
+        table.cell(tbl, 0, row, "Sales Growth Rate", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, na(latestRevG) ? "n/a" : fmtPct(latestRevG), text_color=f_growthText(latestRevG), text_size=size)
+        row += 1
+
+        // EPS Growth Rate
+        table.cell(tbl, 0, row, "EPS Growth Rate", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, na(blendedGrowth) ? "n/a" : fmtPct(blendedGrowth), text_color=f_growthText(blendedGrowth), text_size=size)
+        row += 1
+
+        // P/E
+        float pe = close > 0 ? close / epsFQ : na
+        table.cell(tbl, 0, row, "P/E", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, na(pe) ? "n/a" : str.tostring(pe, "#.#"), text_color=color.black, text_size=size)
+        row += 1
+
+        // % Off 52W High
+        table.cell(tbl, 0, row, "% Off 52W Hi", text_color=color.black, text_size=size)
+        table.cell(tbl, 1, row, str.tostring(pctOff52wHigh, "#.#") + "%", text_color=color.black, text_size=size)
         row += 1

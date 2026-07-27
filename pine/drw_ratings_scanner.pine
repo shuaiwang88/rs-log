@@ -1,0 +1,158 @@
+//@version=6
+indicator('Ratings Scanner', overlay = true, max_bars_back = 500)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  REQUEST-BASED DATA  — exactly 5 calls (TradingView screener limit)
+// ═══════════════════════════════════════════════════════════════════════════════
+closeDa    = request.security(syminfo.tickerid, 'D', close)
+spxCloseDa = request.security('SP:SPX',         'D', close)
+epsFY      = request.financial(syminfo.tickerid, 'EARNINGS_PER_SHARE_DILUTED', 'FY')
+epsFQ      = request.financial(syminfo.tickerid, 'EARNINGS_PER_SHARE_DILUTED', 'FQ')
+roeFQ      = request.financial(syminfo.tickerid, 'RETURN_ON_EQUITY',           'FQ')
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  RS RATING  (fallback sigmoid — no request.seed needed)
+// ═══════════════════════════════════════════════════════════════════════════════
+n63  = bar_index < 63  ? bar_index : 63
+n126 = bar_index < 126 ? bar_index : 126
+n189 = bar_index < 189 ? bar_index : 189
+n252 = bar_index < 252 ? bar_index : 252
+
+perfT  = 0.4 * (closeDa / closeDa[n63])  + 0.2 * (closeDa / closeDa[n126]) +
+         0.2 * (closeDa / closeDa[n189]) + 0.2 * (closeDa / closeDa[n252])
+perfC  = 0.4 * (spxCloseDa / spxCloseDa[n63])  + 0.2 * (spxCloseDa / spxCloseDa[n126]) +
+         0.2 * (spxCloseDa / spxCloseDa[n189]) + 0.2 * (spxCloseDa / spxCloseDa[n252])
+
+totalRsScore = perfC > 0 ? perfT / perfC * 100 : 100
+
+f_sigmoid(score) =>
+    d = score - 100.0
+    math.max(1.0, math.min(99.0, 50.0 + 49.0 * (d / (math.abs(d) + 22.0))))
+
+rsRating     = f_sigmoid(totalRsScore)
+rsRating3m   = f_sigmoid(perfC > 0 ? (closeDa / closeDa[n63])   / (spxCloseDa / spxCloseDa[n63])   * 100 : 100)
+rsRating6m   = f_sigmoid(perfC > 0 ? (closeDa / closeDa[n126])  / (spxCloseDa / spxCloseDa[n126])  * 100 : 100)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  % OFF 52-WEEK HIGH
+// ═══════════════════════════════════════════════════════════════════════════════
+high52w      = ta.highest(high, 252)
+pctOff52wHigh = high52w > 0 ? (high52w - close) / high52w * 100 : 0.0
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EPS RATING  (simplified — array-based like original, without rev/margin reqs)
+// ═══════════════════════════════════════════════════════════════════════════════
+isStock = syminfo.type == 'stock' or syminfo.type == 'dr'
+
+// Annual EPS array
+var int   MAX_ANN = 5
+var array<float> fyEpsA = array.new_float()
+var array<int>   fyYrA  = array.new_int()
+fyEpsChg = ta.change(epsFY) != 0
+if isStock and fyEpsChg and barstate.isconfirmed
+    array.unshift(fyEpsA, epsFY)
+    array.unshift(fyYrA,  year(time))
+    if array.size(fyEpsA) > MAX_ANN + 1
+        array.pop(fyEpsA)
+        array.pop(fyYrA)
+
+// Quarterly EPS array
+var int   MAX_QTR = 6
+var array<float> fqEpsA = array.new_float()
+fqEpsChg = ta.change(epsFQ) != 0
+if isStock and fqEpsChg and barstate.isconfirmed
+    array.unshift(fqEpsA, epsFQ)
+    if array.size(fqEpsA) > MAX_QTR + 4
+        array.pop(fqEpsA)
+
+// Short-term growth (QoQ YoY)
+int   nFQ  = array.size(fqEpsA)
+float q0G  = nFQ > 4 ? (array.get(fqEpsA, 0) - array.get(fqEpsA, 4)) / math.abs(array.get(fqEpsA, 4)) * 100 : na
+float q1G  = nFQ > 5 ? (array.get(fqEpsA, 1) - array.get(fqEpsA, 5)) / math.abs(array.get(fqEpsA, 5)) * 100 : na
+float stGrowth = na(q0G) ? na : na(q1G) ? q0G : q0G * 0.65 + q1G * 0.35
+
+// Long-term growth (annual, weighted recent)
+int   nFY = array.size(fyEpsA)
+float ltGrowth   = na
+float epsAccel   = 0.0
+float rawEpsBase = 50.0
+float negRatio   = 0.0
+float roePen     = 0.0
+float ltNegPen   = 0.0
+float blended    = 0.0
+float sumG       = 0.0
+float sumW       = 0.0
+
+for i = 0 to 4
+    if nFY > i + 1
+        float gv = (array.get(fyEpsA, i) - array.get(fyEpsA, i + 1)) / math.abs(array.get(fyEpsA, i + 1)) * 100
+        int w = 5 - i
+        sumG += gv * w
+        sumW += w
+ltGrowth := sumW > 0 ? sumG / sumW : na
+
+epsAccel := not na(q0G) and not na(q1G) ? q0G - q1G : 0.0
+
+if na(stGrowth) and na(ltGrowth)
+    blended := 0.0
+else if na(stGrowth)
+    blended := ltGrowth
+else if na(ltGrowth)
+    blended := stGrowth
+else
+    blended := stGrowth * 0.50 + ltGrowth * 0.35 + epsAccel * 0.15
+
+rawEpsBase := 50 + 49 * (blended / (math.abs(blended) + 40))
+
+// Negative quarter ratio
+float negQ = 0.0
+float cntQ = 0.0
+for i = 0 to 3
+    if nFQ > i + 4
+        float gv = (array.get(fqEpsA, i) - array.get(fqEpsA, i + 4)) / math.abs(array.get(fqEpsA, i + 4)) * 100
+        cntQ += 1
+        if gv < 0
+            negQ += 1
+negRatio := cntQ > 0 ? negQ / cntQ : 0.0
+
+// Penalties
+roePen   := not na(roeFQ) and roeFQ < 0 ? math.min(22.0, math.abs(roeFQ) * 0.05 + 5.0) : 0.0
+ltNegPen := not na(ltGrowth) and ltGrowth < 0 ? math.min(15.0, math.abs(ltGrowth) * 0.4) : 0.0
+
+epsRating = math.max(1, math.min(99, math.round(rawEpsBase - roePen - ltNegPen - negRatio * 10.0)))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  A/D RATING  (no request needed)
+// ═══════════════════════════════════════════════════════════════════════════════
+mfMultiplier = (high - low) != 0 ? ((close - low) - (high - close)) / (high - low) : 0.0
+sumMFVol     = math.sum(mfMultiplier * volume, 65)
+sumVolAD     = math.sum(volume, 65)
+adRatio      = sumVolAD != 0 ? sumMFVol / sumVolAD : 0.0
+adRating     = math.max(0, math.min(99, 49.5 + adRatio * 49.5))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SMR RATING  (simplified — ROE-driven, no margin/sales requests available)
+// ═══════════════════════════════════════════════════════════════════════════════
+roeVal    = not na(roeFQ) ? roeFQ : 15.0
+roeScore  = math.max(0, math.min(99, 50 + 49 * (roeVal / (math.abs(roeVal) + 17))))
+smrScore  = roeScore  // single-pillar since margin/sales requests unavailable
+smrGrade  = smrScore >= 80 ? 'A' : smrScore >= 65 ? 'B' : smrScore >= 50 ? 'C' : smrScore >= 35 ? 'D' : 'E'
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  COMPOSITE RATING
+// ═══════════════════════════════════════════════════════════════════════════════
+adNum     = 1.0 + (adRating / 99.0) * 12.0
+compRaw   = -15.94 + 0.5794 * rsRating + 0.3766 * epsRating + 0.2166 * smrScore + 1.4080 * adNum
+compRating = math.max(1, math.min(99, math.round(compRaw)))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PLOT OUTPUTS  — all visible in Data Window, usable in TradingView Screener
+// ═══════════════════════════════════════════════════════════════════════════════
+plot(compRating,     'Comp Rating',            display = display.all)
+plot(epsRating,      'EPS Rating',             display = display.all)
+plot(rsRating,       'RS Rating',              display = display.all)
+plot(rsRating3m,     'RS 3M',                  display = display.all)
+plot(rsRating6m,     'RS 6M',                  display = display.all)
+plot(adRating,       'A/D Rating',             display = display.all)
+plot(smrScore,       'SMR Score',              display = display.all)
+plot(pctOff52wHigh,  '% Off 52W High',         display = display.all)

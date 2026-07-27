@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A/D Rating)
+Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, A/D Rating, and RS Rating)
 Using Advanced Machine Learning Incorporating Up to 365-Day Historical Price & Volume Records.
 
 A/D Rating Reverse Engineering includes:
@@ -263,6 +263,367 @@ def compute_historical_heavy_volume_features(tickers: list, repo_dir: Path, hist
     records = [r for r in results if r is not None]
     print(f"✓ Computed trailing historical volume features for {len(records):,} tickers in parallel!")
     return pd.DataFrame(records)
+
+
+
+def rs_rating_section(df: pd.DataFrame, repo_dir: Path, output_report: list):
+    """
+    Section 5: Reverse-engineer the IBD RS Rating using historical close prices vs SPY.
+    Enforcing 1M RS rating recency weighting (1M >= 3M >= 6M >= 9M >= 12M).
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from scipy.optimize import minimize
+
+    cache_dir = repo_dir / "ticker_cache"
+
+    # ── Load SPY reference prices ──────────────────────────────────────────
+    spy_path = cache_dir / "SPY_1d.parquet"
+    if not spy_path.exists():
+        spy_path = cache_dir / "SPY_250d.parquet"
+    if not spy_path.exists():
+        print("ERROR: No SPY parquet file found in ticker_cache. Skipping RS section.")
+        return
+
+    spy_df = pd.read_parquet(spy_path)
+    if isinstance(spy_df.columns, pd.MultiIndex):
+        spy_df.columns = spy_df.columns.droplevel(1)
+    spy_df.index = pd.to_datetime(spy_df.index, utc=True)
+    spy_close = spy_df['Close'].dropna().astype(float)
+    spy_close = spy_close[spy_close > 0]
+    print(f"SPY reference: {len(spy_close)} trading days ({spy_close.index[0].date()} -> {spy_close.index[-1].date()})")
+
+    # ── Define performance windows (trading days) ──────────────────────────
+    windows = {
+        '1M': 21,
+        '3M': 63,
+        '6M': 126,
+        '9M': 188,
+        '12M': 249
+    }
+
+    # ── Compute SPY returns for each window ────────────────────────────────
+    spy_latest = float(spy_close.iloc[-1])
+    spy_perf = {}
+    for label, days in windows.items():
+        if len(spy_close) > days:
+            spy_past = float(spy_close.iloc[-(days+1)])
+            spy_perf[label] = spy_latest / spy_past
+        else:
+            spy_perf[label] = 1.0
+    print(f"SPY performance ratios: {', '.join(f'{k}={v:.4f}' for k,v in spy_perf.items())}")
+
+    # ── Load ticker prices and compute relative performance vs SPY ─────────
+    ms_symbols = [str(s).strip() for s in df['Symbol'].dropna().unique() if str(s).strip()]
+    print(f"Computing relative performance for {len(ms_symbols):,} tickers vs SPY...")
+
+    def compute_ticker_rs(ticker):
+        t_clean = str(ticker).strip()
+        cdf = None
+        for p_cand in [
+            cache_dir / f"{t_clean}_250d.parquet",
+            cache_dir / f"{t_clean}_1d.parquet",
+            cache_dir / f"{t_clean.replace('.', '-')}_250d.parquet",
+        ]:
+            if p_cand.exists():
+                try:
+                    cdf = pd.read_parquet(p_cand)
+                    if isinstance(cdf.columns, pd.MultiIndex):
+                        cdf.columns = cdf.columns.droplevel(1)
+                    break
+                except Exception:
+                    pass
+
+        if cdf is None or cdf.empty or len(cdf) < 10:
+            return None
+
+        price_c = 'Close' if 'Close' in cdf.columns else ('Price' if 'Price' in cdf.columns else None)
+        if not price_c:
+            return None
+
+        prices = pd.to_numeric(
+            cdf[price_c].astype(str).str.replace(',', '').str.replace('$', '').str.strip(),
+            errors='coerce'
+        ).values
+        prices = prices[~np.isnan(prices) & (prices > 0)]
+
+        if len(prices) < 10:
+            return None
+
+        latest = prices[-1]
+        rec = {'Ticker': t_clean, 'Price_Days': len(prices)}
+
+        for label, days in windows.items():
+            if len(prices) > days:
+                past_price = prices[-(days+1)]
+                stock_perf = latest / past_price
+                rel_perf = stock_perf / spy_perf[label]
+                rec[f'Rel_Perf_{label}'] = rel_perf
+                rec[f'Stock_Ret_{label}'] = (stock_perf - 1) * 100
+                rec[f'Excess_Ret_{label}'] = (rel_perf - 1) * 100
+            else:
+                rec[f'Rel_Perf_{label}'] = np.nan
+                rec[f'Stock_Ret_{label}'] = np.nan
+                rec[f'Excess_Ret_{label}'] = np.nan
+
+        # Exponentially-weighted recent momentum features
+        for decay in [0.005, 0.01, 0.02]:
+            n_days = min(len(prices) - 1, 249)
+            if n_days >= 60:
+                daily_rets = np.diff(prices) / np.where(prices[:-1] == 0, 1.0, prices[:-1])
+                daily_rets = daily_rets[-n_days:]
+                w = np.exp(-decay * np.arange(n_days)[::-1])
+                w = w / w.sum()
+                rec[f'EMA_Ret_d{decay}'] = float(np.sum(daily_rets * w))
+
+        return rec
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        results = list(executor.map(compute_ticker_rs, ms_symbols))
+
+    rs_records = [r for r in results if r is not None]
+    df_rs = pd.DataFrame(rs_records)
+    print(f"✓ Computed relative performance features for {len(df_rs):,} tickers")
+
+    # ── Merge with marketsurge RS Ratings ───────────────────────────────────
+    merged = df[['Symbol', 'RS Rating', 'RS 3-Month Rating', 'RS 6-Month Rating']].copy()
+    merged = merged.merge(df_rs, left_on='Symbol', right_on='Ticker', how='inner')
+    merged = merged.dropna(subset=['RS Rating'])
+    print(f"Merged dataset with RS Ratings: {len(merged):,} stocks")
+
+    required_perf_cols = [f'Rel_Perf_{w}' for w in ['1M', '3M', '6M', '9M', '12M']]
+    merged_full = merged.dropna(subset=required_perf_cols).copy()
+    print(f"Stocks with all 5 windows: {len(merged_full):,}")
+
+    # ── Approach 1: Monotonic Recency & 1M Recency-Heavy Weight Presets ─────
+    print("\n" + "-"*60)
+    print("Approach 1: Monotonic Recency & 1M Recency-Heavy Weight Schemes")
+    print("-"*60)
+
+    weight_configs = {
+        '1M_Heavy (35/25/20/12/8)':       {'1M': 0.35, '3M': 0.25, '6M': 0.20, '9M': 0.12, '12M': 0.08},
+        'Linear_Decay (33.3/26.7/20/13.3/6.7)': {'1M': 5/15, '3M': 4/15, '6M': 3/15, '9M': 2/15, '12M': 1/15},
+        'Moderate_Recency (30/25/20/15/10)':    {'1M': 0.30, '3M': 0.25, '6M': 0.20, '9M': 0.15, '12M': 0.10},
+        '1M_Dominant (40/30/15/10/5)':    {'1M': 0.40, '3M': 0.30, '6M': 0.15, '9M': 0.10, '12M': 0.05},
+        'Equal_Weight (20/20/20/20/20)':  {'1M': 0.20, '3M': 0.20, '6M': 0.20, '9M': 0.20, '12M': 0.20},
+        'Pine_Original (0/40/20/20/20)':  {'1M': 0.00, '3M': 0.40, '6M': 0.20, '9M': 0.20, '12M': 0.20},
+    }
+
+    weighted_results = []
+    for config_name, weights in weight_configs.items():
+        cols = [f'Rel_Perf_{k}' for k in ['1M', '3M', '6M', '9M', '12M']]
+        ws = np.array([weights.get(k, 0) for k in ['1M', '3M', '6M', '9M', '12M']])
+        perf_vals = merged_full[cols].values
+        raw_scores = perf_vals @ ws * 100
+
+        ranks = pd.Series(raw_scores).rank(pct=True) * 99
+        ranks = np.clip(ranks, 1, 99)
+
+        r2 = r2_score(merged_full['RS Rating'], ranks)
+        mae = mean_absolute_error(merged_full['RS Rating'], ranks)
+        corr = np.corrcoef(merged_full['RS Rating'], ranks)[0, 1]
+
+        weighted_results.append({
+            'Weight Config': config_name,
+            '1M': round(weights.get('1M', 0), 4),
+            '3M': round(weights.get('3M', 0), 4),
+            '6M': round(weights.get('6M', 0), 4),
+            '9M': round(weights.get('9M', 0), 4),
+            '12M': round(weights.get('12M', 0), 4),
+            'R²': round(r2, 4),
+            'MAE': round(mae, 2),
+            'Correlation': round(corr, 4)
+        })
+        print(f"  {config_name}: R²={r2:.4f}, MAE={mae:.2f}, Corr={corr:.4f}")
+
+    weighted_df = pd.DataFrame(weighted_results)
+
+    # ── Approach 2: Monotonic Recency Optimization (1M >= 3M >= 6M >= 9M >= 12M) ──
+    print("\n" + "-"*60)
+    print("Approach 2: Monotonic Recency Constrained Optimization (1M >= 3M >= 6M >= 9M >= 12M)")
+    print("-"*60)
+
+    y_true_rs = merged_full['RS Rating'].values
+    perf_matrix = merged_full[required_perf_cols].values
+
+    def mono_recency_objective(params):
+        v = np.abs(params)
+        w5 = v[4]
+        w4 = w5 + v[3]
+        w3 = w4 + v[2]
+        w2 = w3 + v[1]
+        w1 = w2 + v[0]
+        w = np.array([w1, w2, w3, w4, w5])
+        w = w / w.sum()
+        raw = perf_matrix @ w * 100
+        ranks = pd.Series(raw).rank(pct=True).values * 99
+        ranks = np.clip(ranks, 1, 99)
+        return np.mean(np.abs(y_true_rs - ranks))
+
+    res_mono = minimize(mono_recency_objective, [0.1, 0.1, 0.1, 0.1, 0.1], method='Nelder-Mead',
+                        options={'maxiter': 5000, 'xatol': 1e-6, 'fatol': 1e-6})
+
+    v = np.abs(res_mono.x)
+    w5 = v[4]; w4 = w5 + v[3]; w3 = w4 + v[2]; w2 = w3 + v[1]; w1 = w2 + v[0]
+    opt_w_mono = np.array([w1, w2, w3, w4, w5])
+    opt_w_mono = opt_w_mono / opt_w_mono.sum()
+    opt_labels = ['1M', '3M', '6M', '9M', '12M']
+
+    print(f"Optimal Monotonic Recency Weights: {', '.join(f'{l}={w:.4f}' for l, w in zip(opt_labels, opt_w_mono))}")
+
+    raw_mono = perf_matrix @ opt_w_mono * 100
+    ranks_mono = pd.Series(raw_mono).rank(pct=True).values * 99
+    ranks_mono = np.clip(ranks_mono, 1, 99)
+    r2_mono = r2_score(y_true_rs, ranks_mono)
+    mae_mono = mean_absolute_error(y_true_rs, ranks_mono)
+    corr_mono = np.corrcoef(y_true_rs, ranks_mono)[0, 1]
+
+    print(f"Monotonic Constrained R²={r2_mono:.4f}, MAE={mae_mono:.2f}, Corr={corr_mono:.4f}")
+
+    # ── Approach 3: Exponential Recency Decay Optimization ─────────────────
+    print("\n" + "-"*60)
+    print("Approach 3: Parametric Exponential Recency Decay Optimization")
+    print("-"*60)
+
+    def exp_recency_decay_objective(beta):
+        k = np.array([0, 1, 2, 3, 4])  # 1M=0, 3M=1, 6M=2, 9M=3, 12M=4
+        w = np.exp(-abs(beta[0]) * k)
+        w = w / w.sum()
+        raw = perf_matrix @ w * 100
+        ranks = pd.Series(raw).rank(pct=True).values * 99
+        ranks = np.clip(ranks, 1, 99)
+        return np.mean(np.abs(y_true_rs - ranks))
+
+    res_exp = minimize(exp_recency_decay_objective, [0.15], method='Nelder-Mead',
+                       options={'maxiter': 3000, 'xatol': 1e-8, 'fatol': 1e-8})
+
+    opt_beta = abs(res_exp.x[0])
+    k_steps = np.array([0, 1, 2, 3, 4])
+    exp_weights = np.exp(-opt_beta * k_steps)
+    exp_weights = exp_weights / exp_weights.sum()
+
+    print(f"Optimal Recency Decay β = {opt_beta:.6f}")
+    print(f"Exp Recency Weights: {', '.join(f'{l}={w:.4f}' for l, w in zip(opt_labels, exp_weights))}")
+
+    raw_exp = perf_matrix @ exp_weights * 100
+    ranks_exp = pd.Series(raw_exp).rank(pct=True).values * 99
+    ranks_exp = np.clip(ranks_exp, 1, 99)
+    r2_exp = r2_score(y_true_rs, ranks_exp)
+    mae_exp = mean_absolute_error(y_true_rs, ranks_exp)
+    corr_exp = np.corrcoef(y_true_rs, ranks_exp)[0, 1]
+
+    print(f"Exp Recency R²={r2_exp:.4f}, MAE={mae_exp:.2f}, Corr={corr_exp:.4f}")
+
+    # ── Approach 4: ML Regression Models (Feature-Rich) ───────────────────
+    print("\n" + "-"*60)
+    print("Approach 4: ML Regression Models (Feature-Rich)")
+    print("-"*60)
+
+    ml_feature_candidates = (
+        [f'Rel_Perf_{w}' for w in ['1M', '3M', '6M', '9M', '12M']] +
+        [f'Stock_Ret_{w}' for w in ['1M', '3M', '6M', '9M', '12M']] +
+        [f'Excess_Ret_{w}' for w in ['1M', '3M', '6M', '9M', '12M']] +
+        [f'EMA_Ret_d{d}' for d in [0.005, 0.01, 0.02]]
+    )
+    ml_features = [c for c in ml_feature_candidates if c in merged_full.columns and merged_full[c].notna().sum() > 50]
+
+    X_rs = merged_full[ml_features].copy()
+    y_rs = merged_full['RS Rating'].values
+
+    imputer_rs = SimpleImputer(strategy='median')
+    X_rs_imp = imputer_rs.fit_transform(X_rs)
+
+    X_train_rs, X_test_rs, y_train_rs, y_test_rs = train_test_split(
+        X_rs_imp, y_rs, test_size=0.2, random_state=42
+    )
+
+    scaler_rs = StandardScaler()
+    X_train_rs_std = scaler_rs.fit_transform(X_train_rs)
+    X_test_rs_std = scaler_rs.transform(X_test_rs)
+
+    ml_models_rs = {
+        'Ridge (α=50)': Ridge(alpha=50.0),
+        'Linear Regression': LinearRegression(),
+        'HistGradientBoosting': HistGradientBoostingRegressor(max_iter=300, learning_rate=0.05, random_state=42),
+        'Random Forest': RandomForestRegressor(n_estimators=150, max_depth=15, random_state=42, n_jobs=-1),
+        'ExtraTrees': ExtraTreesRegressor(n_estimators=150, max_depth=15, random_state=42, n_jobs=-1),
+    }
+
+    ml_results = []
+    best_ml_model = None
+    best_ml_r2 = -999
+
+    for name, model in ml_models_rs.items():
+        if 'Linear' in name or 'Ridge' in name:
+            model.fit(X_train_rs_std, y_train_rs)
+            y_pred = model.predict(X_test_rs_std)
+        else:
+            model.fit(X_train_rs, y_train_rs)
+            y_pred = model.predict(X_test_rs)
+
+        r2 = r2_score(y_test_rs, y_pred)
+        mae = mean_absolute_error(y_test_rs, y_pred)
+
+        within_5 = (np.abs(y_test_rs - y_pred) <= 5).mean() * 100
+        within_10 = (np.abs(y_test_rs - y_pred) <= 10).mean() * 100
+
+        ml_results.append({
+            'Model': name,
+            'R²': round(r2, 4),
+            'MAE': round(mae, 2),
+            '±5 Acc (%)': round(within_5, 2),
+            '±10 Acc (%)': round(within_10, 2)
+        })
+
+        if r2 > best_ml_r2:
+            best_ml_r2 = r2
+            best_ml_model = (name, model)
+
+        print(f"  {name}: R²={r2:.4f}, MAE={mae:.2f}, ±5={within_5:.1f}%, ±10={within_10:.1f}%")
+
+    ml_results_df = pd.DataFrame(ml_results)
+
+    # ── Build report ──────────────────────────────────────────────────────
+    output_report.append("## 5. RS Rating Model (Historical Price vs SPY - Recency-First Weighting)\n")
+    output_report.append(f"- **Total Stocks with Price History**: `{len(df_rs):,}`")
+    output_report.append(f"- **Merged with RS Ratings**: `{len(merged_full):,}` stocks")
+    output_report.append(f"- **SPY Baseline**: `{len(spy_close)}` trading days\n")
+
+    output_report.append("### A. Recency-Weighted RS Score Schemes (Enforcing 1M RS Input)\n")
+    output_report.append(weighted_df.to_markdown(index=False))
+    output_report.append("\n")
+
+    output_report.append("### B. Monotonic Recency Constrained Optimization (1M ≥ 3M ≥ 6M ≥ 9M ≥ 12M)\n")
+    opt_weights_df = pd.DataFrame({
+        'Window': opt_labels,
+        'Monotonic Constrained Weight': np.round(opt_w_mono, 4),
+        'Exponential Decay Weight (β={:.4f})'.format(opt_beta): np.round(exp_weights, 4),
+        '1M Heavy Preset (35/25/20/12/8)': [0.35, 0.25, 0.20, 0.12, 0.08],
+        'Moderate Recency Preset (30/25/20/15/10)': [0.30, 0.25, 0.20, 0.15, 0.10],
+    })
+    output_report.append(opt_weights_df.to_markdown(index=False))
+    output_report.append(f"\n- **Monotonic Constrained Optimization**: R²=`{r2_mono:.4f}`, MAE=`{mae_mono:.2f}`, Corr=`{corr_mono:.4f}`")
+    output_report.append(f"- **Exponential Recency Decay (β={opt_beta:.4f})**: R²=`{r2_exp:.4f}`, MAE=`{mae_exp:.2f}`, Corr=`{corr_exp:.4f}`\n")
+
+    output_report.append("### C. ML Regression Models (Feature-Rich)\n")
+    output_report.append(ml_results_df.to_markdown(index=False))
+    output_report.append(f"\n**Best ML Model**: `{best_ml_model[0]}` (R²=`{best_ml_r2:.4f}`)\n")
+
+    output_report.append("### D. Recommended RS Formulae for Pine Script & Python\n")
+    output_report.append("```text")
+    output_report.append("// 1. Monotonic Recency Constrained Weights (1M >= 3M >= 6M >= 9M >= 12M)")
+    output_report.append(f"rs_stock = {opt_w_mono[0]:.4f} * perf_1M + {opt_w_mono[1]:.4f} * perf_3M + {opt_w_mono[2]:.4f} * perf_6M + {opt_w_mono[3]:.4f} * perf_9M + {opt_w_mono[4]:.4f} * perf_12M")
+    output_report.append("")
+    output_report.append(f"// 2. Exponential Recency Decay Weights (β={opt_beta:.4f})")
+    output_report.append(f"rs_stock = {exp_weights[0]:.4f} * perf_1M + {exp_weights[1]:.4f} * perf_3M + {exp_weights[2]:.4f} * perf_6M + {exp_weights[3]:.4f} * perf_9M + {exp_weights[4]:.4f} * perf_12M")
+    output_report.append("")
+    output_report.append("// 3. Moderate Recency Preset (Clean 30/25/20/15/10 Weighting)")
+    output_report.append("rs_stock = 0.30 * perf_1M + 0.25 * perf_3M + 0.20 * perf_6M + 0.15 * perf_9M + 0.10 * perf_12M")
+    output_report.append("```\n")
+
+    print(f"\n{'='*60}")
+    print("RS Rating Section Complete!")
+    print(f"{'='*60}")
+
 
 def run_pipeline():
     repo_dir = Path(__file__).resolve().parent.parent
@@ -745,6 +1106,8 @@ def run_pipeline():
         sign = "+" if row['Unstd_Coef (Weight)'] >= 0 else "-"
         formula_str += f" {sign} {abs(row['Unstd_Coef (Weight)']):.4f} × [{row['Component_Rating']}]"
     output_report.append(f"```text\n{formula_str}\n```\n")
+
+    rs_rating_section(df, repo_dir, output_report)
 
     artifact_dir = "/Users/vanstark/.gemini/antigravity-ide/brain/89712f63-1122-4914-b29a-40d1f2f4f77e"
     os.makedirs(artifact_dir, exist_ok=True)
