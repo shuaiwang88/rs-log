@@ -110,12 +110,13 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     return metrics
 
 def fetch_ohlcv_via_yfinance(tickers: list) -> dict:
-    """Bulk download 250 days of OHLCV for a list of tickers via yfinance."""
+    """ONE bulk download of 250-day OHLCV for all tickers. Call once, not per commit."""
     import yfinance as yf
     tech_results = {}
-    clean = [str(t).strip() for t in tickers if pd.notna(t)]
+    clean = [str(t).strip() for t in tickers if pd.notna(t) and str(t).strip()]
     if not clean:
         return tech_results
+    print(f"Downloading 250-day OHLCV for {len(clean):,} tickers via yfinance (single bulk call)...")
     try:
         raw = yf.download(
             tickers=clean,
@@ -124,11 +125,16 @@ def fetch_ohlcv_via_yfinance(tickers: list) -> dict:
             group_by="ticker",
             auto_adjust=True,
             progress=False,
-            threads=True
+            threads=False   # avoid thread exhaustion across 365 commits
         )
         for t_str in clean:
             try:
-                df_t = raw[t_str].dropna(how='all') if len(clean) > 1 else raw.dropna(how='all')
+                if len(clean) == 1:
+                    df_t = raw.dropna(how='all')
+                elif t_str in raw.columns.get_level_values(1):
+                    df_t = raw[t_str].dropna(how='all')
+                else:
+                    continue
                 if df_t.empty:
                     continue
                 res = compute_technical_metrics_from_ohlcv(df_t)
@@ -138,9 +144,11 @@ def fetch_ohlcv_via_yfinance(tickers: list) -> dict:
                 pass
     except Exception as e:
         print(f"  yfinance download error: {e}")
+    print(f"  Got OHLCV metrics for {len(tech_results):,}/{len(clean):,} tickers.")
     return tech_results
 
-def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, target_schema: list) -> pd.DataFrame:
+def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, tech_map: dict, target_schema: list) -> pd.DataFrame:
+    """Apply fundamentals + pre-fetched tech_map to a commit's dataframe."""
     df_clean = df.copy()
     if 'Price' in df_clean.columns and 'Close' not in df_clean.columns:
         df_clean.rename(columns={'Price': 'Close'}, inplace=True)
@@ -162,15 +170,13 @@ def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, target_schema: list) -
         'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day'
     ]
 
-    missing_tech = [c for c in tech_cols if c not in df_clean.columns or df_clean[c].notna().sum() < 50]
-    if missing_tech:
-        tickers_to_fetch = df_clean['Ticker_Clean'].unique().tolist()
-        tech_results = fetch_ohlcv_via_yfinance(tickers_to_fetch)
-
-        for c in tech_cols:
-            if c not in df_clean.columns:
-                df_clean[c] = np.nan
-            df_clean[c] = df_clean[c].fillna(df_clean['Ticker_Clean'].map(lambda t: tech_results.get(t, {}).get(c, np.nan)))
+    # Fill missing technical cols from pre-fetched tech_map (no yfinance call here)
+    for c in tech_cols:
+        if c not in df_clean.columns:
+            df_clean[c] = np.nan
+        df_clean[c] = df_clean[c].fillna(
+            df_clean['Ticker_Clean'].map(lambda t: tech_map.get(t, {}).get(c, np.nan))
+        )
 
     for col in target_schema:
         if col not in df_clean.columns:
@@ -202,6 +208,11 @@ def run_fast_backfill(num_commits: int = 365):
 
     ms_funds = load_marketsurge_fundamentals(ibd_dir)
 
+    # Collect all unique tickers from current rs_stocks.csv for a single bulk yfinance download
+    df_curr = pd.read_csv(rs_file, low_memory=False)
+    all_tickers = df_curr['Ticker'].dropna().astype(str).str.strip().unique().tolist()
+    tech_map = fetch_ohlcv_via_yfinance(all_tickers)
+
     print(f"Retrieving past {num_commits} commit objects for output/rs_stocks.csv...")
     cmd = ['git', 'log', '--oneline', '-n', str(num_commits), '--', 'output/rs_stocks.csv']
     commit_lines = subprocess.check_output(cmd, text=True, cwd=repo_dir).strip().split('\n')
@@ -223,7 +234,7 @@ def run_fast_backfill(num_commits: int = 365):
             if has_all and has_funds and has_open:
                 continue
 
-            df_backfilled = backfill_df(df, ms_funds, target_schema)
+            df_backfilled = backfill_df(df, ms_funds, tech_map, target_schema)
             updated_count += 1
 
             if updated_count % 50 == 0 or idx == len(commits) - 1:
@@ -232,8 +243,7 @@ def run_fast_backfill(num_commits: int = 365):
         except Exception as e:
             pass
 
-    df_curr = pd.read_csv(rs_file, low_memory=False)
-    df_curr_bf = backfill_df(df_curr, ms_funds, target_schema)
+    df_curr_bf = backfill_df(df_curr, ms_funds, tech_map, target_schema)
     df_curr_bf.to_csv(rs_file, index=False)
 
     df1_path = repo_dir / "output" / "rs_stocks_1.csv"
