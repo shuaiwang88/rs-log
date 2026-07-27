@@ -32,7 +32,12 @@ TARGET_SCHEMA = [
 ]
 
 def normalize_df_schema(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize a stock dataframe to the canonical 51-column schema."""
+    """Normalize a stock dataframe to the canonical 51-column schema.
+    
+    - Renames legacy 'Price' → 'Close'
+    - Adds any missing schema columns as NaN
+    - Returns columns in exact TARGET_SCHEMA order (extra/legacy cols dropped)
+    """
     # Rename legacy Price column → Close
     if 'Price' in df.columns and 'Close' not in df.columns:
         df = df.rename(columns={'Price': 'Close'})
@@ -42,7 +47,9 @@ def normalize_df_schema(df: pd.DataFrame) -> pd.DataFrame:
         if col not in df.columns:
             df[col] = float('nan')
 
-    return df
+    # Return only columns in TARGET_SCHEMA, in the correct order
+    # (extra legacy columns like 52WkHigh, AvgVol60 etc. are dropped)
+    return df[TARGET_SCHEMA]
 
 def get_last_date_in_history():
     """Get the last date from the historical file"""
