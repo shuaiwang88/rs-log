@@ -418,11 +418,12 @@ smrGrade = smrScore >= 80 ? "A" : smrScore >= 65 ? "B" : smrScore >= 50 ? "C" : 
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // COMPOSITE ("Comp") RATING (0-99) — Reverse-Engineered ML Model (Excluding Group RS):
-// Comp Rating ≈ -15.56 + 0.5787*RS + 0.3769*EPS + 0.2166*SMR + 0.1825*AD
-// (Variance explained: R² = 0.9406, MAE = 5.66 pts)
+// Comp Rating ≈ -15.94 + 0.5794*RS + 0.3766*EPS + 0.2166*SMR + 1.4080*AD_Num
+// (Variance explained: R² = 0.9405, MAE = 5.66 pts)
 // ═══════════════════════════════════════════════════════════════════════════════
 rsForComp = rsRatingFinal == -1 ? 0.0 : rsRatingFinal
-compRaw   = -15.56 + (0.5787 * rsForComp) + (0.3769 * epsRating) + (0.2166 * smrScore) + (0.1825 * adRating)
+adNum     = 1.0 + (adRating / 99.0) * 12.0
+compRaw   = -15.94 + (0.5794 * rsForComp) + (0.3766 * epsRating) + (0.2166 * smrScore) + (1.4080 * adNum)
 compRating = math.max(1, math.min(99, math.round(compRaw)))
 
 // ═══════════════════════════════════════════════════════════════════════════════
