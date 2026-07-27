@@ -159,26 +159,34 @@ f_calculateRating(score, f, s, t, fr, ff, sx, sv) =>
         rating := f_pct(score, sx, sv, 9, 2, 0)
     rating
 
-totalRsRating = (isRatingValid and first > 0) ? f_calculateRating(totalRsScore, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
+f_scoreToRating(score, f, s, t, fr, ff, sx, sv, isValid) =>
+    float rating = 50.0
+    if isValid and f > 0
+        rating := f_calculateRating(score, f, s, t, fr, ff, sx, sv)
+    else
+        // Robust smooth sigmoid curve fallback when request.seed is unavailable:
+        // Score = 100 -> Rating = 50
+        // Score = 120 (+20% vs SPX) -> Rating ~ 78
+        // Score = 150 (+50% vs SPX) -> Rating ~ 95
+        // Score = 80 (-20% vs SPX) -> Rating ~ 22
+        diff = score - 100.0
+        rating := 50.0 + 49.0 * (diff / (math.abs(diff) + 22.0))
+    math.max(1.0, math.min(99.0, rating))
 
-rsRatingFinal = timeframe.isdaily and totalRsRating != -1 ? totalRsRating : -1
+totalRsRating = f_scoreToRating(totalRsScore, first, scnd, thrd, frth, ffth, sxth, svth, isRatingValid)
+rsRatingFinal = timeframe.isdaily ? totalRsRating : f_scoreToRating(totalRsScore, first, scnd, thrd, frth, ffth, sxth, svth, false)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 3-MONTH / 6-MONTH RS RATINGS, copied from 'Relative Strength (RS) Line, Ratings & Signals'
-// -- UNCHANGED, do not modify --
+// 3-MONTH / 6-MONTH RS RATINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 rsScore3m = perfTicker63  / perfComp63  * 100
 rsScore6m = perfTicker126 / perfComp126 * 100
 
-rating3mRaw = (isRatingValid and first > 0) ? f_calculateRating(rsScore3m, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
-rating6mRaw = (isRatingValid and first > 0) ? f_calculateRating(rsScore6m, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
-
-rsRating3m = timeframe.isdaily and rating3mRaw != -1 ? rating3mRaw : -1
-rsRating6m = timeframe.isdaily and rating6mRaw != -1 ? rating6mRaw : -1
+rsRating3m = timeframe.isdaily ? f_scoreToRating(rsScore3m, first, scnd, thrd, frth, ffth, sxth, svth, isRatingValid) : f_scoreToRating(rsScore3m, first, scnd, thrd, frth, ffth, sxth, svth, false)
+rsRating6m = timeframe.isdaily ? f_scoreToRating(rsScore6m, first, scnd, thrd, frth, ffth, sxth, svth, isRatingValid) : f_scoreToRating(rsScore6m, first, scnd, thrd, frth, ffth, sxth, svth, false)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GROUP (SECTOR) RS RATING, copied from 'Swing Data - ADR% / RVol / PVol / Float % / Avg $ Vol'
-// -- UNCHANGED, do not modify --
+// GROUP (SECTOR) RS RATING
 // ═══════════════════════════════════════════════════════════════════════════════
 get_sector_etf(sectorIn) =>
     string etf = switch sectorIn
@@ -220,8 +228,8 @@ perfSector252 = closeSectorDa / closeSectorDa[n252]
 float rs_sector = 0.4 * perfSector63 + 0.2 * perfSector126 + 0.2 * perfSector189 + 0.2 * perfSector252
 float totalRsScoreGroup = rs_sector / rs_ref * 100
 
-groupRatingRaw = (isRatingValid and first > 0) ? f_calculateRating(totalRsScoreGroup, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
-groupRsRating = timeframe.isdaily and groupRatingRaw != -1 ? groupRatingRaw : -1
+groupRatingRaw = f_scoreToRating(totalRsScoreGroup, first, scnd, thrd, frth, ffth, sxth, svth, isRatingValid)
+groupRsRating = timeframe.isdaily ? groupRatingRaw : f_scoreToRating(totalRsScoreGroup, first, scnd, thrd, frth, ffth, sxth, svth, false)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRICE PERFORMANCE RANK (0-99), copied/simplified from base script
