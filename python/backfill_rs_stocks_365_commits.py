@@ -62,42 +62,54 @@ def load_marketsurge_fundamentals(ibd_dir: Path) -> pd.DataFrame:
     avail_cols = [c for c in fund_cols if c in ms_df.columns]
     return ms_df[['Ticker_Clean'] + avail_cols].drop_duplicates(subset=['Ticker_Clean'])
 
-def fetch_ohlcv_via_yfinance(tickers: list) -> dict:
-    """ONE bulk download of 250-day OHLCV for all tickers. Call once before the commit loop."""
+def fetch_ohlcv_via_yfinance(tickers: list, batch_size: int = 500, sleep_sec: float = 2.0) -> dict:
+    """Batched OHLCV download via yfinance. Called ONCE before the commit loop.
+    Downloads in chunks of batch_size with sleep_sec delay between batches.
+    """
     import yfinance as yf
+    import time as _time
     tech_results = {}
     clean = [str(t).strip() for t in tickers if pd.notna(t) and str(t).strip()]
     if not clean:
         return tech_results
-    print(f"Downloading 250-day OHLCV for {len(clean):,} tickers via yfinance (single bulk call)...")
-    try:
-        raw = yf.download(
-            tickers=clean,
-            period="250d",
-            interval="1d",
-            group_by="ticker",
-            auto_adjust=True,
-            progress=False,
-            threads=False   # avoid thread exhaustion
-        )
-        for t_str in clean:
-            try:
-                if len(clean) == 1:
-                    df_t = raw.dropna(how='all')
-                elif t_str in raw.columns.get_level_values(1):
-                    df_t = raw[t_str].dropna(how='all')
-                else:
-                    continue
-                if df_t.empty:
-                    continue
-                res = compute_technical_metrics_from_ohlcv(df_t)
-                if res:
-                    tech_results[t_str] = res
-            except Exception:
-                pass
-    except Exception as e:
-        print(f"  yfinance download error: {e}")
-    print(f"  Got OHLCV metrics for {len(tech_results):,}/{len(clean):,} tickers.")
+
+    batches = [clean[i:i+batch_size] for i in range(0, len(clean), batch_size)]
+    print(f"Downloading 250-day OHLCV for {len(clean):,} tickers in {len(batches)} batches of {batch_size}...")
+
+    for b_idx, batch in enumerate(batches):
+        try:
+            raw = yf.download(
+                tickers=batch,
+                period="250d",
+                interval="1d",
+                group_by="ticker",
+                auto_adjust=True,
+                progress=False,
+                threads=False
+            )
+            for t_str in batch:
+                try:
+                    if len(batch) == 1:
+                        df_t = raw.dropna(how='all')
+                    elif t_str in raw.columns.get_level_values(1):
+                        df_t = raw[t_str].dropna(how='all')
+                    else:
+                        continue
+                    if df_t.empty:
+                        continue
+                    res = compute_technical_metrics_from_ohlcv(df_t)
+                    if res:
+                        tech_results[t_str] = res
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"  Batch {b_idx+1} error: {e}")
+
+        print(f"  Batch {b_idx+1}/{len(batches)}: {len(tech_results):,} tickers done so far")
+        if b_idx < len(batches) - 1:
+            _time.sleep(sleep_sec)
+
+    print(f"  Total: OHLCV metrics for {len(tech_results):,}/{len(clean):,} tickers.")
     return tech_results
 
 def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
