@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A/D Rating)
-Using Advanced Machine Learning with Numeric Regression -> 5-Tier Threshold Conversion.
+Using Advanced Machine Learning incorporating Heavy-Volume Up/Down Price-Volume Interaction Variables.
 """
 
 import sys
@@ -15,7 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
-from sklearn.metrics import r2_score, mean_absolute_error, accuracy_score, classification_report
+from sklearn.metrics import r2_score, mean_absolute_error, accuracy_score
 
 def clean_num(val):
     if pd.isna(val):
@@ -68,8 +68,8 @@ def num_to_5tier(val):
     elif val >= 2.5: return 'D'
     else: return 'E'
 
-def compute_21_commit_all_daily_features(hist_file: Path) -> pd.DataFrame:
-    print(f"Extracting all 21 individual daily price and volume records from {hist_file}...")
+def compute_21_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
+    print(f"Extracting heavy-volume price/volume interaction variables from {hist_file}...")
     df_hist = pd.read_csv(hist_file, low_memory=False)
     if 'date' in df_hist.columns:
         df_hist['date'] = pd.to_datetime(df_hist['date'])
@@ -94,36 +94,46 @@ def compute_21_commit_all_daily_features(hist_file: Path) -> pd.DataFrame:
         vol_diff = np.diff(vols)
         vol_tail = vols[1:]
         
-        is_up = price_diff > 0
-        is_dn = price_diff < 0
-        
-        up_vol_sum = np.sum(vol_tail[is_up])
-        dn_vol_sum = np.sum(vol_tail[is_dn])
-        ud_ratio_21 = up_vol_sum / max(1, dn_vol_sum)
-        
-        acc_days = np.sum((price_diff > 0) & (vol_diff > 0))
-        dist_days = np.sum((price_diff < 0) & (vol_diff > 0))
-        net_acc_days = acc_days - dist_days
-        
         mean_vol = max(1, np.mean(vols))
         safe_prices = np.where(prices[:-1] == 0, 1.0, prices[:-1])
-        daily_rets = price_diff / safe_prices
+        price_rets = price_diff / safe_prices
         vol_ratios = vol_tail / mean_vol
-        vw_ret = np.sum(daily_rets * vol_ratios)
+        
+        # Heavy-Volume Up & Down Days (Volume > 1.2x average)
+        heavy_up_mask = (price_rets > 0) & (vol_ratios > 1.2)
+        heavy_dn_mask = (price_rets < 0) & (vol_ratios > 1.2)
+        
+        heavy_up_vol_sum = np.sum(vol_tail[heavy_up_mask])
+        heavy_dn_vol_sum = np.sum(vol_tail[heavy_dn_mask])
+        heavy_net_ratio = heavy_up_vol_sum / max(1, heavy_up_vol_sum + heavy_dn_vol_sum)
+        
+        heavy_up_cnt = np.sum(heavy_up_mask)
+        heavy_dn_cnt = np.sum(heavy_dn_mask)
+        net_heavy_days = heavy_up_cnt - heavy_dn_cnt
+        
+        heavy_up_intensity = np.sum(price_rets[heavy_up_mask] * vol_ratios[heavy_up_mask])
+        heavy_dn_intensity = np.sum(np.abs(price_rets[heavy_dn_mask]) * vol_ratios[heavy_dn_mask])
+        net_heavy_intensity = heavy_up_intensity - heavy_dn_intensity
         
         rec = {
             'Ticker': ticker,
             'Hist21D_Price_Pct_Chg': ret_tot,
-            'Hist21D_UD_Ratio': ud_ratio_21,
-            'Hist21D_Acc_Days': int(acc_days),
-            'Hist21D_Dist_Days': int(dist_days),
-            'Hist21D_Net_Acc_Days': int(net_acc_days),
-            'Hist21D_VW_Ret': vw_ret
+            'Heavy_Up_Vol_Sum': heavy_up_vol_sum,
+            'Heavy_Dn_Vol_Sum': heavy_dn_vol_sum,
+            'Heavy_Net_Ratio': heavy_net_ratio,
+            'Heavy_Up_Cnt': int(heavy_up_cnt),
+            'Heavy_Dn_Cnt': int(heavy_dn_cnt),
+            'Net_Heavy_Days': int(net_heavy_days),
+            'Heavy_Up_Intensity': heavy_up_intensity,
+            'Heavy_Dn_Intensity': heavy_dn_intensity,
+            'Net_Heavy_Intensity': net_heavy_intensity
         }
         
         for i in range(20):
-            rec[f'Ret_D{i+1}'] = daily_rets[i]
+            rec[f'Ret_D{i+1}'] = price_rets[i]
             rec[f'VolRatio_D{i+1}'] = vol_ratios[i]
+            rec[f'HeavyUp_D{i+1}'] = price_rets[i] * vol_ratios[i] if heavy_up_mask[i] else 0.0
+            rec[f'HeavyDn_D{i+1}'] = abs(price_rets[i]) * vol_ratios[i] if heavy_dn_mask[i] else 0.0
             
         records.append(rec)
 
@@ -296,14 +306,14 @@ def run_pipeline():
     output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (REGRESSION -> 5 TIER CONVERSION)
+    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (HEAVY-VOLUME INTERACTIONS)
     # ═══════════════════════════════════════════════════════════════════════════
     print("\n" + "="*80)
     print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING")
     print("="*80)
 
     if hist_file.exists() and rs_stocks_file.exists():
-        df_21_feat = compute_21_commit_all_daily_features(hist_file)
+        df_21_feat = compute_21_commit_heavy_volume_features(hist_file)
         rs_df = pd.read_csv(rs_stocks_file, low_memory=False)
         merged_ad = rs_df.merge(df_21_feat, on='Ticker', how='inner')
         merged_ad = merged_ad.merge(df[['Symbol', 'AD_Num', 'AD_Tier', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
@@ -311,15 +321,14 @@ def run_pipeline():
         # Percentile Rank Scaling
         merged_ad['Rank_Price_50D'] = merged_ad['Price vs 50-Day'].rank(pct=True) * 100
         merged_ad['Rank_Up_Down_Vol'] = merged_ad['Up/Down Vol'].rank(pct=True) * 100
-        merged_ad['Rank_Net_Acc_Days'] = merged_ad['Hist21D_Net_Acc_Days'].rank(pct=True) * 100
-        merged_ad['Inter_50D_UD'] = merged_ad['Price vs 50-Day'] * merged_ad['Up/Down Vol']
+        merged_ad['Rank_Net_Heavy_Intensity'] = merged_ad['Net_Heavy_Intensity'].rank(pct=True) * 100
+        merged_ad['Inter_50D_Heavy'] = merged_ad['Price vs 50-Day'] * merged_ad['Net_Heavy_Intensity']
 
-        daily_features = [f'Ret_D{i+1}' for i in range(20)] + [f'VolRatio_D{i+1}' for i in range(20)]
+        daily_features = [f'Ret_D{i+1}' for i in range(20)] + [f'VolRatio_D{i+1}' for i in range(20)] + [f'HeavyUp_D{i+1}' for i in range(20)] + [f'HeavyDn_D{i+1}' for i in range(20)]
         macro_features = [
-            'Rank_Price_50D', 'Rank_Up_Down_Vol', 'Rank_Net_Acc_Days', 'Inter_50D_UD',
-            'Hist21D_Net_Acc_Days', 'Hist21D_Acc_Days', 'Hist21D_Dist_Days', 'Hist21D_Price_Pct_Chg',
-            'Hist21D_UD_Ratio', 'Hist21D_VW_Ret', 'Price vs 50-Day', 'Price vs 200-Day',
-            'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day', '21 Day ATR %'
+            'Rank_Price_50D', 'Rank_Up_Down_Vol', 'Rank_Net_Heavy_Intensity', 'Inter_50D_Heavy',
+            'Net_Heavy_Intensity', 'Heavy_Net_Ratio', 'Net_Heavy_Days', 'Heavy_Up_Intensity', 'Heavy_Dn_Intensity',
+            'Price vs 50-Day', 'Price vs 200-Day', 'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day', '21 Day ATR %'
         ]
 
         ad_features = macro_features + daily_features
@@ -333,7 +342,7 @@ def run_pipeline():
             X_ad, y_ad_num, y_ad_tier, test_size=0.2, random_state=42
         )
 
-        et_ad = ExtraTreesRegressor(n_estimators=100, max_depth=16, random_state=42)
+        et_ad = ExtraTreesRegressor(n_estimators=120, max_depth=16, random_state=42)
         et_ad.fit(X_train_ad, y_train_ad)
         y_pred_ad = et_ad.predict(X_test_ad)
 
@@ -349,9 +358,8 @@ def run_pipeline():
         pr_num = pred_converted_tier.map(tier_order)
         within_1_tier_acc = (np.abs(te_num - pr_num) <= 1).mean() * 100
 
-        print(f"A/D Continuous ExtraTrees Regressor R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
-        print(f"A/D Regression -> 5-Tier Conversion Exact Accuracy: {exact_tier_acc:.2f}%")
-        print(f"A/D Regression -> 5-Tier Conversion Within-1-Tier Accuracy: {within_1_tier_acc:.2f}%")
+        print(f"A/D Heavy-Volume Model ExtraTrees R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
+        print(f"A/D Heavy-Volume Model Within-1-Tier Accuracy: {within_1_tier_acc:.2f}%")
 
         ad_weights = pd.DataFrame({
             'Feature': ad_features,
@@ -359,12 +367,11 @@ def run_pipeline():
         }).sort_values(by='Importance', ascending=False)
         ad_weights['Rel_Weight_Pct'] = ad_weights['Importance'] * 100
 
-        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (Numeric Regression -> 5-Tier Conversion)\n")
-        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with ALL 21 individual daily price & volume records")
+        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (Heavy-Volume Price-Volume Interactions)\n")
+        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with Heavy-Volume Up/Down interaction variables")
         output_report.append(f"- **ExtraTrees Regressor $R^2$**: `{r2_ad:.4f}` | **MAE**: `{mae_ad:.2f}` grade points (out of 13 scale points)")
-        output_report.append(f"- **Regression $\\rightarrow$ 5-Tier Threshold Conversion Within-1-Tier Accuracy**: `{within_1_tier_acc:.2f}%` (Predicts `A, B, C, D, E` tier correctly or within $\\pm 1$ tier)")
-        output_report.append(f"- **Grade A Prediction Precision**: `86%` | **Grade E Prediction Precision**: `71%`\n")
-        output_report.append("### Top 15 Feature Importances for A/D Rating Model\n")
+        output_report.append(f"- **Regression $\\rightarrow$ 5-Tier Threshold Conversion Within-1-Tier Accuracy**: `{within_1_tier_acc:.2f}%` (Predicts `A, B, C, D, E` tier correctly or within $\\pm 1$ tier)\n")
+        output_report.append("### Top 15 Feature Importances with Heavy-Volume Interaction Variables\n")
         output_report.append(ad_weights.head(15)[['Feature', 'Rel_Weight_Pct', 'Importance']].to_markdown(index=False))
         output_report.append("\n")
 
