@@ -63,7 +63,13 @@ def push_to_origin(branch):
     if r.returncode == 0:
         print("Pushed to origin successfully.")
     else:
-        print(f"Failed to push to origin:\n{r.stderr}")
+        print("Initial push rejected; performing git pull --rebase origin and pushing...")
+        run_cmd(["git", "pull", "--rebase", "origin", branch], cwd=REPO_DIR)
+        r2 = run_cmd(["git", "push", "origin", branch], cwd=REPO_DIR)
+        if r2.returncode == 0:
+            print("Pushed to origin successfully after rebase.")
+        else:
+            print(f"Failed to push to origin:\n{r2.stderr}")
 
 def run_append_scripts():
     print("Running daily pipeline: derive OHLCV + technical columns, then append history...")
