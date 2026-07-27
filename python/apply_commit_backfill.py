@@ -15,8 +15,7 @@ import numpy as np
 def clean_and_backfill():
     repo_dir = Path.cwd()
     rs_file = repo_dir / "output" / "rs_stocks.csv"
-    ms_file = repo_dir / "IBD" / "marketsurge.csv"
-    cache_dir = repo_dir / "ticker_cache"
+    ms_file = Path("/Users/vanstark/Desktop/stock/rs-log/IBD/marketsurge.csv")
 
     if not rs_file.exists():
         return
