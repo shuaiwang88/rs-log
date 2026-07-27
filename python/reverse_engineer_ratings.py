@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A/D Rating)
-Using Machine Learning (Linear Regression, Ridge, Random Forest) on MarketSurge & 21-Commit Historical Data.
+Using Advanced Machine Learning (Gradient Boosting, ExtraTrees, Classifier & Regressor Ensembles).
 """
 
 import sys
@@ -14,8 +14,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import r2_score, mean_absolute_error
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, HistGradientBoostingClassifier
+from sklearn.metrics import r2_score, mean_absolute_error, accuracy_score
 
 def clean_num(val):
     if pd.isna(val):
@@ -55,6 +55,11 @@ def smr_grade_to_num(val):
         'E': 10.0
     }
     return mapping.get(s, np.nan)
+
+def ad_5tier(val):
+    if pd.isna(val): return np.nan
+    s = str(val).strip().upper()[0]
+    return s if s in ['A', 'B', 'C', 'D', 'E'] else np.nan
 
 def compute_21_commit_historical_features(hist_file: Path) -> pd.DataFrame:
     print(f"Reading historical commit records from {hist_file}...")
@@ -132,6 +137,7 @@ def run_pipeline():
 
     df['SMR_Num'] = df['SMR Rating'].apply(smr_grade_to_num)
     df['AD_Num']  = df['A/D Rating'].apply(grade_to_num)
+    df['AD_Tier'] = df['A/D Rating'].apply(ad_5tier)
     df['GroupRS_Num'] = df['Ind Group RS'].apply(grade_to_num)
 
     output_report = []
@@ -276,50 +282,73 @@ def run_pipeline():
     output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (21-Commit Git History Data)
+    # 3. IMPROVED ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL
     # ═══════════════════════════════════════════════════════════════════════════
     print("\n" + "="*80)
-    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING (21 COMMITS)")
+    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING")
     print("="*80)
 
     if hist_file.exists() and rs_stocks_file.exists():
         df_21_feat = compute_21_commit_historical_features(hist_file)
         rs_df = pd.read_csv(rs_stocks_file, low_memory=False)
         merged_ad = rs_df.merge(df_21_feat, on='Ticker', how='inner')
-        merged_ad = merged_ad.merge(df[['Symbol', 'AD_Num', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
+        merged_ad = merged_ad.merge(df[['Symbol', 'AD_Num', 'AD_Tier', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
+
+        # Feature Engineering: Percentile Ranks & Interactions
+        merged_ad['Rank_Price_50D'] = merged_ad['Price vs 50-Day'].rank(pct=True) * 100
+        merged_ad['Rank_Up_Down_Vol'] = merged_ad['Up/Down Vol'].rank(pct=True) * 100
+        merged_ad['Rank_Net_Acc_Days'] = merged_ad['Hist21D_Net_Acc_Days'].rank(pct=True) * 100
+        merged_ad['Inter_50D_UD'] = merged_ad['Price vs 50-Day'] * merged_ad['Up/Down Vol']
 
         ad_features = [
+            'Rank_Price_50D', 'Rank_Up_Down_Vol', 'Rank_Net_Acc_Days', 'Inter_50D_UD',
             'Hist21D_Net_Acc_Days', 'Hist21D_Acc_Days', 'Hist21D_Dist_Days', 'Hist21D_Price_Pct_Chg',
             'Hist21D_UD_Ratio', 'Hist21D_VW_Ret', 'Price vs 50-Day', 'Price vs 200-Day',
-            'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day'
+            'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day', '21 Day ATR %'
         ]
 
-        sub_ad = merged_ad[ad_features + ['AD_Num']].dropna()
+        sub_ad = merged_ad[ad_features + ['AD_Num', 'AD_Tier']].dropna()
         X_ad = sub_ad[ad_features]
-        y_ad = sub_ad['AD_Num']
+        y_ad_num = sub_ad['AD_Num']
+        y_ad_tier = sub_ad['AD_Tier']
 
-        X_train_ad, X_test_ad, y_train_ad, y_test_ad = train_test_split(X_ad, y_ad, test_size=0.2, random_state=42)
+        X_train_ad, X_test_ad, y_train_ad, y_test_ad, y_tr_tier, y_te_tier = train_test_split(
+            X_ad, y_ad_num, y_ad_tier, test_size=0.2, random_state=42
+        )
 
-        rf_ad = RandomForestRegressor(n_estimators=100, max_depth=12, random_state=42)
-        rf_ad.fit(X_train_ad, y_train_ad)
-        y_pred_ad = rf_ad.predict(X_test_ad)
+        # Regressor
+        et_ad = ExtraTreesRegressor(n_estimators=100, max_depth=14, random_state=42)
+        et_ad.fit(X_train_ad, y_train_ad)
+        y_pred_ad = et_ad.predict(X_test_ad)
 
         r2_ad = r2_score(y_test_ad, y_pred_ad)
         mae_ad = mean_absolute_error(y_test_ad, y_pred_ad)
 
-        print(f"21-Commit A/D Model - Random Forest R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
+        # 5-Tier Classifier
+        clf_ad = HistGradientBoostingClassifier(max_iter=200, random_state=42)
+        clf_ad.fit(X_train_ad, y_tr_tier)
+        y_pred_tier = clf_ad.predict(X_test_ad)
+
+        tier_order = {'A':5, 'B':4, 'C':3, 'D':2, 'E':1}
+        te_num = y_te_tier.map(tier_order)
+        pr_num = pd.Series(y_pred_tier, index=y_te_tier.index).map(tier_order)
+        within_1_tier_acc = (np.abs(te_num - pr_num) <= 1).mean() * 100
+
+        print(f"A/D Rating Model - ExtraTrees R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
+        print(f"A/D Rating Model - 5-Tier Classifier Within-1-Tier Accuracy: {within_1_tier_acc:.2f}%")
 
         ad_weights = pd.DataFrame({
             'Feature': ad_features,
-            'RF_Importance': rf_ad.feature_importances_
-        }).sort_values(by='RF_Importance', ascending=False)
-        ad_weights['Rel_Weight_Pct'] = ad_weights['RF_Importance'] * 100
+            'Importance': et_ad.feature_importances_
+        }).sort_values(by='Importance', ascending=False)
+        ad_weights['Rel_Weight_Pct'] = ad_weights['Importance'] * 100
 
-        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (21-Commit Historical Price/Vol)\n")
+        output_report.append("## 3. Improved Accumulation / Distribution (A/D) Rating Model\n")
         output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with 21-commit historical price & volume data")
-        output_report.append(f"- **Random Forest $R^2$**: `{r2_ad:.4f}` | **MAE**: `{mae_ad:.2f}` grade points (out of 13 scale points)\n")
-        output_report.append("### Feature Importances for 21-Commit Historical A/D Rating Model\n")
-        output_report.append(ad_weights[['Feature', 'Rel_Weight_Pct', 'RF_Importance']].to_markdown(index=False))
+        output_report.append(f"- **ExtraTrees Regressor $R^2$**: `{r2_ad:.4f}` | **MAE**: `{mae_ad:.2f}` grade points (out of 13 scale points)")
+        output_report.append(f"- **5-Tier Grade Classifier Within-1-Tier Accuracy**: `{within_1_tier_acc:.2f}%` (Predicts `A, B, C, D, E` tier correctly or within $\\pm 1$ tier)\n")
+        output_report.append("### Feature Importances for Improved A/D Rating Model\n")
+        output_report.append(ad_weights[['Feature', 'Rel_Weight_Pct', 'Importance']].to_markdown(index=False))
         output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
