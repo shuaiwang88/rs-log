@@ -5,7 +5,7 @@ update_volume_column.py
 Automates adding the single 'Volume' column (placed right after 'Price') to output/rs_stocks.csv,
 output/rs_stocks_1.csv, and output/rs_stocks_2.csv whenever new commits are fetched from upstream.
 
-Fetches the latest trading day volume via yfinance (period='1mo') for all tickers.
+Queries yfinance for ONLY the same-day trading volume (period='5d', interval='1d', taking latest bar).
 """
 
 import sys
@@ -21,14 +21,13 @@ def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
         repo_dir = Path(__file__).resolve().parent.parent
 
     output_dir = repo_dir / "output"
-    cache_dir = repo_dir / "ticker_cache"
     rs_stocks_file = output_dir / "rs_stocks.csv"
 
     if not rs_stocks_file.exists():
         print(f"Error: {rs_stocks_file} does not exist.")
         return False
 
-    print(f"🔄 Processing {rs_stocks_file} to ensure single 'Volume' column...")
+    print(f"🔄 Processing {rs_stocks_file} to add same-day 'Volume' column...")
     df = pd.read_csv(rs_stocks_file)
     tickers = df['Ticker'].dropna().tolist()
 
@@ -38,17 +37,17 @@ def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
         if c in df.columns:
             df.drop(columns=[c], inplace=True)
 
-    # Fetch latest trading day volume via yfinance
+    # Fetch ONLY same-day volume via yfinance (period='5d' gets latest trading day)
     clean_tickers = [str(t).strip().replace('.', '-') for t in tickers]
     vol_map = {}
-    batch_size = 300
+    batch_size = 400
     total = len(clean_tickers)
 
-    print(f"Fetching latest daily volume via yfinance for {total:,} tickers...")
+    print(f"Fetching same-day volume via yfinance for {total:,} tickers...")
     for i in range(0, total, batch_size):
         batch = clean_tickers[i:i + batch_size]
         try:
-            data = yf.download(batch, period='1mo', interval='1d', progress=False, group_by='ticker', threads=True)
+            data = yf.download(batch, period='5d', interval='1d', progress=False, group_by='ticker', threads=True)
             if isinstance(data.columns, pd.MultiIndex):
                 for t in batch:
                     try:
@@ -65,13 +64,13 @@ def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
                 if len(vs) > 0:
                     vol_map[batch[0]] = int(vs.iloc[-1])
         except Exception as e:
-            print(f"Notice during yfinance volume fetch (batch {i}): {e}")
+            print(f"Notice during same-day volume fetch (batch {i}): {e}")
         time.sleep(0.1)
 
-    print(f"Retrieved volume data for {len(vol_map):,} / {total:,} tickers.")
+    print(f"Retrieved same-day volume data for {len(vol_map):,} / {total:,} tickers.")
 
     # Assign Volume column
-    def get_latest_vol(row):
+    def get_same_day_vol(row):
         t = str(row['Ticker']).strip()
         if t in vol_map:
             return vol_map[t]
@@ -84,7 +83,7 @@ def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
             return int(row['AvgVol30'])
         return 0
 
-    df['Volume'] = df.apply(get_latest_vol, axis=1)
+    df['Volume'] = df.apply(get_same_day_vol, axis=1)
 
     # Position Volume column right after Price
     cols = [c for c in df.columns if c != 'Volume']
