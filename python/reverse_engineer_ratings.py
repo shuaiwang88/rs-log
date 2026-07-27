@@ -80,7 +80,8 @@ def compute_30_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
         if len(group) < 30:
             continue
         g30 = group.tail(30).copy()
-        prices = g30['Price'].values
+        price_col = 'Close' if 'Close' in g30.columns else 'Price'
+        prices = g30[price_col].values
         vols = g30['Volume'].values
         
         if len(prices) < 30 or prices[0] <= 0:

@@ -233,7 +233,7 @@ def main():
     print(f"Stocks with Funds Information: {funds_nonnull:,} ({funds_nonnull/len(df)*100:.1f}%)")
 
     print("\nSample Output (Top 5 Stocks):")
-    display_cols = ['Rank', 'Ticker', 'Price', 'Price vs 50-Day', '21 Day ATR %', 'Up/Down Vol', 'Number of Funds', 'Funds %', 'Funds % Increase']
+    display_cols = ['Rank', 'Ticker', 'Close', 'Price vs 50-Day', '21 Day ATR %', 'Up/Down Vol', 'Number of Funds', 'Funds %', 'Funds % Increase']
     avail_display = [c for c in display_cols if c in df.columns]
     print(df[avail_display].head(5).to_string(index=False))
 

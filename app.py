@@ -1429,7 +1429,7 @@ if df is None or df.empty:
     st.stop()
 
 numeric_cols = ['Rank', 'Relative Strength', 'Percentile', '1M_RS_Percentile',
-                '3M_RS_Percentile', '6M_RS_Percentile', 'Price', 'MarketCap',
+                '3M_RS_Percentile', '6M_RS_Percentile', 'Close', 'Price', 'MarketCap',
                 'Float', 'ShortFloatPct', 'PctFrom52WkHigh', 'AvgVol10',
                 'AvgVol30', 'AvgVol50', 'RevenueGrowth']
 for col in numeric_cols:
@@ -1507,7 +1507,8 @@ with tab1:
     with col1: st.metric("Total Stocks",   len(filtered_df))
     with col2: st.metric("Avg RS",         f"{filtered_df['Relative Strength'].mean():.1f}")
     with col3: st.metric("Avg Percentile", f"{filtered_df['Percentile'].mean():.1f}")
-    with col4: st.metric("Avg Price",      f"${filtered_df['Price'].mean():.2f}")
+    price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
+    with col4: st.metric("Avg Close",      f"${filtered_df[price_col].mean():.2f}")
     if has_historical:
         st.divider()
         col1, col2 = st.columns(2)
@@ -1554,8 +1555,9 @@ if has_historical:
             fig = px.line(daily_count, x='date', y='stock_count', title="Number of Stocks in Universe Over Time")
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            daily_price = filtered_df.groupby('date')['Price'].mean().reset_index()
-            fig = px.line(daily_price, x='date', y='Price', title="Average Stock Price Over Time")
+            price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
+            daily_price = filtered_df.groupby('date')[price_col].mean().reset_index()
+            fig = px.line(daily_price, x='date', y=price_col, title="Average Stock Close Price Over Time")
             st.plotly_chart(fig, use_container_width=True)
         st.divider()
         st.subheader("📊 Sector RS Trends")
@@ -1582,11 +1584,12 @@ with tab3:
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("🏆 Top 15 by Relative Strength")
-        top_rs = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Relative Strength')[['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile', 'Price']].copy()
+        price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
+        top_rs = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Relative Strength')[['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile', price_col]].copy()
         st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
         st.subheader("⭐ Top 15 by Percentile")
-        top_percentile = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Percentile')[['Rank', 'Ticker', 'Sector', 'Percentile', 'Relative Strength', 'Price']].copy()
+        top_percentile = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Percentile')[['Rank', 'Ticker', 'Sector', 'Percentile', 'Relative Strength', price_col]].copy()
         st.dataframe(top_percentile.reset_index(drop=True), use_container_width=True, hide_index=True)
     st.divider()
     col1, col2 = st.columns(2)
@@ -1605,8 +1608,9 @@ with tab3:
 with tab4:
     col1, col2 = st.columns(2)
     with col1:
-        fig = px.scatter(filtered_df, x='Price', y='Relative Strength', color='Percentile',
-                         hover_data=['Ticker', 'Sector'], title="Relative Strength vs Price",
+        price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
+        fig = px.scatter(filtered_df, x=price_col, y='Relative Strength', color='Percentile',
+                         hover_data=['Ticker', 'Sector'], title="Relative Strength vs Close Price",
                          color_continuous_scale='Viridis')
         st.plotly_chart(fig, use_container_width=True)
     with col2:
@@ -1632,7 +1636,7 @@ with tab4:
     st.divider()
     st.subheader("Key Statistics Summary")
     summary_stats = filtered_df[['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
-                                  '6M_RS_Percentile', 'Price', 'AvgVol10', 'AvgVol30', 'AvgVol50',
+                                  '6M_RS_Percentile', 'Close' if 'Close' in filtered_df.columns else 'Price', 'AvgVol10', 'AvgVol30', 'AvgVol50',
                                   'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']].describe()
     st.dataframe(summary_stats, use_container_width=True)
 
@@ -1961,7 +1965,7 @@ with (tab7 if has_historical else tab6):
                 return f"{np.log(price_value):.4f}" if show_log_price and price_value > 0 else f"${price_value:.2f}"
 
             label_map = {
-                'Sector': 'Sector', 'Industry': 'Industry', 'Price': 'Price',
+                'Sector': 'Sector', 'Industry': 'Industry', 'Close': 'Close', 'Price': 'Price',
                 'MarketCap': 'Mkt Cap', 'AvgVol30': 'Avg Vol',
                 'PctFrom52WkHigh': '52W High %', 'Relative Strength': 'RS',
                 'Percentile': 'Pctl', '1M_RS_Percentile': '1M RS',
@@ -1975,9 +1979,9 @@ with (tab7 if has_historical else tab6):
                     elif k == 'MarketCap':
                         try: val = f"${float(val)/1e9:.1f}B"
                         except: val = str(val)
-                    elif k == 'Price':
+                    elif k in ['Close', 'Price']:
                         val = get_display_price(val)
-                        display = "log Price" if show_log_price else "Price"
+                        display = "log Price" if show_log_price else "Close"
                     elif k in ['AvgVol30', 'AvgVol50', 'AvgVol10']:
                         try: val = f"{int(val):,}"
                         except: val = str(val)
@@ -2558,7 +2562,7 @@ with (tab8 if has_historical else tab7):
         table_df = filtered_df.copy()
     table_df = table_df.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
     all_cols = [c for c in table_df.columns if c not in ('date', 'source_file')]
-    default_cols = ['Rank', 'Ticker', 'Industry', '1M', '3M', '6M', 'Price', 'MarketCap', 'AvgVol30', 'PctFrom52WkHigh']
+    default_cols = ['Rank', 'Ticker', 'Industry', '1M', '3M', '6M', 'Close' if 'Close' in table_df.columns else 'Price', 'MarketCap', 'AvgVol30', 'PctFrom52WkHigh']
     selected_cols = st.multiselect("Select columns to display", all_cols, default=[c for c in default_cols if c in all_cols])
     sort_options  = selected_cols if selected_cols else all_cols
     default_sort_index = sort_options.index('Rank') if 'Rank' in sort_options else 0

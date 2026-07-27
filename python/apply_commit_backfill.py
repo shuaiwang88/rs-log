@@ -27,7 +27,7 @@ def clean_and_backfill():
 
     target_schema = [
         'Rank', 'Ticker', 'Sector', 'Industry', 'Exchange', 'Relative Strength', 'Percentile',
-        '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile', 'Price', 'Volume', 'MarketCap',
+        '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile', 'Close', 'Volume', 'MarketCap',
         'Float', 'ShortFloatPct', 'PctFrom52WkHigh', 'AvgVol10', 'AvgVol30', 'AvgVol50',
         'RevenueGrowth', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day',
         'Price vs 200-Day', '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
