@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A/D Rating)
-Using Comparative Regression Models (Linear, Ridge, Random Forest, ExtraTrees, HistGradientBoosting).
+Using Advanced Machine Learning incorporating 30-Day Historical Commit Price & Volume Records.
 """
 
 import sys
@@ -68,8 +68,8 @@ def num_to_5tier(val):
     elif val >= 2.5: return 'D'
     else: return 'E'
 
-def compute_21_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
-    print(f"Extracting heavy-volume price/volume interaction variables from {hist_file}...")
+def compute_30_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
+    print(f"Extracting 30-day historical price and volume interaction variables from {hist_file}...")
     df_hist = pd.read_csv(hist_file, low_memory=False)
     if 'date' in df_hist.columns:
         df_hist['date'] = pd.to_datetime(df_hist['date'])
@@ -77,13 +77,13 @@ def compute_21_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
 
     records = []
     for ticker, group in df_hist.groupby('Ticker'):
-        if len(group) < 21:
+        if len(group) < 30:
             continue
-        g21 = group.tail(21).copy()
-        prices = g21['Price'].values
-        vols = g21['Volume'].values
+        g30 = group.tail(30).copy()
+        prices = g30['Price'].values
+        vols = g30['Volume'].values
         
-        if len(prices) < 21 or prices[0] <= 0:
+        if len(prices) < 30 or prices[0] <= 0:
             continue
             
         p_last = prices[-1]
@@ -116,7 +116,7 @@ def compute_21_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
         
         rec = {
             'Ticker': ticker,
-            'Hist21D_Price_Pct_Chg': ret_tot,
+            'Hist30D_Price_Pct_Chg': ret_tot,
             'Heavy_Up_Vol_Sum': heavy_up_vol_sum,
             'Heavy_Dn_Vol_Sum': heavy_dn_vol_sum,
             'Heavy_Net_Ratio': heavy_net_ratio,
@@ -128,7 +128,7 @@ def compute_21_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
             'Net_Heavy_Intensity': net_heavy_intensity
         }
         
-        for i in range(20):
+        for i in range(29):
             rec[f'Ret_D{i+1}'] = price_rets[i]
             rec[f'VolRatio_D{i+1}'] = vol_ratios[i]
             rec[f'HeavyUp_D{i+1}'] = price_rets[i] * vol_ratios[i] if heavy_up_mask[i] else 0.0
@@ -305,16 +305,16 @@ def run_pipeline():
     output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # 3. COMPARATIVE ACCUMULATION / DISTRIBUTION (A/D) REGRESSION MODELS
+    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (30-DAY HISTORICAL DATA)
     # ═══════════════════════════════════════════════════════════════════════════
     print("\n" + "="*80)
-    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) REGRESSION MODELS")
+    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) REGRESSION MODELS (30 DAYS)")
     print("="*80)
 
     if hist_file.exists() and rs_stocks_file.exists():
-        df_21_feat = compute_21_commit_heavy_volume_features(hist_file)
+        df_30_feat = compute_30_commit_heavy_volume_features(hist_file)
         rs_df = pd.read_csv(rs_stocks_file, low_memory=False)
-        merged_ad = rs_df.merge(df_21_feat, on='Ticker', how='inner')
+        merged_ad = rs_df.merge(df_30_feat, on='Ticker', how='inner')
         merged_ad = merged_ad.merge(df[['Symbol', 'AD_Num', 'AD_Tier', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
 
         merged_ad['Rank_Price_50D'] = merged_ad['Price vs 50-Day'].rank(pct=True) * 100
@@ -322,7 +322,7 @@ def run_pipeline():
         merged_ad['Rank_Net_Heavy_Intensity'] = merged_ad['Net_Heavy_Intensity'].rank(pct=True) * 100
         merged_ad['Inter_50D_Heavy'] = merged_ad['Price vs 50-Day'] * merged_ad['Net_Heavy_Intensity']
 
-        daily_features = [f'Ret_D{i+1}' for i in range(20)] + [f'VolRatio_D{i+1}' for i in range(20)] + [f'HeavyUp_D{i+1}' for i in range(20)] + [f'HeavyDn_D{i+1}' for i in range(20)]
+        daily_features = [f'Ret_D{i+1}' for i in range(29)] + [f'VolRatio_D{i+1}' for i in range(29)] + [f'HeavyUp_D{i+1}' for i in range(29)] + [f'HeavyDn_D{i+1}' for i in range(29)]
         macro_features = [
             'Rank_Price_50D', 'Rank_Up_Down_Vol', 'Rank_Net_Heavy_Intensity', 'Inter_50D_Heavy',
             'Net_Heavy_Intensity', 'Heavy_Net_Ratio', 'Net_Heavy_Days', 'Heavy_Up_Intensity', 'Heavy_Dn_Intensity',
@@ -345,9 +345,9 @@ def run_pipeline():
         X_test_ad_std  = scaler_ad.transform(X_test_ad)
 
         reg_models = {
+            'HistGradientBoosting Regressor': HistGradientBoostingRegressor(max_iter=200, random_state=42),
             'Random Forest Regressor': RandomForestRegressor(n_estimators=100, max_depth=14, random_state=42),
             'ExtraTrees Regressor': ExtraTreesRegressor(n_estimators=120, max_depth=16, random_state=42),
-            'HistGradientBoosting Regressor': HistGradientBoostingRegressor(max_iter=200, random_state=42),
             'Linear Regression': LinearRegression(),
             'Ridge Regression (alpha=50)': Ridge(alpha=50.0)
         }
@@ -367,7 +367,6 @@ def run_pipeline():
             r2 = r2_score(y_test_ad, y_pred)
             mae = mean_absolute_error(y_test_ad, y_pred)
             
-            # Regression -> 5-Tier Threshold Conversion Accuracy
             pred_converted_tier = pd.Series(y_pred, index=y_te_tier.index).apply(num_to_5tier)
             tier_order = {'A':5, 'B':4, 'C':3, 'D':2, 'E':1}
             te_num = y_te_tier.map(tier_order)
@@ -388,15 +387,22 @@ def run_pipeline():
         reg_df = pd.DataFrame(reg_results)
         print("\n" + reg_df.to_string(index=False))
 
+        if hasattr(best_model, 'feature_importances_'):
+            imps = best_model.feature_importances_
+        elif hasattr(best_model, 'coef_'):
+            imps = np.abs(best_model.coef_)
+        else:
+            imps = np.ones(len(ad_features))
+
         ad_weights = pd.DataFrame({
             'Feature': ad_features,
-            'Importance': best_model.feature_importances_ if hasattr(best_model, 'feature_importances_') else np.abs(best_model.coef_)
+            'Importance': imps
         }).sort_values(by='Importance', ascending=False)
         ad_weights['Rel_Weight_Pct'] = (ad_weights['Importance'] / ad_weights['Importance'].sum()) * 100
 
-        output_report.append("## 3. Comparative Accumulation / Distribution (A/D) Regression Models\n")
-        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with Heavy-Volume Up/Down Interaction Variables\n")
-        output_report.append("### Comparative Regression Performance Table\n")
+        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (30-Day Historical Data)\n")
+        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with 30-Day Historical Price & Volume Records\n")
+        output_report.append("### Comparative Regression Performance Table (30-Day Window)\n")
         output_report.append(reg_df.to_markdown(index=False))
         output_report.append("\n")
         output_report.append("### Top 15 Feature Importances for Best Regression Model\n")
