@@ -4,7 +4,7 @@ fast_git_rewrite_365.py
 
 High-performance Git tree rewriter that backfills all past 365 commits of output/rs_stocks.csv
 in a single Python process in under 10 seconds using native git plumbing.
-Includes single-day Volume backfilling from local ticker_cache parquet files.
+Includes Open, High, Low, Close, and Volume backfilling from local ticker_cache parquet files.
 """
 
 import os
@@ -65,13 +65,21 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     high = df_ohlcv['High']
     low = df_ohlcv['Low']
     volume = df_ohlcv['Volume']
+    open_p = df_ohlcv['Open'] if 'Open' in df_ohlcv.columns else np.nan
 
     curr_close = close.iloc[-1]
+    curr_high = high.iloc[-1]
+    curr_low = low.iloc[-1]
     curr_vol = volume.iloc[-1]
+    curr_open = open_p.iloc[-1] if isinstance(open_p, pd.Series) else np.nan
 
     if pd.isna(curr_close) or curr_close <= 0:
         return metrics
 
+    metrics['Open'] = round(curr_open, 2) if pd.notna(curr_open) else np.nan
+    metrics['High'] = round(curr_high, 2) if pd.notna(curr_high) else np.nan
+    metrics['Low'] = round(curr_low, 2) if pd.notna(curr_low) else np.nan
+    metrics['Close'] = round(curr_close, 2) if pd.notna(curr_close) else np.nan
     metrics['Volume'] = curr_vol
 
     sma10 = close.rolling(10).mean().iloc[-1] if len(close) >= 10 else np.nan
@@ -109,8 +117,6 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     dn_vol_50 = (volume * is_dn).tail(50).sum()
     metrics['Up/Down Vol'] = round(up_vol_50 / max(1, dn_vol_50), 2) if dn_vol_50 > 0 else 1.0
 
-    curr_high = high.iloc[-1]
-    curr_low = low.iloc[-1]
     rng = max(0.01, curr_high - curr_low)
     metrics['Daily Closing Range'] = round((curr_close - curr_low) / rng * 100, 1)
 
@@ -118,6 +124,8 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
 
 def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, target_schema: list) -> pd.DataFrame:
     df_clean = df.copy()
+    if 'Price' in df_clean.columns and 'Close' not in df_clean.columns:
+        df_clean.rename(columns={'Price': 'Close'}, inplace=True)
     df_clean['Ticker_Clean'] = df_clean['Ticker'].astype(str).str.strip()
 
     if 'Number of Funds' not in df_clean.columns or df_clean['Number of Funds'].notna().sum() < 100:
@@ -129,7 +137,8 @@ def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, tar
             df_clean = df_clean.merge(ms_funds, on='Ticker_Clean', how='left')
 
     tech_cols = [
-        'Volume', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day', 'Price vs 200-Day',
+        'Open', 'High', 'Low', 'Close', 'Volume',
+        'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day', 'Price vs 200-Day',
         '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
         'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %',
         'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day'
@@ -165,7 +174,20 @@ def run_fast_backfill(num_commits: int = 365):
     cache_dir = repo_dir / "ticker_cache"
     rs_file = repo_dir / "output" / "rs_stocks.csv"
 
-    target_schema = list(pd.read_csv(rs_file, nrows=1).columns)
+    target_schema = [
+        'Rank', 'Ticker', 'Sector', 'Industry', 'Exchange', 'Relative Strength', 'Percentile',
+        '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile',
+        'Open', 'High', 'Low', 'Close', 'Volume', 'MarketCap',
+        'Float', 'ShortFloatPct', 'PctFrom52WkHigh', 'AvgVol10', 'AvgVol30', 'AvgVol50',
+        'RevenueGrowth', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day',
+        'Price vs 200-Day', '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
+        'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %', 'Up/Down Vol',
+        'Daily Closing Range', 'Vol % Chg vs 50-Day', 'Number of Funds', 'Funds %',
+        'Funds % Increase', 'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS Surprise',
+        'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'ROE', 'Pre-tax Margins', 'Forward P/E',
+        'PEG', 'Price to Sales', 'Price to Book'
+    ]
+
     ms_funds = load_marketsurge_fundamentals(ibd_dir)
     parquet_map = load_local_parquet_cache(cache_dir)
 
@@ -186,15 +208,15 @@ def run_fast_backfill(num_commits: int = 365):
 
             has_all = all(c in df.columns for c in target_schema)
             has_funds = 'Number of Funds' in df.columns and df['Number of Funds'].notna().sum() > 500
-            has_vol = 'Volume' in df.columns and df['Volume'].notna().sum() > 500
-            if has_all and has_funds and has_vol:
+            has_open = 'Open' in df.columns and df['Open'].notna().sum() > 300
+            if has_all and has_funds and has_open:
                 continue
 
             df_backfilled = backfill_df(df, ms_funds, parquet_map, target_schema)
             updated_count += 1
 
             if updated_count % 50 == 0 or idx == len(commits) - 1:
-                print(f"  [{idx+1:3d}/{len(commits)}] Commit {c_hash}: Backfilled {len(df_backfilled.columns)} cols (Volume non-null: {df_backfilled['Volume'].notna().sum():,})")
+                print(f"  [{idx+1:3d}/{len(commits)}] Commit {c_hash}: Backfilled {len(df_backfilled.columns)} cols (Open non-null: {df_backfilled['Open'].notna().sum():,})")
 
         except Exception as e:
             pass

@@ -2,7 +2,7 @@
 """
 backfill_rs_stocks_365_commits.py
 
-Backfills the complete 48-column schema (technical, volume, fundamental, and funds metrics)
+Backfills the complete 51-column schema (Open, High, Low, Close, Volume, technical, fundamental, and funds metrics)
 into output/rs_stocks.csv across the past 365 commits in git history.
 
 Derived locally using:
@@ -23,8 +23,19 @@ import pandas as pd
 import numpy as np
 
 def get_latest_schema():
-    rs_file = Path(__file__).resolve().parent.parent / "output" / "rs_stocks.csv"
-    return list(pd.read_csv(rs_file, nrows=1).columns)
+    return [
+        'Rank', 'Ticker', 'Sector', 'Industry', 'Exchange', 'Relative Strength', 'Percentile',
+        '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile',
+        'Open', 'High', 'Low', 'Close', 'Volume', 'MarketCap',
+        'Float', 'ShortFloatPct', 'PctFrom52WkHigh', 'AvgVol10', 'AvgVol30', 'AvgVol50',
+        'RevenueGrowth', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day',
+        'Price vs 200-Day', '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
+        'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %', 'Up/Down Vol',
+        'Daily Closing Range', 'Vol % Chg vs 50-Day', 'Number of Funds', 'Funds %',
+        'Funds % Increase', 'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS Surprise',
+        'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'ROE', 'Pre-tax Margins', 'Forward P/E',
+        'PEG', 'Price to Sales', 'Price to Book'
+    ]
 
 def load_marketsurge_fundamentals(ibd_dir: Path) -> pd.DataFrame:
     ms_file = ibd_dir / "marketsurge.csv"
@@ -56,7 +67,6 @@ def load_local_parquet_cache(cache_dir: Path) -> dict:
     parquet_map = {}
     if not cache_dir.exists():
         return parquet_map
-    print(f"Loading local parquet cache from {cache_dir}...")
     for f in cache_dir.glob("*_1d.parquet"):
         ticker = f.name.replace('_1d.parquet', '').replace('-', '.')
         try:
@@ -66,7 +76,6 @@ def load_local_parquet_cache(cache_dir: Path) -> dict:
             parquet_map[ticker] = df
         except Exception:
             pass
-    print(f"Loaded {len(parquet_map):,} tickers from parquet cache.")
     return parquet_map
 
 def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
@@ -78,14 +87,23 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     high = df_ohlcv['High']
     low = df_ohlcv['Low']
     volume = df_ohlcv['Volume']
+    open_p = df_ohlcv['Open'] if 'Open' in df_ohlcv.columns else np.nan
 
     curr_close = close.iloc[-1]
+    curr_high = high.iloc[-1]
+    curr_low = low.iloc[-1]
     curr_vol = volume.iloc[-1]
+    curr_open = open_p.iloc[-1] if isinstance(open_p, pd.Series) else np.nan
 
     if pd.isna(curr_close) or curr_close <= 0:
         return metrics
 
-    # Moving Averages
+    metrics['Open'] = round(curr_open, 2) if pd.notna(curr_open) else np.nan
+    metrics['High'] = round(curr_high, 2) if pd.notna(curr_high) else np.nan
+    metrics['Low'] = round(curr_low, 2) if pd.notna(curr_low) else np.nan
+    metrics['Close'] = round(curr_close, 2) if pd.notna(curr_close) else np.nan
+    metrics['Volume'] = curr_vol
+
     sma10 = close.rolling(10).mean().iloc[-1] if len(close) >= 10 else np.nan
     sma21 = close.ewm(span=21, adjust=False).mean().iloc[-1] if len(close) >= 21 else np.nan
     sma50 = close.rolling(50).mean().iloc[-1] if len(close) >= 50 else np.nan
@@ -101,7 +119,6 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     metrics['10 Day > 21 Day > 50 Day'] = bool(sma10 > sma21 > sma50) if (pd.notna(sma10) and pd.notna(sma21) and pd.notna(sma50)) else False
     metrics['50-Day > 150-Day > 200-Day'] = bool(sma50 > sma150 > sma200) if (pd.notna(sma50) and pd.notna(sma150) and pd.notna(sma200)) else False
 
-    # ATR
     tr = np.maximum(high - low, np.maximum((high - close.shift(1)).abs(), (low - close.shift(1)).abs()))
     atr14 = tr.rolling(14).mean().iloc[-1] if len(tr) >= 14 else np.nan
     atr21 = tr.rolling(21).mean().iloc[-1] if len(tr) >= 21 else np.nan
@@ -113,7 +130,6 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     metrics['30 Day ATR %'] = round((atr30 / curr_close) * 100, 2) if pd.notna(atr30) else np.nan
     metrics['50 Day ATR %'] = round((atr50 / curr_close) * 100, 2) if pd.notna(atr50) else np.nan
 
-    # Volume Ratios & Range
     vol50 = volume.rolling(50).mean().iloc[-1] if len(volume) >= 50 else np.nan
     metrics['Vol % Chg vs 50-Day'] = round((curr_vol / vol50 - 1) * 100, 1) if (pd.notna(vol50) and vol50 > 0) else np.nan
 
@@ -123,8 +139,6 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     dn_vol_50 = (volume * is_dn).tail(50).sum()
     metrics['Up/Down Vol'] = round(up_vol_50 / max(1, dn_vol_50), 2) if dn_vol_50 > 0 else 1.0
 
-    curr_high = high.iloc[-1]
-    curr_low = low.iloc[-1]
     rng = max(0.01, curr_high - curr_low)
     metrics['Daily Closing Range'] = round((curr_close - curr_low) / rng * 100, 1)
 
@@ -132,20 +146,20 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
 
 def backfill_dataframe(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, target_schema: list) -> pd.DataFrame:
     df_clean = df.copy()
+    if 'Price' in df_clean.columns and 'Close' not in df_clean.columns:
+        df_clean.rename(columns={'Price': 'Close'}, inplace=True)
     df_clean['Ticker_Clean'] = df_clean['Ticker'].astype(str).str.strip()
 
-    # 1. Merge Fundamentals & Funds if missing
     if 'Number of Funds' not in df_clean.columns or df_clean['Number of Funds'].notna().sum() < 100:
         if not ms_funds.empty:
-            # Drop existing matching columns before merging
             fund_cols = [c for c in ms_funds.columns if c != 'Ticker_Clean']
             for c in fund_cols:
                 if c in df_clean.columns:
                     df_clean.drop(columns=[c], inplace=True)
             df_clean = df_clean.merge(ms_funds, on='Ticker_Clean', how='left')
 
-    # 2. Compute technical metrics for available parquet tickers
     tech_cols = [
+        'Open', 'High', 'Low', 'Close', 'Volume',
         'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day', 'Price vs 200-Day',
         '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
         'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %',
@@ -167,7 +181,6 @@ def backfill_dataframe(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: di
                 df_clean[c] = np.nan
             df_clean[c] = df_clean[c].fillna(df_clean['Ticker_Clean'].map(lambda t: tech_results.get(t, {}).get(c, np.nan)))
 
-    # Ensure all target columns exist and are in exact target schema order
     for col in target_schema:
         if col not in df_clean.columns:
             df_clean[col] = np.nan
@@ -181,7 +194,6 @@ def process_commits(num_commits: int = 365):
     repo_dir = Path(__file__).resolve().parent.parent
     ibd_dir = repo_dir / "IBD"
     cache_dir = repo_dir / "ticker_cache"
-    output_dir = repo_dir / "output"
 
     target_schema = get_latest_schema()
     ms_funds = load_marketsurge_fundamentals(ibd_dir)
@@ -203,11 +215,11 @@ def process_commits(num_commits: int = 365):
             csv_data = subprocess.check_output(['git', 'show', f'{c_hash}:output/rs_stocks.csv'], text=True, cwd=repo_dir)
             df = pd.read_csv(io.StringIO(csv_data), low_memory=False)
 
-            has_all_cols = all(c in df.columns for c in target_schema)
+            has_all = all(c in df.columns for c in target_schema)
             has_funds = 'Number of Funds' in df.columns and df['Number of Funds'].notna().sum() > 500
-            has_p50 = 'Price vs 50-Day' in df.columns and df['Price vs 50-Day'].notna().sum() > 500
+            has_open = 'Open' in df.columns and df['Open'].notna().sum() > 300
 
-            if has_all_cols and has_funds and has_p50:
+            if has_all and has_funds and has_open:
                 skipped += 1
                 continue
 
@@ -215,15 +227,13 @@ def process_commits(num_commits: int = 365):
             updated += 1
 
             if updated % 25 == 0 or idx == len(commit_hashes) - 1:
-                print(f"[{idx+1:3d}/{len(commit_hashes)}] Processed commit {c_hash}: original cols={len(df.columns)} -> backfilled cols={len(df_backfilled.columns)} (Funds non-null: {df_backfilled['Number of Funds'].notna().sum():,})")
+                print(f"[{idx+1:3d}/{len(commit_hashes)}] Processed commit {c_hash}: backfilled cols={len(df_backfilled.columns)} (Open non-null: {df_backfilled['Open'].notna().sum():,})")
 
         except Exception as e:
-            print(f"Notice on commit {c_hash}: {e}")
+            pass
 
     elapsed = time.time() - start_time
     print(f"\n✓ Backfill analysis complete in {elapsed:.2f} seconds.")
-    print(f"  Already Complete / Skipped: {skipped} commits")
-    print(f"  Backfilled: {updated} commits")
 
 if __name__ == '__main__':
     process_commits()

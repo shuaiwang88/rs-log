@@ -8,13 +8,14 @@ Derives and backfills 100% complete MarketSurge technical, volume, fundamental, 
   - output/rs_stocks_2.csv
   - output/rs_stocks_historical.csv
 
-Columns included:
-  1. Price MAs: Price vs 10-Day, Price vs 21-Day, Price vs 50-Day, Price vs 150-Day, Price vs 200-Day
-  2. MA Trend Alignments: 10 Day > 21 Day > 50 Day, 50-Day > 150-Day > 200-Day
-  3. Volatility / ATR: Avg True Range, 21 Day ATR %, 30 Day ATR %, 50 Day ATR %
-  4. Volume Ratios & Range: Up/Down Vol, Daily Closing Range, Vol % Chg vs 50-Day
-  5. Funds & Sponsorship: Number of Funds, Funds %, Funds % Increase
-  6. Fundamentals: Avg EPS % Chg 6Q, Avg EPS % Chg 4Q, EPS % Chg Last Qtr, EPS Surprise,
+Columns included (51 columns):
+  1. Prices & Volume: Open, High, Low, Close, Volume
+  2. Price MAs: Price vs 10-Day, Price vs 21-Day, Price vs 50-Day, Price vs 150-Day, Price vs 200-Day
+  3. MA Trend Alignments: 10 Day > 21 Day > 50 Day, 50-Day > 150-Day > 200-Day
+  4. Volatility / ATR: Avg True Range, 21 Day ATR %, 30 Day ATR %, 50 Day ATR %
+  5. Volume Ratios & Range: Up/Down Vol, Daily Closing Range, Vol % Chg vs 50-Day
+  6. Funds & Sponsorship: Number of Funds, Funds %, Funds % Increase
+  7. Fundamentals: Avg EPS % Chg 6Q, Avg EPS % Chg 4Q, EPS % Chg Last Qtr, EPS Surprise,
                    Avg Sales % Chg 6Q, Avg Sales % Chg 4Q, Sales % Chg Last Qtr,
                    ROE, Pre-tax Margins, Forward P/E, PEG, Price to Sales, Price to Book
 """
@@ -23,10 +24,8 @@ import sys
 import os
 import time
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import numpy as np
-import yfinance as yf
 
 def compute_ticker_derived_metrics(df_ohlcv: pd.DataFrame) -> dict:
     metrics = {}
@@ -41,12 +40,22 @@ def compute_ticker_derived_metrics(df_ohlcv: pd.DataFrame) -> dict:
     high = df['High']
     low = df['Low']
     volume = df['Volume']
+    open_p = df['Open'] if 'Open' in df.columns else np.nan
 
     curr_close = close.iloc[-1]
+    curr_high = high.iloc[-1]
+    curr_low = low.iloc[-1]
     curr_vol = volume.iloc[-1]
+    curr_open = open_p.iloc[-1] if isinstance(open_p, pd.Series) else np.nan
 
     if pd.isna(curr_close) or curr_close <= 0:
         return metrics
+
+    metrics['Open'] = round(curr_open, 2) if pd.notna(curr_open) else np.nan
+    metrics['High'] = round(curr_high, 2) if pd.notna(curr_high) else np.nan
+    metrics['Low'] = round(curr_low, 2) if pd.notna(curr_low) else np.nan
+    metrics['Close'] = round(curr_close, 2) if pd.notna(curr_close) else np.nan
+    metrics['Volume'] = curr_vol
 
     # Moving Averages
     sma10 = close.rolling(10).mean().iloc[-1] if len(close) >= 10 else np.nan
@@ -86,19 +95,15 @@ def compute_ticker_derived_metrics(df_ohlcv: pd.DataFrame) -> dict:
     dn_vol_50 = (volume * is_dn).tail(50).sum()
     metrics['Up/Down Vol'] = round(up_vol_50 / max(1, dn_vol_50), 2) if dn_vol_50 > 0 else 1.0
 
-    curr_high = high.iloc[-1]
-    curr_low = low.iloc[-1]
     rng = max(0.01, curr_high - curr_low)
     metrics['Daily Closing Range'] = round((curr_close - curr_low) / rng * 100, 1)
 
     return metrics
 
-def batch_compute_technical_metrics(tickers: list, cache_dir: Path, batch_size: int = 500) -> dict:
-    """Compute technical metrics for ALL tickers using local cache + yfinance batching."""
+def batch_compute_technical_metrics(tickers: list, cache_dir: Path) -> dict:
     tech_map = {}
     clean_tickers = [str(t).strip() for t in tickers if pd.notna(t)]
 
-    # 1. Local parquet cache
     print("Reading local ticker_cache parquet files...")
     cached_count = 0
     for t_str in clean_tickers:
@@ -116,40 +121,6 @@ def batch_compute_technical_metrics(tickers: list, cache_dir: Path, batch_size: 
                 pass
 
     print(f"Retrieved technical metrics for {cached_count:,} stocks from local cache.")
-
-    # 2. Batch download missing tickers via yfinance
-    missing = [t.replace('.', '-') for t in clean_tickers if t not in tech_map]
-    if missing:
-        print(f"Batch downloading yfinance OHLCV for {len(missing):,} missing tickers in batches of {batch_size}...")
-        for i in range(0, len(missing), batch_size):
-            batch = missing[i:i + batch_size]
-            print(f"  Batch {i//batch_size + 1}/{(len(missing)+batch_size-1)//batch_size} ({len(batch)} tickers)...", end="", flush=True)
-            try:
-                data = yf.download(batch, period='1y', interval='1d', progress=False, group_by='ticker', threads=True)
-                acquired = 0
-                if isinstance(data.columns, pd.MultiIndex):
-                    for t in batch:
-                        try:
-                            if t in data.columns.levels[0]:
-                                sub = data[t].dropna(how='all')
-                                metrics = compute_ticker_derived_metrics(sub)
-                                if metrics:
-                                    tech_map[t] = metrics
-                                    tech_map[t.replace('-', '.')] = metrics
-                                    acquired += 1
-                        except Exception:
-                            pass
-                elif 'Close' in data.columns:
-                    metrics = compute_ticker_derived_metrics(data)
-                    if metrics:
-                        tech_map[batch[0]] = metrics
-                        acquired += 1
-                print(f" Done ({acquired}/{len(batch)} acquired).")
-            except Exception as e:
-                print(f" Notice: {e}")
-            time.sleep(0.2)
-
-    print(f"Total tickers with complete technical metrics: {len(tech_map):,} / {len(clean_tickers):,}")
     return tech_map
 
 def main():
@@ -170,10 +141,10 @@ def main():
     tickers = df['Ticker'].dropna().tolist()
     start_time = time.time()
 
-    # Step 1: Compute technical metrics for ALL tickers
     tech_map = batch_compute_technical_metrics(tickers, cache_dir)
 
     tech_cols = [
+        'Open', 'High', 'Low', 'Volume',
         'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day', 'Price vs 200-Day',
         '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
         'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %',
@@ -181,13 +152,10 @@ def main():
     ]
 
     for col in tech_cols:
-        df[col] = df['Ticker'].map(lambda t: tech_map.get(str(t).strip(), {}).get(col, np.nan))
+        if col not in df.columns:
+            df[col] = np.nan
+        df[col] = df[col].fillna(df['Ticker'].map(lambda t: tech_map.get(str(t).strip(), {}).get(col, np.nan)))
 
-    # Remove 'Insiders %' if present
-    if 'Insiders %' in df.columns:
-        df.drop(columns=['Insiders %'], inplace=True)
-
-    # Step 2: Merge Funds info + static quarterly fundamental metrics from MarketSurge dataset
     ms_file = ibd_dir / "marketsurge.csv"
     fund_cols = [
         'Number of Funds', 'Funds %', 'Funds % Increase',
@@ -210,57 +178,51 @@ def main():
             avail_fund = [c for c in fund_cols if c in ms_df.columns]
             if avail_fund:
                 ms_sub = ms_df[[sym_col] + avail_fund].drop_duplicates(subset=[sym_col])
-                
-                # Drop existing duplicate columns before merge
                 for c in avail_fund:
                     if c in df.columns:
                         df.drop(columns=[c], inplace=True)
-                        
                 df = df.merge(ms_sub, left_on='Ticker', right_on=sym_col, how='left')
                 if sym_col != 'Ticker' and sym_col in df.columns:
                     df.drop(columns=[sym_col], inplace=True)
-                print(f"Merged {len(avail_fund)} fundamental & funds columns: {avail_fund}")
+
+    target_schema = [
+        'Rank', 'Ticker', 'Sector', 'Industry', 'Exchange', 'Relative Strength', 'Percentile',
+        '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile',
+        'Open', 'High', 'Low', 'Close', 'Volume', 'MarketCap',
+        'Float', 'ShortFloatPct', 'PctFrom52WkHigh', 'AvgVol10', 'AvgVol30', 'AvgVol50',
+        'RevenueGrowth', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day',
+        'Price vs 200-Day', '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
+        'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %', 'Up/Down Vol',
+        'Daily Closing Range', 'Vol % Chg vs 50-Day', 'Number of Funds', 'Funds %',
+        'Funds % Increase', 'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS Surprise',
+        'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'ROE', 'Pre-tax Margins', 'Forward P/E',
+        'PEG', 'Price to Sales', 'Price to Book'
+    ]
+
+    for col in target_schema:
+        if col not in df.columns:
+            df[col] = np.nan
+
+    df = df[target_schema]
 
     elapsed = time.time() - start_time
     print(f"\n✓ Completed full dataset derivation in {elapsed:.2f} seconds.")
-
-    # Data Coverage Check
-    p50_nonnull = df['Price vs 50-Day'].notna().sum()
-    funds_nonnull = df['Number of Funds'].notna().sum() if 'Number of Funds' in df.columns else 0
-    print(f"\n--- DATA COVERAGE METRICS ---")
-    print(f"Total Stocks: {len(df):,}")
-    print(f"Stocks with Price vs 50-Day: {p50_nonnull:,} ({p50_nonnull/len(df)*100:.1f}%)")
-    print(f"Stocks with Funds Information: {funds_nonnull:,} ({funds_nonnull/len(df)*100:.1f}%)")
-
-    print("\nSample Output (Top 5 Stocks):")
-    display_cols = ['Rank', 'Ticker', 'Close', 'Price vs 50-Day', '21 Day ATR %', 'Up/Down Vol', 'Number of Funds', 'Funds %', 'Funds % Increase']
-    avail_display = [c for c in display_cols if c in df.columns]
-    print(df[avail_display].head(5).to_string(index=False))
 
     # Save output/rs_stocks.csv
     df.to_csv(rs_stocks_file, index=False)
     print(f"\nSaved updated {rs_stocks_file} ({len(df):,} rows, {len(df.columns)} columns)")
 
-    # Split into rs_stocks_1.csv and rs_stocks_2.csv
-    n = len(df)
-    mid = n // 2
-    df1 = df.iloc[:mid]
-    df2 = df.iloc[mid:]
-
+    mid = len(df) // 2
     df1_path = output_dir / "rs_stocks_1.csv"
     df2_path = output_dir / "rs_stocks_2.csv"
+    df.iloc[:mid].to_csv(df1_path, index=False)
+    df.iloc[mid:].to_csv(df2_path, index=False)
+    print(f"Saved split files {df1_path} and {df2_path}")
 
-    df1.to_csv(df1_path, index=False)
-    df2.to_csv(df2_path, index=False)
-    print(f"Saved {df1_path} ({len(df1):,} rows)")
-    print(f"Saved {df2_path} ({len(df2):,} rows)")
-
-    # Also update rs_stocks_historical.csv
     hist_file = output_dir / "rs_stocks_historical.csv"
     if hist_file.exists():
         print(f"\nUpdating {hist_file} with full column schema...")
         hdf = pd.read_csv(hist_file, low_memory=False)
-        # Ensure column order matches rs_stocks.csv
         for c in df.columns:
             if c not in hdf.columns:
                 hdf[c] = np.nan
