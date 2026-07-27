@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A/D Rating)
-Using Machine Learning (Linear Regression, Ridge, Random Forest) on MarketSurge & Derived Technical Data.
+Using Machine Learning (Linear Regression, Ridge, Random Forest) on MarketSurge & 21-Commit Historical Data.
 """
 
 import sys
@@ -56,10 +56,65 @@ def smr_grade_to_num(val):
     }
     return mapping.get(s, np.nan)
 
+def compute_21_commit_historical_features(hist_file: Path) -> pd.DataFrame:
+    print(f"Reading historical commit records from {hist_file}...")
+    df_hist = pd.read_csv(hist_file, low_memory=False)
+    if 'date' in df_hist.columns:
+        df_hist['date'] = pd.to_datetime(df_hist['date'])
+        df_hist = df_hist.sort_values(by=['Ticker', 'date'])
+
+    records = []
+    for ticker, group in df_hist.groupby('Ticker'):
+        if len(group) < 5:
+            continue
+        g21 = group.tail(21).copy()
+        prices = g21['Price'].values
+        vols = g21['Volume'].values
+        
+        if len(prices) < 5 or prices[0] <= 0:
+            continue
+            
+        p_last = prices[-1]
+        p_first = prices[0]
+        ret_tot = (p_last / p_first - 1) * 100
+        
+        price_diff = np.diff(prices)
+        vol_diff = np.diff(vols)
+        vol_tail = vols[1:]
+        
+        is_up = price_diff > 0
+        is_dn = price_diff < 0
+        
+        up_vol_sum = np.sum(vol_tail[is_up])
+        dn_vol_sum = np.sum(vol_tail[is_dn])
+        ud_ratio_21 = up_vol_sum / max(1, dn_vol_sum)
+        
+        acc_days = np.sum((price_diff > 0) & (vol_diff > 0))
+        dist_days = np.sum((price_diff < 0) & (vol_diff > 0))
+        net_acc_days = acc_days - dist_days
+        
+        mean_vol = max(1, np.mean(vols))
+        safe_prices = np.where(prices[:-1] == 0, 1.0, prices[:-1])
+        daily_rets = price_diff / safe_prices
+        vw_ret = np.sum(daily_rets * (vol_tail / mean_vol))
+        
+        records.append({
+            'Ticker': ticker,
+            'Hist21D_Price_Pct_Chg': ret_tot,
+            'Hist21D_UD_Ratio': ud_ratio_21,
+            'Hist21D_Acc_Days': int(acc_days),
+            'Hist21D_Dist_Days': int(dist_days),
+            'Hist21D_Net_Acc_Days': int(net_acc_days),
+            'Hist21D_VW_Ret': vw_ret
+        })
+
+    return pd.DataFrame(records)
+
 def run_pipeline():
     repo_dir = Path(__file__).resolve().parent.parent
     csv_path = repo_dir / "IBD" / "marketsurge.csv"
     rs_stocks_file = repo_dir / "output" / "rs_stocks.csv"
+    hist_file = repo_dir / "output" / "rs_stocks_historical.csv"
 
     if not csv_path.exists():
         print(f"Error: CSV file not found at {csv_path}")
@@ -221,31 +276,38 @@ def run_pipeline():
     output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (50-Day Price/Vol)
+    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (21-Commit Git History Data)
     # ═══════════════════════════════════════════════════════════════════════════
     print("\n" + "="*80)
-    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING")
+    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING (21 COMMITS)")
     print("="*80)
 
-    if rs_stocks_file.exists():
+    if hist_file.exists() and rs_stocks_file.exists():
+        df_21_feat = compute_21_commit_historical_features(hist_file)
         rs_df = pd.read_csv(rs_stocks_file, low_memory=False)
-        merged_ad = rs_df.merge(df[['Symbol', 'AD_Num', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
-        ad_features = ['Price vs 50-Day', 'Price vs 200-Day', 'Up/Down Vol', '21 Day ATR %', 'Price vs 21-Day', 'Vol % Chg vs 50-Day', 'Price vs 10-Day', 'Daily Closing Range']
-        
+        merged_ad = rs_df.merge(df_21_feat, on='Ticker', how='inner')
+        merged_ad = merged_ad.merge(df[['Symbol', 'AD_Num', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
+
+        ad_features = [
+            'Hist21D_Net_Acc_Days', 'Hist21D_Acc_Days', 'Hist21D_Dist_Days', 'Hist21D_Price_Pct_Chg',
+            'Hist21D_UD_Ratio', 'Hist21D_VW_Ret', 'Price vs 50-Day', 'Price vs 200-Day',
+            'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day'
+        ]
+
         sub_ad = merged_ad[ad_features + ['AD_Num']].dropna()
         X_ad = sub_ad[ad_features]
         y_ad = sub_ad['AD_Num']
 
         X_train_ad, X_test_ad, y_train_ad, y_test_ad = train_test_split(X_ad, y_ad, test_size=0.2, random_state=42)
 
-        rf_ad = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
+        rf_ad = RandomForestRegressor(n_estimators=100, max_depth=12, random_state=42)
         rf_ad.fit(X_train_ad, y_train_ad)
         y_pred_ad = rf_ad.predict(X_test_ad)
 
         r2_ad = r2_score(y_test_ad, y_pred_ad)
         mae_ad = mean_absolute_error(y_test_ad, y_pred_ad)
 
-        print(f"A/D Rating Model - Random Forest R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
+        print(f"21-Commit A/D Model - Random Forest R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
 
         ad_weights = pd.DataFrame({
             'Feature': ad_features,
@@ -253,10 +315,10 @@ def run_pipeline():
         }).sort_values(by='RF_Importance', ascending=False)
         ad_weights['Rel_Weight_Pct'] = ad_weights['RF_Importance'] * 100
 
-        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (13-Week / 50-Day Window)\n")
-        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks")
-        output_report.append(f"- **Random Forest $R^2$**: `{r2_ad:.4f}` | **MAE**: `{mae_ad:.2f}` grade steps (out of 13 scale points)\n")
-        output_report.append("### Feature Importances for 13-Week A/D Accumulation Score\n")
+        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (21-Commit Historical Price/Vol)\n")
+        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with 21-commit historical price & volume data")
+        output_report.append(f"- **Random Forest $R^2$**: `{r2_ad:.4f}` | **MAE**: `{mae_ad:.2f}` grade points (out of 13 scale points)\n")
+        output_report.append("### Feature Importances for 21-Commit Historical A/D Rating Model\n")
         output_report.append(ad_weights[['Feature', 'Rel_Weight_Pct', 'RF_Importance']].to_markdown(index=False))
         output_report.append("\n")
 
