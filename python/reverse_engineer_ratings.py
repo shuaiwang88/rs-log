@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A/D Rating)
-Using Advanced Machine Learning incorporating Heavy-Volume Up/Down Price-Volume Interaction Variables.
+Using Comparative Regression Models (Linear, Ridge, Random Forest, ExtraTrees, HistGradientBoosting).
 """
 
 import sys
@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, HistGradientBoostingRegressor
 from sklearn.metrics import r2_score, mean_absolute_error, accuracy_score
 
 def clean_num(val):
@@ -99,7 +99,6 @@ def compute_21_commit_heavy_volume_features(hist_file: Path) -> pd.DataFrame:
         price_rets = price_diff / safe_prices
         vol_ratios = vol_tail / mean_vol
         
-        # Heavy-Volume Up & Down Days (Volume > 1.2x average)
         heavy_up_mask = (price_rets > 0) & (vol_ratios > 1.2)
         heavy_dn_mask = (price_rets < 0) & (vol_ratios > 1.2)
         
@@ -306,10 +305,10 @@ def run_pipeline():
     output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODEL (HEAVY-VOLUME INTERACTIONS)
+    # 3. COMPARATIVE ACCUMULATION / DISTRIBUTION (A/D) REGRESSION MODELS
     # ═══════════════════════════════════════════════════════════════════════════
     print("\n" + "="*80)
-    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING")
+    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) REGRESSION MODELS")
     print("="*80)
 
     if hist_file.exists() and rs_stocks_file.exists():
@@ -318,7 +317,6 @@ def run_pipeline():
         merged_ad = rs_df.merge(df_21_feat, on='Ticker', how='inner')
         merged_ad = merged_ad.merge(df[['Symbol', 'AD_Num', 'AD_Tier', 'A/D Rating']], left_on='Ticker', right_on='Symbol', how='inner')
 
-        # Percentile Rank Scaling
         merged_ad['Rank_Price_50D'] = merged_ad['Price vs 50-Day'].rank(pct=True) * 100
         merged_ad['Rank_Up_Down_Vol'] = merged_ad['Up/Down Vol'].rank(pct=True) * 100
         merged_ad['Rank_Net_Heavy_Intensity'] = merged_ad['Net_Heavy_Intensity'].rank(pct=True) * 100
@@ -342,36 +340,66 @@ def run_pipeline():
             X_ad, y_ad_num, y_ad_tier, test_size=0.2, random_state=42
         )
 
-        et_ad = ExtraTreesRegressor(n_estimators=120, max_depth=16, random_state=42)
-        et_ad.fit(X_train_ad, y_train_ad)
-        y_pred_ad = et_ad.predict(X_test_ad)
+        scaler_ad = StandardScaler()
+        X_train_ad_std = scaler_ad.fit_transform(X_train_ad)
+        X_test_ad_std  = scaler_ad.transform(X_test_ad)
 
-        r2_ad = r2_score(y_test_ad, y_pred_ad)
-        mae_ad = mean_absolute_error(y_test_ad, y_pred_ad)
+        reg_models = {
+            'Random Forest Regressor': RandomForestRegressor(n_estimators=100, max_depth=14, random_state=42),
+            'ExtraTrees Regressor': ExtraTreesRegressor(n_estimators=120, max_depth=16, random_state=42),
+            'HistGradientBoosting Regressor': HistGradientBoostingRegressor(max_iter=200, random_state=42),
+            'Linear Regression': LinearRegression(),
+            'Ridge Regression (alpha=50)': Ridge(alpha=50.0)
+        }
 
-        # Regression -> Thresholded 5-Tier Grade Conversion
-        pred_converted_tier = pd.Series(y_pred_ad, index=y_te_tier.index).apply(num_to_5tier)
-        exact_tier_acc = accuracy_score(y_te_tier, pred_converted_tier) * 100
+        reg_results = []
+        best_model = None
+        best_r2 = -999.0
 
-        tier_order = {'A':5, 'B':4, 'C':3, 'D':2, 'E':1}
-        te_num = y_te_tier.map(tier_order)
-        pr_num = pred_converted_tier.map(tier_order)
-        within_1_tier_acc = (np.abs(te_num - pr_num) <= 1).mean() * 100
+        for name, m in reg_models.items():
+            if 'Linear' in name or 'Ridge' in name:
+                m.fit(X_train_ad_std, y_train_ad)
+                y_pred = m.predict(X_test_ad_std)
+            else:
+                m.fit(X_train_ad, y_train_ad)
+                y_pred = m.predict(X_test_ad)
+                
+            r2 = r2_score(y_test_ad, y_pred)
+            mae = mean_absolute_error(y_test_ad, y_pred)
+            
+            # Regression -> 5-Tier Threshold Conversion Accuracy
+            pred_converted_tier = pd.Series(y_pred, index=y_te_tier.index).apply(num_to_5tier)
+            tier_order = {'A':5, 'B':4, 'C':3, 'D':2, 'E':1}
+            te_num = y_te_tier.map(tier_order)
+            pr_num = pred_converted_tier.map(tier_order)
+            within_1_tier_acc = (np.abs(te_num - pr_num) <= 1).mean() * 100
 
-        print(f"A/D Heavy-Volume Model ExtraTrees R² across {len(sub_ad):,} stocks: {r2_ad:.4f} | MAE: {mae_ad:.2f} grade points")
-        print(f"A/D Heavy-Volume Model Within-1-Tier Accuracy: {within_1_tier_acc:.2f}%")
+            reg_results.append({
+                'Regressor Model': name,
+                'R² Score': round(r2, 4),
+                'MAE (Grade Points)': round(mae, 2),
+                'Within 1 Tier Accuracy (%)': round(within_1_tier_acc, 2)
+            })
+
+            if r2 > best_r2:
+                best_r2 = r2
+                best_model = m
+
+        reg_df = pd.DataFrame(reg_results)
+        print("\n" + reg_df.to_string(index=False))
 
         ad_weights = pd.DataFrame({
             'Feature': ad_features,
-            'Importance': et_ad.feature_importances_
+            'Importance': best_model.feature_importances_ if hasattr(best_model, 'feature_importances_') else np.abs(best_model.coef_)
         }).sort_values(by='Importance', ascending=False)
-        ad_weights['Rel_Weight_Pct'] = ad_weights['Importance'] * 100
+        ad_weights['Rel_Weight_Pct'] = (ad_weights['Importance'] / ad_weights['Importance'].sum()) * 100
 
-        output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (Heavy-Volume Price-Volume Interactions)\n")
-        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with Heavy-Volume Up/Down interaction variables")
-        output_report.append(f"- **ExtraTrees Regressor $R^2$**: `{r2_ad:.4f}` | **MAE**: `{mae_ad:.2f}` grade points (out of 13 scale points)")
-        output_report.append(f"- **Regression $\\rightarrow$ 5-Tier Threshold Conversion Within-1-Tier Accuracy**: `{within_1_tier_acc:.2f}%` (Predicts `A, B, C, D, E` tier correctly or within $\\pm 1$ tier)\n")
-        output_report.append("### Top 15 Feature Importances with Heavy-Volume Interaction Variables\n")
+        output_report.append("## 3. Comparative Accumulation / Distribution (A/D) Regression Models\n")
+        output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with Heavy-Volume Up/Down Interaction Variables\n")
+        output_report.append("### Comparative Regression Performance Table\n")
+        output_report.append(reg_df.to_markdown(index=False))
+        output_report.append("\n")
+        output_report.append("### Top 15 Feature Importances for Best Regression Model\n")
         output_report.append(ad_weights.head(15)[['Feature', 'Rel_Weight_Pct', 'Importance']].to_markdown(index=False))
         output_report.append("\n")
 
