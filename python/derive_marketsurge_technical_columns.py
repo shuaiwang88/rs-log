@@ -2,7 +2,7 @@
 """
 derive_marketsurge_technical_columns.py
 
-Derives and backfills MarketSurge technical, volume, fundamental, and funds/institutional metrics into
+Derives and backfills MarketSurge technical, volume, fundamental, and yfinance funds/institutional metrics into
 output/rs_stocks.csv, output/rs_stocks_1.csv, output/rs_stocks_2.csv, and output/rs_stocks_historical.csv.
 """
 
@@ -10,8 +10,10 @@ import sys
 import os
 import time
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import numpy as np
+import yfinance as yf
 
 def compute_ticker_derived_metrics(df_ohlcv: pd.DataFrame) -> dict:
     metrics = {}
@@ -75,6 +77,63 @@ def compute_ticker_derived_metrics(df_ohlcv: pd.DataFrame) -> dict:
 
     return metrics
 
+def _fetch_single_ticker_funds(t_str: str):
+    try:
+        tk = yf.Ticker(t_str.replace('.', '-'))
+        inst_count = np.nan
+        inst_pct = np.nan
+        insider_pct = np.nan
+        try:
+            mh = tk.major_holders
+            if mh is not None and not mh.empty:
+                val_col = 'Value' if 'Value' in mh.columns else mh.columns[0]
+                for idx, row in mh.iterrows():
+                    row_key = str(idx).lower()
+                    val = row[val_col]
+                    if 'institutionscount' in row_key:
+                        inst_count = int(float(val))
+                    elif 'institutionspercentheld' in row_key:
+                        inst_pct = float(val) * 100
+                    elif 'insiderspercentheld' in row_key:
+                        insider_pct = float(val) * 100
+        except Exception:
+            pass
+            
+        if pd.isna(inst_pct) or pd.isna(inst_count):
+            try:
+                info = tk.info
+                if pd.isna(inst_pct) and info.get('heldPercentInstitutions') is not None:
+                    inst_pct = info.get('heldPercentInstitutions') * 100
+                if pd.isna(insider_pct) and info.get('heldPercentInsiders') is not None:
+                    insider_pct = info.get('heldPercentInsiders') * 100
+            except Exception:
+                pass
+
+        if pd.notna(inst_count) or pd.notna(inst_pct):
+            return t_str, {
+                'Number of Funds': inst_count,
+                'Funds %': round(inst_pct, 2) if pd.notna(inst_pct) else np.nan,
+                'Insiders %': round(insider_pct, 2) if pd.notna(insider_pct) else np.nan
+            }
+    except Exception:
+        pass
+    return t_str, None
+
+def fetch_yfinance_funds_info(tickers: list, limit: int = 1500, max_workers: int = 20) -> dict:
+    funds_map = {}
+    target_tickers = [str(t).strip() for t in tickers[:limit] if pd.notna(t)]
+    print(f"Fetching yfinance Funds & Institutional Holdings for {len(target_tickers)} tickers in parallel...")
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_fetch_single_ticker_funds, t): t for t in target_tickers}
+        for future in as_completed(futures):
+            t_str, res = future.result()
+            if res:
+                funds_map[t_str] = res
+
+    print(f"Acquired yfinance Funds & Institutional data for {len(funds_map):,} tickers.")
+    return funds_map
+
 def main():
     repo_dir = Path(__file__).resolve().parent.parent
     output_dir = repo_dir / "output"
@@ -93,6 +152,7 @@ def main():
     tickers = df['Ticker'].dropna().tolist()
     start_time = time.time()
 
+    # Step 1: Compute derived technical metrics from local ticker_cache
     print("\nComputing MarketSurge derived technical metrics from local ticker_cache...")
     tech_map = {}
     cached_count = 0
@@ -125,17 +185,27 @@ def main():
     for col in tech_cols:
         df[col] = df['Ticker'].map(lambda t: tech_map.get(str(t).strip(), {}).get(col, np.nan))
 
-    # Merge static quarterly fundamental & funds/institutional metrics from MarketSurge dataset
+    # Step 2: Fetch Funds & Institutional Holdings directly from yfinance
+    print("\nFetching Funds & Institutional Ownership directly from yfinance...")
+    yfinance_funds_map = fetch_yfinance_funds_info(tickers, limit=1500)
+
+    df['Number of Funds'] = df['Ticker'].map(lambda t: yfinance_funds_map.get(str(t).strip(), {}).get('Number of Funds', np.nan))
+    df['Funds %'] = df['Ticker'].map(lambda t: yfinance_funds_map.get(str(t).strip(), {}).get('Funds %', np.nan))
+    df['Insiders %'] = df['Ticker'].map(lambda t: yfinance_funds_map.get(str(t).strip(), {}).get('Insiders %', np.nan))
+
+    if 'Funds % Increase' in df.columns:
+        df.drop(columns=['Funds % Increase'], inplace=True)
+
+    # Step 3: Merge static quarterly fundamental metrics from MarketSurge dataset
     ms_file = ibd_dir / "marketsurge.csv"
     fund_cols = [
-        'Number of Funds', 'Funds %', 'Funds % Increase',
         'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS % Chg Last Qtr', 'EPS Surprise',
         'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'Sales % Chg Last Qtr',
         'ROE', 'Pre-tax Margins', 'Forward P/E', 'PEG', 'Price to Sales', 'Price to Book'
     ]
 
     if ms_file.exists():
-        print(f"Merging static quarterly fundamental & funds metrics from {ms_file}...")
+        print(f"\nMerging static quarterly fundamental metrics from {ms_file}...")
         ms_df = pd.read_csv(ms_file, low_memory=False)
         sym_col = None
         for c in ['Symbol', 'Ticker', 'ticker', 'symbol']:
@@ -149,7 +219,6 @@ def main():
             if avail_fund:
                 ms_sub = ms_df[[sym_col] + avail_fund].drop_duplicates(subset=[sym_col])
                 
-                # Drop old duplicate columns before merge if re-running
                 for c in avail_fund:
                     if c in df.columns:
                         df.drop(columns=[c], inplace=True)
@@ -157,21 +226,19 @@ def main():
                 df = df.merge(ms_sub, left_on='Ticker', right_on=sym_col, how='left')
                 if sym_col != 'Ticker' and sym_col in df.columns:
                     df.drop(columns=[sym_col], inplace=True)
-                print(f"Merged {len(avail_fund)} fundamental & funds columns: {avail_fund}")
+                print(f"Merged {len(avail_fund)} static fundamental columns: {avail_fund}")
 
     elapsed = time.time() - start_time
     print(f"\n✓ Completed metrics processing in {elapsed:.2f} seconds.")
 
-    print("\nSample Output (Top 5 Stocks with Funds / Institutional Information):")
-    display_cols = ['Rank', 'Ticker', 'Price', 'Number of Funds', 'Funds %', 'Funds % Increase', 'ROE']
+    print("\nSample Output (Top 5 Stocks with yfinance Funds / Institutional Data):")
+    display_cols = ['Rank', 'Ticker', 'Price', 'Number of Funds', 'Funds %', 'Insiders %', 'ROE']
     avail_display = [c for c in display_cols if c in df.columns]
     print(df[avail_display].head(5).to_string(index=False))
 
-    # Save output/rs_stocks.csv
     df.to_csv(rs_stocks_file, index=False)
     print(f"\nSaved updated {rs_stocks_file} ({len(df):,} rows, {len(df.columns)} columns)")
 
-    # Split into rs_stocks_1.csv and rs_stocks_2.csv
     n = len(df)
     mid = n // 2
     df1 = df.iloc[:mid]
