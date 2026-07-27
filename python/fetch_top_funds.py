@@ -2,8 +2,8 @@
 """
 fetch_top_funds.py
 
-Extracts and formats IBD Mutual Fund Index Ownership data for any stock ticker
-matching ONLY the 20 official IBD Mutual Fund Index Funds:
+Extracts, sorts by portfolio_pct (descending), and displays the TOP 5 IBD Mutual Fund Index Funds for any stock ticker
+from the official 20 IBD Mutual Fund Index Funds:
 
   1. Am Cent Focus Dyn Gr (ACFSX)
   2. Baron Asset (BARAX)
@@ -27,9 +27,9 @@ matching ONLY the 20 official IBD Mutual Fund Index Funds:
  20. Wasatch Micro Cap (WMICX)
 
 Usage:
-    python python/fetch_top_funds.py MU
     python python/fetch_top_funds.py NVDA
-    python python/fetch_top_funds.py META
+    python python/fetch_top_funds.py MU
+    python python/fetch_top_funds.py DELL
 """
 
 import sys
@@ -75,6 +75,17 @@ def format_shares(val):
         return f"{val / 1_000:.2f}K"
     return f"{val:.2f}"
 
+def parse_pct(pct_val):
+    if isinstance(pct_val, (int, float)):
+        return float(pct_val)
+    if isinstance(pct_val, str):
+        cleaned = pct_val.replace('%', '').strip()
+        try:
+            return float(cleaned)
+        except Exception:
+            pass
+    return 0.0
+
 def _check_reverse_fund_holding(args):
     f_ticker, f_name, keywords, target_symbol = args
     target_symbol = target_symbol.upper().strip()
@@ -92,6 +103,7 @@ def _check_reverse_fund_holding(args):
                         'fund_name': f_name,
                         'fund_ticker': f_ticker,
                         'portfolio_pct': f"{pct:.2f}%",
+                        'num_pct': pct,
                         'q_dates': ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
                         'q_shares': ["–", "–", "–", format_shares(pct * 50_000)]
                     }
@@ -99,10 +111,12 @@ def _check_reverse_fund_holding(args):
         pass
     return None
 
-def fetch_ibd_20_funds_for_stock(stock_symbol: str) -> list:
+def fetch_ibd_20_funds_for_stock(stock_symbol: str, top_n: int = 5) -> list:
     stock_symbol = stock_symbol.upper().strip()
     repo_dir = Path(__file__).resolve().parent.parent
     db_file = repo_dir / "data" / "ibd_20_mutual_funds_holdings.json"
+
+    funds = []
 
     # 1. Check curated local MarketSurge database first
     if db_file.exists():
@@ -110,54 +124,65 @@ def fetch_ibd_20_funds_for_stock(stock_symbol: str) -> list:
             with open(db_file, "r") as f:
                 db_data = json.load(f)
                 if stock_symbol in db_data:
-                    return db_data[stock_symbol]
+                    funds = db_data[stock_symbol]
         except Exception:
             pass
 
-    # 2. Dynamic yfinance fallback lookup
-    found_map = {}
-    tasks = [(f_ticker, f_name, keywords, stock_symbol) for f_ticker, f_name, keywords in OFFICIAL_20_IBD_FUNDS]
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(_check_reverse_fund_holding, task) for task in tasks]
-        for future in as_completed(futures):
-            res = future.result()
-            if res:
-                found_map[res['fund_ticker']] = res
+    # 2. Dynamic yfinance fallback lookup if not in local DB
+    if not funds:
+        found_map = {}
+        tasks = [(f_ticker, f_name, keywords, stock_symbol) for f_ticker, f_name, keywords in OFFICIAL_20_IBD_FUNDS]
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(_check_reverse_fund_holding, task) for task in tasks]
+            for future in as_completed(futures):
+                res = future.result()
+                if res:
+                    found_map[res['fund_ticker']] = res
 
-    try:
-        stk = yf.Ticker(stock_symbol.replace('.', '-'))
-        mf = stk.mutualfund_holders
-        if mf is not None and not mf.empty:
-            for idx, row in mf.iterrows():
-                h_name = str(row.get('Holder', '')).lower()
-                for f_ticker, f_name, keywords in OFFICIAL_20_IBD_FUNDS:
-                    if f_ticker not in found_map and any(k in h_name for k in keywords):
-                        pct = float(row.get('pctHeld', 0)) * 100 if pd.notna(row.get('pctHeld')) else 0.5
-                        shares = row.get('Shares', np.nan)
-                        found_map[f_ticker] = {
-                            'fund_name': f_name,
-                            'fund_ticker': f_ticker,
-                            'portfolio_pct': f"{pct:.2f}%",
-                            'q_dates': ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
-                            'q_shares': ["–", "–", "–", format_shares(shares)]
-                        }
-    except Exception:
-        pass
+        try:
+            stk = yf.Ticker(stock_symbol.replace('.', '-'))
+            mf = stk.mutualfund_holders
+            if mf is not None and not mf.empty:
+                for idx, row in mf.iterrows():
+                    h_name = str(row.get('Holder', '')).lower()
+                    for f_ticker, f_name, keywords in OFFICIAL_20_IBD_FUNDS:
+                        if f_ticker not in found_map and any(k in h_name for k in keywords):
+                            pct = float(row.get('pctHeld', 0)) * 100 if pd.notna(row.get('pctHeld')) else 0.5
+                            shares = row.get('Shares', np.nan)
+                            found_map[f_ticker] = {
+                                'fund_name': f_name,
+                                'fund_ticker': f_ticker,
+                                'portfolio_pct': f"{pct:.2f}%",
+                                'num_pct': pct,
+                                'q_dates': ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+                                'q_shares': ["–", "–", "–", format_shares(shares)]
+                            }
+        except Exception:
+            pass
 
-    return list(found_map.values())
+        funds = list(found_map.values())
 
-def display_ibd_funds(symbol: str):
+    # Ensure num_pct is populated for sorting
+    for f in funds:
+        if 'num_pct' not in f:
+            f['num_pct'] = parse_pct(f.get('portfolio_pct', 0))
+
+    # Sort descending by numeric portfolio_pct and select top N (default top 5)
+    funds.sort(key=lambda x: x['num_pct'], reverse=True)
+    return funds[:top_n]
+
+def display_ibd_funds(symbol: str, top_n: int = 5):
     symbol = symbol.upper().strip()
-    print(f"Querying 20 Official IBD Mutual Fund Index Funds for {symbol}...\n")
+    print(f"Querying Top {top_n} IBD Mutual Fund Index Funds for {symbol} (sorted by portfolio %)...\n")
 
-    funds = fetch_ibd_20_funds_for_stock(symbol)
+    funds = fetch_ibd_20_funds_for_stock(symbol, top_n=top_n)
 
     if not funds:
         print(f"Notice: No active holdings found from the 20 Official IBD Funds for {symbol}.")
         return
 
     print("==================================================")
-    print(f"  IBD MUTUAL FUND INDEX OWNERSHIP ({symbol})")
+    print(f"  TOP {len(funds)} IBD MUTUAL FUND INDEX OWNERSHIP ({symbol})")
     print("==================================================\n")
 
     for f in funds:
@@ -195,17 +220,18 @@ def display_ibd_funds(symbol: str):
     else:
         save_df.to_csv(save_path, index=False)
 
-    print(f"✓ Saved official 20 IBD Fund holdings to {save_path}")
+    print(f"✓ Saved top {len(funds)} official IBD Fund holdings to {save_path}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch official 20 IBD Mutual Fund Index Ownership for a stock.")
-    parser.add_argument("ticker", type=str, help="Stock ticker symbol (e.g. MU, NVDA, META, AAPL)")
+    parser = argparse.ArgumentParser(description="Fetch top 5 official IBD Mutual Fund Index Ownership for a stock.")
+    parser.add_argument("ticker", type=str, help="Stock ticker symbol (e.g. NVDA, MU, DELL, META)")
+    parser.add_argument("--top", type=int, default=5, help="Number of top funds to display (default: 5)")
     args = parser.parse_args()
 
-    display_ibd_funds(args.ticker)
+    display_ibd_funds(args.ticker, top_n=args.top)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        display_ibd_funds("MU")
+        display_ibd_funds("NVDA", top_n=5)
     else:
         main()
