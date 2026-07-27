@@ -43,3 +43,7 @@ SingletonCookie
 SingletonSocket
 DevToolsActivePort
 Default/
+
+# IBD Data
+IBD/
+
