@@ -47,9 +47,8 @@ def build_historical_stocks_data():
         commit_hash = commit['hash']
         commit_date = commit['date']
         
-        # Try both rs_stocks_1.csv and rs_stocks_2.csv
-        for file_num in [1, 2]:
-            file_path = f'output/rs_stocks_{file_num}.csv'
+        # Try output/rs_stocks.csv, output/rs_stocks_1.csv, and output/rs_stocks_2.csv
+        for file_path in ['output/rs_stocks.csv', 'output/rs_stocks_1.csv', 'output/rs_stocks_2.csv']:
             file_content = get_file_from_commit(commit_hash, file_path)
             
             if file_content:
