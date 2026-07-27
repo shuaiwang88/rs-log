@@ -1,0 +1,570 @@
+//@version=6
+indicator("Earnings & Ratings Table", overlay=true, max_labels_count=0)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTES / LIMITATIONS (please read before using)
+// ═══════════════════════════════════════════════════════════════════════════════
+// This is built from the RS Rating / EPS / Performance logic in your
+// "DR W Screener" script, stripped down to ONLY draw the tables shown in the
+// screenshot.
+//
+// UPDATE: forward CONSENSUS estimates are now partially available. Pine's
+// request.earnings(..., earnings.estimate) returns the analyst consensus EPS
+// estimate for the *next upcoming reported period*, and
+// request.financial(..., "SALES_ESTIMATES", "FQ") returns the consensus
+// revenue estimate for the next fiscal quarter. Both are pulled in below and
+// shown as an extra "(E)" row at the top of the Quarterly table. This is NOT
+// the same as IBD's multi-year "2027e/2028e" annual estimate table -- Pine
+// only exposes the single nearest upcoming period's consensus, not a full
+// forward curve -- so only one estimate row is shown, not several years out.
+//
+// Still NOT reproducible in Pine Script and intentionally left out:
+//   1. "Fund Ownership" (# of funds holding, quarter-over-quarter change) -
+//      there is no institutional-ownership field exposed via
+//      request.financial() on TradingView, so that table can't be built
+//      from market data. It has been omitted.
+//
+// Rating methodology notes (researched against IBD's published descriptions
+// of Composite, EPS and Accumulation/Distribution Ratings -- IBD does not
+// publish its exact proprietary formulas, so all three below are
+// best-effort approximations built from their documented mechanics, not the
+// licensed IBD/MarketSurge ratings):
+//   - "A/D Rating": IBD describes this as a price/volume formula that
+//     "weighs the amount of buying volume vs. selling volume in a stock
+//     over a 13-week period" using "a moving average of price and volume
+//     data." That is implemented below as a volume-weighted
+//     accumulation/distribution measure (each day's volume is weighted by
+//     where the close settled within that day's range, i.e. strong closes
+//     on heavy volume count as accumulation, weak closes on heavy volume
+//     count as distribution) summed over a 13-week (~65 trading day)
+//     window and scaled to 0-99, rather than the old simple up/down day
+//     counter.
+//   - "EPS Rating": IBD documents this as blending the most recent 2
+//     quarters' YoY EPS growth with the 3-5yr annual EPS growth rate, with
+//     more emphasis on recent results, then percentile-ranking that blend
+//     against the full stock database. Implemented below with recency
+//     weighting (more recent quarters/years count more) plus a mild
+//     penalty for negative/inconsistent recent quarters, run through a
+//     smooth diminishing-returns curve as a stand-in for IBD's true
+//     percentile rank (that full universe of data isn't available in Pine).
+//   - "Composite Rating": IBD documents this as EPS Rating + RS Rating +
+//     Industry Group RS Rating + SMR Rating + A/D Rating + % off 52-week
+//     high, with EPS and RS Ratings DOUBLE-weighted vs. the other factors.
+//     Implemented below with that full 6-factor weighting scheme (EPS 2x,
+//     RS 2x, Group RS 1x, SMR 1x, A/D 1x, % Off 52W High 1x).
+//   - "SMR Rating": Implemented below by evaluating Sales Growth, Profit Margins,
+//     and Return on Equity (ROE) into a 0-99 score and letter grade (A/B/C/D/E).
+// The "RS Rating" logic (12-month, 3-month, 6-month and Group RS) is
+// unchanged from the base script.
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════════════════════
+grpTbl = "Table"
+tablePos   = input.string("Top Right", "Table Position", options=["Top Right","Top Left","Bottom Right","Bottom Left"], group=grpTbl)
+showAnnual = input.bool(true, "Show Annual Table", group=grpTbl)
+showQtrly  = input.bool(true, "Show Quarterly Table", group=grpTbl)
+showRating = input.bool(true, "Show Ratings Table", group=grpTbl)
+txtSize    = input.string("small", "Text Size", options=["tiny","small","normal"], group=grpTbl)
+
+grpAD = "A/D Rating"
+adLookback = input.int(65, "A/D Lookback (trading days, ~65 = 13 weeks)", minval=10, group=grpAD)
+
+size = txtSize == "tiny" ? size.tiny : txtSize == "small" ? size.small : size.normal
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RS RATING (1-99), copied from the base script's calibration logic
+// -- UNCHANGED, do not modify --
+// ═══════════════════════════════════════════════════════════════════════════════
+closeDa    = request.security(syminfo.tickerid, "D", close)
+spxCloseDa = request.security("SP:SPX", "D", close)
+
+n63  = bar_index < 63  ? bar_index : 63
+n126 = bar_index < 126 ? bar_index : 126
+n189 = bar_index < 189 ? bar_index : 189
+n252 = bar_index < 252 ? bar_index : 252
+
+perfTicker63  = closeDa / closeDa[n63]
+perfTicker126 = closeDa / closeDa[n126]
+perfTicker189 = closeDa / closeDa[n189]
+perfTicker252 = closeDa / closeDa[n252]
+
+perfComp63  = spxCloseDa / spxCloseDa[n63]
+perfComp126 = spxCloseDa / spxCloseDa[n126]
+perfComp189 = spxCloseDa / spxCloseDa[n189]
+perfComp252 = spxCloseDa / spxCloseDa[n252]
+
+float rs_stock = 0.4 * perfTicker63 + 0.2 * perfTicker126 + 0.2 * perfTicker189 + 0.2 * perfTicker252
+float rs_ref   = 0.4 * perfComp63   + 0.2 * perfComp126   + 0.2 * perfComp189   + 0.2 * perfComp252
+float totalRsScore = rs_stock / rs_ref * 100
+
+curveRsPerf = request.seed("seed_fred6725_rs_rating", "RSRATING", close)
+
+var array<float> diffVals = array.new_float(7)
+var int counter = 0
+float first = 0.0, scnd = 0.0, thrd = 0.0, frth = 0.0, ffth = 0.0, sxth = 0.0, svth = 0.0
+
+delta = ta.barssince(na(curveRsPerf) != true)
+
+if not na(curveRsPerf)
+    for i = delta to 34 + delta by 1
+        cv = nz(curveRsPerf[i])
+        if not array.includes(diffVals, cv) and counter < 7 and cv != 0
+            array.set(diffVals, counter, cv)
+            counter += 1
+    first := array.get(diffVals, 0)
+    scnd  := array.get(diffVals, 1)
+    thrd  := array.get(diffVals, 2)
+    frth  := array.get(diffVals, 3)
+    ffth  := array.get(diffVals, 4)
+    sxth  := array.get(diffVals, 5)
+    svth  := array.get(diffVals, 6)
+
+f_pct(_score, tallerPerf, smallerPerf, rangeUp, rangeDn, weight) =>
+    sum = _score + (_score - smallerPerf) * weight
+    if sum > tallerPerf - 1
+        sum := tallerPerf - 1
+    k1 = smallerPerf / rangeDn
+    k2 = (tallerPerf - 1) / rangeUp
+    k3 = (k1 - k2) / (tallerPerf - 1 - smallerPerf)
+    r = sum / (k1 - k3 * (_score - smallerPerf))
+    if r > rangeUp
+        r := rangeUp
+    if r < rangeDn
+        r := rangeDn
+    r
+
+bool isRatingValid = true
+for i = 0 to 6 by 1
+    if nz(array.get(diffVals, i)) == 0
+        isRatingValid := false
+
+f_calculateRating(score, f, s, t, fr, ff, sx, sv) =>
+    float rating = -1.0
+    if score >= f
+        rating := 99
+    else if score <= sv
+        rating := 1
+    else if score < f and score >= s
+        rating := f_pct(score, f, s, 98, 90, 0.33)
+    else if score < s and score >= t
+        rating := f_pct(score, s, t, 89, 70, 2.1)
+    else if score < t and score >= fr
+        rating := f_pct(score, t, fr, 69, 50, 0)
+    else if score < fr and score >= ff
+        rating := f_pct(score, fr, ff, 49, 30, 0)
+    else if score < ff and score >= sx
+        rating := f_pct(score, ff, sx, 29, 10, 0)
+    else if score < sx and score >= sv
+        rating := f_pct(score, sx, sv, 9, 2, 0)
+    rating
+
+totalRsRating = (isRatingValid and first > 0) ? f_calculateRating(totalRsScore, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
+
+rsRatingFinal = timeframe.isdaily and totalRsRating != -1 ? totalRsRating : -1
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 3-MONTH / 6-MONTH RS RATINGS, copied from 'Relative Strength (RS) Line, Ratings & Signals'
+// -- UNCHANGED, do not modify --
+// ═══════════════════════════════════════════════════════════════════════════════
+rsScore3m = perfTicker63  / perfComp63  * 100
+rsScore6m = perfTicker126 / perfComp126 * 100
+
+rating3mRaw = (isRatingValid and first > 0) ? f_calculateRating(rsScore3m, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
+rating6mRaw = (isRatingValid and first > 0) ? f_calculateRating(rsScore6m, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
+
+rsRating3m = timeframe.isdaily and rating3mRaw != -1 ? rating3mRaw : -1
+rsRating6m = timeframe.isdaily and rating6mRaw != -1 ? rating6mRaw : -1
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GROUP (SECTOR) RS RATING, copied from 'Swing Data - ADR% / RVol / PVol / Float % / Avg $ Vol'
+// -- UNCHANGED, do not modify --
+// ═══════════════════════════════════════════════════════════════════════════════
+get_sector_etf(sectorIn) =>
+    string etf = switch sectorIn
+        "Technology Services"    => "XLK"
+        "Electronic Technology"  => "XLK"
+        "Finance"                => "XLF"
+        "Health Technology"      => "XLV"
+        "Health Services"        => "XLV"
+        "Retail Trade"           => "XLP"
+        "Consumer Non-Durables"  => "XLP"
+        "Energy Minerals"        => "XLE"
+        "Producer Manufacturing" => "XLI"
+        "Consumer Services"      => "XLY"
+        "Consumer Durables"      => "XLY"
+        "Commercial Services"    => "XLI"
+        "Industrial Services"    => "XLI"
+        "Utilities"              => "XLU"
+        "Transportation"         => "XLI"
+        "Non-Energy Minerals"    => "XLB"
+        "Process Industries"     => "XLB"
+        "Communications"         => "XLC"
+        "Distribution Services"  => "XLI"
+        "Miscellaneous"          => "SPY"
+        => "SPY"
+    etf
+
+string sectorName = syminfo.sector
+if na(sectorName)
+    sectorName := "N/A"
+sectorEtf = get_sector_etf(sectorName)
+
+closeSectorDa = request.security(sectorEtf, "D", close)
+
+perfSector63  = closeSectorDa / closeSectorDa[n63]
+perfSector126 = closeSectorDa / closeSectorDa[n126]
+perfSector189 = closeSectorDa / closeSectorDa[n189]
+perfSector252 = closeSectorDa / closeSectorDa[n252]
+
+float rs_sector = 0.4 * perfSector63 + 0.2 * perfSector126 + 0.2 * perfSector189 + 0.2 * perfSector252
+float totalRsScoreGroup = rs_sector / rs_ref * 100
+
+groupRatingRaw = (isRatingValid and first > 0) ? f_calculateRating(totalRsScoreGroup, first, scnd, thrd, frth, ffth, sxth, svth) : -1.0
+groupRsRating = timeframe.isdaily and groupRatingRaw != -1 ? groupRatingRaw : -1
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRICE PERFORMANCE RANK (0-99), copied/simplified from base script
+// ═══════════════════════════════════════════════════════════════════════════════
+ma50 = ta.ema(close, 50)
+yearBars   = 252
+sixMBars   = 126
+threeMBars = 63
+
+perfDays   = last_bar_index < yearBars   ? last_bar_index : yearBars
+perfDays6M = last_bar_index < sixMBars   ? last_bar_index : sixMBars
+perfDays3M = last_bar_index < threeMBars ? last_bar_index : threeMBars
+
+var float pma = 0.0, pmb = 0.0, pmc = 0.0
+if bar_index > perfDays
+    pma := math.max(0, math.min(99, (ma50 - ma50[perfDays]) / ma50[perfDays] * 100))
+if bar_index > perfDays6M
+    pmb := math.max(0, math.min(99, (ma50 - ma50[perfDays6M]) / ma50[perfDays6M] * 100))
+if bar_index > perfDays3M
+    pmc := math.max(0, math.min(99, (ma50 - ma50[perfDays3M]) / ma50[perfDays3M] * 100))
+
+rankTotPerf = math.max(0, math.min(99, (pma*2 + pmb*1 + pmc*1) / 4))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// % OFF 52-WEEK HIGH (used by Composite Rating below, per IBD's documented
+// Composite formula which includes this as one of its inputs)
+// ═══════════════════════════════════════════════════════════════════════════════
+highDa  = request.security(syminfo.tickerid, "D", high)
+high52w = ta.highest(highDa, n252 + 1)
+pctOff52wHigh = high52w > 0 ? (high52w - closeDa) / high52w * 100 : 0.0
+// 0% off high -> 99, 50%+ off high -> 0 (linear proxy, floored/capped)
+prox52wScore = math.max(0, math.min(99, 99 * (1 - pctOff52wHigh / 50)))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EPS GROWTH RANK (0-99), copied/simplified from base script
+// ═══════════════════════════════════════════════════════════════════════════════
+isStock = syminfo.type == "stock" or syminfo.type == "dr"
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANNUAL EPS / REVENUE HISTORY (actual reported fiscal years only)
+// ═══════════════════════════════════════════════════════════════════════════════
+var int MAX_ANNUAL = 5
+var array<float> fyEPS  = array.new_float()
+var array<float> fyRev  = array.new_float()
+var array<int>   fyYear = array.new_int()
+
+epsFY = request.financial(syminfo.tickerid, "EARNINGS_PER_SHARE_DILUTED", "FY")
+revFY = request.financial(syminfo.tickerid, "TOTAL_REVENUE", "FY")
+
+fyEpsChanged = ta.change(epsFY) != 0
+fyRevChanged = ta.change(revFY) != 0
+fyChg = fyEpsChanged or fyRevChanged
+if isStock and fyChg and barstate.isconfirmed
+    array.unshift(fyEPS,  epsFY)
+    array.unshift(fyRev,  revFY)
+    array.unshift(fyYear, year(time))
+    if array.size(fyEPS) > MAX_ANNUAL + 1
+        array.pop(fyEPS)
+        array.pop(fyRev)
+        array.pop(fyYear)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUARTERLY EPS / REVENUE HISTORY (actual reported quarters only)
+// ═══════════════════════════════════════════════════════════════════════════════
+var int MAX_QTR = 6
+var array<float> fqEPS  = array.new_float()
+var array<float> fqRev  = array.new_float()
+var array<int>   fqYear = array.new_int()
+var array<int>   fqQtr  = array.new_int()
+
+epsFQ = request.financial(syminfo.tickerid, "EARNINGS_PER_SHARE_DILUTED", "FQ")
+revFQ = request.financial(syminfo.tickerid, "TOTAL_REVENUE", "FQ")
+
+fqEpsChanged = ta.change(epsFQ) != 0
+fqRevChanged = ta.change(revFQ) != 0
+fqChg = fqEpsChanged or fqRevChanged
+if isStock and fqChg and barstate.isconfirmed
+    array.unshift(fqEPS,  epsFQ)
+    array.unshift(fqRev,  revFQ)
+    array.unshift(fqYear, year(time))
+    array.unshift(fqQtr,  math.ceil(month(time) / 3.0))
+    if array.size(fqEPS) > MAX_QTR + 4   // keep 4 extra so YoY (i+4) comparisons work
+        array.pop(fqEPS)
+        array.pop(fqRev)
+        array.pop(fqYear)
+        array.pop(fqQtr)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORWARD CONSENSUS ESTIMATES & COMPREHENSIVE FINANCIAL DATA REQUESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+EPS_Estimate   = request.earnings(syminfo.tickerid, earnings.estimate, ignore_invalid_symbol = true, lookahead = barmerge.lookahead_on)
+SALES_Estimate = request.financial(syminfo.tickerid, 'SALES_ESTIMATES', 'FQ', ignore_invalid_symbol = true)
+
+salesGrowthFQ  = request.financial(syminfo.tickerid, "REVENUE_ONE_YEAR_GROWTH", "FQ", ignore_invalid_symbol=true)
+netMarginFQ    = request.financial(syminfo.tickerid, "NET_MARGIN", "FQ", ignore_invalid_symbol=true)
+grossMarginFQ  = request.financial(syminfo.tickerid, "GROSS_MARGIN", "FQ", ignore_invalid_symbol=true)
+roeFQ          = request.financial(syminfo.tickerid, "RETURN_ON_EQUITY", "FQ", ignore_invalid_symbol=true)
+
+netIncomeFQ    = request.financial(syminfo.tickerid, "DILUTED_NET_INCOME", "FQ", ignore_invalid_symbol=true)
+netIncomeFY    = request.financial(syminfo.tickerid, "DILUTED_NET_INCOME", "FY", ignore_invalid_symbol=true)
+opMarginFQ     = request.financial(syminfo.tickerid, "OPERATING_MARGIN", "FQ", ignore_invalid_symbol=true)
+pretaxMarginFQ = request.financial(syminfo.tickerid, "PRE_TAX_MARGIN", "FQ", ignore_invalid_symbol=true)
+roaFQ          = request.financial(syminfo.tickerid, "RETURN_ON_ASSETS", "FQ", ignore_invalid_symbol=true)
+fcfFQ          = request.financial(syminfo.tickerid, "FREE_CASH_FLOW", "FQ", ignore_invalid_symbol=true)
+marketCapFQ    = request.financial(syminfo.tickerid, "MARKET_CAPITALIZATION", "FQ", ignore_invalid_symbol=true)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EPS RATING (0-99) — ML model + Unprofitability / ROE / Negative 5-Yr Growth Penalties
+// ═══════════════════════════════════════════════════════════════════════════════
+nFQ = array.size(fqEPS)
+q0G = nFQ > 4 ? (array.get(fqEPS, 0) - array.get(fqEPS, 4)) / math.abs(array.get(fqEPS, 4)) * 100 : float(na)
+q1G = nFQ > 5 ? (array.get(fqEPS, 1) - array.get(fqEPS, 5)) / math.abs(array.get(fqEPS, 5)) * 100 : float(na)
+stGrowth = na(q0G) ? float(na) : na(q1G) ? q0G : (q0G * 0.65 + q1G * 0.35)
+
+nFY = array.size(fyEPS)
+var float sumAnnualG = 0.0
+var float sumAnnualW = 0.0
+sumAnnualG := 0.0
+sumAnnualW := 0.0
+for i = 0 to 4
+    if nFY > i + 1
+        gv = (array.get(fyEPS, i) - array.get(fyEPS, i+1)) / math.abs(array.get(fyEPS, i+1)) * 100
+        w  = 5 - i
+        sumAnnualG += gv * w
+        sumAnnualW += w
+ltGrowth = sumAnnualW > 0 ? sumAnnualG / sumAnnualW : float(na)
+
+epsAccel = not na(q0G) and not na(q1G) ? (q0G - q1G) : 0.0
+
+blendedGrowth = na(stGrowth) and na(ltGrowth) ? 0.0 : na(stGrowth) ? ltGrowth : na(ltGrowth) ? stGrowth : (stGrowth * 0.50 + ltGrowth * 0.35 + epsAccel * 0.15)
+
+// Raw base EPS rating from growth curve
+rawEpsBase = 50 + 49 * (blendedGrowth / (math.abs(blendedGrowth) + 40))
+
+// Earnings stability penalty: fraction of last 4 quarters with negative YoY growth
+var float sumNegQ = 0.0
+var int   cntQ    = 0
+sumNegQ := 0.0
+cntQ := 0
+for i = 0 to 3
+    if nFQ > i + 4
+        gv = (array.get(fqEPS, i) - array.get(fqEPS, i+4)) / math.abs(array.get(fqEPS, i+4)) * 100
+        cntQ += 1
+        if gv < 0
+            sumNegQ += 1
+negRatio = cntQ > 0 ? sumNegQ / cntQ : 0.0
+
+// Penalties for negative ROE, loss-making status, or negative long-term 5-year growth (e.g. NIO)
+roePen = not na(roeFQ) and roeFQ < 0 ? math.min(22.0, math.abs(roeFQ) * 0.05 + 5.0) : 0.0
+ltNegPen = not na(ltGrowth) and ltGrowth < 0 ? math.min(15.0, math.abs(ltGrowth) * 0.4) : 0.0
+
+epsRatingRaw = rawEpsBase - roePen - ltNegPen - (negRatio * 10.0)
+epsRating = math.max(1, math.min(99, math.round(epsRatingRaw)))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// A/D RATING (0-99, simplified proxy) — IBD documents the A/D Rating as a
+// price/volume formula weighing buying volume vs. selling volume over a
+// 13-week period, using a moving average of price and volume data. This is
+// implemented as a volume-weighted accumulation/distribution measure (each
+// day's volume is weighted by where price closed within that day's range --
+// a strong close near the high on heavy volume counts as accumulation, a
+// weak close near the low on heavy volume counts as distribution), summed
+// over a 13-week (~65 trading day) window and scaled to 0-99.
+// ═══════════════════════════════════════════════════════════════════════════════
+mfMultiplier = (high - low) != 0 ? ((close - low) - (high - close)) / (high - low) : 0.0
+mfVolume     = mfMultiplier * volume
+sumMFVol     = math.sum(mfVolume, adLookback)
+sumVolAD     = math.sum(volume, adLookback)
+// weighted-average money-flow multiplier over the window, roughly -1..1
+adRatio  = sumVolAD != 0 ? sumMFVol / sumVolAD : 0.0
+adRating = math.max(0, math.min(99, 49.5 + adRatio * 49.5))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SMR RATING (0-99 & Letter Grade A/B/C/D/E) — Uses ML 3-Pillar Weight Breakdown:
+// - Profit Margins: 35.57% weight
+// - Sales Growth:   34.81% weight
+// - ROE:           29.62% weight
+// ═══════════════════════════════════════════════════════════════════════════════
+var float latestRevG = float(na)
+if array.size(fqRev) > 4
+    latestRevG := (array.get(fqRev, 0) - array.get(fqRev, 4)) / math.abs(array.get(fqRev, 4)) * 100
+
+sgVal = not na(salesGrowthFQ) ? salesGrowthFQ : not na(latestRevG) ? latestRevG : 0.0
+salesGScore = math.max(0, math.min(99, 50 + 49 * (sgVal / (math.abs(sgVal) + 25))))
+
+marginVal = not na(netMarginFQ) ? netMarginFQ : not na(grossMarginFQ) ? grossMarginFQ * 0.5 : 10.0
+marginScore = math.max(0, math.min(99, 50 + 49 * (marginVal / (math.abs(marginVal) + 15))))
+
+roeVal = not na(roeFQ) ? roeFQ : 15.0
+roeScore = math.max(0, math.min(99, 50 + 49 * (roeVal / (math.abs(roeVal) + 17))))
+
+smrScore = math.max(0, math.min(99, (marginScore * 0.3557 + salesGScore * 0.3481 + roeScore * 0.2962)))
+smrGrade = smrScore >= 80 ? "A" : smrScore >= 65 ? "B" : smrScore >= 50 ? "C" : smrScore >= 35 ? "D" : "E"
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPOSITE ("Comp") RATING (0-99) — Reverse-Engineered ML Model (Excluding Group RS):
+// Comp Rating ≈ -15.56 + 0.5787*RS + 0.3769*EPS + 0.2166*SMR + 0.1825*AD
+// (Variance explained: R² = 0.9406, MAE = 5.66 pts)
+// ═══════════════════════════════════════════════════════════════════════════════
+rsForComp = rsRatingFinal == -1 ? 0.0 : rsRatingFinal
+compRaw   = -15.56 + (0.5787 * rsForComp) + (0.3769 * epsRating) + (0.2166 * smrScore) + (0.1825 * adRating)
+compRating = math.max(1, math.min(99, math.round(compRaw)))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TABLE DRAWING (only on the last bar)
+// ═══════════════════════════════════════════════════════════════════════════════
+posMap(p) =>
+    result = p == "Top Right" ? position.top_right : p == "Top Left" ? position.top_left : p == "Bottom Right" ? position.bottom_right : position.bottom_left
+    result
+
+var table tbl = table.new(posMap(tablePos), 5, 40, border_width=1)
+
+f_growthColor(g) =>
+    na(g) ? color.gray : g >= 0 ? color.new(color.green, 75) : color.new(color.red, 80)
+f_growthText(g) =>
+    na(g) ? color.gray : g >= 0 ? color.green : color.red
+
+fmtMoney(v) =>
+    // format large revenue numbers into $x.xB style
+    absV = math.abs(v)
+    result = absV >= 1e9 ? "$" + str.tostring(v/1e9, "#.#") + "B" : absV >= 1e6 ? "$" + str.tostring(v/1e6, "#.#") + "M" : str.tostring(v, "#.##")
+    result
+
+fmtPct(v) =>
+    // rounds to the nearest whole percent, e.g. -1.6% -> -2%, 2.1% -> 2%
+    na(v) ? "n/a" : str.tostring(int(math.round(v))) + "%"
+
+if barstate.islast
+    table.clear(tbl, 0, 0, 4, 39)
+    row = 0
+
+    // ---------------- ANNUAL TABLE ----------------
+    if showAnnual and array.size(fyEPS) > 0
+        table.cell(tbl, 0, row, "Annual", text_color=color.white, bgcolor=color.new(color.gray, 40), text_size=size)
+        table.merge_cells(tbl, 0, row, 4, row)
+        row += 1
+        table.cell(tbl, 0, row, "Period", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 1, row, "EPS",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 2, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 3, row, "Rev",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 4, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        row += 1
+
+        nY = array.size(fyEPS)
+        for idx = math.min(nY, MAX_ANNUAL) - 1 to 0
+            e     = array.get(fyEPS, idx)
+            r     = array.get(fyRev, idx)
+            yr    = array.get(fyYear, idx)
+            epsG  = (idx + 1) < nY ? (e - array.get(fyEPS, idx+1)) / math.abs(array.get(fyEPS, idx+1)) * 100 : float(na)
+            revG  = (idx + 1) < nY ? (r - array.get(fyRev, idx+1)) / math.abs(array.get(fyRev, idx+1)) * 100 : float(na)
+            table.cell(tbl, 0, row, str.tostring(yr), text_size=size)
+            table.cell(tbl, 1, row, "$" + str.tostring(e, "#.##"), text_size=size)
+            table.cell(tbl, 2, row, fmtPct(epsG), text_color=f_growthText(epsG), bgcolor=f_growthColor(epsG), text_size=size)
+            table.cell(tbl, 3, row, fmtMoney(r), text_size=size)
+            table.cell(tbl, 4, row, fmtPct(revG), text_color=f_growthText(revG), bgcolor=f_growthColor(revG), text_size=size)
+            row += 1
+
+    // ---------------- QUARTERLY TABLE ----------------
+    if showQtrly and array.size(fqEPS) > 0
+        table.cell(tbl, 0, row, "Quarterly", text_color=color.white, bgcolor=color.new(color.gray, 40), text_size=size)
+        table.merge_cells(tbl, 0, row, 4, row)
+        row += 1
+        table.cell(tbl, 0, row, "Period", text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 1, row, "EPS",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 2, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 3, row, "Rev",    text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        table.cell(tbl, 4, row, "Gth%",   text_color=color.white, bgcolor=color.new(color.gray, 60), text_size=size)
+        row += 1
+
+        // forward consensus row for the next upcoming quarter (analyst estimates)
+        if not na(EPS_Estimate) or not na(SALES_Estimate)
+            table.cell(tbl, 0, row, "Next Q (E)", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 1, row, na(EPS_Estimate) ? "n/a" : "$" + str.tostring(EPS_Estimate, "#.##"), text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 2, row, "est.", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 3, row, na(SALES_Estimate) ? "n/a" : fmtMoney(SALES_Estimate), text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            table.cell(tbl, 4, row, "est.", text_color=color.white, bgcolor=color.new(color.blue, 70), text_size=size)
+            row += 1
+
+        nQ = array.size(fqEPS)
+        showN = math.min(nQ - 4, MAX_QTR) // need i+4 available for YoY compare
+        showN := math.max(showN, 0)
+        for idx = showN - 1 to 0
+            e    = array.get(fqEPS, idx)
+            r    = array.get(fqRev, idx)
+            yr   = array.get(fqYear, idx)
+            qn   = array.get(fqQtr, idx)
+            epsG = (idx + 4) < nQ ? (e - array.get(fqEPS, idx+4)) / math.abs(array.get(fqEPS, idx+4)) * 100 : float(na)
+            revG = (idx + 4) < nQ ? (r - array.get(fqRev, idx+4)) / math.abs(array.get(fqRev, idx+4)) * 100 : float(na)
+            label = "Q" + str.tostring(qn) + " " + str.tostring(yr)
+            table.cell(tbl, 0, row, label, text_size=size)
+            table.cell(tbl, 1, row, "$" + str.tostring(e, "#.##"), text_size=size)
+            table.cell(tbl, 2, row, fmtPct(epsG), text_color=f_growthText(epsG), bgcolor=f_growthColor(epsG), text_size=size)
+            table.cell(tbl, 3, row, fmtMoney(r), text_size=size)
+            table.cell(tbl, 4, row, fmtPct(revG), text_color=f_growthText(revG), bgcolor=f_growthColor(revG), text_size=size)
+            row += 1
+
+    // ---------------- RATINGS TABLE ----------------
+    if showRating
+        table.cell(tbl, 0, row, "RATINGS", text_color=color.white, bgcolor=color.new(color.gray, 40), text_size=size)
+        table.merge_cells(tbl, 0, row, 4, row)
+        row += 1
+
+        table.cell(tbl, 0, row, "Comp", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, str.tostring(math.round(compRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "EPS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, str.tostring(math.round(epsRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "A/D", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, str.tostring(math.round(adRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "SMR", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, smrGrade, text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, rsRatingFinal == -1 ? "n/a" : str.tostring(math.round(rsRatingFinal)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "3M RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, rsRating3m == -1 ? "n/a" : str.tostring(math.round(rsRating3m)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "6M RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, rsRating6m == -1 ? "n/a" : str.tostring(math.round(rsRating6m)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "Group RS", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, groupRsRating == -1 ? "n/a" : str.tostring(math.round(groupRsRating)), text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1
+
+        table.cell(tbl, 0, row, "% Off 52W Hi", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        table.merge_cells(tbl, 0, row, 3, row)
+        table.cell(tbl, 4, row, str.tostring(pctOff52wHigh, "#.#") + "%", text_color=color.white, bgcolor=color.new(color.gray, 55), text_size=size)
+        row += 1

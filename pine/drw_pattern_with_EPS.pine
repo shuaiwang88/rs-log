@@ -556,12 +556,12 @@ i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         
 i_htfOn      = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
 i_htfDepth   = input.float(25.0,  'HTF: Max Flag Depth %',              group = 'Chart Pattern Recognition', step = .25, minval = .25, tooltip = 'Maximum pullback allowed from flag high to flag low (less than 25%)')
 i_htfFMax    = input.int(20,      'HTF: Max Flag Length (bars)',        group = 'Chart Pattern Recognition', tooltip = 'The maximum number of bars the flag can last (4 weeks = 20 bars)')
-i_htfFMin    = input.int(3,       'HTF: Min Flag Length (bars)',        group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag (default 3 bars for earlier detection)')
+i_htfFMin    = input.int(6,       'HTF: Min Flag Length (bars)',        group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag (default 3 bars for earlier detection)')
 
-i_htfPole    = input.float(80.0,  'HTF: Prior Uptrend Minimum %',       group = 'Chart Pattern Recognition', step = .50, minval = .25, tooltip = 'The minimum percentage gain required before a flag forms (at least 80%)')
+i_htfPole    = input.float(85.0,  'HTF: Prior Uptrend Minimum %',       group = 'Chart Pattern Recognition', step = .50, minval = .25, tooltip = 'The minimum percentage gain required before a flag forms (at least 80%)')
 i_htfPB      = input.int(40,      'HTF: Max Flag Pole Length (bars)',   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The maximum number of bars the flagpole can be (less than 8 weeks = 40 bars)')
 i_htfPBMin   = input.int(5,       'HTF: Min Flag Pole Length',          group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag pole')
-i_htfVol     = input.float(1.2,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
+i_htfVol     = input.float(1.1,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
 
 i_baseDepth := i_baseDepth / 100
 i_dbDepth := i_dbDepth / 100
@@ -1256,9 +1256,11 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
                     cupLineRight
     if i_displayBoxes
         topBase = activePivot
-        entryBox := box.new(bar_index[1], topBase * (1 + 0.05), bar_index, topBase, border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(0, 0, 255, 63))
-        slBox := box.new(bar_index[1], topBase * (1 - 0.05), bar_index, topBase * (1 - 0.08), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(255, 0, 0, 56))
-        tpBox := box.new(bar_index[1], topBase * (1 + 0.20), bar_index, topBase * (1 + 0.25), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(60, 243, 4, 12))
+        entryBox := box.new(bar_index[1], topBase * (1 + 0.05), bar_index, topBase, border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(0, 122, 255, 95))
+        slBox := box.new(bar_index[1], topBase * (1 - 0.05), bar_index, topBase * (1 - 0.08), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(255, 59, 48, 95))
+        tpBox := box.new(bar_index[1], topBase * (1 + 0.20), bar_index, topBase * (1 + 0.25), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(52, 199, 89, 95))
+
+
         isBox := true
         boxOver := false
         boxOver

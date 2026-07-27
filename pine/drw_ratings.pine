@@ -1,0 +1,780 @@
+//@version=6
+indicator("DR W Screener", overlay=false, max_labels_count=500, max_boxes_count=500)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// RS Calculation
+indexSymbol = input.string("SP:SPX", "Index Symbol", group="Relative Strength")
+q1Period = input.int(63, "Q1 Period (Daily)", minval=1, group="Relative Strength")
+q2Period = input.int(126, "Q2 Period (Daily)", minval=1, group="Relative Strength")
+q3Period = input.int(189, "Q3 Period (Daily)", minval=1, group="Relative Strength")
+q4Period = input.int(252, "Q4 Period (Daily)", minval=1, group="Relative Strength")
+q1PeriodWeekly = input.int(13, "Q1 Period (Weekly)", minval=1, group="Relative Strength")
+q2PeriodWeekly = input.int(26, "Q2 Period (Weekly)", minval=1, group="Relative Strength")
+q3PeriodWeekly = input.int(39, "Q3 Period (Weekly)", minval=1, group="Relative Strength")
+q4PeriodWeekly = input.int(52, "Q4 Period (Weekly)", minval=1, group="Relative Strength")
+
+// Base Settings
+basePeriodD = input.int(3, "Daily Base Bars, Min:", group="Base Locator", inline="dbb", minval=2)
+maxBarsD = input.int(99, "Max:", group="Base Locator", inline="dbb", minval=2)
+basePeriodW = input.int(5, "Weekly Base Bars, Min:", group="Base Locator", inline="wbb", minval=2)
+maxBarsW = input.int(24, "Max:", group="Base Locator", inline="wbb", minval=2)
+
+// 52 Week High
+show52WH = input.bool(true, "Show 52 Week High", group="52 Week High")
+alert52WH = input.bool(false, "Alert on 52 Week High", group="52 Week High")
+
+// Pocket Pivot
+showPocketPivots = input.bool(true, "Show Pocket Pivots", group="Pocket Pivot")
+alertPocketPivots = input.bool(false, "Alert on Pocket Pivot", group="Pocket Pivot")
+
+// Heavy Volume
+volMultiplier = input.float(1.5, "Volume Multiplier (vs Average)", minval=1.0, step=0.1, group="Heavy Volume")
+volMaLength = input.int(20, "Volume MA Length", minval=1, group="Heavy Volume")
+priceProgressPct = input.float(0.5, "Max Price Progress %", minval=0.0, step=0.1, group="Heavy Volume")
+lookbackBars = input.int(1, "Compare to bars ago", minval=1, group="Heavy Volume")
+highLookback = input.int(20, "Recent High Lookback", minval=5, group="Heavy Volume")
+
+// RS Detection
+rsLookbackDaily = input.int(252, "RS Lookback Period (Daily)", minval=20, group="RS Detection")
+rsLookbackWeekly = input.int(52, "RS Lookback Period (Weekly)", minval=10, group="RS Detection")
+minBarsBetweenSignals = input.int(1, "Min Bars Between Signals", minval=1, group="RS Detection")
+rsThreshold = input.float(40, "RS Minimum Threshold", minval=0, maxval=99, group="RS Detection")
+nearHighPercent = input.float(2.0, "Near-High % Tolerance", minval=0, maxval=10, group="RS Detection")
+showNearHighs = input.bool(true, "Show Near-Highs", group="RS Detection")
+priceLookbackDaily = input.int(252, "Price Lookback Period (Daily)", minval=20, group="RS Detection")
+priceLookbackWeekly = input.int(52, "Price Lookback Period (Weekly)", minval=10, group="RS Detection")
+
+// A/D
+lookbackDays = input.int(21, 'A/D Lookback Period (Days)', minval=1, group="Accumulation/Distribution")
+adPriceThresholdPct = input.float(1.0, 'A/D Price Change Threshold (%)', step=0.1, group="Accumulation/Distribution") / 100
+isIndexInput = input.bool(false, 'Is Index? (Changes threshold to 0.2%)', group="Accumulation/Distribution")
+
+// Volume Analysis
+volMaLengthAnalysis = input.int(50, "Volume MA Length (Analysis)", minval=1, group="Volume Analysis")
+showSkyscraper = input.bool(true, "Show Skyscraper", group="Volume Analysis")
+showHVE = input.bool(true, "Show Highest Volume Ever", group="Volume Analysis")
+showHVY = input.bool(true, "Show Highest Volume In Year", group="Volume Analysis")
+alertSkyscraper = input.bool(false, "Alert on Skyscraper", group="Volume Analysis")
+alertHVE = input.bool(false, "Alert on Highest Volume Ever", group="Volume Analysis")
+alertHVY = input.bool(false, "Alert on Highest Volume Year", group="Volume Analysis")
+
+// CANSLIM Filters (now only EPS)
+enablePerfFilter = input.bool(true, "Enable Performance Filter", group="CANSLIM Filters")
+minPerf = input.float(50, "Min Performance Score", minval=0, maxval=99, group="CANSLIM Filters")
+enableFundFilter = input.bool(true, "Enable Fundamental Filter", group="CANSLIM Filters")
+minC = input.float(25, "Min C (EPS Growth %)", group="CANSLIM Filters")
+enableRSFilter = input.bool(true, "Enable RS Filter", group="CANSLIM Filters")
+minRS = input.float(80, "Min Relative Strength", minval=0, maxval=99, group="CANSLIM Filters")
+enableMomFilter = input.bool(true, "Enable Momentum Filter", group="CANSLIM Filters")
+minMom = input.float(3, "Min Momentum Score", group="CANSLIM Filters")
+enableRankFilter = input.bool(true, "Enable Composite Rank Filter", group="CANSLIM Filters")
+minRank = input.float(80, "Min Composite Rank", minval=0, maxval=99, group="CANSLIM Filters")
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONSTANTS AND VARIABLES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+var int yearBars = timeframe.period == "1W" ? 52 : 252
+isStock = syminfo.type == "stock" or syminfo.type == "dr"
+isIndex = syminfo.type == "index"
+
+var int oneMBars = timeframe.period == "1W" ? 4 : 21
+var int threeMBars = timeframe.period == "1W" ? 12 : 63
+var int sixMBars = timeframe.period == "1W" ? 24 : 126
+
+int Q1 = timeframe.isdaily ? q1Period : q1PeriodWeekly
+int Q2 = timeframe.isdaily ? q2Period : q2PeriodWeekly
+int Q3 = timeframe.isdaily ? q3Period : q3PeriodWeekly
+int Q4 = timeframe.isdaily ? q4Period : q4PeriodWeekly
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOVING AVERAGES
+// ═══════════════════════════════════════════════════════════════════════════════
+getMA50Length() => timeframe.period == "1W" ? 10 : 50
+getMA100Length() => timeframe.period == "1W" ? 20 : 100
+getMA150Length() => timeframe.period == "1W" ? 30 : 150
+getMA200Length() => timeframe.period == "1W" ? 40 : 200
+
+ma50 = ta.ema(close, getMA50Length())
+ma100 = ta.ema(close, getMA100Length())
+ma150 = ta.sma(close, getMA150Length())
+ma200 = ta.sma(close, getMA200Length())
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUEST 1 & 2: Daily closes of stock and SPX
+// ═══════════════════════════════════════════════════════════════════════════════
+closeDa = request.security(syminfo.tickerid, "D", close)
+spxCloseDa = request.security("SP:SPX", "D", close)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RS RATING CALCULATION (1‑99)
+// ═══════════════════════════════════════════════════════════════════════════════
+n63  = bar_index < 63  ? bar_index : 63
+n126 = bar_index < 126 ? bar_index : 126
+n189 = bar_index < 189 ? bar_index : 189
+n252 = bar_index < 252 ? bar_index : 252
+
+perfTicker63  = closeDa / closeDa[n63]
+perfTicker126 = closeDa / closeDa[n126]
+perfTicker189 = closeDa / closeDa[n189]
+perfTicker252 = closeDa / closeDa[n252]
+
+perfComp63  = spxCloseDa / spxCloseDa[n63]
+perfComp126 = spxCloseDa / spxCloseDa[n126]
+perfComp189 = spxCloseDa / spxCloseDa[n189]
+perfComp252 = spxCloseDa / spxCloseDa[n252]
+
+float rs_stock = 0.4 * perfTicker63 + 0.2 * perfTicker126 + 0.2 * perfTicker189 + 0.2 * perfTicker252
+float rs_ref   = 0.4 * perfComp63   + 0.2 * perfComp126   + 0.2 * perfComp189   + 0.2 * perfComp252
+float totalRsScore = rs_stock / rs_ref * 100
+
+// REQUEST 3: Seed for RS Rating calibration
+curveRsPerf = request.seed("seed_fred6725_rs_rating", "RSRATING", close)
+
+var array<float> different_values = array.new_float(7)
+var int counter = 0
+float first = 0.0, scnd = 0.0, thrd = 0.0, frth = 0.0, ffth = 0.0, sxth = 0.0, svth = 0.0
+
+delta = ta.barssince(na(curveRsPerf) != true)
+
+if not na(curveRsPerf)
+    for i = delta to 34 + delta by 1
+        close_value = nz(curveRsPerf[i])
+        if not array.includes(different_values, close_value) and counter < 7 and close_value != 0
+            array.set(different_values, counter, close_value)
+            counter := counter + 1
+    first := array.get(different_values, 0)
+    scnd  := array.get(different_values, 1)
+    thrd  := array.get(different_values, 2)
+    frth  := array.get(different_values, 3)
+    ffth  := array.get(different_values, 4)
+    sxth  := array.get(different_values, 5)
+    svth  := array.get(different_values, 6)
+
+f_attributePercentile(_score, tallerPerf, smallerPerf, rangeUp, rangeDn, weight) =>
+    sum = _score + (_score - smallerPerf) * weight
+    if sum > tallerPerf - 1
+        sum := tallerPerf - 1
+    k1 = smallerPerf / rangeDn
+    k2 = (tallerPerf - 1) / rangeUp
+    k3 = (k1 - k2) / (tallerPerf - 1 - smallerPerf)
+    RsRating = sum / (k1 - k3 * (_score - smallerPerf))
+    if RsRating > rangeUp
+        RsRating := rangeUp
+    if RsRating < rangeDn
+        RsRating := rangeDn
+    RsRating
+
+float totalRsRating = -1.0
+
+if not na(first) and first > 0
+    if totalRsScore >= first
+        totalRsRating := 99
+    else if totalRsScore <= svth
+        totalRsRating := 1
+    else if totalRsScore < first and totalRsScore >= scnd
+        totalRsRating := f_attributePercentile(totalRsScore, first, scnd, 98, 90, 0.33)
+    else if totalRsScore < scnd and totalRsScore >= thrd
+        totalRsRating := f_attributePercentile(totalRsScore, scnd, thrd, 89, 70, 2.1)
+    else if totalRsScore < thrd and totalRsScore >= frth
+        totalRsRating := f_attributePercentile(totalRsScore, thrd, frth, 69, 50, 0)
+    else if totalRsScore < frth and totalRsScore >= ffth
+        totalRsRating := f_attributePercentile(totalRsScore, frth, ffth, 49, 30, 0)
+    else if totalRsScore < ffth and totalRsScore >= sxth
+        totalRsRating := f_attributePercentile(totalRsScore, ffth, sxth, 29, 10, 0)
+    else if totalRsScore < sxth and totalRsScore >= svth
+        totalRsRating := f_attributePercentile(totalRsScore, sxth, svth, 9, 2, 0)
+
+for i = 0 to 6 by 1
+    if nz(array.get(different_values, i)) == 0
+        totalRsRating := -1
+
+isDaily = timeframe.isdaily
+float rsRatingFinal = isDaily and totalRsRating != -1 ? totalRsRating : -1
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PERFORMANCE METRIC
+// ═══════════════════════════════════════════════════════════════════════════════
+perfDays = last_bar_index < yearBars ? last_bar_index : yearBars
+perfDays6M = last_bar_index < sixMBars ? last_bar_index : sixMBars
+perfDays3M = last_bar_index < threeMBars ? last_bar_index : threeMBars
+
+var float pma = 0.0, pmb = 0.0, pmc = 0.0
+if bar_index > perfDays
+    pma := math.max(0, math.min(99, (ma50 - ma50[perfDays]) / ma50[perfDays] * 100))
+if bar_index > perfDays6M
+    pmb := math.max(0, math.min(99, (ma50 - ma50[perfDays6M]) / ma50[perfDays6M] * 100))
+if bar_index > perfDays3M
+    pmc := math.max(0, math.min(99, (ma50 - ma50[perfDays3M]) / ma50[perfDays3M] * 100))
+
+rankTotPerf = math.max(0, math.min(99, (pma*2 + pmb*1 + pmc*1) / 4))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FUNDAMENTAL METRIC (EPS only, Request 4)
+// ═══════════════════════════════════════════════════════════════════════════════
+var epsQVal = array.new<float>()
+epsThisQVal = request.financial(isStock ? syminfo.tickerid : "NYSE:A", "EARNINGS_PER_SHARE_DILUTED", "FQ")
+epsChange = ta.change(epsThisQVal) != 0
+
+var float valueC = 0.0
+if isStock and epsChange
+    epsQVal.unshift(epsThisQVal)
+
+entries = array.size(epsQVal)
+if entries > 4
+    vnow = epsQVal.get(0)
+    vprev = epsQVal.get(4)
+    valueC := (vnow - vprev) / math.abs(vprev) * 100
+
+// Simplified fundamental rank (0‑99) from EPS growth
+rankTotQ = math.max(0, math.min(99, valueC / 25 * 99))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MOMENTUM METRIC
+// ═══════════════════════════════════════════════════════════════════════════════
+var int lastM1MH = 0
+var int lastMW = 0
+var int nhCount = 0
+var float rankMM2 = 0.0
+var float rankMM3 = 0.0
+
+OneMHBars = ta.highestbars(21) == 0
+newWEEK = ta.change(weekofyear) != 0
+newMONTH = ta.change(month) != 0
+
+if newWEEK
+    lastM1MH += lastMW
+    lastMW := 0
+if newMONTH
+    rankMM3 := rankMM2
+    rankMM2 := lastM1MH
+    nhCount := 0
+    lastM1MH := 0
+if OneMHBars
+    nhCount += 1
+    lastMW += 1
+
+rankMThisM = lastM1MH
+wtMNow = math.min(1, dayofmonth / 28)
+wtMM1 = 1 - wtMNow
+rankMM1C = rankMThisM * wtMNow + rankMM2 * wtMM1
+totM1w = math.min(99, rankMM1C / 8 * 99) * 3
+totM2w = math.min(99, rankMM2 / 8 * 99) * 2
+totM3w = math.min(99, rankMM3 / 8 * 99) * 1
+rankTotM = (totM1w + totM2w + totM3w) / 6
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GROWTH CONSISTENCY
+// ═══════════════════════════════════════════════════════════════════════════════
+var growthConsistency = 0.0
+var int period = 42
+var float threshold = 25
+var float maxValue = 24
+
+if bar_index > (2*period)
+    if newWEEK
+        grp = (close[1]-open[period+1]) / open[period+1] * 100
+        inc = grp >= threshold ? 1 : -1
+        growthConsistency := math.min(maxValue, math.max(0, growthConsistency + inc))
+    grp = (close-open[period]) / open[period] * 100
+    inc = grp >= threshold ? 1 : -1
+    growthConsistency := math.min(maxValue, math.max(0, growthConsistency + inc))
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPOSITE RANK & CANSLIM FILTERS (simplified)
+// ═══════════════════════════════════════════════════════════════════════════════
+valueRTrend = na(rankTotPerf) ? 0 : rankTotPerf
+valueRFund = na(rankTotQ) ? 0 : rankTotQ
+valueRRS = rsRatingFinal == -1 ? 0 : rsRatingFinal
+valueRMom = na(rankTotM) ? 0 : rankTotM
+
+valueRank = timeframe.isweekly ? na : (valueRTrend * 100 + valueRFund * 75 + valueRRS * 62 + valueRMom * 12) / (100 + 75 + 62 + 12)
+valueRank := math.min(99, valueRank)
+cpts = growthConsistency > 23 ? 3 : growthConsistency > 15 ? 2 : growthConsistency > 7 ? 1 : 0
+valueRank := math.min(99, valueRank + cpts)
+
+perfPass = not enablePerfFilter or rankTotPerf >= minPerf
+fundPass = not enableFundFilter or valueC >= minC
+rsPass = not enableRSFilter or rsRatingFinal >= minRS
+momPass = not enableMomFilter or lastM1MH >= minMom
+rankPass = not enableRankFilter or valueRank >= minRank
+
+passesCANSLIMFilter = perfPass and fundPass and rsPass and momPass and rankPass
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BASE COUNTING LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════
+enum dbState
+    idle = "Idle"
+    init = "init"
+    findTop = "findTop"
+    findBottom = "findBottom"
+    basePartial = "basePartial"
+    baseComplete = "baseComplete"
+    waitBreak = "WaitBreak"
+    countPartial = "countPartial"
+    countComplete = "countComplete"
+
+var float darvasTop = float(na)
+var float darvasBottom = float(na)
+var float darvasPivot = float(na)
+
+var int darvasLeft = 0, darvasRight = 0, daysCountTop = 0, daysCountBottom = 0, darvasBottomLeft = 0
+var dbState baseState = dbState.idle
+var int lastBaseIndex = 0
+var int breakBar = int(na)
+var float prevBaseTop = 0.0
+var float prevBaseBottom = 0.0
+
+var bool baseOnBase = false
+basePeriod = timeframe.isweekly ? basePeriodW : basePeriodD
+maxBars = timeframe.isweekly ? maxBarsW : maxBarsD
+
+type Base
+    string mName
+    int mNr = na
+    int mLeft = na
+    float mTop = na
+    int mRight = na
+    float mBottom = na
+    float mAbsBottom = na
+    float mPivotPoint = na
+    float mMidPoint = na
+
+method copyBase(Base this, Base from) =>
+    this.mName := from.mName
+    this.mNr := from.mNr
+    this.mLeft := from.mLeft
+    this.mTop := from.mTop
+    this.mRight := from.mRight
+    this.mBottom := from.mBottom
+    this.mAbsBottom := from.mAbsBottom
+    this.mPivotPoint := from.mPivotPoint
+    this.mMidPoint := from.mMidPoint
+
+method reset(Base this) =>
+    this.mName := na
+    this.mNr := na
+    this.mLeft := na
+    this.mTop := na
+    this.mRight := na
+    this.mBottom := na
+    this.mAbsBottom := na
+    this.mPivotPoint := na
+    this.mMidPoint := na
+
+var cntCurrBase = Base.new(mBottom = na, mTop = na)
+var cntPrevBase = Base.new(mBottom = 0)
+
+int BASE_NONE = 0
+int BASE_FIRST = 1
+int BASE_HIGH = 2
+int BASE_HIGH_RESET = 3
+int BASE_HIGH_BOB = 4
+int BASE_HIGH_BOB_RESET = 5
+int BASE_LOW = 6
+int BASE_LOW_RESET = 7
+
+var bool cntReset = false
+var bool higherThanCB = false
+var bool lowerThanCB = false
+var bool higherThanPB = false
+var bool lowerThanPB = false
+var int bobIndex = 0
+var int baseType = BASE_NONE
+var int currentBaseNumber = 0
+var float lastBoBTop = 0.0
+var float lastNonBBBottom = 0.0
+var int currentBaseBreakBar = na
+
+atrdp = ta.atr(25) / close * 100
+var float baseIncrease = 0.0
+if baseState == dbState.idle
+    if bar_index > basePeriod
+        baseState := dbState.findTop
+
+dHigh = high
+dLow = low
+dLeft = bar_index
+
+if baseState != dbState.idle
+    if baseState == dbState.init
+        iLeft = dLeft
+        iHigh = dHigh
+        iLow = dLow
+        if not na(breakBar)
+            iLeft := breakBar
+            iLow := low[bar_index - iLeft]
+            iHigh := high[bar_index - iLeft]
+            breakBar := na
+        darvasTop := iHigh
+        daysCountTop := 0
+        darvasLeft := iLeft
+        darvasBottomLeft := iLeft
+        darvasBottom := iLow
+        if high[1] > darvasTop
+            darvasTop := high[1]
+            darvasLeft := bar_index - 1
+            darvasBottomLeft := darvasLeft
+        if low[1] < darvasBottom
+            darvasBottom := low[1]
+            darvasBottomLeft := bar_index - 1
+        darvasPivot := darvasBottom + (darvasTop - darvasBottom) * 0.75
+        daysCountBottom := 0
+        darvasRight := iLeft
+        baseState := dbState.findTop
+        baseOnBase := false
+        currentBaseBreakBar := na
+
+    if baseState == dbState.findTop
+        if na(darvasTop) or dHigh > darvasTop
+            darvasTop := dHigh
+            darvasLeft := dLeft
+            darvasBottom := dLow
+            darvasPivot := darvasBottom + (darvasTop - darvasBottom) * 0.75
+            darvasBottomLeft := dLeft
+        daysCountTop := dLeft - darvasLeft
+        if na(darvasBottom) or dLow < darvasBottom
+            darvasBottom := dLow
+            darvasPivot := darvasBottom + (darvasTop - darvasBottom) * 0.75
+            darvasBottomLeft := dLeft
+            if (darvasTop - darvasBottom) / darvasTop * 100 > 80
+                darvasTop := na
+        daysCountBottom := dLeft - darvasBottomLeft
+        darvasRight := dLeft
+        if daysCountBottom == basePeriod
+            baseState := dbState.waitBreak
+        else if daysCountTop == basePeriod
+            baseState := dbState.findBottom
+            lastBaseIndex := dLeft
+        baseOnBase := darvasTop > prevBaseTop and prevBaseTop > 0 and (darvasTop - prevBaseTop) / prevBaseTop * 100 < 20
+
+    if baseState == dbState.findBottom
+        lastBaseIndex := dLeft
+        if na(darvasBottom) or dLow < darvasBottom
+            darvasBottom := dLow
+            darvasPivot := darvasBottom + (darvasTop - darvasBottom) * 0.75
+            darvasBottomLeft := dLeft
+        daysCountBottom := dLeft - darvasBottomLeft
+        darvasRight := dLeft
+        if close[1] > darvasTop
+            baseState := dbState.basePartial
+            darvasRight := dLeft - 1
+            breakBar := dLeft - 1
+            currentBaseBreakBar := dLeft - 1
+        else if daysCountBottom == basePeriod
+            baseState := dbState.waitBreak
+
+    if baseState == dbState.waitBreak
+        if close[1] > darvasTop or close[1] < darvasBottom or bar_index - darvasLeft >= maxBars
+            baseState := dbState.baseComplete
+            breakBar := dLeft - 1
+            currentBaseBreakBar := dLeft - 1
+        darvasRight := dLeft - 1
+
+    if baseState == dbState.basePartial or baseState == dbState.baseComplete
+        if darvasTop > prevBaseTop and darvasBottom < prevBaseBottom
+            baseOnBase := false
+        baseState := baseState == dbState.basePartial ? dbState.countPartial : dbState.countComplete
+
+// Update tracking flags
+if baseState == dbState.countPartial or baseState == dbState.countComplete or baseState == dbState.findTop
+    if not na(cntCurrBase.mBottom) and low[1] < cntCurrBase.mAbsBottom and not higherThanCB
+        cntCurrBase.mAbsBottom := low[1]
+if not na(cntCurrBase.mTop) and darvasTop > cntCurrBase.mTop and (baseState == dbState.findBottom or baseState == dbState.findTop)
+    higherThanCB := true
+if not na(cntCurrBase.mBottom) and darvasBottom < cntCurrBase.mAbsBottom and higherThanCB and baseState == dbState.findBottom
+    if (cntCurrBase.mAbsBottom - darvasBottom) / cntCurrBase.mAbsBottom * 100 > 0.5 * atrdp
+        lowerThanCB := true
+if not na(cntPrevBase.mTop) and darvasTop > cntPrevBase.mTop
+    higherThanPB := true
+if low < cntPrevBase.mBottom
+    if (cntPrevBase.mBottom - low) / cntPrevBase.mBottom * 100 > 0.5 * atrdp
+        lowerThanPB := true
+
+// Counting logic
+if baseState == dbState.countPartial or baseState == dbState.countComplete
+    baseType := BASE_NONE
+    if na(cntCurrBase.mNr)
+        baseType := BASE_FIRST
+    else if darvasTop > cntCurrBase.mTop
+        baseIncrease := (darvasTop - cntCurrBase.mTop) / cntCurrBase.mTop * 100
+        baseInc = isIndex ? atrdp * 2 : 20.0
+        if baseIncrease > baseInc
+            baseType := (lowerThanCB or lowerThanPB) ? BASE_HIGH_RESET : BASE_HIGH
+            bobIndex := 0
+        else
+            baseType := (lowerThanCB or lowerThanPB) ? BASE_HIGH_BOB_RESET : BASE_HIGH_BOB
+    else if darvasTop < cntCurrBase.mTop
+        baseType := (lowerThanCB or lowerThanPB) ? BASE_LOW_RESET : BASE_LOW
+
+    if baseType == BASE_HIGH_RESET or baseType == BASE_HIGH or baseType == BASE_LOW_RESET
+        lastBoBTop := 0.0
+        bobIndex := 0
+    if not na(cntCurrBase.mLeft) and bar_index - cntCurrBase.mLeft > yearBars and darvasTop < cntCurrBase.mTop
+        baseType := BASE_LOW_RESET
+        bobIndex := 0
+    if baseType != BASE_HIGH_BOB and baseType != BASE_HIGH_BOB_RESET
+        lastNonBBBottom := darvasBottom
+
+    if baseType == BASE_FIRST
+        cntCurrBase.mNr := 1
+        cntCurrBase.mLeft := darvasLeft
+        cntCurrBase.mTop := darvasTop
+        cntCurrBase.mRight := darvasRight
+        cntCurrBase.mBottom := darvasBottom
+        cntCurrBase.mAbsBottom := darvasBottom
+        cntCurrBase.mPivotPoint := darvasPivot
+        cntReset := false
+        bobIndex := 0
+        currentBaseNumber := 1
+    else if baseType == BASE_HIGH
+        cntPrevBase.copyBase(cntCurrBase)
+        cntCurrBase.mNr += 1
+        cntCurrBase.mLeft := darvasLeft
+        cntCurrBase.mTop := darvasTop
+        cntCurrBase.mRight := darvasRight
+        cntCurrBase.mBottom := darvasBottom
+        cntCurrBase.mAbsBottom := darvasBottom
+        cntCurrBase.mPivotPoint := darvasPivot
+        cntReset := false
+        bobIndex := 0
+        higherThanCB := false
+        lowerThanCB := false
+        currentBaseNumber := cntCurrBase.mNr
+    else if baseType == BASE_HIGH_RESET or baseType == BASE_HIGH_BOB_RESET
+        cntReset := true
+    else if baseType == BASE_HIGH_BOB
+        if darvasTop > lastBoBTop
+            if bobIndex < 25
+                bobIndex += 1
+            lastBoBTop := darvasTop
+        if darvasBottom < cntCurrBase.mBottom
+            cntCurrBase.mBottom := darvasBottom
+            cntCurrBase.mPivotPoint := darvasPivot
+        cntReset := false
+        currentBaseNumber := cntCurrBase.mNr
+    else if baseType == BASE_LOW
+        if darvasBottom < cntCurrBase.mBottom
+            cntCurrBase.mBottom := darvasBottom
+        if darvasBottom < cntCurrBase.mAbsBottom
+            cntCurrBase.mAbsBottom := darvasBottom
+        if (cntCurrBase.mTop - cntCurrBase.mAbsBottom) / cntCurrBase.mTop * 100 > 50
+            cntReset := true
+        currentBaseNumber := cntCurrBase.mNr
+    else if baseType == BASE_LOW_RESET
+        cntReset := true
+
+    if darvasBottom < ma200
+        cntReset := true
+
+    if cntReset
+        cntPrevBase.reset()
+        cntCurrBase.mNr := 1
+        cntCurrBase.mLeft := darvasLeft
+        cntCurrBase.mTop := darvasTop
+        cntCurrBase.mRight := darvasRight
+        cntCurrBase.mBottom := darvasBottom
+        cntCurrBase.mAbsBottom := darvasBottom
+        cntCurrBase.mPivotPoint := darvasPivot
+        higherThanCB := false
+        lowerThanCB := false
+        higherThanPB := false
+        lowerThanPB := false
+        lastBoBTop := 0
+        bobIndex := 0
+        currentBaseNumber := 1
+
+    if baseType != BASE_HIGH_BOB
+        prevBaseTop := darvasTop
+        prevBaseBottom := 0.0
+    if baseState == dbState.countPartial or baseState == dbState.countComplete
+        baseState := dbState.init
+
+bool isInBase = na(currentBaseBreakBar)
+distToPivot = isInBase and not na(cntCurrBase.mTop) ? (close - cntCurrBase.mTop) / cntCurrBase.mTop * 100 : na
+barsSinceBreakout = na(currentBaseBreakBar) ? 0 : bar_index - currentBaseBreakBar
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 52 WEEK HIGH
+// ═══════════════════════════════════════════════════════════════════════════════
+useHigh = input.bool(false, "Use highest high of day instead of highest close for prior high")
+hiSeries = useHigh ? high : close
+weeks52InSeconds = 52 * 7 * 24 * 60 * 60
+currentTfSeconds = timeframe.in_seconds()
+lookback52w = timeframe.isweekly ? 52 : timeframe.ismonthly ? 12 : timeframe.isdaily ? 252 : math.min(math.ceil(weeks52InSeconds / currentTfSeconds), 252)
+weekHigh52 = ta.highest(hiSeries, lookback52w)
+new52WHigh = high >= weekHigh52 and barstate.isconfirmed
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POCKET PIVOT 10
+// ═══════════════════════════════════════════════════════════════════════════════
+var float h10 = 0
+vols = array.new<float>()
+for i = 0 to 10 by 1
+    if close[i] < close[i + 1]
+        array.push(vols, volume[i])
+        h10 := array.max(vols)
+PocketPivot10 = close > close[1] and volume > h10
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEAVY VOLUME WITHOUT PROGRESS
+// ═══════════════════════════════════════════════════════════════════════════════
+avgVolume = ta.sma(volume, volMaLength)
+isHeavyVolume = volume >= (avgVolume * volMultiplier)
+priceChangePct = (close - close[lookbackBars]) / close[lookbackBars] * 100
+volumeNoProgress = isHeavyVolume and math.abs(priceChangePct) <= priceProgressPct and barstate.isconfirmed
+recentHigh = ta.highest(high, highLookback)
+strongSignal = volumeNoProgress and close >= (recentHigh * 0.95)
+volRatio = volume / avgVolume
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VOLUME ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════════
+avgVolumeAnalysis = ta.sma(volume, volMaLengthAnalysis)
+highVolYear = ta.highest(volume, yearBars)
+var float hve = volume
+if volume > hve
+    hve := volume
+isHVE = showHVE and (volume == hve)
+isHVY = showHVY and (volume == highVolYear) and not isHVE
+volPercentChange = (volume / avgVolumeAnalysis - 1) * 100
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RS LINE NEW HIGH DETECTION (uses daily SPX close already fetched)
+// ═══════════════════════════════════════════════════════════════════════════════
+rsCurve = closeDa / spxCloseDa   // daily RS curve
+lb1Y = 250
+lb6M = 126
+lb3M = 63
+
+f_rrs_highest(src, len) =>
+    h = src
+    for i = 1 to len - 1 by 1
+        if not na(src[i]) and src[i] > h
+            h := src[i]
+    h
+
+_rsH1Y = f_rrs_highest(rsCurve, lb1Y)[1]
+_rsH6M = f_rrs_highest(rsCurve, lb6M)[1]
+_rsH3M = f_rrs_highest(rsCurve, lb3M)[1]
+
+rs_nh1Y = not na(rsCurve) and not na(_rsH1Y) and rsCurve > _rsH1Y
+rs_nh6M = not na(rsCurve) and not na(_rsH6M) and rsCurve > _rsH6M and not rs_nh1Y
+rs_nh3M = not na(rsCurve) and not na(_rsH3M) and rsCurve > _rsH3M and not rs_nh1Y and not rs_nh6M
+
+// % distance to RS 12‑month high (the RS line's distance from its 1‑year high)
+rs12mHigh = ta.highest(rsCurve, lb1Y)
+distToRS12mHigh = not na(rsCurve) and not na(rs12mHigh) ? (rsCurve / rs12mHigh - 1) * 100 : na
+
+// RS New High (rating‑based)
+lookbackPeriod = timeframe.isdaily ? rsLookbackDaily : rsLookbackWeekly
+highestRS = ta.highest(rsRatingFinal, lookbackPeriod)
+rsNewHigh = rsRatingFinal >= rsThreshold and rsRatingFinal > highestRS[1]
+
+// RS near 52‑week high
+rs52WeekHigh = ta.highest(rsRatingFinal, yearBars)
+rsWithin5PercentOfHigh = not na(rsRatingFinal) and not na(rs52WeekHigh) and rs52WeekHigh > 0 and ((rs52WeekHigh - rsRatingFinal) / rs52WeekHigh) * 100 <= 5.0
+
+// RS high before price
+var int lastRSHighBarForPrice = 0
+var float highestPriceSinceLastRSHigh = na
+rsHighBeforePrice = false
+if not na(lastRSHighBarForPrice) and bar_index > lastRSHighBarForPrice
+    highestPriceSinceLastRSHigh := na(highestPriceSinceLastRSHigh) ? high : math.max(highestPriceSinceLastRSHigh, high)
+if rsNewHigh and bar_index >= lookbackPeriod
+    priceHasMadeNewHigh = false
+    if not na(lastRSHighBarForPrice) and bar_index > lastRSHighBarForPrice
+        highestPriceBefore = 0.0
+        barsToCheck = math.min(lookbackPeriod, bar_index - lastRSHighBarForPrice + lookbackPeriod)
+        for i = bar_index - lastRSHighBarForPrice to barsToCheck by 1
+            if not na(high[i])
+                highestPriceBefore := math.max(highestPriceBefore, high[i])
+        if not na(highestPriceSinceLastRSHigh) and highestPriceSinceLastRSHigh > highestPriceBefore * 1.0
+            priceHasMadeNewHigh := true
+    if not priceHasMadeNewHigh or na(lastRSHighBarForPrice)
+        rsHighBeforePrice := true
+    lastRSHighBarForPrice := bar_index
+    highestPriceSinceLastRSHigh := na
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EARNINGS GAP & RELATIVE VOLUME
+// ═══════════════════════════════════════════════════════════════════════════════
+gapPct = (open - close[1]) / close[1] * 100
+vol50 = ta.sma(volume, 50)
+Earnings_Gap = gapPct >= 4 and open > close[1] and volume > vol50 * 1.3
+relVol = volume / vol50
+relVolHigh = ta.highest(relVol, 252)
+RelVol_Pct = relVolHigh > 0 ? math.min(100, relVol / relVolHigh * 100) : 0
+RelVol_Strong = RelVol_Pct >= 90
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPOSITE SETUP SCORE
+// ═══════════════════════════════════════════════════════════════════════════════
+Setup_Score = (
+    (rsRatingFinal >= 95 ? 3 : rsRatingFinal >= 90 ? 2 : rsRatingFinal >= 85 ? 1 : 0) +
+    (PocketPivot10 ? 3 : 0) +
+    (Earnings_Gap ? 1 : 0) +
+    (RelVol_Strong ? 1 : 0) +
+    (passesCANSLIMFilter ? 2 : 0) +
+    (rsWithin5PercentOfHigh ? 1 : 0) +
+    (isHVE ? 3 : 0) +
+    (isHVY ? 3 : 0)
+)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PLOTS
+// ═══════════════════════════════════════════════════════════════════════════════
+plot(rsRatingFinal, "RS Rating", display=display.all)
+plot(Setup_Score, "Setup", display=display.all)
+plot(valueRank, "Composite", display=display.all)
+plot(rsNewHigh ? 1 : 0, "RS High", display=display.all)
+plot(rs_nh1Y ? 1 : 0, "RS 12M High", display=display.all)
+plot(rs_nh6M ? 1 : 0, "RS 6M High", display=display.all)
+plot(rs_nh3M ? 1 : 0, "RS 3M High", display=display.all)
+plot(distToRS12mHigh, "% to RS 12M High", display=display.all)  // NEW: percentage distance to RS 12‑month high
+plot(rsWithin5PercentOfHigh ? 1 : 0, "RS Near 52W High", display=display.all)
+plot(PocketPivot10 ? 1 : 0, "PP10", display=display.all)
+plot(isHVE ? 1 : 0, "HVE", display=display.all)
+plot(isHVY ? 1 : 0, "HVY", display=display.all)
+plot(new52WHigh ? 1 : 0, "52WH", display=display.all)
+plot(rsHighBeforePrice ? 1 : 0, "RSLeadPrice", display=display.all)
+plot(volumeNoProgress and not strongSignal ? 50 : 0, "VNoProgress", display=display.all)
+plot(strongSignal ? 1 : 0, "VolNoProgress(Strong)", display=display.all)
+plot(volRatio, "Volume Ratio", display=display.all)
+plot(volPercentChange, "Vol%vsAvg", display=display.all)
+plot(Earnings_Gap ? 1 : 0, "EarningsGap", display=display.all)
+plot(RelVol_Pct, "RelativeVolume%", display=display.all)
+plot(rankTotPerf, "Price Score", display=display.all)
+plot(rankTotQ, "Fundamental Rank", display=display.all)
+plot(valueC, "EPS%", display=display.all)
+plot(growthConsistency, "Consistency", display=display.all)
+plot(distToPivot, "Dist to Pivot %", display=display.all)
+plot(barsSinceBreakout, "Bars Since Breakout", display=display.all)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════════════════════
+alertcondition(new52WHigh or PocketPivot10 or isHVE or isHVY, "ANY Signal", "{{ticker}}: Signal triggered")
+alertcondition(show52WH and new52WHigh, "52 Week High", "{{ticker}}: 52 Week High")
+alertcondition(showPocketPivots and PocketPivot10, "Pocket Pivot 10", "{{ticker}}: PP10")
+alertcondition(volumeNoProgress, "Heavy Vol No Progress", "{{ticker}}: Churning")
+alertcondition(strongSignal, "Churning Near High", "{{ticker}}: Strong warning")
+alertcondition(rsNewHigh, "RS New High", "{{ticker}}: RS new high")
+alertcondition(rsWithin5PercentOfHigh, "RS Near 52W High", "{{ticker}}: RS near high")
+alertcondition(rsHighBeforePrice, "RS Before Price", "{{ticker}}: RS leads price")
+alertcondition(Earnings_Gap, "Earnings Gap", "{{ticker}}: Gap up on earnings")
+alertcondition(RelVol_Strong, "Relative Vol Strong", "{{ticker}}: RelVol > 90%")
+alertcondition(Setup_Score >= 5, "High Setup Score", "{{ticker}}: Setup ≥ 5")
+alertcondition(passesCANSLIMFilter, "CANSLIM Pass", "{{ticker}}: All filters passed")
+alertcondition(passesCANSLIMFilter and rsRatingFinal >= 90, "Elite Setup", "{{ticker}}: RS≥90 + CANSLIM")
+alertcondition(valueRank >= 90, "Composite ≥90", "{{ticker}}: Rank ≥90")
+alertcondition(valueC >= 50, "EPS Growth ≥50%", "{{ticker}}: EPS strong")
+alertcondition(rankTotM >= 5, "Momentum ≥5", "{{ticker}}: Strong momentum")
+alertcondition(showHVE and isHVE, "Highest Volume Ever", "{{ticker}}: HVE")
+alertcondition(showHVY and isHVY, "Highest Volume Year", "{{ticker}}: HVY")
+alertcondition(currentBaseNumber >= 3, "Base Stage 3+", "{{ticker}}: 3rd base")
+alertcondition(baseType == BASE_HIGH, "New Base Stage", "{{ticker}}: New base formed")

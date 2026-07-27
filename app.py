@@ -1274,9 +1274,11 @@ def load_ibd_data_tables_full():
             df_ibd['Symbol'] = df_ibd['Symbol'].astype(str).str.strip('"').str.strip()
             df_ibd = df_ibd.drop_duplicates(subset=['Symbol'])
             # Convert numeric columns where possible
-            for col in ['IBD Comp. Rating', 'RS Rating', 'Industry Group Rank', 'EPS Rating']:
+            num_ibd_cols = ['IBD Comp. Rating', 'RS Rating', 'Industry Group Rank', 'EPS Rating', 'Price', 'Price % Change', 'Vol. % Change', 'Last Qtr EPS % Chg.', 'Last Qtr Sales % Chg.', 'Curr Yr EPS Est. % Chg.', 'Curr Qtr EPS Est. % Chg.', 'Pretax Margin']
+            for col in num_ibd_cols:
                 if col in df_ibd.columns:
                     df_ibd[col] = pd.to_numeric(df_ibd[col], errors='coerce')
+
             
             # create dictionary mapping symbol -> dict of stats
             df_ibd.set_index('Symbol', inplace=True)
@@ -2820,19 +2822,190 @@ with (tab9 if has_historical else tab8):
             with open(patterns_json_path, 'r', encoding='utf-8') as f:
                 pattern_data = json.load(f)
             
-            # Displays the patterns nicely
-            for pattern_name, tickers in pattern_data.items():
+            # Load IBD Data Tables full map for Composite Rating lookup & filtering
+            ibd_full_map = load_ibd_data_tables_full()
+            
+            # Expander for IBD Column Filters
+            with st.expander("🎛️ Filter Patterns by IBD Data Columns", expanded=False):
+                f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+                with f_col1:
+                    pf_min_comp = st.slider("Min IBD Comp Rating", 0, 99, 0, key="pf_min_comp")
+                    pf_min_eps  = st.slider("Min EPS Rating", 0, 99, 0, key="pf_min_eps")
+                    pf_min_rs   = st.slider("Min RS Rating", 0, 99, 0, key="pf_min_rs")
+                with f_col2:
+                    pf_max_ind_rank = st.slider("Max Industry Group Rank", 1, 197, 197, key="pf_max_ind_rank")
+                    pf_min_vol_chg  = st.number_input("Min Vol % Change", value=-999.0, key="pf_min_vol_chg")
+                    pf_min_price_chg = st.number_input("Min Price % Change", value=-999.0, key="pf_min_price_chg")
+                with f_col3:
+                    pf_min_lq_eps   = st.number_input("Min Last Qtr EPS % Chg", value=-999.0, key="pf_min_lq_eps")
+                    pf_min_lq_sales = st.number_input("Min Last Qtr Sales % Chg", value=-999.0, key="pf_min_lq_sales")
+                    pf_min_cy_eps   = st.number_input("Min Curr Yr EPS Est % Chg", value=-999.0, key="pf_min_cy_eps")
+                with f_col4:
+                    pf_acc_dis = st.multiselect("Acc/Dis Rating", ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E"], default=[], key="pf_acc_dis")
+                    pf_smr     = st.multiselect("SMR Rating", ["A", "B", "C", "D", "E"], default=[], key="pf_smr")
+                    pf_ind_rs  = st.multiselect("Ind Grp RS", ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E"], default=[], key="pf_ind_rs")
+
+            def passes_ibd_filter(t_sym):
+                if not isinstance(ibd_full_map, dict): return True
+                t_info = ibd_full_map.get(t_sym, {})
+                if not t_info:
+                    if pf_min_comp > 0 or pf_min_eps > 0 or pf_min_rs > 0 or pf_max_ind_rank < 197 or pf_acc_dis or pf_smr or pf_ind_rs:
+                        return False
+                    return True
+                
+                comp = t_info.get('IBD Comp. Rating', 0)
+                if pd.isna(comp): comp = 0
+                if comp < pf_min_comp: return False
+                
+                eps = t_info.get('EPS Rating', 0)
+                if pd.isna(eps): eps = 0
+                if eps < pf_min_eps: return False
+                
+                rs = t_info.get('RS Rating', 0)
+                if pd.isna(rs): rs = 0
+                if rs < pf_min_rs: return False
+                
+                ind_rank = t_info.get('Industry Group Rank', 197)
+                if pd.isna(ind_rank): ind_rank = 197
+                if ind_rank > pf_max_ind_rank: return False
+                
+                if pf_min_vol_chg > -999.0:
+                    v_chg = t_info.get('Vol. % Change', -999.0)
+                    if pd.isna(v_chg) or v_chg < pf_min_vol_chg: return False
+                    
+                if pf_min_price_chg > -999.0:
+                    p_chg = t_info.get('Price % Change', -999.0)
+                    if pd.isna(p_chg) or p_chg < pf_min_price_chg: return False
+
+                if pf_min_lq_eps > -999.0:
+                    lq_e = t_info.get('Last Qtr EPS % Chg.', -999.0)
+                    if pd.isna(lq_e) or lq_e < pf_min_lq_eps: return False
+
+                if pf_min_lq_sales > -999.0:
+                    lq_s = t_info.get('Last Qtr Sales % Chg.', -999.0)
+                    if pd.isna(lq_s) or lq_s < pf_min_lq_sales: return False
+
+                if pf_min_cy_eps > -999.0:
+                    cy_e = t_info.get('Curr Yr EPS Est. % Chg.', -999.0)
+                    if pd.isna(cy_e) or cy_e < pf_min_cy_eps: return False
+
+                if pf_acc_dis:
+                    acc = str(t_info.get('Acc/Dis Rating', '')).strip()
+                    if acc not in pf_acc_dis: return False
+
+                if pf_smr:
+                    smr = str(t_info.get('SMR Rating', '')).strip()
+                    if smr not in pf_smr: return False
+
+                if pf_ind_rs:
+                    ind_r = str(t_info.get('Ind Grp RS', '')).strip()
+                    if ind_r not in pf_ind_rs: return False
+
+                return True
+
+            # Process patterns and sort tickers by Industry Group Rank (asc) then IBD Comp Rating (desc)
+            processed_patterns = []
+            total_headers = 0
+            
+            for p_name, tickers in pattern_data.items():
+                if tickers:
+                    filtered_tickers = [t for t in tickers if passes_ibd_filter(t)]
+                    if filtered_tickers:
+                        section_title = p_name.replace('-', ' ').title()
+                        scored_tickers = []
+                        for t in filtered_tickers:
+                            t_info = ibd_full_map.get(t, {}) if isinstance(ibd_full_map, dict) else {}
+                            comp_val = t_info.get('IBD Comp. Rating', 0)
+                            if pd.isna(comp_val):
+                                comp_val = 0
+                            ind_rank = t_info.get('Industry Group Rank', 999)
+                            if pd.isna(ind_rank):
+                                ind_rank = 999
+                            scored_tickers.append((t, float(ind_rank), float(comp_val)))
+                        
+                        # Sort tickers within pattern: Industry Group Rank (asc), then Comp Rating (desc)
+                        scored_tickers.sort(key=lambda x: (x[1], -x[2]))
+                        processed_patterns.append((section_title, scored_tickers))
+                        total_headers += 1
+
+            # TradingView allows maximum 1000 lines (section headers like ###Bull Flag count as 1 line)
+            MAX_TV_LINES = 1000
+            max_allowed_tickers = max(0, MAX_TV_LINES - total_headers)
+            
+            # Collect all candidate (ind_rank, comp_rating, section_title, ticker) to pick top max_allowed_tickers overall
+            all_candidates = []
+            for section_title, scored_tickers in processed_patterns:
+                for t, ind_rank, comp_val in scored_tickers:
+                    all_candidates.append((ind_rank, comp_val, section_title, t))
+            
+            # Sort globally by Industry Group Rank (asc) then Comp Rating (desc)
+            all_candidates.sort(key=lambda x: (x[0], -x[1]))
+            selected_candidates = set((sec, t) for ind_rank, comp_val, sec, t in all_candidates[:max_allowed_tickers])
+            
+            # Build final tv_lines, ibkr_lines, and all_tickers_list
+            tv_lines = []
+            ibkr_lines = []
+            all_tickers_list = []
+            
+            for section_title, scored_tickers in processed_patterns:
+                # Include selected tickers maintaining Industry Rank & Comp Rating order
+                sec_selected_tickers = [t for t, ind_rank, comp in scored_tickers if (section_title, t) in selected_candidates]
+                if sec_selected_tickers:
+                    tv_lines.append(f"###{section_title}")
+                    tv_lines.extend(sec_selected_tickers)
+                    for t in sec_selected_tickers:
+                        ibkr_lines.append(f"SYM, {t.upper()}, SMART")
+                        if t not in all_tickers_list:
+                            all_tickers_list.append(t)
+            
+            if tv_lines:
+                tv_watchlist_string = "\n".join(tv_lines)
+                ibkr_watchlist_string = "\n".join(ibkr_lines)
+                all_tickers_string = ",".join(all_tickers_list)
+                
+                preview_tv_lines = tv_lines[:10]
+                tv_preview_string = "\n".join(preview_tv_lines)
+                if len(tv_lines) > 10:
+                    tv_preview_string += f"\n... ({len(tv_lines) - 10} more lines - use buttons to copy/download full list)"
+                
+                today_str = datetime.today().strftime('%m%d%y')
+                tv_filename = f"DrW Pattern_{today_str}.txt"
+                ibkr_filename = f"DrW Pattern_IBKR_{today_str}.txt"
+                all_filename = f"DrW Pattern_All_{today_str}.txt"
+                
+                st.write(f"**All Patterns Combined (TradingView & IBKR Watchlist - Capped at 1,000 Lines by Industry Group Rank & Comp Rating)** ({len(all_tickers_list)} unique tickers | {len(tv_lines)} TV lines)")
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.code(tv_preview_string, language="text")
+                with col2:
+                    st.download_button("TradingView", tv_watchlist_string,
+                                       tv_filename, "text/plain",
+                                       key="download_tv_pattern_watchlist")
+                    st.download_button("IBKR", ibkr_watchlist_string,
+                                       ibkr_filename, "text/plain",
+                                       key="download_ibkr_pattern_watchlist")
+                    st.download_button("Copy All Tickers", all_tickers_string,
+                                       all_filename, "text/plain",
+                                       key="download_all_pattern_tickers")
+
+                st.divider()
+
+            # Displays the individual patterns sorted by Industry Group Rank & IBD Comp. Rating
+            for section_title, scored_tickers in processed_patterns:
+                tickers_sorted = [t for t, ind_rank, comp in scored_tickers]
                 col_title, col_count = st.columns([6, 1])
                 with col_title:
-                    st.markdown(f"### {pattern_name.replace('-', ' ').title()}")
+                    st.markdown(f"### {section_title}")
                 with col_count:
-                    st.markdown(f"**Count: {len(tickers)}**")
+                    st.markdown(f"**Count: {len(tickers_sorted)}**")
                 
-                if tickers:
-                    ticker_str = ",".join(tickers)
+                if tickers_sorted:
+                    ticker_str = ",".join(tickers_sorted)
                     st.code(ticker_str, language="text")
                 else:
                     st.info("No tickers found for this pattern.")
+
+
         except Exception as e:
             st.error(f"Error loading pattern data: {e}")
     else:
