@@ -2,8 +2,8 @@
 """
 derive_marketsurge_technical_columns.py
 
-Derives and backfills MarketSurge technical, volume, and fundamental metrics into output/rs_stocks.csv,
-output/rs_stocks_1.csv, output/rs_stocks_2.csv, and output/rs_stocks_historical.csv.
+Derives and backfills MarketSurge technical, volume, fundamental, and funds/institutional metrics into
+output/rs_stocks.csv, output/rs_stocks_1.csv, output/rs_stocks_2.csv, and output/rs_stocks_historical.csv.
 """
 
 import sys
@@ -125,17 +125,18 @@ def main():
     for col in tech_cols:
         df[col] = df['Ticker'].map(lambda t: tech_map.get(str(t).strip(), {}).get(col, np.nan))
 
-    # Merge static quarterly fundamental metrics from MarketSurge dataset
+    # Merge static quarterly fundamental & funds/institutional metrics from MarketSurge dataset
     ms_file = ibd_dir / "marketsurge.csv"
     fund_cols = [
+        'Number of Funds', 'Funds %', 'Funds % Increase',
         'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS % Chg Last Qtr', 'EPS Surprise',
         'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'Sales % Chg Last Qtr',
         'ROE', 'Pre-tax Margins', 'Forward P/E', 'PEG', 'Price to Sales', 'Price to Book'
     ]
 
     if ms_file.exists():
-        print(f"Merging static quarterly fundamental metrics from {ms_file}...")
-        ms_df = pd.read_csv(ms_file)
+        print(f"Merging static quarterly fundamental & funds metrics from {ms_file}...")
+        ms_df = pd.read_csv(ms_file, low_memory=False)
         sym_col = None
         for c in ['Symbol', 'Ticker', 'ticker', 'symbol']:
             if c in ms_df.columns:
@@ -147,22 +148,30 @@ def main():
             avail_fund = [c for c in fund_cols if c in ms_df.columns]
             if avail_fund:
                 ms_sub = ms_df[[sym_col] + avail_fund].drop_duplicates(subset=[sym_col])
+                
+                # Drop old duplicate columns before merge if re-running
+                for c in avail_fund:
+                    if c in df.columns:
+                        df.drop(columns=[c], inplace=True)
+                        
                 df = df.merge(ms_sub, left_on='Ticker', right_on=sym_col, how='left')
                 if sym_col != 'Ticker' and sym_col in df.columns:
                     df.drop(columns=[sym_col], inplace=True)
-                print(f"Merged {len(avail_fund)} static fundamental columns: {avail_fund}")
+                print(f"Merged {len(avail_fund)} fundamental & funds columns: {avail_fund}")
 
     elapsed = time.time() - start_time
     print(f"\n✓ Completed metrics processing in {elapsed:.2f} seconds.")
 
-    print("\nSample Output (Top 5 Stocks with MarketSurge Technical & Fundamental Columns):")
-    display_cols = ['Rank', 'Ticker', 'Price', 'Price vs 50-Day', '21 Day ATR %', 'Up/Down Vol', 'Daily Closing Range', 'Avg EPS % Chg 6Q']
+    print("\nSample Output (Top 5 Stocks with Funds / Institutional Information):")
+    display_cols = ['Rank', 'Ticker', 'Price', 'Number of Funds', 'Funds %', 'Funds % Increase', 'ROE']
     avail_display = [c for c in display_cols if c in df.columns]
     print(df[avail_display].head(5).to_string(index=False))
 
+    # Save output/rs_stocks.csv
     df.to_csv(rs_stocks_file, index=False)
     print(f"\nSaved updated {rs_stocks_file} ({len(df):,} rows, {len(df.columns)} columns)")
 
+    # Split into rs_stocks_1.csv and rs_stocks_2.csv
     n = len(df)
     mid = n // 2
     df1 = df.iloc[:mid]
