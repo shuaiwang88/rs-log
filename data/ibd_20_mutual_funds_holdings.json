@@ -1,4 +1,20 @@
 {
+  "DELL": [
+    {
+      "fund_name": "JPMrgn Lrg Cp Grw",
+      "fund_ticker": "SEEGX",
+      "portfolio_pct": "0.42%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["–", "–", "–", "520.10K"]
+    },
+    {
+      "fund_name": "Fidelity Contra",
+      "fund_ticker": "FCNTX",
+      "portfolio_pct": "0.38%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["–", "–", "310.20K", "480.25K"]
+    }
+  ],
   "MU": [
     {
       "fund_name": "JPMrgn Lrg Cp Grw",
@@ -30,6 +46,13 @@
     }
   ],
   "NVDA": [
+    {
+      "fund_name": "Am Cent Focus Dyn Gr",
+      "fund_ticker": "ACFSX",
+      "portfolio_pct": "17.35%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["85.28M", "86.90M", "87.74M", "86.75M"]
+    },
     {
       "fund_name": "Fidelity Srs Gro Co",
       "fund_ticker": "FCGSX",
