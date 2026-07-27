@@ -3,7 +3,8 @@
 fast_git_rewrite_365.py
 
 High-performance Git tree rewriter that backfills all past 365 commits of output/rs_stocks.csv
-in a single Python process in under 10 seconds using native git plumbing (git hash-object & git commit-tree).
+in a single Python process in under 10 seconds using native git plumbing.
+Includes single-day Volume backfilling from local ticker_cache parquet files.
 """
 
 import os
@@ -71,6 +72,8 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     if pd.isna(curr_close) or curr_close <= 0:
         return metrics
 
+    metrics['Volume'] = curr_vol
+
     sma10 = close.rolling(10).mean().iloc[-1] if len(close) >= 10 else np.nan
     sma21 = close.ewm(span=21, adjust=False).mean().iloc[-1] if len(close) >= 21 else np.nan
     sma50 = close.rolling(50).mean().iloc[-1] if len(close) >= 50 else np.nan
@@ -126,7 +129,7 @@ def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, tar
             df_clean = df_clean.merge(ms_funds, on='Ticker_Clean', how='left')
 
     tech_cols = [
-        'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day', 'Price vs 200-Day',
+        'Volume', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day', 'Price vs 200-Day',
         '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
         'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %',
         'Up/Down Vol', 'Daily Closing Range', 'Vol % Chg vs 50-Day'
@@ -183,19 +186,19 @@ def run_fast_backfill(num_commits: int = 365):
 
             has_all = all(c in df.columns for c in target_schema)
             has_funds = 'Number of Funds' in df.columns and df['Number of Funds'].notna().sum() > 500
-            if has_all and has_funds:
+            has_vol = 'Volume' in df.columns and df['Volume'].notna().sum() > 500
+            if has_all and has_funds and has_vol:
                 continue
 
             df_backfilled = backfill_df(df, ms_funds, parquet_map, target_schema)
             updated_count += 1
 
             if updated_count % 50 == 0 or idx == len(commits) - 1:
-                print(f"  [{idx+1:3d}/{len(commits)}] Commit {c_hash}: Backfilled {len(df_backfilled.columns)} cols (Funds non-null: {df_backfilled['Number of Funds'].notna().sum():,})")
+                print(f"  [{idx+1:3d}/{len(commits)}] Commit {c_hash}: Backfilled {len(df_backfilled.columns)} cols (Volume non-null: {df_backfilled['Volume'].notna().sum():,})")
 
         except Exception as e:
             pass
 
-    # Ensure current working copy rs_stocks.csv is 100% updated with full schema
     df_curr = pd.read_csv(rs_file, low_memory=False)
     df_curr_bf = backfill_df(df_curr, ms_funds, parquet_map, target_schema)
     df_curr_bf.to_csv(rs_file, index=False)
@@ -208,7 +211,6 @@ def run_fast_backfill(num_commits: int = 365):
 
     elapsed = time.time() - start_time
     print(f"\n✓ Completed fast backfill processing across past {num_commits} commits in {elapsed:.2f} seconds!")
-    print(f"✓ Saved updated {rs_file} ({len(df_curr_bf):,} rows, {len(df_curr_bf.columns)} columns)")
 
 if __name__ == '__main__':
     run_fast_backfill()
