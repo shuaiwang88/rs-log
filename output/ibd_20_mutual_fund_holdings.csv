@@ -1,13 +1,17 @@
-Ticker,Fund Name,Fund Ticker,Portfolio %,Current Shares
-META,Fidelity Contra,FCNTX,1.11,24411959.0
-NVDA,Am Cent Focus Dyn Gr,ACFSX,17.35,
-NVDA,Fidelity Srs Gro Co,FCGSX,15.65,
-NVDA,MFS Growth,MFEGX,13.93,
-NVDA,Janus Hndrsn Forty,JARTX,13.03,
-NVDA,Loomis Sayles:Gro,LSGRX,12.46,
-NVDA,JPMrgn Lrg Cp Grw,SEEGX,10.72,
-NVDA,Fidelity Contra,FCNTX,10.0,
-NVDA,Franklin Growth A,FKGRX,8.53,
-NVDA,T Rowe Price US ER,PRCOX,7.38,
-NVDA,Federtd Hrms MDTLC,QILGX,6.7,
-MU,T Rowe Price US ER,PRCOX,2.14,
+Ticker,Fund Name,Fund Ticker,Portfolio %,Current Shares,Jun-26 Shares
+META,Fidelity Contra,FCNTX,1.11,24411959.0,
+NVDA,Am Cent Focus Dyn Gr,ACFSX,17.35,,
+NVDA,Fidelity Srs Gro Co,FCGSX,15.65,,
+NVDA,MFS Growth,MFEGX,13.93,,
+NVDA,Janus Hndrsn Forty,JARTX,13.03,,
+NVDA,Loomis Sayles:Gro,LSGRX,12.46,,
+NVDA,JPMrgn Lrg Cp Grw,SEEGX,10.72,,
+NVDA,Fidelity Contra,FCNTX,10.0,,
+NVDA,Franklin Growth A,FKGRX,8.53,,
+NVDA,T Rowe Price US ER,PRCOX,7.38,,
+NVDA,Federtd Hrms MDTLC,QILGX,6.7,,
+MU,T Rowe Price US ER,PRCOX,2.14,,
+MU,JPMrgn Lrg Cp Grw,SEEGX,1.02%,,1.29M
+MU,Fidelity Contra,FCNTX,0.77%,,1.41M
+MU,MFS Growth,MFEGX,0.57%,,243.63K
+MU,Fidelity Srs Gro Co,FCGSX,0.45%,,1.10M

@@ -1,0 +1,90 @@
+{
+  "MU": [
+    {
+      "fund_name": "JPMrgn Lrg Cp Grw",
+      "fund_ticker": "SEEGX",
+      "portfolio_pct": "1.02%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["–", "–", "–", "1.29M"]
+    },
+    {
+      "fund_name": "Fidelity Contra",
+      "fund_ticker": "FCNTX",
+      "portfolio_pct": "0.77%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["200.51K", "559.48K", "846.14K", "1.41M"]
+    },
+    {
+      "fund_name": "MFS Growth",
+      "fund_ticker": "MFEGX",
+      "portfolio_pct": "0.57%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["–", "–", "–", "243.63K"]
+    },
+    {
+      "fund_name": "Fidelity Srs Gro Co",
+      "fund_ticker": "FCGSX",
+      "portfolio_pct": "0.45%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["–", "–", "–", "1.10M"]
+    }
+  ],
+  "NVDA": [
+    {
+      "fund_name": "Fidelity Srs Gro Co",
+      "fund_ticker": "FCGSX",
+      "portfolio_pct": "16.29%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["19.13M", "18.18M", "19.23M", "18.13M"]
+    },
+    {
+      "fund_name": "MFS Growth",
+      "fund_ticker": "MFEGX",
+      "portfolio_pct": "15.27%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["35.98M", "32.86M", "31.16M", "30.13M"]
+    },
+    {
+      "fund_name": "Janus Hndrsn Forty",
+      "fund_ticker": "JARTX",
+      "portfolio_pct": "12.99%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["13.90M", "14.86M", "15.15M", "15.15M"]
+    },
+    {
+      "fund_name": "Loomis Sayles:Gro",
+      "fund_ticker": "LSGRX",
+      "portfolio_pct": "12.46%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["10.63M", "10.63M", "10.63M", "10.53M"]
+    },
+    {
+      "fund_name": "JPMrgn Lrg Cp Grw",
+      "fund_ticker": "SEEGX",
+      "portfolio_pct": "10.71%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["83.08M", "84.57M", "60.34M", "62.64M"]
+    },
+    {
+      "fund_name": "Fidelity Contra",
+      "fund_ticker": "FCNTX",
+      "portfolio_pct": "10.00%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["89.24M", "88.57M", "85.24M", "84.04M"]
+    },
+    {
+      "fund_name": "Franklin Growth A",
+      "fund_ticker": "FKGRX",
+      "portfolio_pct": "9.30%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["8.34M", "8.18M", "8.18M", "7.87M"]
+    },
+    {
+      "fund_name": "Federtd Hrms MDTLC",
+      "fund_ticker": "QILGX",
+      "portfolio_pct": "6.57%",
+      "q_dates": ["Sep-25", "Dec-25", "Mar-26", "Jun-26"],
+      "q_shares": ["1.67M", "1.67M", "1.74M", "1.74M"]
+    }
+  ]
+}
