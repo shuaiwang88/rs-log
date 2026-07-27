@@ -100,33 +100,51 @@ def compute_ticker_derived_metrics(df_ohlcv: pd.DataFrame) -> dict:
 
     return metrics
 
-def batch_compute_technical_metrics(tickers: list, cache_dir: Path) -> dict:
+def batch_compute_technical_metrics(tickers: list) -> dict:
+    """Fetch last 250 days of OHLCV via yfinance for all tickers and compute metrics."""
     tech_map = {}
     clean_tickers = [str(t).strip() for t in tickers if pd.notna(t)]
 
-    print("Reading local ticker_cache parquet files...")
-    cached_count = 0
-    for t_str in clean_tickers:
-        p1 = cache_dir / f"{t_str}_1d.parquet"
-        p2 = cache_dir / f"{t_str.replace('.', '-')}_1d.parquet"
-        target_path = p1 if p1.exists() else (p2 if p2.exists() else None)
-        if target_path:
-            try:
-                cdf = pd.read_parquet(target_path)
-                metrics = compute_ticker_derived_metrics(cdf)
-                if metrics:
-                    tech_map[t_str] = metrics
-                    cached_count += 1
-            except Exception:
-                pass
+    print(f"Downloading OHLCV for {len(clean_tickers):,} tickers via yfinance...")
+    try:
+        import yfinance as yf
+        # Bulk download: 250 days of daily OHLCV for all tickers in one call
+        raw = yf.download(
+            tickers=clean_tickers,
+            period="250d",
+            interval="1d",
+            group_by="ticker",
+            auto_adjust=True,
+            progress=False,
+            threads=True
+        )
+    except Exception as e:
+        print(f"  yfinance download failed: {e}")
+        return tech_map
 
-    print(f"Retrieved technical metrics for {cached_count:,} stocks from local cache.")
+    success = 0
+    for t_str in clean_tickers:
+        try:
+            if len(clean_tickers) == 1:
+                df_t = raw.copy()
+            else:
+                df_t = raw[t_str].dropna(how='all') if t_str in raw.columns.get_level_values(1) else pd.DataFrame()
+            if df_t.empty:
+                continue
+            metrics = compute_ticker_derived_metrics(df_t)
+            if metrics:
+                tech_map[t_str] = metrics
+                success += 1
+        except Exception:
+            pass
+
+    print(f"  Retrieved technical metrics for {success:,}/{len(clean_tickers):,} stocks.")
     return tech_map
+
 
 def main():
     repo_dir = Path(__file__).resolve().parent.parent
     output_dir = repo_dir / "output"
-    cache_dir = repo_dir / "ticker_cache"
     ibd_dir = repo_dir / "IBD"
 
     rs_stocks_file = output_dir / "rs_stocks.csv"
@@ -141,7 +159,7 @@ def main():
     tickers = df['Ticker'].dropna().tolist()
     start_time = time.time()
 
-    tech_map = batch_compute_technical_metrics(tickers, cache_dir)
+    tech_map = batch_compute_technical_metrics(tickers)
 
     tech_cols = [
         'Open', 'High', 'Low', 'Volume',

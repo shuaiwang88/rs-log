@@ -3,8 +3,9 @@
 fast_git_rewrite_365.py
 
 High-performance Git tree rewriter that backfills all past 365 commits of output/rs_stocks.csv
-in a single Python process in under 10 seconds using native git plumbing.
-Includes Open, High, Low, Close, and Volume backfilling from local ticker_cache parquet files.
+in a single Python process using native git plumbing.
+Derives Open/High/Low/Close/Volume and all technical columns via yfinance.
+No local parquet cache needed.
 """
 
 import os
@@ -41,20 +42,6 @@ def load_marketsurge_fundamentals(ibd_dir: Path) -> pd.DataFrame:
     avail_cols = [c for c in fund_cols if c in ms_df.columns]
     return ms_df[['Ticker_Clean'] + avail_cols].drop_duplicates(subset=['Ticker_Clean'])
 
-def load_local_parquet_cache(cache_dir: Path) -> dict:
-    parquet_map = {}
-    if not cache_dir.exists():
-        return parquet_map
-    for f in cache_dir.glob("*_1d.parquet"):
-        ticker = f.name.replace('_1d.parquet', '').replace('-', '.')
-        try:
-            df = pd.read_parquet(f)
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.droplevel(1)
-            parquet_map[ticker] = df
-        except Exception:
-            pass
-    return parquet_map
 
 def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
     metrics = {}
@@ -122,7 +109,38 @@ def compute_technical_metrics_from_ohlcv(df_ohlcv: pd.DataFrame) -> dict:
 
     return metrics
 
-def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, target_schema: list) -> pd.DataFrame:
+def fetch_ohlcv_via_yfinance(tickers: list) -> dict:
+    """Bulk download 250 days of OHLCV for a list of tickers via yfinance."""
+    import yfinance as yf
+    tech_results = {}
+    clean = [str(t).strip() for t in tickers if pd.notna(t)]
+    if not clean:
+        return tech_results
+    try:
+        raw = yf.download(
+            tickers=clean,
+            period="250d",
+            interval="1d",
+            group_by="ticker",
+            auto_adjust=True,
+            progress=False,
+            threads=True
+        )
+        for t_str in clean:
+            try:
+                df_t = raw[t_str].dropna(how='all') if len(clean) > 1 else raw.dropna(how='all')
+                if df_t.empty:
+                    continue
+                res = compute_technical_metrics_from_ohlcv(df_t)
+                if res:
+                    tech_results[t_str] = res
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"  yfinance download error: {e}")
+    return tech_results
+
+def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, target_schema: list) -> pd.DataFrame:
     df_clean = df.copy()
     if 'Price' in df_clean.columns and 'Close' not in df_clean.columns:
         df_clean.rename(columns={'Price': 'Close'}, inplace=True)
@@ -146,13 +164,8 @@ def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, tar
 
     missing_tech = [c for c in tech_cols if c not in df_clean.columns or df_clean[c].notna().sum() < 50]
     if missing_tech:
-        tech_results = {}
-        for t_str in df_clean['Ticker_Clean'].unique():
-            t_base = t_str.replace('-', '.')
-            if t_base in parquet_map:
-                res = compute_technical_metrics_from_ohlcv(parquet_map[t_base])
-                if res:
-                    tech_results[t_str] = res
+        tickers_to_fetch = df_clean['Ticker_Clean'].unique().tolist()
+        tech_results = fetch_ohlcv_via_yfinance(tickers_to_fetch)
 
         for c in tech_cols:
             if c not in df_clean.columns:
@@ -171,7 +184,6 @@ def backfill_df(df: pd.DataFrame, ms_funds: pd.DataFrame, parquet_map: dict, tar
 def run_fast_backfill(num_commits: int = 365):
     repo_dir = Path(__file__).resolve().parent.parent
     ibd_dir = repo_dir / "IBD"
-    cache_dir = repo_dir / "ticker_cache"
     rs_file = repo_dir / "output" / "rs_stocks.csv"
 
     target_schema = [
@@ -189,7 +201,6 @@ def run_fast_backfill(num_commits: int = 365):
     ]
 
     ms_funds = load_marketsurge_fundamentals(ibd_dir)
-    parquet_map = load_local_parquet_cache(cache_dir)
 
     print(f"Retrieving past {num_commits} commit objects for output/rs_stocks.csv...")
     cmd = ['git', 'log', '--oneline', '-n', str(num_commits), '--', 'output/rs_stocks.csv']
@@ -212,7 +223,7 @@ def run_fast_backfill(num_commits: int = 365):
             if has_all and has_funds and has_open:
                 continue
 
-            df_backfilled = backfill_df(df, ms_funds, parquet_map, target_schema)
+            df_backfilled = backfill_df(df, ms_funds, target_schema)
             updated_count += 1
 
             if updated_count % 50 == 0 or idx == len(commits) - 1:
@@ -222,7 +233,7 @@ def run_fast_backfill(num_commits: int = 365):
             pass
 
     df_curr = pd.read_csv(rs_file, low_memory=False)
-    df_curr_bf = backfill_df(df_curr, ms_funds, parquet_map, target_schema)
+    df_curr_bf = backfill_df(df_curr, ms_funds, target_schema)
     df_curr_bf.to_csv(rs_file, index=False)
 
     df1_path = repo_dir / "output" / "rs_stocks_1.csv"
