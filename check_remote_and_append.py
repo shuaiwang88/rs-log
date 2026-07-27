@@ -66,14 +66,36 @@ def push_to_origin(branch):
         print(f"Failed to push to origin:\n{r.stderr}")
 
 def run_append_scripts():
-    print("Running technical column derivation and history append scripts...")
+    print("Running daily pipeline: derive OHLCV + technical columns, then append history...")
     import sys
     py = sys.executable
-    print("Deriving complete MarketSurge technical, fundamental, and funds columns...")
-    run_cmd([py, str(REPO_DIR / 'python' / 'derive_marketsurge_technical_columns.py')], cwd=REPO_DIR)
-    print("Appending historical datasets...")
-    run_cmd([py, str(REPO_DIR / 'append_industry_history.py')], cwd=REPO_DIR)
-    run_cmd([py, str(REPO_DIR / 'append_stocks_history.py')], cwd=REPO_DIR)
+
+    # Step 1: Derive Open/High/Low/Close/Volume + all technical, ATR, volume ratio, fund & fundamental columns
+    print("\n[1/3] Deriving 51-column OHLCV + technical + fundamental schema...")
+    r = run_cmd([py, str(REPO_DIR / 'python' / 'derive_marketsurge_technical_columns.py')], cwd=REPO_DIR)
+    if r.returncode != 0:
+        print(f"  ⚠ derive_marketsurge_technical_columns.py exited with error:\n{r.stderr}")
+    else:
+        print("  ✓ Technical derivation complete.")
+
+    # Step 2: Append industry history
+    print("\n[2/3] Appending industry history...")
+    r = run_cmd([py, str(REPO_DIR / 'append_industry_history.py')], cwd=REPO_DIR)
+    if r.returncode != 0:
+        print(f"  ⚠ append_industry_history.py error:\n{r.stderr}")
+    else:
+        print("  ✓ Industry history appended.")
+
+    # Step 3: Append stocks history
+    print("\n[3/3] Appending stocks history...")
+    r = run_cmd([py, str(REPO_DIR / 'append_stocks_history.py')], cwd=REPO_DIR)
+    if r.returncode != 0:
+        print(f"  ⚠ append_stocks_history.py error:\n{r.stderr}")
+    else:
+        print("  ✓ Stocks history appended.")
+
+    print("\n✅ Daily pipeline complete.")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

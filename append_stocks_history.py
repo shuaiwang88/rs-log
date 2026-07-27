@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
+append_stocks_history.py
+
 Append new rs_stocks data from recent commits to historical dataset.
 Run this daily to keep the historical stock data updated.
+
+Schema: 51-column layout with Open, High, Low, Close, Volume and full technical/fundamental columns.
 """
 
 import subprocess
@@ -9,7 +13,36 @@ import pandas as pd
 import json
 from pathlib import Path
 from datetime import datetime
+from io import StringIO
 from rs_pipeline_utils import REPO_DIR, get_file_from_commit, save_metadata, now_iso
+
+# Canonical 51-column target schema (matches rs_stocks.csv)
+TARGET_SCHEMA = [
+    'Rank', 'Ticker', 'Sector', 'Industry', 'Exchange', 'Relative Strength', 'Percentile',
+    '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile',
+    'Open', 'High', 'Low', 'Close', 'Volume', 'MarketCap',
+    'Float', 'ShortFloatPct', 'PctFrom52WkHigh', 'AvgVol10', 'AvgVol30', 'AvgVol50',
+    'RevenueGrowth', 'Price vs 10-Day', 'Price vs 21-Day', 'Price vs 50-Day', 'Price vs 150-Day',
+    'Price vs 200-Day', '10 Day > 21 Day > 50 Day', '50-Day > 150-Day > 200-Day',
+    'Avg True Range', '21 Day ATR %', '30 Day ATR %', '50 Day ATR %', 'Up/Down Vol',
+    'Daily Closing Range', 'Vol % Chg vs 50-Day', 'Number of Funds', 'Funds %',
+    'Funds % Increase', 'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS Surprise',
+    'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'ROE', 'Pre-tax Margins', 'Forward P/E',
+    'PEG', 'Price to Sales', 'Price to Book'
+]
+
+def normalize_df_schema(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize a stock dataframe to the canonical 51-column schema."""
+    # Rename legacy Price column → Close
+    if 'Price' in df.columns and 'Close' not in df.columns:
+        df = df.rename(columns={'Price': 'Close'})
+
+    # Add any missing schema columns as NaN
+    for col in TARGET_SCHEMA:
+        if col not in df.columns:
+            df[col] = float('nan')
+
+    return df
 
 def get_last_date_in_history():
     """Get the last date from the historical file"""
@@ -48,95 +81,98 @@ def get_commits_after_date(cutoff_date=None):
         print(f"Error getting commits: {e}")
         return []
 
-# use `get_file_from_commit` from `rs_pipeline_utils`
-
 def append_new_stocks_data():
     """Append new stock data from recent commits"""
     print("🔄 Checking for new rs_stocks*.csv commits...")
-    
+
     historical_path = REPO_DIR / 'output' / 'rs_stocks_historical.csv'
-    
+
     if not historical_path.exists():
         print("❌ Historical file not found. Run build_stocks_history.py first.")
         return False
-    
+
     # Get last date in history
     last_date = get_last_date_in_history()
     print(f"Last date in history: {last_date.date() if last_date else 'None'}")
-    
+
     # Get new commits
     new_commits = get_commits_after_date(last_date)
-    
+
     if not new_commits:
         print("✅ No new commits found. Stock dataset is current.")
         return True
-    
+
     print(f"Found {len(new_commits)} new commits to process")
-    
+
     # Process new commits
     new_data = []
     processed = 0
-    
+
     for commit in new_commits:
         commit_hash = commit['hash']
         commit_date = commit['date']
-        
+
         # Try both rs_stocks_1.csv and rs_stocks_2.csv
         for file_num in [1, 2]:
             file_path = f'output/rs_stocks_{file_num}.csv'
             file_content = get_file_from_commit(commit_hash, file_path, repo_dir=REPO_DIR)
-            
+
             if file_content:
                 try:
-                    from io import StringIO
                     df = pd.read_csv(StringIO(file_content))
-                    
+
+                    # Normalize to canonical 51-column schema (handles Price→Close rename)
+                    df = normalize_df_schema(df)
+
                     # Add date and commit info
                     df['date'] = pd.to_datetime(commit_date)
                     df['commit_hash'] = commit_hash
-                    
-                    # Calculate ranks
+
+                    # Calculate RS ranks from percentiles
                     rank_cols_map = {
                         '1M_RS_Percentile': '1M_RS_Rank',
                         '3M_RS_Percentile': '3M_RS_Rank',
                         '6M_RS_Percentile': '6M_RS_Rank'
                     }
-                    
                     for percentile_col, rank_col in rank_cols_map.items():
                         if percentile_col in df.columns:
                             df[rank_col] = 101 - df[percentile_col]
-                    
+
                     new_data.append(df)
                     processed += 1
-                    
+
                 except Exception as e:
-                    pass  # Skip problematic files
-    
+                    print(f"  ✗ Error processing commit {commit_hash} file {file_num}: {e}")
+
     if new_data:
         # Read existing data
         df_existing = pd.read_csv(historical_path)
         df_existing['date'] = pd.to_datetime(df_existing['date'])
-        
+
+        # Normalize existing data to canonical schema
+        df_existing = normalize_df_schema(df_existing)
+
         # Combine with new data
         df_new = pd.concat(new_data, ignore_index=True)
         df_combined = pd.concat([df_new, df_existing], ignore_index=True)
-        
-        # Ensure date is datetime type
+
+        # Ensure date is datetime
         df_combined['date'] = pd.to_datetime(df_combined['date'])
-        
+
         # Sort by date descending
         df_combined = df_combined.sort_values('date', ascending=False)
-        
+
         # Remove duplicates (keep newest) - using Ticker and date as key
         if 'Ticker' in df_combined.columns:
             df_combined = df_combined.drop_duplicates(subset=['Ticker', 'date'], keep='first')
-        
+
         # Save
         df_combined.to_csv(historical_path, index=False)
-        
+
         print(f"\n✅ Appended {processed} new stock files")
         print(f"   Total records now: {len(df_combined):,}")
-        
+        print(f"   Schema: {len(df_combined.columns)} columns (incl. Open, High, Low, Close, Volume)")
+
         # Update metadata
         metadata = {
             'total_records': len(df_combined),
@@ -144,12 +180,14 @@ def append_new_stocks_data():
             'unique_stocks': int(df_combined['Ticker'].nunique()) if 'Ticker' in df_combined.columns else None,
             'date_min': str(df_combined['date'].min()),
             'date_max': str(df_combined['date'].max()),
+            'schema_version': '51-column-ohlcv',
+            'columns': list(df_combined.columns),
             'last_updated': datetime.now().isoformat()
         }
-        
+
         metadata_path = REPO_DIR / 'output' / 'rs_stocks_metadata.json'
         save_metadata(metadata_path, metadata)
-        
+
         return True
     else:
         print("❌ No new rs_stocks files found in commits")
