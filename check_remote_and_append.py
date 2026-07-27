@@ -66,15 +66,14 @@ def push_to_origin(branch):
         print(f"Failed to push to origin:\n{r.stderr}")
 
 def run_append_scripts():
-    print("Running volume update and history append scripts...")
+    print("Running technical column derivation and history append scripts...")
     import sys
     py = sys.executable
-    print("Adding Volume column from yfinance...")
-    run_cmd([py, str(REPO_DIR / 'python' / 'update_volume_column.py')], cwd=REPO_DIR)
+    print("Deriving complete MarketSurge technical, fundamental, and funds columns...")
+    run_cmd([py, str(REPO_DIR / 'python' / 'derive_marketsurge_technical_columns.py')], cwd=REPO_DIR)
     print("Appending historical datasets...")
     run_cmd([py, str(REPO_DIR / 'append_industry_history.py')], cwd=REPO_DIR)
     run_cmd([py, str(REPO_DIR / 'append_stocks_history.py')], cwd=REPO_DIR)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
