@@ -4,8 +4,8 @@ Reverse Engineering IBD Ratings (EPS Rating, SMR Rating, Composite Rating, and A
 Using Advanced Machine Learning Incorporating Up to 365-Day Historical Price & Volume Records.
 
 A/D Rating Reverse Engineering includes:
-1. Regression Models (predicting continuous grade score, then converting to 5-tier A/B/C/D/E)
-2. Direct Classification Models (directly classifying into 5-tier A/B/C/D/E classes)
+1. 13-Subtier Regression Models (predicting continuous 1..13 grade score, then converting to sub-tier A+, A, A-, B+, B, B-, C+, C, C-, D+, D, D-, E)
+2. 13-Class Direct Classification Models (directly classifying into 13 sub-tier classes)
 """
 
 import sys
@@ -40,18 +40,19 @@ def clean_num(val):
     except:
         return np.nan
 
+SUBTIER_MAP = {
+    'A+': 13.0, 'A': 12.0, 'A-': 11.0,
+    'B+': 10.0, 'B': 9.0,  'B-': 8.0,
+    'C+': 7.0,  'C': 6.0,  'C-': 5.0,
+    'D+': 4.0,  'D': 3.0,  'D-': 2.0,
+    'E': 1.0
+}
+
 def grade_to_num(val):
     if pd.isna(val):
         return np.nan
     s = str(val).strip().upper()
-    mapping = {
-        'A+': 13.0, 'A': 12.0, 'A-': 11.0,
-        'B+': 10.0, 'B': 9.0,  'B-': 8.0,
-        'C+': 7.0,  'C': 6.0,  'C-': 5.0,
-        'D+': 4.0,  'D': 3.0,  'D-': 2.0,
-        'E': 1.0
-    }
-    return mapping.get(s, np.nan)
+    return SUBTIER_MAP.get(s, np.nan)
 
 def smr_grade_to_num(val):
     if pd.isna(val):
@@ -71,14 +72,32 @@ def ad_5tier(val):
     s = str(val).strip().upper()[0]
     return s if s in ['A', 'B', 'C', 'D', 'E'] else np.nan
 
-def num_to_5tier(val):
-    if val >= 10.5: return 'A'
-    elif val >= 7.5: return 'B'
+def ad_subtier(val):
+    if pd.isna(val): return np.nan
+    s = str(val).strip().upper()
+    return s if s in SUBTIER_MAP else np.nan
+
+def num_to_13subtier(val):
+    if val >= 12.5: return 'A+'
+    elif val >= 11.5: return 'A'
+    elif val >= 10.5: return 'A-'
+    elif val >= 9.5: return 'B+'
+    elif val >= 8.5: return 'B'
+    elif val >= 7.5: return 'B-'
+    elif val >= 6.5: return 'C+'
     elif val >= 5.5: return 'C'
+    elif val >= 4.5: return 'C-'
+    elif val >= 3.5: return 'D+'
     elif val >= 2.5: return 'D'
+    elif val >= 1.5: return 'D-'
     else: return 'E'
 
-TIER_ORDER = {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1}
+def subtier_to_maintier(subtier):
+    if pd.isna(subtier): return np.nan
+    s = str(subtier).strip().upper()[0]
+    return s if s in ['A', 'B', 'C', 'D', 'E'] else np.nan
+
+MAIN_TIER_ORDER = {'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1}
 
 def compute_window_features(prices, vols, window_size, highs=None, lows=None):
     """Compute volume and price metrics for a trailing window of trading days."""
@@ -252,6 +271,7 @@ def run_pipeline():
 
     df['SMR_Num'] = df['SMR Rating'].apply(smr_grade_to_num)
     df['AD_Num']  = df['A/D Rating'].apply(grade_to_num)
+    df['AD_Subtier'] = df['A/D Rating'].apply(ad_subtier)
     df['AD_Tier'] = df['A/D Rating'].apply(ad_5tier)
     df['GroupRS_Num'] = df['Ind Group RS'].apply(grade_to_num)
 
@@ -397,14 +417,14 @@ def run_pipeline():
     output_report.append("\n")
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODELS (365-DAY HISTORICAL DATA)
-    #    - Regression Model (Converted to Tier)
-    #    - Direct Classification Model
+    # 3. ACCUMULATION / DISTRIBUTION (A/D) RATING MODELS (13 SUB-TIERS SCALE)
+    #    - Regression Model (Predicting 1..13, Converted to 13 Sub-Tiers A+, A, A- ... E)
+    #    - Direct 13-Class Classification Model
     # ═══════════════════════════════════════════════════════════════════════════
     print("\n" + "="*80)
-    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING (365 DAYS DATA)")
-    print("   - Paradigm 1: Regression Model (Converted to Tier)")
-    print("   - Paradigm 2: Direct 5-Class Classification Model")
+    print("3. REVERSE ENGINEERING ACCUMULATION / DISTRIBUTION (A/D) RATING (13 SUB-TIER SCALE)")
+    print("   - Paradigm 1: 13-Subtier Regression Model (Converted to A+, A, A-, B+... E)")
+    print("   - Paradigm 2: Direct 13-Class Classification Model")
     print("="*80)
 
     ms_tickers = [str(s).strip() for s in df['Symbol'].dropna().unique() if str(s).strip()]
@@ -441,19 +461,20 @@ def run_pipeline():
 
     ad_features = [c for c in candidate_ad_features if c in merged_ad.columns]
 
-    sub_ad = merged_ad[ad_features + ['AD_Num', 'AD_Tier']].dropna(subset=['AD_Num', 'AD_Tier'])
+    sub_ad = merged_ad[ad_features + ['AD_Num', 'AD_Subtier', 'AD_Tier']].dropna(subset=['AD_Num', 'AD_Subtier'])
     X_ad = sub_ad[ad_features].copy()
     for c in ad_features:
         X_ad[c] = X_ad[c].apply(clean_num)
 
-    y_ad_num = sub_ad['AD_Num']
-    y_ad_tier = sub_ad['AD_Tier']
+    y_ad_num = sub_ad['AD_Num']           # Continuous 1..13
+    y_ad_subtier = sub_ad['AD_Subtier']   # 13 Sub-tier strings (A+, A, A-, B+ ... E)
+    y_ad_maintier = sub_ad['AD_Tier']     # 5 Main tier strings (A, B, C, D, E)
 
     imputer_ad = SimpleImputer(strategy='median')
     X_ad_imp = imputer_ad.fit_transform(X_ad)
 
-    X_train_ad, X_test_ad, y_train_ad_num, y_test_ad_num, y_train_ad_tier, y_test_ad_tier = train_test_split(
-        X_ad_imp, y_ad_num, y_ad_tier, test_size=0.2, random_state=42, stratify=y_ad_tier
+    X_train_ad, X_test_ad, y_tr_num, y_te_num, y_tr_sub, y_te_sub = train_test_split(
+        X_ad_imp, y_ad_num, y_ad_subtier, test_size=0.2, random_state=42, stratify=y_ad_subtier
     )
 
     scaler_ad = StandardScaler()
@@ -461,10 +482,10 @@ def run_pipeline():
     X_test_ad_std  = scaler_ad.transform(X_test_ad)
 
     # -----------------------------------------------------------------------
-    # Approach 1: Regression then Convert to 5-Tier
+    # Approach 1: 13-Subtier Regression Model (Converted to Sub-Tier)
     # -----------------------------------------------------------------------
     print("\n" + "-"*60)
-    print("Approach 1: Regression Models (Converted to 5-Tier)")
+    print("Approach 1: 13-Subtier Regression Models (Converted to A+, A, A- ... E)")
     print("-"*60)
 
     reg_models = {
@@ -477,51 +498,58 @@ def run_pipeline():
 
     reg_results = []
     best_reg_model = None
-    best_reg_tier_acc = 0.0
+    best_reg_sub_acc = 0.0
 
     for name, m in reg_models.items():
         if 'Linear' in name or 'Ridge' in name:
-            m.fit(X_train_ad_std, y_train_ad_num)
+            m.fit(X_train_ad_std, y_tr_num)
             y_pred_num = m.predict(X_test_ad_std)
         else:
-            m.fit(X_train_ad, y_train_ad_num)
+            m.fit(X_train_ad, y_tr_num)
             y_pred_num = m.predict(X_test_ad)
 
-        r2 = r2_score(y_test_ad_num, y_pred_num)
-        mae = mean_absolute_error(y_test_ad_num, y_pred_num)
+        r2 = r2_score(y_te_num, y_pred_num)
+        mae = mean_absolute_error(y_te_num, y_pred_num)
 
-        # Convert continuous predictions to 5-tier A/B/C/D/E
-        pred_converted_tier = pd.Series(y_pred_num, index=y_test_ad_tier.index).apply(num_to_5tier)
+        # Convert continuous predictions to 13 sub-tiers
+        pred_subtier = pd.Series(y_pred_num, index=y_te_sub.index).apply(num_to_13subtier)
 
-        exact_acc = accuracy_score(y_test_ad_tier, pred_converted_tier) * 100
-        macro_f1 = f1_score(y_test_ad_tier, pred_converted_tier, average='macro') * 100
+        exact_subtier_acc = accuracy_score(y_te_sub, pred_subtier) * 100
+        macro_f1_sub = f1_score(y_te_sub, pred_subtier, average='macro') * 100
 
-        te_num = y_test_ad_tier.map(TIER_ORDER)
-        pr_num = pred_converted_tier.map(TIER_ORDER)
-        within_1_tier_acc = (np.abs(te_num - pr_num) <= 1).mean() * 100
+        # Distance checks
+        te_sub_num = y_te_sub.map(SUBTIER_MAP)
+        pr_sub_num = pred_subtier.map(SUBTIER_MAP)
+        within_1_subtier_acc = (np.abs(te_sub_num - pr_sub_num) <= 1).mean() * 100
+
+        # Main tier accuracy check
+        te_main_num = y_te_sub.apply(subtier_to_maintier).map(MAIN_TIER_ORDER)
+        pr_main_num = pred_subtier.apply(subtier_to_maintier).map(MAIN_TIER_ORDER)
+        within_1_maintier_acc = (np.abs(te_main_num - pr_main_num) <= 1).mean() * 100
 
         reg_results.append({
-            'Model Paradigm': 'Regression -> Tier',
+            'Model Paradigm': '13-Subtier Regression',
             'Model Name': name,
             'R² Score': round(r2, 4),
-            'MAE (Grade Pts)': round(mae, 2),
-            'Exact Tier Acc (%)': round(exact_acc, 2),
-            'Within 1 Tier Acc (%)': round(within_1_tier_acc, 2),
-            'Macro F1 (%)': round(macro_f1, 2)
+            'MAE (13-Pt Scale)': round(mae, 2),
+            'Exact Subtier Acc (%)': round(exact_subtier_acc, 2),
+            'Within 1 Subtier Acc (%)': round(within_1_subtier_acc, 2),
+            'Within 1 MainTier Acc (%)': round(within_1_maintier_acc, 2),
+            'Macro F1 (%)': round(macro_f1_sub, 2)
         })
 
-        if exact_acc > best_reg_tier_acc:
-            best_reg_tier_acc = exact_acc
+        if exact_subtier_acc > best_reg_sub_acc:
+            best_reg_sub_acc = exact_subtier_acc
             best_reg_model = (name, m)
 
     reg_df = pd.DataFrame(reg_results)
     print(reg_df.to_string(index=False))
 
     # -----------------------------------------------------------------------
-    # Approach 2: Direct 5-Class Classification
+    # Approach 2: Direct 13-Class Classification Models
     # -----------------------------------------------------------------------
     print("\n" + "-"*60)
-    print("Approach 2: Direct 5-Class Classification Models")
+    print("Approach 2: Direct 13-Class Classification Models")
     print("-"*60)
 
     clf_models = {
@@ -538,33 +566,38 @@ def run_pipeline():
 
     for name, m in clf_models.items():
         if 'Logistic' in name:
-            m.fit(X_train_ad_std, y_train_ad_tier)
-            y_pred_cls = m.predict(X_test_ad_std)
+            m.fit(X_train_ad_std, y_tr_sub)
+            y_pred_sub = m.predict(X_test_ad_std)
         else:
-            m.fit(X_train_ad, y_train_ad_tier)
-            y_pred_cls = m.predict(X_test_ad)
+            m.fit(X_train_ad, y_tr_sub)
+            y_pred_sub = m.predict(X_test_ad)
 
-        exact_acc = accuracy_score(y_test_ad_tier, y_pred_cls) * 100
-        macro_f1 = f1_score(y_test_ad_tier, y_pred_cls, average='macro') * 100
+        exact_subtier_acc = accuracy_score(y_te_sub, y_pred_sub) * 100
+        macro_f1_sub = f1_score(y_te_sub, y_pred_sub, average='macro') * 100
 
-        te_num = y_test_ad_tier.map(TIER_ORDER)
-        pr_num = pd.Series(y_pred_cls, index=y_test_ad_tier.index).map(TIER_ORDER)
-        within_1_tier_acc = (np.abs(te_num - pr_num) <= 1).mean() * 100
+        te_sub_num = y_te_sub.map(SUBTIER_MAP)
+        pr_sub_num = pd.Series(y_pred_sub, index=y_te_sub.index).map(SUBTIER_MAP)
+        within_1_subtier_acc = (np.abs(te_sub_num - pr_sub_num) <= 1).mean() * 100
+
+        te_main_num = y_te_sub.apply(subtier_to_maintier).map(MAIN_TIER_ORDER)
+        pr_main_num = pd.Series(y_pred_sub, index=y_te_sub.index).apply(subtier_to_maintier).map(MAIN_TIER_ORDER)
+        within_1_maintier_acc = (np.abs(te_main_num - pr_main_num) <= 1).mean() * 100
 
         clf_results.append({
-            'Model Paradigm': 'Direct Classification',
+            'Model Paradigm': '13-Class Classification',
             'Model Name': name,
             'R² Score': 'N/A',
-            'MAE (Grade Pts)': 'N/A',
-            'Exact Tier Acc (%)': round(exact_acc, 2),
-            'Within 1 Tier Acc (%)': round(within_1_tier_acc, 2),
-            'Macro F1 (%)': round(macro_f1, 2)
+            'MAE (13-Pt Scale)': 'N/A',
+            'Exact Subtier Acc (%)': round(exact_subtier_acc, 2),
+            'Within 1 Subtier Acc (%)': round(within_1_subtier_acc, 2),
+            'Within 1 MainTier Acc (%)': round(within_1_maintier_acc, 2),
+            'Macro F1 (%)': round(macro_f1_sub, 2)
         })
 
-        if exact_acc > best_clf_acc:
-            best_clf_acc = exact_acc
+        if exact_subtier_acc > best_clf_acc:
+            best_clf_acc = exact_subtier_acc
             best_clf_model = (name, m)
-            best_clf_y_pred = y_pred_cls
+            best_clf_y_pred = y_pred_sub
 
     clf_df = pd.DataFrame(clf_results)
     print(clf_df.to_string(index=False))
@@ -588,11 +621,11 @@ def run_pipeline():
 
     best_reg_name, b_reg_m = best_reg_model
     reg_test_x = X_test_ad_std if ('Linear' in best_reg_name or 'Ridge' in best_reg_name) else X_test_ad
-    reg_imps = get_model_feature_importances(b_reg_m, reg_test_x, y_test_ad_num)
+    reg_imps = get_model_feature_importances(b_reg_m, reg_test_x, y_te_num)
 
     best_clf_name, b_clf_m = best_clf_model
     clf_test_x = X_test_ad_std if 'Logistic' in best_clf_name else X_test_ad
-    clf_imps = get_model_feature_importances(b_clf_m, clf_test_x, y_test_ad_tier)
+    clf_imps = get_model_feature_importances(b_clf_m, clf_test_x, y_te_sub)
 
     feat_imp_df = pd.DataFrame({
         'Feature': ad_features,
@@ -604,19 +637,20 @@ def run_pipeline():
     feat_imp_df = feat_imp_df.sort_values(by='Reg_Weight_Pct', ascending=False)
 
     # Classification report for best classifier
-    clf_rep = classification_report(y_test_ad_tier, best_clf_y_pred, target_names=['A', 'B', 'C', 'D', 'E'], output_dict=True)
-    clf_rep_df = pd.DataFrame(clf_rep).transpose().reset_index().rename(columns={'index': 'Tier / Metric'})
+    labels_present = sorted(list(y_te_sub.unique()))
+    clf_rep = classification_report(y_te_sub, best_clf_y_pred, labels=labels_present, output_dict=True)
+    clf_rep_df = pd.DataFrame(clf_rep).transpose().reset_index().rename(columns={'index': 'Sub-Tier / Metric'})
 
-    output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (365-Day Historical Data)\n")
+    output_report.append("## 3. Accumulation / Distribution (A/D) Rating Model (13 Sub-Tier Scale)\n")
     output_report.append(f"- **Evaluated Stock Dataset**: `{len(sub_ad):,}` stocks with 250D/365D Historical Price & Volume Records")
-    output_report.append(f"- **Feature Count**: `{len(ad_features)}` technical, volume accumulation, and fund footprint metrics across 30D/65D/130D/250D windows\n")
-    output_report.append("### Comparative Model Performance Table (Regression -> Tier vs Direct Classification)\n")
+    output_report.append(f"- **Scale**: 13 Sub-Tiers (`A+`, `A`, `A-`, `B+`, `B`, `B-`, `C+`, `C`, `C-`, `D+`, `D`, `D-`, `E`)\n")
+    output_report.append("### Comparative Model Performance Table (13 Sub-Tier Scale)\n")
     output_report.append(combined_comparison.to_markdown(index=False))
     output_report.append("\n")
     output_report.append("### Top 20 Feature Importances for A/D Rating Models\n")
     output_report.append(feat_imp_df.head(20)[['Feature', 'Reg_Weight_Pct', 'Clf_Weight_Pct']].to_markdown(index=False))
     output_report.append("\n")
-    output_report.append(f"### Direct Classification Per-Class Report (`{best_clf_name}`)\n")
+    output_report.append(f"### Direct Classification Per-Subtier Report (`{best_clf_name}`)\n")
     output_report.append(clf_rep_df.to_markdown(index=False))
     output_report.append("\n")
 
