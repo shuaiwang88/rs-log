@@ -179,11 +179,15 @@ def main():
         'Number of Funds', 'Funds %', 'Funds % Increase',
         'Avg EPS % Chg 6Q', 'Avg EPS % Chg 4Q', 'EPS % Chg Last Qtr', 'EPS Surprise',
         'Avg Sales % Chg 6Q', 'Avg Sales % Chg 4Q', 'Sales % Chg Last Qtr',
-        'ROE', 'Pre-tax Margins', 'Forward P/E', 'PEG', 'Price to Sales', 'Price to Book'
+        'ROE', 'Pre-tax Margins', 'Forward P/E', 'PEG', 'Price to Sales', 'Price to Book',
+        '50 Day ATR %', '30 Day ATR %', '21 Day ATR %', 'Avg True Range',
+        'Up/Down Vol', 'Vol % Chg vs 50-Day', '50-Day > 150-Day > 200-Day', '10 Day > 21 Day > 50 Day',
+        'Price vs 200-Day', 'Price vs 150-Day', 'Price vs 50-Day', 'Price vs 21-Day', 'Price vs 10-Day',
+        'Daily Closing Range'
     ]
 
     if ms_file.exists():
-        print(f"\nMerging Funds & static quarterly fundamental metrics from {ms_file}...")
+        print(f"\nMerging Funds, Technicals, and Price metrics from {ms_file}...")
         ms_df = pd.read_csv(ms_file, low_memory=False)
         sym_col = None
         for c in ['Symbol', 'Ticker', 'ticker', 'symbol']:
@@ -193,15 +197,48 @@ def main():
 
         if sym_col:
             ms_df[sym_col] = ms_df[sym_col].astype(str).str.strip()
-            avail_fund = [c for c in fund_cols if c in ms_df.columns]
+            
+            # Map MarketSurge columns to canonical schema names
+            ms_df['Close_MS'] = pd.to_numeric(ms_df['Current Price'], errors='coerce')
+            ms_df['Volume_MS'] = pd.to_numeric(ms_df['Volume (1000s)'], errors='coerce') * 1000
+            if '52-Wk High' in ms_df.columns:
+                ms_df['High_MS'] = pd.to_numeric(ms_df['52-Wk High'], errors='coerce')
+            if '52-Wk Low' in ms_df.columns:
+                ms_df['Low_MS'] = pd.to_numeric(ms_df['52-Wk Low'], errors='coerce')
+
+            extra_ms_cols = ['Close_MS', 'Volume_MS']
+            if 'High_MS' in ms_df.columns: extra_ms_cols.append('High_MS')
+            if 'Low_MS' in ms_df.columns: extra_ms_cols.append('Low_MS')
+
+            avail_fund = [c for c in fund_cols if c in ms_df.columns] + extra_ms_cols
             if avail_fund:
                 ms_sub = ms_df[[sym_col] + avail_fund].drop_duplicates(subset=[sym_col])
                 for c in avail_fund:
-                    if c in df.columns:
+                    if c in df.columns and c not in ['Close', 'Volume', 'Open', 'High', 'Low']:
                         df.drop(columns=[c], inplace=True)
                 df = df.merge(ms_sub, left_on='Ticker', right_on=sym_col, how='left')
                 if sym_col != 'Ticker' and sym_col in df.columns:
                     df.drop(columns=[sym_col], inplace=True)
+
+                # Fallback Close, Volume, High, Low, Open and technical columns from MarketSurge
+                if 'Close' not in df.columns: df['Close'] = np.nan
+                if 'Volume' not in df.columns: df['Volume'] = np.nan
+                if 'Open' not in df.columns: df['Open'] = np.nan
+                if 'High' not in df.columns: df['High'] = np.nan
+                if 'Low' not in df.columns: df['Low'] = np.nan
+
+                if 'Close_MS' in df.columns: df['Close'] = df['Close'].fillna(df['Close_MS'])
+                if 'Volume_MS' in df.columns: df['Volume'] = df['Volume'].fillna(df['Volume_MS'])
+                if 'High_MS' in df.columns: df['High'] = df['High'].fillna(df['High_MS'])
+                if 'Low_MS' in df.columns: df['Low'] = df['Low'].fillna(df['Low_MS'])
+                df['Open'] = df['Open'].fillna(df['Close'])
+
+                # Fill technical columns mapped directly from MarketSurge if still NaN
+                for col in fund_cols:
+                    if col in ms_df.columns and col in df.columns:
+                        df[col] = df[col].fillna(df[col + '_ms'] if (col + '_ms') in df.columns else np.nan)
+
+
 
     target_schema = [
         'Rank', 'Ticker', 'Sector', 'Industry', 'Exchange', 'Relative Strength', 'Percentile',
