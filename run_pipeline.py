@@ -47,12 +47,23 @@ def sync_upstream(branch="main"):
             return False
 
         print(f"📥 Upstream has {count} new commits. Merging upstream/{branch}...")
+
+        # Stash any uncommitted changes (e.g. from prior pipeline runs) before merging
+        stash_res = run_cmd(["git", "stash", "--include-untracked"])
+        stashed = stash_res.returncode == 0 and "No local changes" not in stash_res.stdout
+
         merge_res = run_cmd(["git", "merge", "-X", "theirs", "--no-edit", f"upstream/{branch}"])
         if merge_res.returncode != 0:
             print("❌ Merge failed! Aborting merge...")
             run_cmd(["git", "merge", "--abort"])
+            if stashed:
+                run_cmd(["git", "stash", "pop"])
             print(merge_res.stderr)
             return False
+
+        # Drop stash after successful merge (upstream's version wins via -X theirs)
+        if stashed:
+            run_cmd(["git", "stash", "drop"])
 
         print("✅ Merge successful.")
         return True
@@ -118,6 +129,13 @@ def execute_consolidated_pipeline():
     print("\n=======================================================")
     print("✅ Consolidated Pipeline Execution Finished!")
     print("=======================================================\n")
+
+    # Auto-commit pipeline output so working tree is clean for next upstream merge
+    run_cmd(["git", "add",
+             "output/rs_stocks.csv", "output/rs_stocks_1.csv", "output/rs_stocks_2.csv",
+             "output/rs_stocks_historical.csv", "output/rs_industries_historical.csv",
+             "output/rs_stocks_metadata.json", "output/rs_industries_metadata.json"])
+    run_cmd(["git", "commit", "-m", "chore: pipeline auto-update derived columns and history"])
 
 def main():
     parser = argparse.ArgumentParser(description="Run consolidated RS log pipeline.")
