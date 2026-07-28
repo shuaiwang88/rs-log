@@ -19,6 +19,9 @@ def setup_launchagent_macos():
     la_dir = Path.home() / "Library/LaunchAgents"
     la_dir.mkdir(parents=True, exist_ok=True)
 
+    python_bin = REPO_DIR / ".venv" / "bin" / "python"
+    python_path = str(python_bin) if python_bin.exists() else sys.executable
+
     # Scheduled plist (5:00 PM Daily) - forces append
     scheduled_plist = f'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -28,7 +31,7 @@ def setup_launchagent_macos():
     <string>com.rs-log.append-rs-history-scheduled</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
+        <string>{python_path}</string>
         <string>{REPO_DIR}/check_remote_and_append.py</string>
         <string>--force</string>
     </array>
@@ -67,7 +70,7 @@ def setup_launchagent_macos():
     <string>com.rs-log.append-rs-history-poll</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
+        <string>{python_path}</string>
         <string>{REPO_DIR}/check_remote_and_append.py</string>
     </array>
     <key>StartInterval</key>

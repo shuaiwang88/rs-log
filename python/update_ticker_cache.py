@@ -36,6 +36,18 @@ def get_target_tickers():
         except Exception:
             pass
 
+    # Add tickers from rs_stocks_historical.csv if present
+    rs_hist = REPO_DIR / "output" / "rs_stocks_historical.csv"
+    if rs_hist.exists():
+        try:
+            df_h = pd.read_csv(rs_hist, usecols=['Ticker'])
+            for t in df_h['Ticker'].dropna():
+                clean = str(t).strip()
+                if clean:
+                    tickers.add(clean)
+        except Exception:
+            pass
+
     # Add any existing tickers in ticker_cache/
     for f in CACHE_DIR.glob("*.parquet"):
         stem = f.stem
@@ -46,7 +58,7 @@ def get_target_tickers():
 
     return sorted(tickers)
 
-def update_ticker_cache_batch(tickers=None, batch_size=60, delay_between_batches=0.6):
+def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batches=0.4, target_min_date="2024-06-04"):
     if tickers is None:
         tickers = get_target_tickers()
 
@@ -54,7 +66,7 @@ def update_ticker_cache_batch(tickers=None, batch_size=60, delay_between_batches
         print("No tickers found to update.")
         return
 
-    print(f"🔄 Starting rate-limit safe ticker_cache update for {len(tickers):,} tickers...")
+    print(f"🔄 Starting ticker_cache update for {len(tickers):,} tickers (Target earliest date: {target_min_date})...")
     start_time = time.time()
 
     # Determine which tickers need full initial fetch vs incremental 5d update
@@ -64,14 +76,24 @@ def update_ticker_cache_batch(tickers=None, batch_size=60, delay_between_batches
     for t in tickers:
         clean = t.replace(".", "-")
         p_1d = CACHE_DIR / f"{clean}_1d.parquet"
-        p_250d = CACHE_DIR / f"{clean}_250d.parquet"
-        if not p_1d.exists() and not p_250d.exists():
+        if not p_1d.exists():
             need_full.append(t)
         else:
-            need_incremental.append(t)
+            try:
+                existing_df = pd.read_parquet(p_1d)
+                if existing_df.empty:
+                    need_full.append(t)
+                else:
+                    min_d = str(existing_df.index.min())[:10]
+                    if min_d > target_min_date:
+                        need_full.append(t)
+                    else:
+                        need_incremental.append(t)
+            except Exception:
+                need_full.append(t)
 
-    print(f"  • {len(need_incremental):,} tickers with existing cache (incremental 5d update)")
-    print(f"  • {len(need_full):,} tickers missing cache (full max history download)")
+    print(f"  • {len(need_incremental):,} tickers with complete cache (incremental 5d update)")
+    print(f"  • {len(need_full):,} tickers missing or lacking pre-{target_min_date} history (full max backfill)")
 
     def process_download_data(t_list, period_str):
         success_count = 0
@@ -90,7 +112,7 @@ def update_ticker_cache_batch(tickers=None, batch_size=60, delay_between_batches
                     threads=True
                 )
                 if data is None or data.empty:
-                    time.sleep(1.0)
+                    time.sleep(0.5)
                     continue
 
                 is_multi = isinstance(data.columns, pd.MultiIndex)
@@ -154,25 +176,29 @@ def update_ticker_cache_batch(tickers=None, batch_size=60, delay_between_batches
                         pass
             except Exception as e:
                 print(f"  Notice during batch download ({i}/{total_len}): {e}")
-                time.sleep(2.0)  # Pause if rate limited or connection issue
+                time.sleep(1.0)
 
             time.sleep(delay_between_batches)
+            processed_num = min(i + batch_size, total_len)
+            if (i // batch_size + 1) % 5 == 0 or processed_num == total_len:
+                print(f"    Batch {i // batch_size + 1}: Processed {processed_num:,} / {total_len:,} tickers ({success_count:,} saved successfully)...")
         return success_count
 
-    # 1. Process incremental updates for existing files
+    # 1. Process incremental updates for existing files that already cover target_min_date
     if need_incremental:
-        print("  Updating existing ticker cache files...")
+        print("  Updating existing complete ticker cache files...")
         inc_ok = process_download_data(need_incremental, period_str="5d")
         print(f"  ✓ Updated {inc_ok:,} / {len(need_incremental):,} existing ticker parquets.")
 
-    # 2. Process full max downloads for new tickers
+    # 2. Process full max downloads for new/incomplete tickers
     if need_full:
-        print("  Fetching full history for new tickers...")
+        print("  Fetching full history for missing/incomplete tickers (max period)...")
         full_ok = process_download_data(need_full, period_str="max")
-        print(f"  ✓ Created {full_ok:,} / {len(need_full):,} new ticker parquets.")
+        print(f"  ✓ Created/Backfilled {full_ok:,} / {len(need_full):,} ticker parquets.")
 
     elapsed = time.time() - start_time
     print(f"✅ Ticker cache update finished in {elapsed:.2f} seconds.")
 
 if __name__ == "__main__":
     update_ticker_cache_batch()
+

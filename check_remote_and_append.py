@@ -72,12 +72,12 @@ def push_to_origin(branch):
             print(f"Failed to push to origin:\n{r2.stderr}")
 
 def run_append_scripts():
-    print("Running daily pipeline: derive OHLCV + technical columns, then append history...")
+    print("Running daily pipeline: derive OHLCV + technical columns, append history, and update ticker cache...")
     import sys
     py = sys.executable
 
     # Step 1: Derive Open/High/Low/Close/Volume + all technical, ATR, volume ratio, fund & fundamental columns
-    print("\n[1/3] Deriving 51-column OHLCV + technical + fundamental schema...")
+    print("\n[1/4] Deriving 51-column OHLCV + technical + fundamental schema...")
     r = run_cmd([py, str(REPO_DIR / 'python' / 'derive_marketsurge_technical_columns.py')], cwd=REPO_DIR)
     if r.returncode != 0:
         print(f"  ⚠ derive_marketsurge_technical_columns.py exited with error:\n{r.stderr}")
@@ -85,7 +85,7 @@ def run_append_scripts():
         print("  ✓ Technical derivation complete.")
 
     # Step 2: Append industry history
-    print("\n[2/3] Appending industry history...")
+    print("\n[2/4] Appending industry history...")
     r = run_cmd([py, str(REPO_DIR / 'append_industry_history.py')], cwd=REPO_DIR)
     if r.returncode != 0:
         print(f"  ⚠ append_industry_history.py error:\n{r.stderr}")
@@ -93,12 +93,20 @@ def run_append_scripts():
         print("  ✓ Industry history appended.")
 
     # Step 3: Append stocks history
-    print("\n[3/3] Appending stocks history...")
+    print("\n[3/4] Appending stocks history...")
     r = run_cmd([py, str(REPO_DIR / 'append_stocks_history.py')], cwd=REPO_DIR)
     if r.returncode != 0:
         print(f"  ⚠ append_stocks_history.py error:\n{r.stderr}")
     else:
         print("  ✓ Stocks history appended.")
+
+    # Step 4: Update ticker cache
+    print("\n[4/4] Updating ticker_cache daily parquet files...")
+    r = run_cmd([py, str(REPO_DIR / 'python' / 'update_ticker_cache.py')], cwd=REPO_DIR)
+    if r.returncode != 0:
+        print(f"  ⚠ update_ticker_cache.py error:\n{r.stderr}")
+    else:
+        print("  ✓ Ticker cache parquets updated.")
 
     print("\n✅ Daily pipeline complete.")
 
