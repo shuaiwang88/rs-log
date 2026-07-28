@@ -18,6 +18,18 @@ indicator("Earnings & Ratings Table", overlay=true, max_labels_count=0)
 // only exposes the single nearest upcoming period's consensus, not a full
 // forward curve -- so only one estimate row is shown, not several years out.
 //
+// UPDATE 2: Group RS now uses an INDUSTRY-level ETF mapping (syminfo.industry)
+// instead of the old GICS-sector-level mapping (syminfo.sector). IBD's own
+// "Group RS Rating" is based on ~197 narrow industry groups (Airlines,
+// Semiconductors, Homebuilding, etc.), not broad 11-sector buckets, so a
+// dedicated industry ETF (e.g. Airlines -> JETS, Semiconductors -> SMH,
+// Homebuilding -> ITB) tracks the actual peer group much more tightly than a
+// sector ETF like XLK or XLI ever could. Coverage is necessarily incomplete
+// -- there is no dedicated, liquid ETF for every one of IBD's ~197 industry
+// buckets -- so any industry without a good direct match falls back to the
+// old sector-level ETF logic (still driven by syminfo.sector) rather than
+// leaving Group RS blank.
+//
 // Still NOT reproducible in Pine Script and intentionally left out:
 //   1. "Fund Ownership" (# of funds holding, quarter-over-quarter change) -
 //      there is no institutional-ownership field exposed via
@@ -54,8 +66,8 @@ indicator("Earnings & Ratings Table", overlay=true, max_labels_count=0)
 //     RS 2x, Group RS 1x, SMR 1x, A/D 1x, % Off 52W High 1x).
 //   - "SMR Rating": Implemented below by evaluating Sales Growth, Profit Margins,
 //     and Return on Equity (ROE) into a 0-99 score and letter grade (A/B/C/D/E).
-// The "RS Rating" logic (12-month, 3-month, 6-month and Group RS) is
-// unchanged from the base script.
+// The "RS Rating" logic (12-month, 3-month, 6-month) is unchanged from the
+// base script. Group RS now uses the industry-level ETF mapping above.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // INPUTS
@@ -69,6 +81,9 @@ txtSize    = input.string("tiny", "Text Size", options=["tiny","small","normal"]
 
 grpAD = "A/D Rating"
 adLookback = input.int(65, "A/D Lookback (trading days, ~65 = 13 weeks)", minval=10, group=grpAD)
+
+grpGrp = "Group RS"
+showGroupEtf = input.bool(false, "Show Industry/ETF Used for Group RS in Table", group=grpGrp)
 
 size = txtSize == "tiny" ? size.tiny : txtSize == "small" ? size.small : size.normal
 
@@ -186,8 +201,10 @@ rsRating3m = timeframe.isdaily ? f_scoreToRating(rsScore3m, first, scnd, thrd, f
 rsRating6m = timeframe.isdaily ? f_scoreToRating(rsScore6m, first, scnd, thrd, frth, ffth, sxth, svth, isRatingValid) : f_scoreToRating(rsScore6m, first, scnd, thrd, frth, ffth, sxth, svth, false)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GROUP (SECTOR) RS RATING
+// GROUP (INDUSTRY) RS RATING
 // ═══════════════════════════════════════════════════════════════════════════════
+// Sector-level fallback (unchanged from before) -- used only when the stock's
+// specific industry isn't in the industry->ETF map below.
 get_sector_etf(sectorIn) =>
     string etf = switch sectorIn
         "Technology Services"    => "XLK"
@@ -213,20 +230,121 @@ get_sector_etf(sectorIn) =>
         => "SPY"
     etf
 
+// Industry-level map: syminfo.industry (IBD-style ~197 industry groups, same
+// names as the "Industry Group Strength" companion indicator) -> the closest
+// liquid, dedicated industry ETF. Returns na when no good direct match
+// exists, so the caller can fall back to the sector ETF above instead of
+// leaving Group RS blank. Not every one of IBD's ~197 industries has a
+// tradable dedicated ETF, so this covers the ones that do; add more
+// mappings below as you find good candidates for industries you follow.
+get_industry_etf(industryIn) =>
+    string etf = switch industryIn
+        "Aerospace & Defense"                    => "ITA"
+        "Airlines"                               => "JETS"
+        "Auto Parts: OEM"                        => "CARZ"
+        "Automotive Aftermarket"                  => "CARZ"
+        "Motor Vehicles"                          => "CARZ"
+        "Banks"                                   => "KBE"
+        "Biotechnology"                            => "XBI"
+        "Building Products"                        => "ITB"
+        "Casinos/Gaming"                          => "BJK"
+        "Coal"                                     => "XLE"
+        "Computer Peripherals"                    => "XLK"
+        "Computer Processing Hardware"            => "XLK"
+        "Construction Materials"                  => "ITB"
+        "Contract Drilling"                       => "OIH"
+        "Data Processing Services"                => "XLK"
+        "Discount Stores"                         => "XRT"
+        "Drugstore Chains"                        => "XRT"
+        "Electric Utilities"                      => "XLU"
+        "Electrical Products"                     => "XLI"
+        "Electronic Components"                   => "SOXX"
+        "Electronic Equipment/Instruments"        => "XLK"
+        "Electronic Production Equipment"         => "SOXX"
+        "Engineering & Construction"               => "PAVE"
+        "Finance/Rental/Leasing"                   => "XLF"
+        "Financial Publishing/Services"            => "XLF"
+        "Food Distributors"                        => "XLP"
+        "Food Retail"                               => "XLP"
+        "Food: Major Diversified"                  => "XLP"
+        "Food: Meat/Fish/Dairy"                    => "XLP"
+        "Food: Specialty/Candy"                    => "XLP"
+        "Gas Distributors"                          => "AMLP"
+        "Homebuilding"                             => "ITB"
+        "Home Furnishings"                          => "ITB"
+        "Home Improvement Chains"                  => "XHB"
+        "Hospital/Nursing Management"              => "IHF"
+        "Hotels/Resorts/Cruise lines"              => "PEJ"
+        "Household/Personal Care"                  => "XLP"
+        "Industrial Machinery"                     => "XLI"
+        "Information Technology Services"          => "IGV"
+        "Insurance Brokers/Services"               => "KIE"
+        "Integrated Oil"                            => "XOP"
+        "Oil & Gas Production"                     => "XOP"
+        "Oil & Gas Pipelines"                      => "AMLP"
+        "Oil Refining/Marketing"                    => "CRAK"
+        "Oilfield Services/Equipment"                => "OIH"
+        "Internet Retail"                          => "IBUY"
+        "Internet Software/Services"                => "FDN"
+        "Investment Banks/Brokers"                 => "IAI"
+        "Investment Managers"                       => "XLF"
+        "Major Banks"                               => "KBE"
+        "Major Telecommunications"                  => "IYZ"
+        "Wireless Telecommunications"               => "IYZ"
+        "Specialty Telecommunications"              => "IYZ"
+        "Managed Health Care"                       => "IHF"
+        "Marine Shipping"                            => "SEA"
+        "Medical Distributors"                       => "IHF"
+        "Medical Specialties"                        => "IHI"
+        "Medical/Nursing Services"                   => "IHF"
+        "Metal Fabrication"                          => "XME"
+        "Other Metals/Minerals"                      => "XME"
+        "Packaged Software"                          => "IGV"
+        "Pharmaceuticals: Major"                    => "XPH"
+        "Pharmaceuticals: Other"                     => "XPH"
+        "Precious Metals"                            => "GDX"
+        "Property/Casualty Insurance"                 => "KIE"
+        "Multi-Line Insurance"                        => "KIE"
+        "Life/Health Insurance"                       => "KIE"
+        "Specialty Insurance"                          => "KIE"
+        "Railroads"                                    => "IYT"
+        "Real Estate Development"                     => "XLRE"
+        "Real Estate Investment Trusts"               => "XLRE"
+        "Regional Banks"                              => "KRE"
+        "Savings Banks"                                => "KRE"
+        "Semiconductors"                               => "SMH"
+        "Alternative Power Generation"                => "TAN"
+        "Specialty Stores"                             => "XRT"
+        "Apparel/Footwear Retail"                     => "XRT"
+        "Steel"                                        => "SLX"
+        "Trucking"                                     => "IYT"
+        "Trucks/Construction/Farm Machinery"          => "IYT"
+        "Water Utilities"                              => "PHO"
+        "Wholesale Distributors"                        => "XLI"
+        => na
+    etf
+
+string industryName = syminfo.industry
+if na(industryName)
+    industryName := "N/A"
 string sectorName = syminfo.sector
 if na(sectorName)
     sectorName := "N/A"
-sectorEtf = get_sector_etf(sectorName)
 
-closeSectorDa = request.security(sectorEtf, "D", close)
+string industryEtfMatch = get_industry_etf(industryName)
+bool   usingIndustryEtf = not na(industryEtfMatch)
+groupEtf = usingIndustryEtf ? industryEtfMatch : get_sector_etf(sectorName)
+string groupEtfLabel = (usingIndustryEtf ? industryName : sectorName) + " (" + groupEtf + ")"
 
-perfSector63  = closeSectorDa / closeSectorDa[n63]
-perfSector126 = closeSectorDa / closeSectorDa[n126]
-perfSector189 = closeSectorDa / closeSectorDa[n189]
-perfSector252 = closeSectorDa / closeSectorDa[n252]
+closeGroupDa = request.security(groupEtf, "D", close)
 
-float rs_sector = 0.4 * perfSector63 + 0.2 * perfSector126 + 0.2 * perfSector189 + 0.2 * perfSector252
-float totalRsScoreGroup = rs_sector / rs_ref * 100
+perfGroup63  = closeGroupDa / closeGroupDa[n63]
+perfGroup126 = closeGroupDa / closeGroupDa[n126]
+perfGroup189 = closeGroupDa / closeGroupDa[n189]
+perfGroup252 = closeGroupDa / closeGroupDa[n252]
+
+float rs_group = 0.4 * perfGroup63 + 0.2 * perfGroup126 + 0.2 * perfGroup189 + 0.2 * perfGroup252
+float totalRsScoreGroup = rs_group / rs_ref * 100
 
 groupRatingRaw = f_scoreToRating(totalRsScoreGroup, first, scnd, thrd, frth, ffth, sxth, svth, isRatingValid)
 groupRsRating = timeframe.isdaily ? groupRatingRaw : f_scoreToRating(totalRsScoreGroup, first, scnd, thrd, frth, ffth, sxth, svth, false)
@@ -454,7 +572,7 @@ posMap(p) =>
     result = p == "Top Right" ? position.top_right : p == "Top Left" ? position.top_left : p == "Bottom Right" ? position.bottom_right : position.bottom_left
     result
 
-var table tbl = table.new(posMap(tablePos), 5, 30, border_width=0)
+var table tbl = table.new(posMap(tablePos), 5, 31, border_width=0)
 
 f_growthColor(g) =>
     na(g) ? color.gray : g >= 0 ? color.new(color.green, 75) : color.new(color.red, 80)
@@ -472,7 +590,7 @@ fmtPct(v) =>
     na(v) ? "n/a" : str.tostring(int(math.round(v))) + "%"
 
 if barstate.islast
-    table.clear(tbl, 0, 0, 4, 29)
+    table.clear(tbl, 0, 0, 4, 30)
     row = 3
 
     // ---------------- ANNUAL TABLE (left) ----------------
@@ -571,10 +689,15 @@ if barstate.islast
         table.cell(tbl, 1, row, rsRating6m == -1 ? "n/a" : str.tostring(math.round(rsRating6m)), text_color=color.black, text_size=size)
         row += 1
 
-        // Group RS Rating
+        // Group RS Rating (industry-mapped, with sector fallback)
         table.cell(tbl, 0, row, "Group RS Rating", text_color=color.black, text_size=size)
         table.cell(tbl, 1, row, groupRsRating == -1 ? "n/a" : str.tostring(math.round(groupRsRating)), text_color=color.black, text_size=size)
         row += 1
+
+        if showGroupEtf
+            table.cell(tbl, 0, row, "Group RS Basis", text_color=color.gray, text_size=size)
+            table.cell(tbl, 1, row, groupEtfLabel, text_color=color.gray, text_size=size)
+            row += 1
 
         // Acc/Dis Rating (converted to letter grade)
         string adGrade = adRating >= 80 ? "A" : adRating >= 65 ? "B" : adRating >= 50 ? "C" : adRating >= 35 ? "D" : "E"

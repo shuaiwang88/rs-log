@@ -1,39 +1,58 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradeVizion
+//
 //@version=6
 indicator('MarketSmith Indicator', overlay = true, max_bars_back = 500, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
+
+// ── BARS ──────────────────────────────────────────────────────────────────────
+prevClose   = input(true, title='Color Based On Previous Close',  group='----------BARS----------', inline='x')
+i_posColor = input(color.rgb(39, 54,233,0), title='Candle Color Positive', group='----------BARS----------', inline = '1')
+i_negColor = input(color.rgb(222,50,174,0), title='Negative', group='----------BARS----------', inline = '1')
+isUp = prevClose ? (close >= close[1]) : (close >= open)
+plotbar(open = close, high = high, low = low, close = close, color = isUp ? i_posColor : i_negColor)
 
 iSma10 = input(true, title = 'MA 1', group = '----------SMAs----------', inline = 'sma10')
 iSmaV10 = input(10, title = 'Lenght', group = '----------SMAs----------', inline = 'sma10')
 iExp10 = input(true, title = 'Exponential', group = '----------SMAs----------', inline = 'sma10')
-iCol10 = input(color.rgb(15, 59, 219), title = '', group = '----------SMAs----------', inline = 'sma10')
+iCol10 = input(color.rgb(240, 141, 240, 0), title = '', group = '----------SMAs----------', inline = 'sma10')
+iWid10 = input.int(1, title = 'Width', group = '----------SMAs----------', inline = 'sma10', minval = 1, maxval = 10)
 iSma21 = input(true, title = 'MA 2', group = '----------SMAs----------', inline = 'sma21')
 iSmaV21 = input(21, title = 'Lenght', group = '----------SMAs----------', inline = 'sma21')
 iExp21 = input(true, title = 'Exponential', group = '----------SMAs----------', inline = 'sma21')
-iCol21 = input(color.rgb(204, 169, 16), title = '', group = '----------SMAs----------', inline = 'sma21')
+iCol21 = input(color.rgb(68, 186, 76), title = '', group = '----------SMAs----------', inline = 'sma21')
+iWid21 = input.int(1, title = 'Width', group = '----------SMAs----------', inline = 'sma21', minval = 1, maxval = 10)
 iSma50 = input(true, title = 'MA 3', group = '----------SMAs----------', inline = 'sma50')
 iSmaV50 = input(50, title = 'Lenght', group = '----------SMAs----------', inline = 'sma50')
 iExp50 = input(false, title = 'Exponential', group = '----------SMAs----------', inline = 'sma50')
 iCol50 = input(color.rgb(255, 33, 33), title = '', group = '----------SMAs----------', inline = 'sma50')
+iWid50 = input.int(1, title = 'Width', group = '----------SMAs----------', inline = 'sma50', minval = 1, maxval = 10)
 iSma200 = input(true, title = 'MA 4', group = '----------SMAs----------', inline = 'sma200')
 iSmaV200 = input(200, title = 'Lenght', group = '----------SMAs----------', inline = 'sma200')
 iExp200 = input(false, title = 'Exponential', group = '----------SMAs----------', inline = 'sma200')
 iCol200 = input(color.rgb(0, 0, 0, 0), title = '', group = '----------SMAs----------', inline = 'sma200')
+iWid200 = input.int(2, title = 'Width', group = '----------SMAs----------', inline = 'sma200', minval = 1, maxval = 10)
 
 iSma10We = input(true, title = 'SMA 1', group = '----------SMAs We----------', inline = 'sma10We')
 iSmaV10We = input(10, title = 'Lenght', group = '----------SMAs We----------', inline = 'sma10We')
 iExp10We = input(false, title = 'Exponential', group = '----------SMAs We----------', inline = 'sma10We')
 iCol10We = input(color.rgb(255, 33, 33), title = '', group = '----------SMAs We----------', inline = 'sma10We')
+iWid10We = input.int(1, title = 'Width', group = '----------SMAs We----------', inline = 'sma10We', minval = 1, maxval = 10)
 iEma20We = input(true, title = 'EMA 2', group = '----------SMAs We----------', inline = 'ema20We')
 iSmaV20We = input(20, title = 'Lenght', group = '----------SMAs We----------', inline = 'ema20We')
 iExp20We = input(true, title = 'Exponential', group = '----------SMAs We----------', inline = 'ema20We')
 iCol20We = input(color.rgb(240, 141, 240, 0), title = '', group = '----------SMAs We----------', inline = 'ema20We')
+iWid20We = input.int(1, title = 'Width', group = '----------SMAs We----------', inline = 'ema20We', minval = 1, maxval = 10)
 iSma30We = input(true, title = 'SMA 3', group = '----------SMAs We----------', inline = 'sma30We')
 iSmaV30We = input(30, title = 'Lenght', group = '----------SMAs We----------', inline = 'sma30We')
 iExp30We = input(false, title = 'Exponential', group = '----------SMAs We----------', inline = 'sma30We')
 iCol30We = input(color.rgb(68, 186, 76), title = '', group = '----------SMAs We----------', inline = 'sma30We')
+iWid30We = input.int(1, title = 'Width', group = '----------SMAs We----------', inline = 'sma30We', minval = 1, maxval = 10)
 iSma40We = input(true, title = 'SMA 4', group = '----------SMAs We----------', inline = 'sma40We')
 iSmaV40We = input(40, title = 'Lenght', group = '----------SMAs We----------', inline = 'sma40We')
 iExp40We = input(false, title = 'Exponential', group = '----------SMAs We----------', inline = 'sma40We')
 iCol40We = input(color.rgb(0, 0, 0, 0), title = '', group = '----------SMAs We----------', inline = 'sma40We')
+iWid40We = input.int(2, title = 'Width', group = '----------SMAs We----------', inline = 'sma40We', minval = 1, maxval = 10)
+
 
 sma10 = iExp10 ? ta.ema(close, iSmaV10) : ta.sma(close, iSmaV10)
 sma21 = iExp21 ? ta.ema(close, iSmaV21) : ta.sma(close, iSmaV21)
@@ -46,24 +65,25 @@ sma30We = iExp30We ? ta.ema(close, iSmaV30We) : ta.sma(close, iSmaV30We)
 sma40We = iExp40We ? ta.ema(close, iSmaV40We) : ta.sma(close, iSmaV40We)
 
 tfWeekly = timeframe.isweekly
-psma10 = plot(iSma10 and not tfWeekly ? sma10 : na, linewidth = 1, color = iCol10, title='EMA 10')
-pema21 = plot(iSma21 and not tfWeekly ? sma21 : na, linewidth = 1, color = iCol21, title='EMA 21')
-psma50 = plot(iSma50 and not tfWeekly ? sma50 : na, linewidth = 1, color = iCol50 , title='SMA 50')
-psma200 = plot(iSma200 and not tfWeekly ? sma200 : na, linewidth = 1, color = iCol200,  title='SMA 200')
+psma10 = plot(iSma10 and not tfWeekly ? sma10 : na, linewidth = iWid10, color = iCol10, title='EMA 10')
+pema21 = plot(iSma21 and not tfWeekly ? sma21 : na, linewidth = iWid21, color = iCol21, title='EMA 21')
+psma50 = plot(iSma50 and not tfWeekly ? sma50 : na, linewidth = iWid50, color = iCol50 , title='SMA 50')
+psma200 = plot(iSma200 and not tfWeekly ? sma200 : na, linewidth = iWid200, color = iCol200,  title='SMA 200')
 
-psma10We = plot(iSma10We and tfWeekly ? sma10We : na, linewidth = 1, color = iCol10We)
-pema20We = plot(iEma20We and tfWeekly ? ema20We : na, linewidth = 1, color = iCol20We)
-psma30We = plot(iSma30We and tfWeekly ? sma30We : na, linewidth = 1, color = iCol30We)
-psma40We = plot(iSma40We and tfWeekly ? sma40We : na, linewidth = 1, color = iCol40We)
+psma10We = plot(iSma10We and tfWeekly ? sma10We : na, linewidth = iWid10We, color = iCol10We)
+pema20We = plot(iEma20We and tfWeekly ? ema20We : na, linewidth = iWid20We, color = iCol20We)
+psma30We = plot(iSma30We and tfWeekly ? sma30We : na, linewidth = iWid30We, color = iCol30We)
+psma40We = plot(iSma40We and tfWeekly ? sma40We : na, linewidth = iWid40We, color = iCol40We)
 
 comparativeTickerId = 'SP:SPX'
 
+showRS = input(false, title = 'Show RS Features', group = '----------RS Rating----------')
 hideRSLine = input(false, title = 'Hide RS Line', group = '----------RS Rating----------', inline = '0')
 hideRSRat = input(false, title = 'Hide Rating', group = '----------RS Rating----------', inline = '0')
 ratingOnly = input(false, title = 'Rating Only', group = '----------RS Rating----------')
 lineTicker = input('SP:SPX', title = 'Comparative Symbol for Line', group = '----------RS Rating----------', tooltip = 'Reference ticker used for calculation of the RS Line.')
 SpxValue = input(4200, title = 'Value of Comparative Symbol', group = '----------RS Rating----------', tooltip = 'Used to gather a constant value')
-offset = input.int(80, minval = 0, maxval = 300, title = 'Offset (%)', group = '----------RS Rating----------', tooltip = 'Used to display the RS Line under the price.')
+offset = input.int(130, minval = 0, maxval = 300, title = 'Offset (%)', group = '----------RS Rating----------', tooltip = 'Used to display the RS Line under the price.')
 colorRS = input(color.rgb(24, 140, 202), title = 'Color of RS Line & Rating', group = '----------RS Rating----------')
 plotNewHigh = input(true, title = 'Plot RS New Highs', group = '----------RS Rating----------')
 rsNewHigh   = input.string('Historical RS New Highs', title = 'Type',
@@ -76,7 +96,7 @@ col_nh3M    = input(color.new(#00BFFF, 30), title = '3M NH',         group = '--
 col_nhLP    = input(color.new(#00ffd9,  0), title = 'Leads Price',   group = '----------RS Rating----------', inline = 'nhcols')
 lookback = input.int(250, title = 'Look-back', minval = 1, maxval = 252, group = '----------RS Rating----------', tooltip = 'The lookback for calculation of price and RS New Highs.')
 sizeLabHigh = input.string('Tiny', title = 'RS New Highs Circle Size', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge', 'Auto'], group = '----------RS Rating----------')
-plotNewLow = input(false, title = 'Plot RS New Lows', group = '----------RS Rating----------')
+plotNewLow = input(true, title = 'Plot RS New Lows', group = '----------RS Rating----------')
 rsNewLow = input.string('Historical RS New Lows', title = 'Type', options = ['RS New Lows', 'RS New Lows Before Price', 'Historical RS New Lows', 'Historical RS New Lows  Before Price'], group = '----------RS Rating----------')
 redDotCol = input(color.rgb(255, 82, 82, 62), title = 'Color', group = '----------RS Rating----------')
 lookback2 = input.int(250, title = 'Look-back', minval = 1, maxval = 252, group = '----------RS Rating----------', tooltip = 'The lookback for calculation of price and RS New Lows.')
@@ -136,7 +156,7 @@ rs = rsCurve * rsRatio
 prevlookback = lookback
 prevlookback2 = lookback2
 lookback := math.min(lookback - 1, bar_index)
-rsPlot = plot(hideRSLine ? na : rs, title = 'RS Line', style = plot.style_line, linewidth = 1, color = colorRS)
+rsPlot = plot(hideRSLine or not showRS ? na : rs, title = 'RS Line', style = plot.style_line, linewidth = 1, color = colorRS)
 
 isWeekly  = timeframe.isweekly
 isMonthly = timeframe.ismonthly
@@ -145,9 +165,9 @@ quickLen      = isMonthly ? 5  : isWeekly ? 8  : 21
 quickSandLen  = isMonthly ? 8  : isWeekly ? 13 : 34
 gdLen         = isMonthly ? 13 : isWeekly ? 21 : 50
 
-emaQuick      = showQuick      ? ta.ema(rs, quickLen)     : na
-emaQuickSand  = showQuickSand  ? ta.ema(rs, quickSandLen) : na
-emaGrateful   = showGD         ? ta.ema(rs, gdLen)        : na
+emaQuick      = showQuick and showRS     ? ta.ema(rs, quickLen)     : na
+emaQuickSand  = showQuickSand and showRS ? ta.ema(rs, quickSandLen) : na
+emaGrateful   = showGD and showRS        ? ta.ema(rs, gdLen)        : na
 
 plot(emaQuick,     color=colQuick,     linewidth=1, title='Quick')
 plot(emaQuickSand, color=colQuickSand, linewidth=1, title='QuickSand')
@@ -202,29 +222,29 @@ price_nl = not na(low)     and not na(_prL) and low     < _prL
 
 var label newHigh = na
 
-if rsNewHigh == 'Historical RS New Highs' and plotNewHigh and rs_nh_any
+if rsNewHigh == 'Historical RS New Highs' and plotNewHigh and rs_nh_any and showRS
     newHigh := label.new(x = bar_index, y = rs, color = f_nhColor(),
                          style = label.style_circle, size = highLabel)
     newHigh
 
-if rsNewHigh == 'Historical RS New Highs  Before Price' and plotNewHigh and rs_nh_any and not price_nh_matching
+if rsNewHigh == 'Historical RS New Highs  Before Price' and plotNewHigh and rs_nh_any and not price_nh_matching and showRS
     newHigh := label.new(x = bar_index, y = rs, color = col_nhLP,
                          style = label.style_circle, size = highLabel)
     newHigh
 
-if barstate.islast and rsNewHigh == 'RS New Highs' and plotNewHigh and rs_nh_any
+if barstate.islast and rsNewHigh == 'RS New Highs' and plotNewHigh and rs_nh_any and showRS
     label.delete(newHigh)
     newHigh := label.new(x = bar_index, y = rs, color = f_nhColor(),
                          style = label.style_circle, size = highLabel)
     newHigh
 
-if barstate.islast and rsNewHigh == 'RS New Highs Before Price' and plotNewHigh and rs_nh_any and not price_nh_matching
+if barstate.islast and rsNewHigh == 'RS New Highs Before Price' and plotNewHigh and rs_nh_any and not price_nh_matching and showRS
     label.delete(newHigh)
     newHigh := label.new(x = bar_index, y = rs, color = col_nhLP,
                          style = label.style_circle, size = highLabel)
     newHigh
 
-if plotNewHigh and rs_nh_any
+if plotNewHigh and rs_nh_any and showRS
     _leadsPrice = not price_nh_matching
     _ttNH = _leadsPrice
           ? "🟢 RS LEADS PRICE (" + rs_nh_period + ")\nRS new " + rs_nh_period + " high before price\nLeading strength signal"
@@ -238,29 +258,29 @@ if plotNewHigh and rs_nh_any
 
 var label newLow = na
 
-if rsNewLow == 'Historical RS New Lows' and plotNewLow and rs_nl
+if rsNewLow == 'Historical RS New Lows' and plotNewLow and rs_nl and showRS
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-if rsNewLow == 'Historical RS New Lows  Before Price' and plotNewLow and rs_nl and not price_nl
+if rsNewLow == 'Historical RS New Lows  Before Price' and plotNewLow and rs_nl and not price_nl and showRS
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-if barstate.islast and rsNewLow == 'RS New Lows' and plotNewLow and rs_nl
+if barstate.islast and rsNewLow == 'RS New Lows' and plotNewLow and rs_nl and showRS
     label.delete(newLow)
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-if barstate.islast and rsNewLow == 'RS New Lows Before Price' and plotNewLow and rs_nl and not price_nl
+if barstate.islast and rsNewLow == 'RS New Lows Before Price' and plotNewLow and rs_nl and not price_nl and showRS
     label.delete(newLow)
     newLow := label.new(x = bar_index, y = rs, color = redDotCol,
                         style = label.style_circle, size = lowLabel)
     newLow
 
-if plotNewLow and rs_nl
+if plotNewLow and rs_nl and showRS
     label.new(bar_index, rs, "",
               style     = label.style_circle,
               color     = color.new(color.white, 100),
@@ -377,63 +397,9 @@ for i = 0 to 6 by 1
         totalRsRating := -1
         totalRsRating
 
-
-
-rsScore3m = perfTicker63  / perfComp63  * 100
-rsScore6m = perfTicker126 / perfComp126 * 100
-
-float rsRating3m = -1
-float rsRating6m = -1
-
-if not allowReplay
-    for i = delta to 34 + delta by 1
-        continue
-
-if rsScore3m >= first
-    rsRating3m := 99
-else if rsScore3m <= svth
-    rsRating3m := 1
-else if rsScore3m < first and rsScore3m >= scnd
-    rsRating3m := f_attributePercentile(rsScore3m, first, scnd, 98, 90, 0.33)
-else if rsScore3m < scnd and rsScore3m >= thrd
-    rsRating3m := f_attributePercentile(rsScore3m, scnd, thrd, 89, 70, 2.1)
-else if rsScore3m < thrd and rsScore3m >= frth
-    rsRating3m := f_attributePercentile(rsScore3m, thrd, frth, 69, 50, 0)
-else if rsScore3m < frth and rsScore3m >= ffth
-    rsRating3m := f_attributePercentile(rsScore3m, frth, ffth, 49, 30, 0)
-else if rsScore3m < ffth and rsScore3m >= sxth
-    rsRating3m := f_attributePercentile(rsScore3m, ffth, sxth, 29, 10, 0)
-else if rsScore3m < sxth and rsScore3m >= svth
-    rsRating3m := f_attributePercentile(rsScore3m, sxth, svth, 9, 2, 0)
-
-if rsScore6m >= first
-    rsRating6m := 99
-else if rsScore6m <= svth
-    rsRating6m := 1
-else if rsScore6m < first and rsScore6m >= scnd
-    rsRating6m := f_attributePercentile(rsScore6m, first, scnd, 98, 90, 0.33)
-else if rsScore6m < scnd and rsScore6m >= thrd
-    rsRating6m := f_attributePercentile(rsScore6m, scnd, thrd, 89, 70, 2.1)
-else if rsScore6m < thrd and rsScore6m >= frth
-    rsRating6m := f_attributePercentile(rsScore6m, thrd, frth, 69, 50, 0)
-else if rsScore6m < frth and rsScore6m >= ffth
-    rsRating6m := f_attributePercentile(rsScore6m, frth, ffth, 49, 30, 0)
-else if rsScore6m < ffth and rsScore6m >= sxth
-    rsRating6m := f_attributePercentile(rsScore6m, ffth, sxth, 29, 10, 0)
-else if rsScore6m < sxth and rsScore6m >= svth
-    rsRating6m := f_attributePercentile(rsScore6m, sxth, svth, 9, 2, 0)
-
-for i = 0 to 6 by 1
-    if nz(array.get(different_values, i)) == 0 and not allowReplay
-        rsRating3m := -1
-        rsRating6m := -1
-
-// Fetch daily ratings when on non-daily charts
-[t_t, t_3m, t_6m] = request.security(syminfo.tickerid, 'D', [totalRsRating, rsRating3m, rsRating6m])
-
-rToday  = timeframe.isdaily ? totalRsRating : t_t
-r3m     = timeframe.isdaily ? rsRating3m : t_3m
-r6m     = timeframe.isdaily ? rsRating6m : t_6m
+// Fetch daily totalRsRating (we only need the daily rating for the label)
+t_t = request.security(syminfo.tickerid, 'D', totalRsRating)
+rToday = timeframe.isdaily ? totalRsRating : t_t
 
 // Plot RS Rating Labels on Chart
 labelText1 = ''
@@ -446,8 +412,8 @@ if ratingOnly
     labelText2 := '\n    ' + str.tostring(rToday, '#0')
     labelText2
 
-label1 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
-label2 = hideRSRat == false and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
+label1 = hideRSRat == false and showRS and barstate.islast ? label.new(bar_index, rs, text = labelText1, color = color.rgb(0, 0, 0, 100), size = size.normal, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
+label2 = hideRSRat == false and showRS and barstate.islast ? label.new(bar_index, rs, text = labelText2, color = color.rgb(0, 0, 0, 100), size = size.large, textcolor = colorRS, style = label.style_label_center, textalign = text.align_left, yloc = yloc.price) : na
 
 label.delete(label1[1])
 label.delete(label2[1])
@@ -487,11 +453,10 @@ if tfWeekly
 
 i_displayHL = input(true, title = 'Display H/L Points', group = 'High/Low Price Points')
 i_colorHL = input(color.rgb(180, 158, 48), title = 'Labels Color', group = 'High/Low Price Points')
-i_displayPc = input(false, title = '%Change', group = 'High/Low Price Points')
+i_displayPc = input(true, title = '%Change', group = 'High/Low Price Points')
 i_colorPctP = input(color.rgb(0, 0, 255), title = 'Positive % Color', group = 'High/Low Price Points', inline = 'z')
 i_colorPctN = input(color.rgb(181, 49, 144), title = 'Negative %', group = 'High/Low Price Points', inline = 'z')
 i_pivot = input(9, title = 'Length for peak/valey points', group = 'High/Low Price Points')
-i_pivot := timeframe.isweekly ? 2 : i_pivot
 
 var pivotHighValues = array.new_float(0)
 var pivotLowValues = array.new_float(0)
@@ -533,7 +498,7 @@ if i_displayHL and not tfWeekly
 i_displayPattern = input(true, title = 'Display Pattern', group = 'Chart Pattern Recognition')
 i_displayBoxes = input(true, title = 'Display Trade Boxes', group = 'Chart Pattern Recognition')
 i_displayHistoricalBoxes = input(true, title = 'Display Historical Trade Boxes', group = 'Chart Pattern Recognition')
-i_baseDepth = input(50, title = 'Base: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
+i_baseDepth = input(35, title = 'Base: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_dbDepth = input(50, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
 i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
@@ -546,32 +511,26 @@ i_handleMinBars = input(5, title = 'Handle: Min Bars', group = 'Chart Pattern Re
 i_handleMaxBars = input(25, title = 'Handle: Max Bars', group = 'Chart Pattern Recognition')
 i_handleMaxDecline = input(12.0, title = 'Handle: Max Decline (%)', group = 'Chart Pattern Recognition')
 i_handleMinHeightPct = input(60.0, title = 'Handle: Min Peak Height (%)', group = 'Chart Pattern Recognition')
-i_useVolHandle       = input.bool(false,  'Use Volume Confirmation for Handle', group = 'Chart Pattern Recognition', tooltip = 'Optional: require volume contraction in the handle & expansion on breakout. OFF by default — the separate Cup-with-Handle is a no-volume, early-detection pattern.')
-i_requireCupForHandle = input.bool(false,  'Require Cup Base for Handle',       group = 'Chart Pattern Recognition', tooltip = 'Optional: require a fully detected cup before flagging a handle. OFF by default — the handle may form on the right side of the base before the full cup completes (early handle).')
+i_useVolHandle       = input.bool(true,   'Use Volume Confirmation for Handle', group = 'Chart Pattern Recognition', tooltip = 'Require volume contraction during handle & expansion on breakout')
+i_requireCupForHandle = input.bool(true,   'Require Cup Base for Handle',       group = 'Chart Pattern Recognition', tooltip = 'Handle must form in a detected cup pattern (not just any base)')
 i_volMaLengthHandle  = input.int(50,      'Volume MA Length',                   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'Lookback for average volume')
 i_volContractionMax  = input.float(50.0,  'Max Avg Vol % in Handle',            group = 'Chart Pattern Recognition', minval = 0, step = 1, tooltip = 'Average handle volume must be below this % of the volume MA')
 i_volBreakoutMult    = input.float(1.5,   'Breakout Volume Multiplier',         group = 'Chart Pattern Recognition', minval = 1, step = 0.1, tooltip = 'Breakout bar volume must be ≥ this times volume MA')
-i_lockFirstHandle    = input.bool(true,   'Lock First Valid Handle (no shift)', group = 'Chart Pattern Recognition', tooltip = 'IBD update #2: lock the FIRST valid handle/pivot instead of shifting to a later or higher one. Gives a consistent pivot point. Turn OFF for the legacy "best handle" behavior.')
-i_requirePriorUptrend = input.bool(true,  'Require Prior Uptrend for Base',     group = 'Chart Pattern Recognition', tooltip = 'Legacy filter: base must sit ~20% above its prior ~20-week low. ON preserves current behavior. Turn OFF to match the new IBD left-side rule (13-week high OR prior-base breakout only) — flags more bases, including some in downtrends.')
-i_htfOn   = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
-i_htfPole = input.float(80.0,  'HTF: Min Pole Gain %',               group = 'Chart Pattern Recognition', step = 5.0, tooltip = 'Minimum advance of the pole (low → peak). At least 80% prior uptrend.')
-i_htfPB   = input.int(40,      'HTF: Max Pole Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Pole must run from its low to its peak within this many bars (less than 8 weeks = 40 bars).')
-i_htfFMin = input.int(10,      'HTF: Min Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Minimum bars in the flag (2 weeks = 10 bars).')
-i_htfFMax = input.int(20,      'HTF: Max Flag Bars',                 group = 'Chart Pattern Recognition', tooltip = 'Maximum bars in the flag (4 weeks = 20 bars).')
-i_htfRet  = input.float(25.0,  'HTF: Max Flag Retrace %',            group = 'Chart Pattern Recognition', tooltip = 'Maximum pullback of the flag below the pole high (less than 25%).')
-i_htfVol  = input.float(1.2,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
+
+i_htfOn      = input.bool(true,   'Enable HTF Detection',               group = 'Chart Pattern Recognition')
+i_htfDepth   = input.float(25.0,  'HTF: Max Flag Depth %',              group = 'Chart Pattern Recognition', step = .25, minval = .25, tooltip = 'Maximum pullback allowed from flag high to flag low (less than 25%)')
+i_htfFMax    = input.int(20,      'HTF: Max Flag Length (bars)',        group = 'Chart Pattern Recognition', tooltip = 'The maximum number of bars the flag can last (4 weeks = 20 bars)')
+i_htfFMin    = input.int(6,       'HTF: Min Flag Length (bars)',        group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag (default 3 bars for earlier detection)')
+
+i_htfPole    = input.float(85.0,  'HTF: Prior Uptrend Minimum %',       group = 'Chart Pattern Recognition', step = .50, minval = .25, tooltip = 'The minimum percentage gain required before a flag forms (at least 80%)')
+i_htfPB      = input.int(40,      'HTF: Max Flag Pole Length (bars)',   group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The maximum number of bars the flagpole can be (less than 8 weeks = 40 bars)')
+i_htfPBMin   = input.int(5,       'HTF: Min Flag Pole Length',          group = 'Chart Pattern Recognition', minval = 1, tooltip = 'The minimum number of bars required for the flag pole')
+i_htfVol     = input.float(1.1,   'HTF: BO Volume × Avg',               group = 'Chart Pattern Recognition', tooltip = 'Breakout volume multiplier.')
 
 i_baseDepth := i_baseDepth / 100
 i_dbDepth := i_dbDepth / 100
-int barsPerWeek = timeframe.isweekly ? 1 : 5
-i_baseLength := i_baseLength * barsPerWeek
-i_dbLength   := i_dbLength   * barsPerWeek
-int pivLag     = 5  * barsPerWeek
-int win13wk    = 13 * barsPerWeek
-int win20wk    = 20 * barsPerWeek
-int win10wk    = 10 * barsPerWeek
-int minBaseLen = 6  * barsPerWeek
-bool tfDraw = timeframe.isdaily or timeframe.isweekly
+i_baseLength := i_baseLength * 5
+i_dbLength := i_dbLength * 5
 
 var pivotHighPrices = array.new_float(0)
 var pivotLowPrices = array.new_float(0)
@@ -602,39 +561,45 @@ if bool(pivotLow)
 boolHighbase = false
 boolHigherPiv = false
 htfAvgVol = ta.sma(volume, 20)
-highestOfBase = ta.highest(high, pivLag)
-highestOfComp = ta.highest(high, win10wk)
-lowestBaseLow = ta.lowest(low, pivLag)
-lowestPointLeg = ta.lowest(low, win20wk)
+highestOfBase = ta.highest(high, 25)
+highestOfComp = ta.highest(high, 50)
+lowestBaseLow = ta.lowest(low, 25)
+lowestPointLeg = ta.lowest(low, 103)
 var baseCond = false
 isBase = false
 
-_highest65shifted = ta.highest(high, win13wk)[pivLag + 1]
+_highest65shifted = ta.highest(high, 65)[26]
+_dynamicHighestPrior = ta.highest(high, math.min(14999, math.max(1, bar_index - 25)))[26]
+_dynamicLegLookback = math.min(103, math.max(1, bar_index - 25))
+_dynamicLowestIPOLeg = ta.lowest(low, _dynamicLegLookback)
 
-if array.size(pivotHighPrices) > 2
-    boolHighbase := high[pivLag] == array.get(pivotHighPrices, 0) or high[pivLag] == array.get(pivotHighPrices, 1) or high[pivLag] == array.get(pivotHighPrices, 2)
-    bool13wkHigh    = high[pivLag] > _highest65shifted
+if array.size(pivotHighPrices) > 0
+    int pivCount = array.size(pivotHighPrices)
+    boolHighbase := high[25] == array.get(pivotHighPrices, 0) or (pivCount > 1 and high[25] == array.get(pivotHighPrices, 1)) or (pivCount > 2 and high[25] == array.get(pivotHighPrices, 2))
+    float highestPrior = na(_highest65shifted) ? _dynamicHighestPrior : _highest65shifted
+
+    bool13wkHigh    = high[25] >= highestPrior
     float _priorTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
-    float _priorLow = array.size(lowBasePrice)  > 0 ? array.get(lowBasePrice, 0)  : na
-    bool priorBaseNotReset = na(_priorLow) or lowestPointLeg >= _priorLow * 0.85
-    boolPriorBaseBO = not na(_priorTop) and high[pivLag] > _priorTop and priorBaseNotReset
+    boolPriorBaseBO = not na(_priorTop) and high[25] > _priorTop
     boolHigherPiv  := bool13wkHigh or boolPriorBaseBO
-    legUp = lowestPointLeg * 1.20
-    legUpCond = not i_requirePriorUptrend or high[pivLag] >= legUp
-    firstBaseDepth = high[pivLag] * (1 - i_baseDepth) <= lowestBaseLow
-    noCandleAbove = highestOfBase <= high[pivLag]
-    noBaseInBase = isBase[pivLag] == false
+    float lowestPointIPOLeg = _dynamicLowestIPOLeg
+
+    legUp = lowestPointIPOLeg * 1.20
+    legUpCond = high[25] >= legUp
+    firstBaseDepth = high[25] * (1 - i_baseDepth) <= lowestBaseLow
+    noCandleAbove = highestOfBase <= high[25]
+    noBaseInBase = isBase[25] == false
     baseCond := boolHighbase and boolHigherPiv and legUpCond and firstBaseDepth and noCandleAbove and noBaseInBase
     baseCond
 lowestBar = ta.barssince(low == lowestBaseLow)
 if baseCond and not isBase[1]
-    array.unshift(startBasePrice, high[pivLag])
-    startBaseBar := bar_index[pivLag]
-    array.unshift(lowOfpivotHighPrices, low[pivLag])
-    lowOfBaseHigh := low[pivLag]
+    array.unshift(startBasePrice, high[25])
+    startBaseBar := bar_index[25]
+    array.unshift(lowOfpivotHighPrices, low[25])
+    lowOfBaseHigh := low[25]
     array.unshift(lowBasePrice, lowestBaseLow)
     lowerBaseBar := bar_index[lowestBar]
-    for i = 0 to pivLag by 1
+    for i = 0 to 25 by 1
         array.unshift(baseCloses, close[i])
 
 if baseCond or isBase[1]
@@ -672,7 +637,7 @@ if isBase
         if array.size(startBasePrice) > 0
             condPricesH := firstPivHigh == array.get(startBasePrice, 0)
 
-        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow * 1.03)
+        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow )
 
         condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh and firstPivLow >= (1 - i_dbDepth) * firstPivHigh
 
@@ -761,7 +726,7 @@ if isBase
     condMaxDepth = lowCup >= (1 - i_baseDepth) * highCup
     condMinDepth = lowCup <= 0.92 * highCup
     condMaxLength = bar_index - startBaseBar <= i_baseLength
-    condMinLength = bar_index - startBaseBar >= minBaseLen
+    condMinLength = bar_index - startBaseBar >= 30
     condAbsolutePos = (highCup - lowCup) * 0.5 + lowCup <= high
     for i = baseCount to 2 * baseTier by 1
         if close[i] >= middleOfCup
@@ -805,15 +770,12 @@ else
         rightSideHighCloseSep := nz(rightSideHighCloseSep[1], rightSideHighCloseSep)
 
 var int handlePeakBarSep = 0
-var bool handleLockedFlagSep = false
 if not rightSide or rightSideHighCloseSep == 0.0
     handlePeakBarSep := 0
-    handleLockedFlagSep := false
 else
     float _leftTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
     float minHeightVal = not na(_leftTop) ? _leftTop * (i_handleMinHeightPct / 100.0) : 0.0
-    bool canMovePeak = not i_lockFirstHandle or not handleLockedFlagSep
-    if canMovePeak and close > nz(rightSideHighCloseSep[1], rightSideHighCloseSep) * 1.05 and close <= _leftTop and close >= minHeightVal
+    if close > nz(rightSideHighCloseSep[1], rightSideHighCloseSep) * 1.05 and close <= _leftTop and close >= minHeightVal
         handlePeakBarSep := bar_index
     else
         handlePeakBarSep := nz(handlePeakBarSep[1], handlePeakBarSep)
@@ -844,83 +806,164 @@ float _baseTop = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) :
 bool handleMidOKSep   = not na(_baseTop) and not na(_baseLow) and handleLowPointSep > (_baseTop + _baseLow) * 0.5
 
 float volMaHandle  = ta.sma(volume, i_volMaLengthHandle)
+int safeHandleBars = math.max(1, handleBarCountSep)
+float sumVolHandle = math.sum(volume, safeHandleBars)
 float volAvgHandle = na
 if rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep > 0
-    volAvgHandle := math.sum(volume, handleBarCountSep) / handleBarCountSep
+    volAvgHandle := sumVolHandle / handleBarCountSep
+
 
 bool volContractionOK = not i_useVolHandle or (handleBarCountSep > 0 and volAvgHandle <= volMaHandle * i_volContractionMax / 100)
-bool requireCupOK     = not i_requireCupForHandle or isCup
+bool requireCupOK     = not i_requireCupForHandle or isCup or isDoubleBottom
 
 bool handleFormingSep = i_showCupHandleSep and rightSide and handlePeakLockedSep > 0.0 and handleBarCountSep >= i_handleMinBars and handleBarCountSep <= i_handleMaxBars and handleDepthOKSep and handleMidOKSep and volContractionOK and requireCupOK
-
-if handleFormingSep and i_lockFirstHandle
-    handleLockedFlagSep := true
 
 bool volBreakoutOK    = not i_useVolHandle or volume >= i_volBreakoutMult * volMaHandle
 bool handleBreakoutSep = handleFormingSep and close > handlePeakLockedSep and volBreakoutOK
 
-var bool detectHTF = false
+// Flag variables from drw_flag.pine
+var float flag_baseHigh = na
+var int flag_startIndex = na
+var int flag_flagLength = 0
+var float flag_baseLow = na
+var int flag_lowIndex = na
+var bool flag_flagBool = false
+var float flag_poleLow = na
+var int flag_poleLowIndex = na
+
+var line flagHLine = na
+var line flagLLine = na
+var line flagPLine = na
+
+var bool isHTF = false
 var int htfPoleLowBar = na
 var float htfPoleLowPrice = na
 var int htfPoleHighBar = na
 var float htfPoleHighPrice = na
 var float htfFlagHighPrice = na
 var float htfFlagLowPrice = na
-var int htfBaseLowAgo = na
+var bool is_flag = false
+float _flagHighest10 = ta.highest(high, 10)
 
 if i_htfOn and bar_index > 30
-    bool found = false
-    for fLen = i_htfFMin to i_htfFMax
-        if not found
-            int   pHi = fLen + 1
-            float pH2 = high[pHi]
-            for k = fLen to math.min(fLen + 5, bar_index - 1)
-                if high[k] > pH2
-                    pH2 := high[k]
-                    pHi := k
+    // find bull flag highs (from drw_flag.pine)
+    if high > flag_baseHigh or na(flag_baseHigh)
+        flag_baseHigh := high
+        flag_startIndex := bar_index
+        flag_flagLength := 0
+        flag_baseLow := low
+        flag_lowIndex := bar_index
 
-            float pL2 = low[pHi + 1]
-            int   pLi = pHi + 1
-            for k = 1 to i_htfPB
-                if pHi + k < bar_index
-                    if low[pHi + k] < pL2
-                        pL2 := low[pHi + k]
-                        pLi := pHi + k
+    if high <= flag_baseHigh and low < flag_baseLow
+        flag_baseLow := low
+        flag_lowIndex := bar_index
 
-            float poleGain = pL2 > 0 ? (pH2 / pL2 - 1) * 100 : 0.0
-            int   poleBars = pLi - pHi
+    if high <= flag_baseHigh and flag_lowIndex == flag_startIndex
+        flag_baseLow := low
+        flag_lowIndex := bar_index
 
-            if poleGain >= i_htfPole and poleBars <= i_htfPB and pLi > pHi
-                float fH2 = high[1]
-                float fL2 = low[1]
-                if pHi > 1
-                    for m = 1 to pHi - 1
-                        if high[m] > fH2
-                            fH2 := high[m]
-                        if low[m] < fL2
-                            fL2 := low[m]
+    // calculations
+    float findDepth = flag_baseHigh > 0 ? math.abs(((flag_baseLow / flag_baseHigh) - 1.0) * 100.0) : 0.0
+    bool lower_close = close < close[1]
 
-                float maxRet = pH2 * (1.0 - i_htfRet / 100.0)
-                bool  flagOk = fH2 <= pH2 * 1.01 and fL2 >= maxRet
-                bool  bo     = close > fH2 and volume > htfAvgVol * i_htfVol
+    // start the counters
+    if high < flag_baseHigh and findDepth <= i_htfDepth or (high == flag_baseHigh and lower_close)
+        flag_flagLength += 1
+    else
+        flag_flagLength := 0
 
-                if flagOk and bo
-                    found := true
-                    htfPoleLowBar := bar_index - pLi
-                    htfPoleLowPrice := pL2
-                    htfPoleHighBar := bar_index - pHi
-                    htfPoleHighPrice := pH2
-                    htfFlagHighPrice := fH2
-                    htfFlagLowPrice := fL2
-                    htfBaseLowAgo := pLi
+    // check for prior uptrend (pole gain >= 80% in <= 40 bars)
+    if not flag_flagBool or high == flag_baseHigh
+        float minLow = low[1]
+        int minLowIdx = bar_index - 1
+        int searchBars = math.min(i_htfPB, bar_index - 1)
+        if searchBars >= i_htfPBMin
+            for i = 1 to searchBars
+                if low[i] < minLow
+                    minLow := low[i]
+                    minLowIdx := bar_index - i
+            if minLow > 0 and ((flag_baseHigh / minLow) - 1.0) * 100.0 >= i_htfPole
+                flag_flagBool := true
+                flag_poleLow := minLow
+                flag_poleLowIndex := minLowIdx
 
-    detectHTF := found
+    // reset variables if criteria is broken
+    if findDepth >= i_htfDepth or flag_flagLength > i_htfFMax
+        flag_flagBool := false
+        flag_flagLength := 0
+        flag_baseHigh := na
+        flag_startIndex := na
+        flag_lowIndex := na
+        flag_baseLow := na
 
-if detectHTF and not detectHTF[1] and timeframe.isdaily and i_displayPattern
-    line.new(x1 = htfPoleLowBar, y1 = htfPoleLowPrice, x2 = htfPoleHighBar, y2 = htfPoleHighPrice, width = 3, color = color.green)
-    line.new(x1 = htfPoleHighBar, y1 = htfFlagHighPrice, x2 = bar_index - 1, y2 = htfFlagHighPrice, width = 2, style = line.style_dashed, color = color.green)
-    line.new(x1 = htfPoleHighBar, y1 = htfFlagLowPrice, x2 = bar_index - 1, y2 = htfFlagLowPrice, width = 2, style = line.style_dashed, color = color.green)
-    label.new(x = htfPoleHighBar, y = htfPoleHighPrice, text = "HTF +" + str.tostring((htfPoleHighPrice / htfPoleLowPrice - 1) * 100, "0") + "%", style = label.style_label_down, color = color.green, textcolor = color.white, size = size.small)
+    // reset and look for new flag if price continues higher before minimum length
+    if high > nz(flag_baseHigh[1]) and flag_flagLength < i_htfFMin
+        flag_baseHigh := high
+        flag_flagLength := 0
+        flag_startIndex := bar_index
+        flag_lowIndex := bar_index
+        flag_baseLow := low
+
+    // define the flag forming state
+    is_flag := flag_flagBool == true and flag_flagLength <= i_htfFMax and findDepth < i_htfDepth and flag_flagLength >= i_htfFMin and (flag_startIndex - flag_poleLowIndex) <= i_htfPB
+
+    // live line drawing from drw_flag.pine
+    if is_flag and i_displayPattern
+        if is_flag[1]
+            line.delete(flagHLine)
+            line.delete(flagLLine)
+            line.delete(flagPLine)
+        flagHLine := line.new(flag_startIndex, flag_baseHigh, bar_index, flag_baseHigh, color = color.green, width = 2, style = line.style_dotted)
+        flagLLine := line.new(flag_startIndex, flag_baseLow, bar_index, flag_baseLow, color = color.green, width = 2, style = line.style_dotted)
+        flagPLine := line.new(flag_poleLowIndex, flag_poleLow, flag_startIndex, flag_baseLow, color = color.green, width = 2, style = line.style_dotted)
+
+    // define breakout & breakdown
+    bool breakout = high > nz(flag_baseHigh[1]) and flag_flagLength >= i_htfFMin and flag_flagBool == true
+    bool breakdown = findDepth >= i_htfDepth or flag_flagLength > i_htfFMax
+    bool plotBO = is_flag[1] and high > nz(flag_baseHigh[1]) and flag_flagLength[1] >= i_htfFMin and flag_flagBool == true
+
+    // apply volume confirmation if set
+    bool volOK = true
+    if i_htfVol > 0
+        volOK := volume >= htfAvgVol * i_htfVol
+
+    // update state variables when breakout or flag forming is triggered
+    if (plotBO and volOK) or is_flag
+        isHTF := true
+        htfPoleLowBar := flag_poleLowIndex
+        htfPoleLowPrice := flag_poleLow
+        htfPoleHighBar := flag_startIndex
+        htfPoleHighPrice := flag_baseHigh
+        htfFlagHighPrice := flag_baseHigh
+        htfFlagLowPrice := flag_baseLow
+    else
+        isHTF := false
+
+
+    // reset variables if a breakout occurs
+    if breakout
+        flag_flagLength := 0
+        flag_baseHigh := high
+        flag_startIndex := bar_index
+        flag_lowIndex := bar_index
+        flag_baseLow := low
+
+    // reset from a failed flag (breakdown)
+    if breakdown or flag_flagLength == i_htfFMax
+        flag_flagBool := false
+        flag_baseHigh := _flagHighest10
+        flag_startIndex := bar_index
+        flag_lowIndex := bar_index
+        flag_baseLow := low
+
+    if breakdown and is_flag[1]
+        line.delete(flagHLine)
+        line.delete(flagLLine)
+        line.delete(flagPLine)
+else
+    isHTF := false
+    is_flag := false
+
 
 var line highLine = na
 var line lowLine = na
@@ -939,7 +982,7 @@ var box entryBox = na
 var box slBox = na
 var box tpBox = na
 
-if baseCond and not isBase[1] and tfDraw and i_displayPattern
+if baseCond and not isBase[1] and timeframe.isdaily and i_displayPattern
     highLine := line.new(x1 = startBaseBar, y1 = array.get(startBasePrice, 0), x2 = bar_index, y2 = array.get(startBasePrice, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
     lowLine := line.new(x1 = startBaseBar, y1 = array.get(lowBasePrice, 0), x2 = bar_index, y2 = array.get(lowBasePrice, 0), width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
     select = i_displayHistoricalBoxes ? false : boxOver
@@ -962,7 +1005,7 @@ if lowerBaseBar - startBaseBar <= 0
             lowValue
 lengthLeft = lowerBaseBar - startBaseBar
 lengthRight = bar_index - lowerBaseBar
-if detectCup and isBase and tfDraw and i_displayPattern and not isDoubleBottom[1] and barstate.islast
+if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDoubleBottom[1] and barstate.islast
     if array.size(linesRight) > lengthRight - 1
         for i = 0 to lengthRight - 1 by 1
             line.delete(array.get(linesRight, i))
@@ -979,7 +1022,7 @@ if detectCup and isBase and tfDraw and i_displayPattern and not isDoubleBottom[1
         bottomPrice := array.get(lowBasePrice, 0) * (1 - 0.01)
         bottomPrice
     endUpPrice = low[1] * (1 - 0.01)
-    if tfDraw and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
+    if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
         for i = 0 to lengthLeft - 1 by 1
             float k = 1 / math.exp(0) / (startUpPrice - bottomPrice)
             x1 := bar_index[lengthLeft - 1 - (i - 1)]
@@ -1009,7 +1052,7 @@ if detectCup and isBase and tfDraw and i_displayPattern and not isDoubleBottom[1
 _lowCompareFull = ta.lowest(low, math.min(14999, math.max(1, bar_index - topDBBar)))
 
 lowCompare = bar_index - topDBBar > 0 ? _lowCompareFull : low
-if detectDoubleBottom and not isDoubleBottom[1] and tfDraw and i_displayPattern
+if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_displayPattern
     line.delete(highLine)
     line.delete(lowLine)
     bottomDBBar := array.get(pivotLowBars, 0)
@@ -1082,9 +1125,9 @@ if high <= line.get_y1(highLine) and low >= line.get_y1(lowLine) and isBase
     line.set_x2(highLine, bar_index)
     line.set_x2(lowLine, bar_index)
     if isDoubleBottom
-        line.set_y2(lowLine, low * (100 - 1) / 100)
+        line.set_y2(lowLine, high)
         line.set_x2(lowLine, bar_index)
-    if handleFormingSep and tfDraw and i_displayPattern
+    if handleFormingSep and timeframe.isdaily and i_displayPattern
         if na(handleSepLine)
             handleSepLine := line.new(x1 = handlePeakBarSep, y1 = handlePeakLockedSep, x2 = bar_index, y2 = handlePeakLockedSep, width = 2, style = line.style_dotted, color = color.orange)
         else
@@ -1120,7 +1163,27 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
         isDoubleBottom := false
         isDoubleBottom
     activePivot := isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
-    if (detectCup or handleFormingSep or isHandleBreakoutSep) and tfDraw and i_displayPattern and not isDoubleBottom[1]
+    // ── Base Info Label ────────────────────────────────────────────────────────
+    if timeframe.isdaily and i_displayPattern
+        baseTop = activePivot
+        baseLow_ = na(line.get_y1(lowLine)) ? (array.size(lowBasePrice) > 0 ? array.get(lowBasePrice, 0) : na) : line.get_y1(lowLine)
+        baseDays = bar_index - startBaseBar
+        baseDepth = (not na(baseTop) and not na(baseLow_) and baseTop > 0) ? (baseTop - baseLow_) / baseTop * 100 : na
+        int accDays = 0
+        int disDays = 0
+        int neuDays = 0
+        for i = 0 to baseDays - 1
+            if not na(close[i]) and not na(volume[i]) and not na(close[i + 1])
+                if close[i] > close[i + 1] and volume[i] > volume[i + 1]
+                    accDays += 1
+                else if close[i] < close[i + 1] and volume[i] > volume[i + 1]
+                    disDays += 1
+                else
+                    neuDays += 1
+        lblText = str.tostring(baseDays) + "d " + (not na(baseDepth) ? str.tostring(baseDepth, "#.#") + "% " : "") + "A" + str.tostring(accDays) + " D" + str.tostring(disDays) + " N" + str.tostring(neuDays) + " " + str.tostring(activePivot, "0.00")
+        baseMidBar = startBaseBar + baseDays / 2
+        label.new(baseMidBar, activePivot, lblText, style=label.style_label_down, color=color.new(color.white, 100), textcolor=color.blue, size=size.normal)
+    if (detectCup or handleFormingSep or isHandleBreakoutSep) and timeframe.isdaily and i_displayPattern and not isDoubleBottom[1]
         line.delete(lowLine)
         var int x1 = 0
         var float y1 = na
@@ -1143,7 +1206,7 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
                     lowValue
         lengthLeft := lowerBaseBar - startBaseBar
         lengthRight := bar_index - lowerBaseBar
-        if tfDraw and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
+        if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
             for i = 0 to lengthLeft - 1 by 1
                 float k = 1 / math.exp(0) / (startUpPrice - bottomPrice)
                 x1 := bar_index[lengthLeft - 1 - (i - 1)]
@@ -1170,9 +1233,11 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
                     cupLineRight
     if i_displayBoxes
         topBase = activePivot
-        entryBox := box.new(bar_index[1], topBase * (1 + 0.05), bar_index, topBase, border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(0, 0, 255, 63))
-        slBox := box.new(bar_index[1], topBase * (1 - 0.05), bar_index, topBase * (1 - 0.08), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(255, 0, 0, 56))
-        tpBox := box.new(bar_index[1], topBase * (1 + 0.20), bar_index, topBase * (1 + 0.25), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(60, 243, 4, 12))
+        entryBox := box.new(bar_index[1], topBase * (1 + 0.05), bar_index, topBase, border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(0, 122, 255, 95))
+        slBox := box.new(bar_index[1], topBase * (1 - 0.05), bar_index, topBase * (1 - 0.08), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(255, 59, 48, 95))
+        tpBox := box.new(bar_index[1], topBase * (1 + 0.20), bar_index, topBase * (1 + 0.25), border_color = color.rgb(0, 0, 0, 100), border_width = 0, bgcolor = color.rgb(52, 199, 89, 95))
+
+
         isBox := true
         boxOver := false
         boxOver
@@ -1190,116 +1255,7 @@ if array.size(linesLeft) > 500
 if array.size(linesRight) > 500
     line.delete(array.pop(linesRight))
 
-var float breakoutPivotPrice = na
-var int   breakoutBarIdx     = na
-
-if (not na(highLine) and (isBase[1] or isDoubleBottom[1]) and high > line.get_y1(highLine)) or isHandleBreakoutSep
-    breakoutPivotPrice := isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
-    breakoutBarIdx     := bar_index
-
-if baseCond and not isBase[1]
-    breakoutPivotPrice := na
-    breakoutBarIdx     := na
-
-float currentPivot = na
-if detectHTF
-    currentPivot := htfFlagHighPrice
-else if handleFormingSep
-    currentPivot := handlePeakLockedSep
-else if not na(highLine) and (isBase or isDoubleBottom or isCup)
-    currentPivot := line.get_y1(highLine)
-else if not na(breakoutPivotPrice)
-    currentPivot := breakoutPivotPrice
-
-scrPatternType       = detectHTF ? 5 : isDoubleBottom ? 3  : handleFormingSep ? 4 : isCup ? 2 : isBase ? 1 : 0
-scrDistanceToPivot   = not na(currentPivot) and currentPivot != 0 ? (close - currentPivot) / currentPivot * 100 : na
-scrBarsSinceBreakout = not na(breakoutBarIdx) ? bar_index - breakoutBarIdx : na
-
-scrAbove50sma  = close > sma50  ? 1 : 0
-scrAbove200sma = close > sma200 ? 1 : 0
-scrSma50vs200  = sma50  > sma200 ? 1 : 0
-
-scrRsRating    = rToday
-
-var int   scrStage          = 1
-var float lastBreakoutPrice = na
-var float lowestSinceBO     = na
-
-if not na(lastBreakoutPrice)
-    if na(lowestSinceBO) or low < lowestSinceBO
-        lowestSinceBO := low
-
-if (not na(highLine) and (isBase[1] or isDoubleBottom[1]) and high > line.get_y1(highLine)) or isHandleBreakoutSep
-    lastBreakoutPrice := isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
-    lowestSinceBO     := low
-
-if baseCond and not isBase[1]
-    if na(lastBreakoutPrice) or lastBreakoutPrice <= 0
-        scrStage := 1
-    else
-        advancePct = (high[pivLag] - lastBreakoutPrice) / lastBreakoutPrice * 100
-        correctionPct = not na(lowestSinceBO)
-                      ? (lastBreakoutPrice - lowestSinceBO) / lastBreakoutPrice * 100
-                      : 0.0
-        if correctionPct >= 30
-            scrStage := 1
-        else if advancePct >= 20
-            scrStage := math.min(scrStage + 1, 9)
-
-scrStageLetter = (isBase or isCup or isDoubleBottom or handleFormingSep or detectHTF) ? "a" : ""
-scrStageStr    = str.tostring(scrStage) + (scrStageLetter != "" ? "(" + scrStageLetter + ")" : "")
-
-scrPatternName = detectHTF ? "High Tight Flag" : isDoubleBottom ? "Double Bottom" : handleFormingSep ? "Cup with Handle (Sep)" : isCup ? "Cup" : isBase ? "Base" : ""
-scrPivotPrice  = not na(currentPivot) ? currentPivot : 0.0
-scrDepthPct    = scrPivotPrice > 0 and array.size(lowBasePrice) > 0
-              ? (scrPivotPrice - array.get(lowBasePrice, 0)) / scrPivotPrice * 100
-              : 0.0
-scrLengthDays  = detectHTF ? htfBaseLowAgo : (isBase or isCup or isDoubleBottom or handleFormingSep) ? bar_index - startBaseBar : 0
-scrAvgPrice    = scrPivotPrice > 0 and array.size(lowBasePrice) > 0
-              ? (scrPivotPrice + array.get(lowBasePrice, 0)) / 2
-              : 0.0
-
-scrTooltip = scrPatternName != ""
-          ? "📊 " + scrPatternName + "\n"
-          + "Stage: " + scrStageStr + "\n"
-          + "Pivot: " + str.tostring(scrPivotPrice, "0.00") + "\n"
-          + "Depth: " + str.tostring(scrDepthPct, "0.0") + "%\n"
-          + "Length: " + str.tostring(scrLengthDays) + " bars\n"
-          + "Avg Price: " + str.tostring(scrAvgPrice, "0.00")
-          : ""
-var label patternTooltipLabel = na
-
-if baseCond and not isBase[1] and not na(highLine) and i_showPatternTooltip
-    patternTooltipLabel := label.new(
-      x         = startBaseBar,
-      y         = array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : high[pivLag],
-      text      = "",
-      tooltip   = scrTooltip,
-      style     = label.style_circle,
-      color     = color.new(color.white, 100),
-      textcolor = color.new(color.white, 100),
-      size      = size.normal,
-      xloc      = xloc.bar_index,
-      yloc      = yloc.price)
-else if detectHTF and not detectHTF[1] and i_showPatternTooltip
-    patternTooltipLabel := label.new(
-      x         = htfPoleHighBar,
-      y         = htfPoleHighPrice,
-      text      = "",
-      tooltip   = scrTooltip,
-      style     = label.style_circle,
-      color     = color.new(color.white, 100),
-      textcolor = color.new(color.white, 100),
-      size      = size.normal,
-      xloc      = xloc.bar_index,
-      yloc      = yloc.price)
-
-if (isBase or isCup or isDoubleBottom or handleFormingSep or detectHTF) and not na(patternTooltipLabel) and scrTooltip != "" and i_showPatternTooltip
-    label.set_tooltip(patternTooltipLabel, scrTooltip)
-
-if not i_showPatternTooltip and not na(patternTooltipLabel)
-    label.delete(patternTooltipLabel)
-    patternTooltipLabel := na
+// Removed all earnings-related inputs and code (arrows, tables, EPS/Sales calculations)
 
 volMultiplier = input.float(1.1, "Volume Multiplier (vs Average)", minval=1.1, step=0.1,
                             tooltip="Volume must be this many times higher than average to be considered 'heavy'")
@@ -1350,8 +1306,10 @@ if showLabels and volumeNoProgress and barstate.isconfirmed
 ISDAILY = timeframe.isdaily
 ISWEEKLY = timeframe.isweekly
 
+
+
 var g1 = 'Daily Moving Averages'
-ima1 = input.int(8, "Daily Moving Average 1", inline = "a1", group = g1)
+ima1 = input.int(10, "Daily Moving Average 1", inline = "a1", group = g1)
 ima2 = input.int(21, "Daily Moving Average 2",inline = "a2", group = g1)
 ima3 = input.int(50, "Daily Moving Average 1",inline = "a3", group = g1)
 ima4 = input.int(200, "Daily Moving Average 2",inline = "a4", group = g1)
@@ -1386,6 +1344,8 @@ nasVol = request.security('TVOL.NQ', 'D', close)
 spxVol = request.security('TVOL.NY', 'D', close)
 nasVolWk = request.security('TVOL.NQ', 'W', close)
 spxVolWk = request.security('TVOL.NY', 'W', close)
+
+
 
 timePassed = timenow - time
 timeLeft = time_close - timenow
@@ -1459,4 +1419,3 @@ if ISWEEKLY and (barstate.isconfirmed or barstate.islast)
          maTitle5 + str.tostring(ma5, format.mintick) + ' (' + str.tostring(distMa5, "#.#") + '%)' + nl +
          maTitle6 + str.tostring(ma6, format.mintick) + ' (' + str.tostring(distMa6, "#.#") + '%)'
          )
-
