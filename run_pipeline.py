@@ -118,13 +118,22 @@ def execute_consolidated_pipeline():
         print("  ✓ Industry history appended.")
 
     # Step 4: Append stocks history
-    print("\n[4/4] Appending stocks history...")
+    print("\n[4/5] Appending stocks history...")
     stock_script = REPO_DIR / 'append_stocks_history.py'
     r4 = run_cmd([PYTHON_EXE, str(stock_script)])
     if r4.returncode != 0:
         print(f"  ⚠ append_stocks_history.py warning/error:\n{r4.stderr}")
     else:
         print("  ✓ Stocks history appended.")
+
+    # Step 5: Update ticker_cache parquets
+    print("\n[5/5] Updating ticker_cache daily parquet files...")
+    cache_script = REPO_DIR / 'python' / 'update_ticker_cache.py'
+    r5 = run_cmd([PYTHON_EXE, str(cache_script)])
+    if r5.returncode != 0:
+        print(f"  ⚠ update_ticker_cache.py warning/error:\n{r5.stderr}")
+    else:
+        print("  ✓ Ticker cache parquets updated.")
 
     print("\n=======================================================")
     print("✅ Consolidated Pipeline Execution Finished!")
