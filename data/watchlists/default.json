@@ -1,0 +1,5 @@
+{
+  "name": "default",
+  "tickers": ["AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "JPM", "SPY"],
+  "updated": "2026-07-28T00:00:00"
+}

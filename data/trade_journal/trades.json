@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1,
+    "ticker": "AAPL",
+    "direction": "long",
+    "entryDate": "2026-07-28",
+    "entryPrice": 320.0,
+    "quantity": 100,
+    "stopLoss": null,
+    "target": null,
+    "notes": "Breakout above 50-day",
+    "status": "open",
+    "created": "2026-07-28T10:52:57.740004"
+  }
+]
