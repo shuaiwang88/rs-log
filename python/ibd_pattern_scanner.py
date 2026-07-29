@@ -119,7 +119,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         
         # Parameters (Daily timeframe -> barsPerWeek = 5)
         barsPerWeek = 5
-        pivLag = 25  # 5 * barsPerWeek
+        pivLag = 5  # 5 daily bars (matching drw_pattern_scanner.pine i_pivot = 5)
         win13wk = 65
         win20wk = 100
         bLenB = 325  # 65 weeks
@@ -285,6 +285,8 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 
             if isBase:
                 bCount += 1
+                if bTop is not None and highs[i] > bTop and highs[i] <= bTop * 1.05:
+                    bTop = highs[i]
                 lastBTop = bTop
                 if lows[i] < bLow and bTop is not None and lows[i] >= bTop * (1.0 - bdF):
                     bLow = lows[i]
@@ -294,13 +296,74 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 if lows[i] < bTop * (1.0 - bdF) or bCount > bLenB:
                     isBase = False
                     
-            # Breakout: price clears the base top (matching drw_pattern_scanner.pine lines 280-282)
-            if isBase and bTop is not None and highs[i] > bTop:
+            # Depth Pct & Base Types (Evaluated while in base BEFORE breakout check)
+            bDepPct = (bTop - bLow) / bTop * 100.0 if (bTop and bLow and bTop > 0) else None
+            
+            recent_win = min(i + 1, max(20, min(bCount, 65)))
+            rTop = np.max(highs[max(0, i - recent_win + 1) : i + 1])
+            rLow = np.min(lows[max(0, i - recent_win + 1) : i + 1])
+            rDepPct = (rTop - rLow) / rTop * 100.0 if rTop > 0 else 0.0
+            
+            isFlatBase = isBase and (rDepPct <= 16.5)
+            isDeepBase = isBase and not isFlatBase
+            is6WkFlat = isFlatBase and (25 <= recent_win <= 35)
+            
+            # Double Bottom Detection (Max duration: 4 months = ~17 weeks = 85 daily bars)
+            isDB = False
+            dbMiddlePivot = None
+            dbMaxBars = 85  # 4 months (17 weeks * 5 daily bars)
+            if isBase and len(aHP_list) >= 2 and len(aLP_list) >= 2:
+                for hp_i in range(min(5, len(aHP_list) - 1)):
+                    for hp_j in range(hp_i + 1, min(len(aHP_list), hp_i + 5)):
+                        sH_t, sH = aHP_list[hp_i]
+                        fH_t, fH = aHP_list[hp_j]
+                        if fH_t < i - dbMaxBars:
+                            continue
+                        
+                        l1_candidates = [p for p in aLP_list if fH_t < p[0] < sH_t]
+                        l2_candidates = [p for p in aLP_list if sH_t < p[0] <= i]
+                        
+                        if l1_candidates and l2_candidates:
+                            fLt, fL = l1_candidates[0]
+                            sLt, sL = l2_candidates[0]
+                            
+                            peak = max(fH, sH)
+                            prL250 = np.min(lows[max(0, i-250):i+1])
+                            cPT = (fH >= prL250 * 1.15) or (sH >= prL250 * 1.15)
+                            cPH = (bTop is None) or (abs(fH - bTop) < bTop * 0.15) or (abs(sH - bTop) < bTop * 0.15)
+                            cA = (sL <= fL * 1.03) and (sL >= fL * 0.85)
+                            cB = (sL >= (1 - bdF) * peak)
+                            cC = (sL <= peak * 0.95)
+                            cD = (sH >= sL + (peak - sL) * 0.20)
+                            cE = (sH <= fH * 1.10)
+                            cF = (sH >= fL + (fH - fL) * 0.40)
+                            
+                            fd = fH - fL
+                            sd = sH - sL
+                            cG = (fd > 0 and sd > 0)
+                            
+                            cTA = (fH_t < fLt < sH_t < sLt)
+                            cTB = (sLt - fH_t <= dbMaxBars) and (i - fH_t <= dbMaxBars)
+                            cTC = (sLt - fH_t >= 5)
+                            
+                            highest_since_2nd_low = np.max(highs[sLt:i]) if sLt < i else highs[i-1]
+                            cSh = (highest_since_2nd_low <= sH * 1.02)
+                            
+                            if cPT and cPH and cA and cB and cC and cD and cE and cF and cG and cTA and cTB and cTC and cSh:
+                                isDB = True
+                                dbMiddlePivot = sH
+                                break
+                    if isDB:
+                        break
+                        
+            # Breakout: price clears the base top or middle pivot
+            active_pivot = dbMiddlePivot if (isDB and dbMiddlePivot is not None) else bTop
+            if isBase and active_pivot is not None and highs[i] > active_pivot:
                 isBase = False
-                boPivot = bTop
+                boPivot = active_pivot
                 boBar = i
-                boPatternCode = history_state[-1]['pCode'] if history_state else 0
-                boPatternName = history_state[-1]['pName'] if history_state else 'None'
+                boPatternCode = 5 if isDB else (history_state[-1]['pCode'] if history_state and history_state[-1]['pCode'] > 0 else 1)
+                boPatternName = 'Dbl Bottom' if isDB else (history_state[-1]['pName'] if history_state and history_state[-1]['pName'] != 'None' else 'Base')
                 
             # Breakout tracking flag
             was_in_base = prev_isBase
@@ -309,91 +372,59 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             if was_in_base and not isBase and boBar != i and activeBTop is not None and highs[i] > activeBTop:
                 boPivot = activeBTop
                 boBar = i
-                boPatternCode = history_state[-1]['pCode'] if history_state else 0
-                boPatternName = history_state[-1]['pName'] if history_state else 'None'
+                boPatternCode = history_state[-1]['pCode'] if history_state and history_state[-1]['pCode'] > 0 else 1
+                boPatternName = history_state[-1]['pName'] if history_state and history_state[-1]['pName'] != 'None' else 'Base'
                 
             if newBase:
                 boPivot = None
                 boBar = None
                 boPatternCode = 0
                 boPatternName = 'None'
-                
-            # Depth Pct
-            bDepPct = (bTop - bLow) / bTop * 100.0 if (bTop and bLow and bTop > 0) else None
-            isFlatBase = isBase and (bDepPct is not None and bDepPct <= 15.0)
-            isDeepBase = isBase and (bDepPct is not None and bDepPct > 15.0)
-            is6WkFlat = isFlatBase and (25 <= bCount <= 35)
-            
-            # Double Bottom Detection
-            isDB = False
-            if isBase and len(aHP_list) >= 2 and len(aLP_list) >= 2 and bTop is not None:
-                fH = aHP_list[1][1]
-                sH = aHP_list[0][1]
-                fL = aLP_list[1][1]
-                sL = aLP_list[0][1]
-                fHt = aHP_list[1][0]
-                sHt = aHP_list[0][0]
-                fLt = aLP_list[1][0]
-                sLt = aLP_list[0][0]
-                
-                cPT = (fH >= np.min(lows[max(0, i-250):i+1]) * 1.20)
-                cPH = abs(fH - bTop) < bTop * 0.01
-                cA = (sL <= fL * 1.03)
-                cB = (sL >= (1 - bdF) * fH)
-                cC = (sL <= fH * 0.90)
-                cD = (sH >= sL + (fH - sL) * 0.35)
-                cE = (sH < fH * 1.01)
-                cF = (sH >= fL + (fH - fL) * 0.40)
-                fd = fH - fL
-                sd = sH - sL
-                cG = (fd > 0 and sd > 0 and fd/sd <= 3.0 and sd/fd <= 3.0)
-                
-                cTA = (fHt < sLt < sHt < fLt)
-                cTB = (fLt - fHt <= bLenB)
-                cTC = (fLt - fHt >= 10)
-                cTD = ((sLt - fHt) >= 3 and (sHt - sLt) >= 3 and (fLt - sHt) >= 3)
-                cTE = (1.0/4.0 <= (sHt - fHt) / max(1, i - sHt) <= 4.0) if (i - sHt) > 0 else False
-                
-                highest_since_2nd_low = np.max(highs[sLt:i+1]) if sLt <= i else highs[i]
-                cSh = (highest_since_2nd_low <= sH)
-                
-                if cPT and cPH and cA and cB and cC and cD and cE and cF and cG and cTA and cTB and cTC and cTD and cTE and cSh:
-                    isDB = True
                     
             # Cup & Cup with Handle Detection
             isCup = False
             isCupH = False
             cupMid = bLow + (bTop - bLow) * 0.5 if (bTop and bLow) else None
             
-            if isBase and not isDB and bTop and bLow and bCount >= 30:
-                depOk = (bLow >= (1.0 - bdF) * bTop) and (bLow <= 0.92 * bTop)
+            if isBase and bTop and bLow and bCount >= 20:
+                depOk = (bLow >= 0.55 * bTop) and (bLow <= 0.90 * bTop)
                 lenOk = (bCount <= bLenB)
-                posOk = (cupMid <= highs[i]) if cupMid else False
-                
-                tier = max(1, bCount // 3)
-                start_base_bar = i - bCount + 1
-                if start_base_bar >= 0:
-                    base_closes = closes[start_base_bar:i+1]
-                    if len(base_closes) >= bCount:
-                        v1_closes = base_closes[:tier]
-                        v2_closes = base_closes[tier:2*tier]
-                        
-                        cT2 = (np.sum(v1_closes >= cupMid) / float(tier)) >= 0.30 if cupMid else False
-                        cT = (np.sum(v2_closes <= cupMid) / float(tier)) >= 0.85 if cupMid else False
-                        
-                        if depOk and lenOk and posOk and cT and cT2:
-                            isCup = True
+                if depOk and lenOk:
+                    isCup = True
                             
-            if isCup and bTop and bLow and cupMid and bCount > 12:
-                w12_start = max(0, i - 12 + 1)
+            if isCup and bTop and bLow and cupMid and bCount > 10:
+                handle_len = min(30, max(5, bCount // 4))
+                w12_start = max(0, i - handle_len + 1)
                 H12 = np.max(highs[w12_start:i+1])
                 L12 = np.min(lows[w12_start:i+1])
                 hDep = (H12 - L12) / H12 * 100.0 if H12 > 0 else 999.0
                 inTop = (L12 >= cupMid)
-                depOk_h = (hDep <= 15.0)
+                depOk_h = (hDep <= 18.0)
                 if inTop and depOk_h:
                     isCupH = True
                     
+            # --- Ascending Base & Consolidation Detection ---
+            isAscendingBase = False
+            if isBase and len(aHP_list) >= 3 and len(aLP_list) >= 3:
+                recent_hps = [p for p in aHP_list if p[0] >= i - 90][:3]
+                recent_lps = [p for p in aLP_list if p[0] >= i - 90][:3]
+                if len(recent_hps) == 3 and len(recent_lps) == 3:
+                    recent_hps.sort(key=lambda x: x[0])
+                    recent_lps.sort(key=lambda x: x[0])
+                    h1, h2, h3 = recent_hps[0][1], recent_hps[1][1], recent_hps[2][1]
+                    l1, l2, l3 = recent_lps[0][1], recent_lps[1][1], recent_lps[2][1]
+                    
+                    hh = (h1 < h2 < h3) or (h3 >= h1 * 1.01 and h2 >= h1 * 0.98)
+                    hl = (l1 < l2 < l3) or (l3 >= l1 * 1.01 and l2 >= l1 * 0.98)
+                    pb1 = (h1 - l1) / h1
+                    pb2 = (h2 - l2) / h2
+                    pb3 = (h3 - l3) / h3
+                    pb_ok = (0.05 <= pb1 <= 0.25) and (0.05 <= pb2 <= 0.25) and (0.05 <= pb3 <= 0.25)
+                    if hh and hl and pb_ok:
+                        isAscendingBase = True
+
+            isConsolidation = isBase and (bDepPct is not None and 10.0 <= bDepPct <= 35.0) and (15 <= bCount <= 65)
+
             # --- HTF Detection (drw_pattern_scanner.pine state machine engine) ---
             i_htfPole = 80.0
             i_htfPB = 60
@@ -484,7 +515,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             flag_baseHigh_prev = htf_flag_baseHigh
             
             # Active pattern evaluation
-            inBase = isBase or isDB or isCup or isCupH or isHTF
+            inBase = isBase or isDB or isCup or isCupH or isHTF or isAscendingBase or isConsolidation
             barsSBO = (i - boBar) if boBar is not None else None
             
             pName = 'None'
@@ -495,9 +526,11 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 if isHTF: pName, pCode, pOn = 'HTF', 6, True
                 elif isCupH: pName, pCode, pOn = 'Cup+Handle', 4, True
                 elif isDB: pName, pCode, pOn = 'Dbl Bottom', 5, True
+                elif isAscendingBase: pName, pCode, pOn = 'Ascending Base', 8, True
                 elif isCup: pName, pCode, pOn = 'Cup', 3, True
                 elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True
                 elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True
+                elif isConsolidation: pName, pCode, pOn = 'Consolidation', 9, True
                 elif isDeepBase: pName, pCode, pOn = 'Base', 1, True
             else:
                 if barsSBO is not None and barsSBO <= 15:

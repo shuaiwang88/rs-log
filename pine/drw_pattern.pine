@@ -501,7 +501,7 @@ i_displayHistoricalBoxes = input(true, title = 'Display Historical Trade Boxes',
 i_baseDepth = input(35, title = 'Base: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_dbDepth = input(40, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB', tooltip = 'Max base depth for Double Bottom (commonly forms in volatile environments, < 40%)')
-i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
+i_dbLength = input(17, title = 'Max Duration (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB', tooltip = 'Max base duration for Double Bottom (4 months = 17 weeks)')
 i_dbPriorUptrend = input.float(30.0, title = 'Min Prior Uptrend (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum prior uptrend percentage before Double Bottom forms (30% or more)')
 i_dbMinLengthWeeks = input.int(7, title = 'Min Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum total length in weeks for Double Bottom (7 weeks or more)')
 i_dbRequireUndercut = input.bool(true, title = 'Require 2nd Bottom Undercut', group = 'Chart Pattern Recognition', tooltip = 'If enabled, 2nd bottom low must undercut (be strictly lower than) 1st bottom low')
@@ -547,6 +547,14 @@ var topDBPrice = array.new_float(0)
 var bottomDBPrice = array.new_float(0)
 var int topDBBar = 0
 var int bottomDBBar = 0
+var int db_fHt = na
+var float db_fH = na
+var int db_fLt = na
+var float db_fL = na
+var int db_sHt = na
+var float db_sH = na
+var int db_sLt = na
+var float db_sL = na
 var baseCloses = array.new_float(0)
 
 pivotHigh = ta.pivothigh(high, i_pivot, i_pivot)
@@ -570,8 +578,8 @@ var baseCond = false
 isBase = false
 
 _highest65shifted = ta.highest(high, 65)[26]
-_dynamicHighestPrior = ta.highest(high, math.min(14999, math.max(1, bar_index - 25)))[26]
-_dynamicLegLookback = math.min(103, math.max(1, bar_index - 25))
+_dynamicHighestPrior = ta.highest(high, math.min(4950, math.max(1, bar_index - 26)))[26]
+_dynamicLegLookback = math.min(103, math.max(1, bar_index))
 _dynamicLowestIPOLeg = ta.lowest(low, _dynamicLegLookback)
 
 if array.size(pivotHighPrices) > 0
@@ -622,82 +630,82 @@ if isBox[1] and not boxOver[1]
     isBox
 
 detectDoubleBottom = false
-int _dbFL = array.size(pivotLowBars) > 0 ? math.min(14999, math.max(1, bar_index - array.get(pivotLowBars, 0) + 1)) : 1
-_dbHFL = ta.highest(high, _dbFL)
+int _dbFL = array.size(pivotLowBars) > 0 ? math.min(4950, math.max(1, bar_index - array.get(pivotLowBars, 0) + 1)) : 1
 _priorLowFull = ta.lowest(low, math.max(1, math.min(bar_index, 250)))
+
 if isBase
-    if array.size(pivotHighPrices) > 1 and array.size(pivotLowPrices) > 1
-        firstPivHigh = array.get(pivotHighPrices, 1)
-        scndPivHigh  = array.get(pivotHighPrices, 0)
-        firstPivLow  = array.get(pivotLowPrices,  1)
-        scndPivLow   = array.get(pivotLowPrices,  0)
+    int numHP = array.size(pivotHighPrices)
+    int numLP = array.size(pivotLowPrices)
+    if numHP >= 2 and numLP >= 2
+        int maxHP = math.min(numHP - 1, 4)
+        for hp_i = 0 to maxHP - 1
+            for hp_j = hp_i + 1 to math.min(numHP - 1, hp_i + 4)
+                float sH = array.get(pivotHighPrices, hp_i)
+                float fH = array.get(pivotHighPrices, hp_j)
+                int sHt = array.get(pivotHighBars, hp_i)
+                int fHt = array.get(pivotHighBars, hp_j)
 
-        priorLow      = _priorLowFull
-        condPriorTrend = firstPivHigh >= priorLow * (1.0 + i_dbPriorUptrend / 100.0)
+                int maxDbBars = i_dbLength * 5
+                if fHt >= bar_index - maxDbBars
+                    int fLt = -1
+                    float fL = na
+                    int sLt = -1
+                    float sL = na
 
-        condPricesH = true
-        if array.size(startBasePrice) > 0
-            condPricesH := math.abs(firstPivHigh - array.get(startBasePrice, 0)) < array.get(startBasePrice, 0) * 0.01
+                    for lp_idx = 0 to numLP - 1
+                        int lBar = array.get(pivotLowBars, lp_idx)
+                        if lBar > fHt and lBar < sHt
+                            fLt := lBar
+                            fL := array.get(pivotLowPrices, lp_idx)
+                            break
 
-        condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow )
+                    for lp_idx = 0 to numLP - 1
+                        int lBar = array.get(pivotLowBars, lp_idx)
+                        if lBar > sHt and lBar <= bar_index
+                            sLt := lBar
+                            sL := array.get(pivotLowPrices, lp_idx)
+                            break
 
-        condPricesB = scndPivLow >= (1 - i_dbDepth) * firstPivHigh and firstPivLow >= (1 - i_dbDepth) * firstPivHigh
+                    if fLt != -1 and sLt != -1
+                        float peak = math.max(fH, sH)
+                        bool condPriorTrend = (fH >= _priorLowFull * (1.0 + i_dbPriorUptrend / 100.0)) or (sH >= _priorLowFull * (1.0 + i_dbPriorUptrend / 100.0))
+                        bool condPricesH = array.size(startBasePrice) > 0 ? (math.abs(fH - array.get(startBasePrice, 0)) < array.get(startBasePrice, 0) * 0.15 or math.abs(sH - array.get(startBasePrice, 0)) < array.get(startBasePrice, 0) * 0.15) : true
+                        bool condPricesA = i_dbRequireUndercut ? (sL < fL * 1.05) : (sL <= fL * 1.05 or sL >= fL * 0.80)
+                        bool condPricesB = sL >= (1.0 - i_dbDepth / 100.0) * peak
+                        bool condPricesC = sL <= peak * 0.95
+                        bool condPricesD = sH >= sL + (peak - sL) * 0.15
+                        bool condPricesE = sH <= fH * 1.10
+                        bool condPricesF = sH >= fL + (fH - fL) * 0.15
 
-        condPricesC = scndPivLow <= firstPivHigh * 0.90
+                        float firstLegDepth = fH - fL
+                        float scndLegDepth  = sH - sL
+                        bool condPricesG   = firstLegDepth > 0 and scndLegDepth > 0
 
-        condPricesD = scndPivHigh >= scndPivLow +
-          (firstPivHigh - scndPivLow) * 0.35
+                        bool condTimeA = fHt < fLt and fLt < sHt and sHt < sLt
+                        bool condTimeB = (sLt - fHt) <= maxDbBars
+                        int minDbBars = timeframe.isweekly ? i_dbMinLengthWeeks : (i_dbMinLengthWeeks * 5)
+                        bool condTimeC = (sLt - fHt) >= minDbBars
 
-        condPricesE = scndPivHigh < firstPivHigh * 1.01
+                        int checkLen = math.min(4950, math.max(1, bar_index - sLt + 1))
+                        float highestSince2ndLow = ta.highest(high, checkLen)
+                        bool condBothA = highestSince2ndLow <= sH * 1.02
 
-        condPricesF = scndPivHigh >= firstPivLow +
-          (firstPivHigh - firstPivLow) * 0.40
-
-        firstLegDepth = firstPivHigh - firstPivLow
-        scndLegDepth  = scndPivHigh  - scndPivLow
-        condPricesG   = firstLegDepth > 0 and
-          scndLegDepth > 0 and
-          firstLegDepth / scndLegDepth <= 3.0 and
-          scndLegDepth  / firstLegDepth <= 3.0
-
-        firstPivTime = array.get(pivotHighBars, 1)
-        scndPivTime  = array.get(pivotLowBars,  1)
-        thrdPivTime  = array.get(pivotHighBars, 0)
-        frthPivTime  = array.get(pivotLowBars,  0)
-
-        condTimeA = firstPivTime < scndPivTime and
-          scndPivTime  < thrdPivTime  and
-          thrdPivTime  < frthPivTime
-
-        condTimeB = frthPivTime - firstPivTime <= i_dbLength
-
-        int minDbBars = timeframe.isweekly ? i_dbMinLengthWeeks : (i_dbMinLengthWeeks * 5)
-        condTimeC = (bar_index - firstPivTime) >= minDbBars
-
-        condTimeD = (scndPivTime - firstPivTime) >= 3 and
-          (thrdPivTime - scndPivTime)  >= 3 and
-          (frthPivTime - thrdPivTime)  >= 3
-
-        firstHalf = thrdPivTime - firstPivTime
-        scndHalf  = bar_index   - thrdPivTime
-        condTimeE = firstHalf > 0 and scndHalf > 0 and
-          firstHalf / scndHalf <= 4.0 and
-          scndHalf  / firstHalf <= 4.0
-
-        condTimeF = bar_index - frthPivTime <=
-          (thrdPivTime - firstPivTime) * 2
-
-        condBothA = _dbHFL <= scndPivHigh
-
-        if condPriorTrend and condPricesA and condPricesB and condPricesC and
-          condPricesD and condPricesE and condPricesF and condPricesG and
-          condPricesH and condTimeA   and condTimeB   and condTimeC   and
-          condTimeD   and condTimeE   and condTimeF   and condBothA
-            detectDoubleBottom := true
-            array.unshift(bottomDBPrice, scndPivLow)
-            array.unshift(topDBPrice,    firstPivHigh)
-            topDBBar := array.get(pivotHighBars, 1)
-            topDBBar
+                        if condPriorTrend and condPricesH and condPricesA and condPricesB and condPricesC and condPricesD and condPricesE and condPricesF and condPricesG and condTimeA and condTimeB and condTimeC and condBothA
+                            detectDoubleBottom := true
+                            db_fH := fH
+                            db_fHt := fHt
+                            db_fL := fL
+                            db_fLt := fLt
+                            db_sH := sH
+                            db_sHt := sHt
+                            db_sL := sL
+                            db_sLt := sLt
+                            array.unshift(bottomDBPrice, sL)
+                            array.unshift(topDBPrice, sH)
+                            topDBBar := sHt
+                            break
+            if detectDoubleBottom
+                break
 isDoubleBottom = false
 if detectDoubleBottom or isDoubleBottom[1]
     isDoubleBottom := true
@@ -1051,18 +1059,21 @@ if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDou
                 cupLineRightLive := line.new(x1 = x1, y1 = y1, x2 = x2, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 array.unshift(linesRight, cupLineRightLive)
 
-_lowCompareFull = ta.lowest(low, math.min(14999, math.max(1, bar_index - topDBBar)))
+_lowCompareFull = ta.lowest(low, math.min(4950, math.max(1, bar_index - topDBBar)))
 
 lowCompare = bar_index - topDBBar > 0 ? _lowCompareFull : low
 if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_displayPattern
     line.delete(highLine)
     line.delete(lowLine)
-    bottomDBBar := array.get(pivotLowBars, 0)
-    highLine := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bar_index, y2 = array.get(pivotHighPrices, 0), width = 2, style = line.style_dashed, color = color.green)
-    dbLine1 := line.new(x1 = array.get(pivotHighBars, 1), y1 = array.get(pivotHighPrices, 1), x2 = array.get(pivotLowBars, 1), y2 = array.get(pivotLowPrices, 1), width = 2, style = line.style_solid, color = color.green)
-    dbLine2 := line.new(x1 = array.get(pivotLowBars, 1), y1 = array.get(pivotLowPrices, 1), x2 = array.get(pivotHighBars, 0), y2 = array.get(pivotHighPrices, 0), width = 2, style = line.style_solid, color = color.green)
-    dbLine3 := line.new(x1 = array.get(pivotHighBars, 0), y1 = array.get(pivotHighPrices, 0), x2 = bottomDBBar, y2 = array.get(bottomDBPrice, 0), width = 2, style = line.style_solid, color = color.green)
-    lowLine := line.new(x1 = bottomDBBar, y1 = array.get(bottomDBPrice, 0), x2 = bar_index, y2 = high, width = 2, style = line.style_solid, color = color.green)
+    line.delete(dbLine1)
+    line.delete(dbLine2)
+    line.delete(dbLine3)
+    bottomDBBar := db_sLt
+    highLine := line.new(x1 = db_sHt, y1 = db_sH, x2 = bar_index + 10, y2 = db_sH, width = 2, style = line.style_dashed, color = color.green)
+    dbLine1 := line.new(x1 = db_fHt, y1 = db_fH, x2 = db_fLt, y2 = db_fL, width = 2, style = line.style_solid, color = color.green)
+    dbLine2 := line.new(x1 = db_fLt, y1 = db_fL, x2 = db_sHt, y2 = db_sH, width = 2, style = line.style_solid, color = color.green)
+    dbLine3 := line.new(x1 = db_sHt, y1 = db_sH, x2 = db_sLt, y2 = db_sL, width = 2, style = line.style_solid, color = color.green)
+    lowLine := line.new(x1 = db_sLt, y1 = db_sL, x2 = bar_index, y2 = close, width = 2, style = line.style_solid, color = color.green)
     select = i_displayHistoricalBoxes ? false : boxOver
     if select
         box.delete(entryBox)
@@ -1071,6 +1082,13 @@ if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_disp
         isBox := false
         boxOver := true
         boxOver
+
+if isDoubleBottom and timeframe.isdaily and i_displayPattern
+    if not na(highLine)
+        line.set_x2(highLine, bar_index + 10)
+    if not na(lowLine)
+        line.set_x2(lowLine, bar_index)
+        line.set_y2(lowLine, close)
 
 if array.size(bottomDBPrice) > 0
     if low < array.get(bottomDBPrice, 0) and isDoubleBottom

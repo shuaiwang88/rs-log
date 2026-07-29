@@ -302,46 +302,66 @@ float _dbHFL = ta.highest(high, _dbFL)
 
 bool detectDB = false
 
-if isBase and array.size(aHP) > 1 and array.size(aLP) > 1
-    float fH = array.get(aHP, 1)     // first (left) pivot high  — base start
-    float sH = array.get(aHP, 0)     // second (middle) pivot high
-    float fL = array.get(aLP, 1)     // first pivot low  (left leg)
-    float sL = array.get(aLP, 0)     // second pivot low (right leg)
-    int  fHt = array.size(aHB) > 1 ? array.get(aHB, 1) : 0
-    int  sLt = array.size(aLB) > 1 ? array.get(aLB, 1) : 0
-    int  sHt = array.get(aHB, 0)
-    int  fLt = array.get(aLB, 0)
+if isBase
+    int numHP = array.size(aHP)
+    int numLP = array.size(aLP)
+    if numHP >= 2 and numLP >= 2
+        int maxHP = math.min(numHP - 1, 4)
+        for hp_i = 0 to maxHP - 1
+            for hp_j = hp_i + 1 to math.min(numHP - 1, hp_i + 4)
+                float sH = array.get(aHP, hp_i)
+                float fH = array.get(aHP, hp_j)
+                int sHt = array.get(aHB, hp_i)
+                int fHt = array.get(aHB, hp_j)
 
-    // ── Price conditions ──────────────────────────────────────────────────────
-    bool cPT = fH >= prL250 * 1.20
-    bool cPH = not na(bTop) and math.abs(fH - bTop) < bTop * 0.01
-    bool cA  = sL  <= fL  * 1.03
-    bool cB  = sL  >= (1 - bdF) * fH
-    bool cC  = sL  <= fH  * 0.90
-    bool cD  = sH  >= sL  + (fH - sL) * 0.35
-    bool cE  = sH  <  fH  * 1.01
-    bool cF  = sH  >= fL  + (fH - fL) * 0.40
-    float fd = fH - fL
-    float sd = sH - sL
-    bool cG  = fd > 0 and sd > 0 and fd / sd <= 3.0 and sd / fd <= 3.0
+                int dbMaxBars = 85  // 4 months (17 weeks * 5 daily bars)
+                if fHt >= bar_index - dbMaxBars
+                    int fLt = -1
+                    float fL = na
+                    int sLt = -1
+                    float sL = na
 
-    // ── Time conditions ───────────────────────────────────────────────────────
-    bool cTA = fHt < sLt and sLt < sHt and sHt < fLt
-    bool cTB = fLt - fHt <= bLenB
-    bool cTC = fLt - fHt >= 2 * barsPerWeek
-    int dbMinSpacing = math.max(1, math.round(3.0 * barsPerWeek / 5.0))
-    bool cTD = (sLt - fHt) >= dbMinSpacing and (sHt - sLt) >= dbMinSpacing and (fLt - sHt) >= dbMinSpacing
-    int  h1  = sHt - fHt
-    int  h2  = bar_index - sHt
-    bool cTE = h1 > 0 and h2 > 0 and h1 / h2 <= 4.0 and h2 / h1 <= 4.0
-    bool cTF = bar_index - fLt <= (sHt - fHt) * 2
+                    for lp_idx = 0 to numLP - 1
+                        int lBar = array.get(aLB, lp_idx)
+                        if lBar > fHt and lBar < sHt
+                            fLt := lBar
+                            fL := array.get(aLP, lp_idx)
+                            break
 
-    // ── Shape: no bar above middle high since 2nd low ─────────────────────────
-    bool cSh = _dbHFL <= sH
+                    for lp_idx = 0 to numLP - 1
+                        int lBar = array.get(aLB, lp_idx)
+                        if lBar > sHt and lBar <= bar_index
+                            sLt := lBar
+                            sL := array.get(aLP, lp_idx)
+                            break
 
-    if cPT and cPH and cA and cB and cC and cD and cE and cF and cG and
-       cTA and cTB and cTC and cTD and cTE and cTF and cSh
-        detectDB := true
+                    if fLt != -1 and sLt != -1
+                        float peak = math.max(fH, sH)
+                        bool cPT = (fH >= prL250 * 1.15) or (sH >= prL250 * 1.15)
+                        bool cPH = not na(bTop) ? (math.abs(fH - bTop) < bTop * 0.15 or math.abs(sH - bTop) < bTop * 0.15) : true
+                        bool cA  = (sL <= fL * 1.05) or (sL >= fL * 0.80)
+                        bool cB  = sL >= (1.0 - bdF) * peak
+                        bool cC  = sL <= peak * 0.95
+                        bool cD  = sH >= sL + (peak - sL) * 0.15
+                        bool cE  = sH <= fH * 1.10
+                        bool cF  = sH >= fL + (fH - fL) * 0.15
+                        float fd = fH - fL
+                        float sd = sH - sL
+                        bool cG  = fd > 0 and sd > 0
+
+                        bool cTA = fHt < fLt and fLt < sHt and sHt < sLt
+                        bool cTB = (sLt - fHt) <= dbMaxBars and (bar_index - fHt) <= dbMaxBars
+                        bool cTC = (sLt - fHt) >= 5
+
+                        int checkLen = math.min(14999, math.max(1, bar_index - sLt + 1))
+                        float highestSince2ndLow = ta.highest(high, checkLen)
+                        bool cSh = highestSince2ndLow <= sH * 1.02
+
+                        if cPT and cPH and cA and cB and cC and cD and cE and cF and cG and cTA and cTB and cTC and cSh
+                            detectDB := true
+                            break
+            if detectDB
+                break
 
 var bool isDB = false
 if detectDB or isDB[1]
