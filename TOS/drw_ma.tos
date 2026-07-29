@@ -1,0 +1,121 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# DRW Moving Averages
+# Mirrors pine/drw_pattern.pine MA section
+# Daily: EMA10, EMA21, SMA50, SMA200
+# Weekly: SMA10, EMA20, SMA30, SMA40
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────────────────────────────────────────
+# TIMEFRAME DETECT
+# ──────────────────────────────────────────────────────────────────────────────
+def isWeekly = GetAggregationPeriod() >= AggregationPeriod.WEEK;
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DAILY MA INPUTS
+# ──────────────────────────────────────────────────────────────────────────────
+input ShowMA1         = yes;
+input MA1_Length      = 10;
+input MA1_IsExp       = yes;      # yes = EMA, no = SMA
+
+input ShowMA2         = yes;
+input MA2_Length      = 21;
+input MA2_IsExp       = yes;
+
+input ShowMA3         = yes;
+input MA3_Length      = 50;
+input MA3_IsExp       = no;
+
+input ShowMA4         = yes;
+input MA4_Length      = 200;
+input MA4_IsExp       = no;
+
+# ──────────────────────────────────────────────────────────────────────────────
+# WEEKLY MA INPUTS
+# ──────────────────────────────────────────────────────────────────────────────
+input ShowWMA1        = yes;
+input WMA1_Length     = 10;
+input WMA1_IsExp      = no;
+
+input ShowWMA2        = yes;
+input WMA2_Length     = 20;
+input WMA2_IsExp      = yes;
+
+input ShowWMA3        = yes;
+input WMA3_Length     = 30;
+input WMA3_IsExp      = no;
+
+input ShowWMA4        = yes;
+input WMA4_Length     = 40;
+input WMA4_IsExp      = no;
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DAILY MA CALCULATIONS
+# ──────────────────────────────────────────────────────────────────────────────
+def calcMA1 = if MA1_IsExp then ExpAverage(close, MA1_Length) else SimpleMovingAvg(close, MA1_Length);
+def calcMA2 = if MA2_IsExp then ExpAverage(close, MA2_Length) else SimpleMovingAvg(close, MA2_Length);
+def calcMA3 = if MA3_IsExp then ExpAverage(close, MA3_Length) else SimpleMovingAvg(close, MA3_Length);
+def calcMA4 = if MA4_IsExp then ExpAverage(close, MA4_Length) else SimpleMovingAvg(close, MA4_Length);
+
+# ──────────────────────────────────────────────────────────────────────────────
+# WEEKLY MA CALCULATIONS
+# ──────────────────────────────────────────────────────────────────────────────
+def calcWMA1 = if WMA1_IsExp then ExpAverage(close, WMA1_Length) else SimpleMovingAvg(close, WMA1_Length);
+def calcWMA2 = if WMA2_IsExp then ExpAverage(close, WMA2_Length) else SimpleMovingAvg(close, WMA2_Length);
+def calcWMA3 = if WMA3_IsExp then ExpAverage(close, WMA3_Length) else SimpleMovingAvg(close, WMA3_Length);
+def calcWMA4 = if WMA4_IsExp then ExpAverage(close, WMA4_Length) else SimpleMovingAvg(close, WMA4_Length);
+
+# ──────────────────────────────────────────────────────────────────────────────
+# DAILY MA PLOTS  (hidden on weekly chart)
+# ──────────────────────────────────────────────────────────────────────────────
+plot MA1 = if ShowMA1 and !isWeekly then calcMA1 else Double.NaN;
+plot MA2 = if ShowMA2 and !isWeekly then calcMA2 else Double.NaN;
+plot MA3 = if ShowMA3 and !isWeekly then calcMA3 else Double.NaN;
+plot MA4 = if ShowMA4 and !isWeekly then calcMA4 else Double.NaN;
+
+MA1.SetDefaultColor(Color.MAGENTA);
+MA1.SetLineWeight(1);
+MA1.SetStyle(Curve.FIRM);
+MA1.HideBubble();
+
+MA2.SetDefaultColor(Color.GREEN);
+MA2.SetLineWeight(1);
+MA2.SetStyle(Curve.FIRM);
+MA2.HideBubble();
+
+MA3.SetDefaultColor(Color.RED);
+MA3.SetLineWeight(1);
+MA3.SetStyle(Curve.FIRM);
+MA3.HideBubble();
+
+MA4.SetDefaultColor(Color.DARK_GRAY);
+MA4.SetLineWeight(2);
+MA4.SetStyle(Curve.FIRM);
+MA4.HideBubble();
+
+# ──────────────────────────────────────────────────────────────────────────────
+# WEEKLY MA PLOTS  (hidden on daily chart)
+# ──────────────────────────────────────────────────────────────────────────────
+plot WMA1 = if ShowWMA1 and isWeekly then calcWMA1 else Double.NaN;
+plot WMA2 = if ShowWMA2 and isWeekly then calcWMA2 else Double.NaN;
+plot WMA3 = if ShowWMA3 and isWeekly then calcWMA3 else Double.NaN;
+plot WMA4 = if ShowWMA4 and isWeekly then calcWMA4 else Double.NaN;
+
+WMA1.SetDefaultColor(Color.RED);
+WMA1.SetLineWeight(1);
+WMA1.SetStyle(Curve.FIRM);
+WMA1.HideBubble();
+
+WMA2.SetDefaultColor(Color.MAGENTA);
+WMA2.SetLineWeight(1);
+WMA2.SetStyle(Curve.FIRM);
+WMA2.HideBubble();
+
+WMA3.SetDefaultColor(Color.GREEN);
+WMA3.SetLineWeight(1);
+WMA3.SetStyle(Curve.FIRM);
+WMA3.HideBubble();
+
+WMA4.SetDefaultColor(Color.DARK_GRAY);
+WMA4.SetLineWeight(2);
+WMA4.SetStyle(Curve.FIRM);
+WMA4.HideBubble();

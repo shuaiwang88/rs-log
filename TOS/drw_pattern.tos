@@ -1,6 +1,27 @@
 declare upper;
 
 # ──────────────────────────────────────────────────────────────────────────────
+# HELPER FUNCTIONS
+# ──────────────────────────────────────────────────────────────────────────────
+script PivotHigh {
+    input price = high;
+    input leftLen = 9;
+    input rightLen = 9;
+    input instance = 1;
+    def isPivot = price[rightLen] >= Highest(price[rightLen + 1], leftLen) and price[rightLen] > Highest(price, rightLen);
+    plot Pivot = if isPivot then price[rightLen] else Double.NaN;
+}
+
+script PivotLow {
+    input price = low;
+    input leftLen = 9;
+    input rightLen = 9;
+    input instance = 1;
+    def isPivot = price[rightLen] <= Lowest(price[rightLen + 1], leftLen) and price[rightLen] < Lowest(price, rightLen);
+    plot Pivot = if isPivot then price[rightLen] else Double.NaN;
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
 # GLOBAL COLORS
 # ──────────────────────────────────────────────────────────────────────────────
 DefineGlobalColor("PosCandle", CreateColor(39, 54, 233));   # Positive Candle (Blue)
@@ -152,8 +173,7 @@ def highestBase = Highest(high, 25);
 def lowestBaseLow = Lowest(low, 25);
 def prior65High = GetValue(Highest(high, 65), 26);
 
-def legUpLookback = Min(103, Max(1, bn - 25));
-def lowestIPOLeg  = Lowest(GetValue(low, 25), legUpLookback);
+def lowestIPOLeg  = Lowest(low[25], 103);
 
 def isPivHighAt25 = high25 == pivH1 or high25 == pivH2;
 def is13WkHigh = high25 >= prior65High;
@@ -161,14 +181,17 @@ def legUpCond = high25 >= lowestIPOLeg * 1.20;
 def depthCond = high25 * (1 - BaseDepthPct / 100) <= lowestBaseLow;
 def noCandleAbove = highestBase <= high25;
 
-def baseCond = isPivHighAt25 and is13WkHigh and legUpCond and depthCond and noCandleAbove;
-
 rec isBase;
 rec startBasePrice;
 rec startBaseBar;
 rec lowBasePrice;
 rec lowerBaseBar;
 rec baseCount;
+
+def noBaseInBase = !isBase[25];
+def noSameBase = (bn - 25) > startBaseBar[1] or startBaseBar[1] == 0;
+
+def baseCond = isPivHighAt25 and is13WkHigh and legUpCond and depthCond and noCandleAbove and noBaseInBase and noSameBase;
 
 if bn == 1 {
     isBase = no;
@@ -195,17 +218,17 @@ if bn == 1 {
     } else if (low < startBasePrice[1] * (1 - BaseDepthPct / 100) or baseCount[1] > minLenBars) {
         isBase = no;
         startBasePrice = 0;
-        startBaseBar = 0;
+        startBaseBar = startBaseBar[1];
         lowBasePrice = 0;
         lowerBaseBar = 0;
         baseCount = 0;
     } else if high > startBasePrice[1] {
         isBase = no;
-        startBasePrice = startBasePrice[1];
+        startBasePrice = 0;
         startBaseBar = startBaseBar[1];
-        lowBasePrice = lowBasePrice[1];
-        lowerBaseBar = lowerBaseBar[1];
-        baseCount = baseCount[1] + 1;
+        lowBasePrice = 0;
+        lowerBaseBar = 0;
+        baseCount = 0;
     } else {
         isBase = yes;
         startBasePrice = startBasePrice[1];
@@ -217,7 +240,7 @@ if bn == 1 {
 } else {
     isBase = no;
     startBasePrice = 0;
-    startBaseBar = 0;
+    startBaseBar = startBaseBar[1];
     lowBasePrice = 0;
     lowerBaseBar = 0;
     baseCount = 0;
@@ -372,7 +395,7 @@ def handleBreakout = handleForming and close > handlePeakLocked and volBreakoutO
 # ──────────────────────────────────────────────────────────────────────────────
 # HIGH TIGHT FLAG (HTF) DETECTION
 # ──────────────────────────────────────────────────────────────────────────────
-def htfPoleLow = Lowest(low, htfPoleMax);
+def htfPoleLow = if isWeekly then Lowest(low, 8) else Lowest(low, 40);
 def htfPoleGain = if htfPoleLow > 0 then (high - htfPoleLow) / htfPoleLow * 100 else 0;
 def htfGainOK   = htfPoleGain >= HTFPriorUptrendMinPct;
 def htfFreshHi  = high >= Highest(high, 65);
@@ -409,14 +432,19 @@ def activePivot = if handleBreakout then handlePeakLocked
                   else startBasePrice;
 
 rec tradePivotPx;
+rec tradeBars;
 if bn == 1 {
     tradePivotPx = 0;
+    tradeBars = 0;
 } else if (detectCup or handleBreakout or detectDoubleBottom or htfBreakout) and tradePivotPx[1] == 0 {
     tradePivotPx = activePivot;
-} else if tradePivotPx[1] > 0 and high <= tradePivotPx[1] * 1.25 and low >= tradePivotPx[1] * 0.92 {
+    tradeBars = 1;
+} else if tradePivotPx[1] > 0 and tradeBars[1] < 15 and high <= tradePivotPx[1] * 1.25 and low >= tradePivotPx[1] * 0.92 {
     tradePivotPx = tradePivotPx[1];
+    tradeBars = tradeBars[1] + 1;
 } else {
     tradePivotPx = 0;
+    tradeBars = 0;
 }
 
 def tradeActive = tradePivotPx > 0;
@@ -452,7 +480,46 @@ def neuDays = Max(0, baseDaysCount - accDays - disDays);
 # ──────────────────────────────────────────────────────────────────────────────
 # PLOTS, CURVES, ARROWS, BUBBLES & LABELS
 # ──────────────────────────────────────────────────────────────────────────────
-plot BaseHighLine = if ShowPattern and isBase then startBasePrice else Double.NaN;
+rec cupBreakoutPx;
+rec cupBreakoutBars;
+if (detectCup and close > startBasePrice) and cupBreakoutBars[1] == 0 {
+    cupBreakoutPx = startBasePrice;
+    cupBreakoutBars = 1;
+} else if cupBreakoutBars[1] > 0 and cupBreakoutBars[1] < 10 {
+    cupBreakoutPx = cupBreakoutPx[1];
+    cupBreakoutBars = cupBreakoutBars[1] + 1;
+} else {
+    cupBreakoutPx = 0;
+    cupBreakoutBars = 0;
+}
+
+rec dbBreakoutPx;
+rec dbBreakoutBars;
+if (detectDoubleBottom and close > scndPivHigh) and dbBreakoutBars[1] == 0 {
+    dbBreakoutPx = scndPivHigh;
+    dbBreakoutBars = 1;
+} else if dbBreakoutBars[1] > 0 and dbBreakoutBars[1] < 10 {
+    dbBreakoutPx = dbBreakoutPx[1];
+    dbBreakoutBars = dbBreakoutBars[1] + 1;
+} else {
+    dbBreakoutPx = 0;
+    dbBreakoutBars = 0;
+}
+
+rec handleBreakoutPx;
+rec handleBreakoutBars;
+if handleBreakout and handleBreakoutBars[1] == 0 {
+    handleBreakoutPx = handlePeakLocked;
+    handleBreakoutBars = 1;
+} else if handleBreakoutBars[1] > 0 and handleBreakoutBars[1] < 10 {
+    handleBreakoutPx = handleBreakoutPx[1];
+    handleBreakoutBars = handleBreakoutBars[1] + 1;
+} else {
+    handleBreakoutPx = 0;
+    handleBreakoutBars = 0;
+}
+
+plot BaseHighLine = if ShowPattern and isBase then startBasePrice else if ShowPattern and cupBreakoutBars > 0 then cupBreakoutPx else Double.NaN;
 plot BaseLowLine  = if ShowPattern and isBase then lowBasePrice else Double.NaN;
 
 BaseHighLine.SetDefaultColor(GlobalColor("Cup"));
@@ -462,6 +529,12 @@ BaseHighLine.SetLineWeight(2);
 BaseLowLine.SetDefaultColor(GlobalColor("Cup"));
 BaseLowLine.SetStyle(Curve.FIRM);
 BaseLowLine.SetLineWeight(2);
+
+# Handle Pivot Line
+plot HandlePivotLine = if ShowCupHandle and handleForming then handlePeakLocked else if ShowCupHandle and handleBreakoutBars > 0 then handleBreakoutPx else Double.NaN;
+HandlePivotLine.SetDefaultColor(GlobalColor("Cup"));
+HandlePivotLine.SetStyle(Curve.SHORT_DASH);
+HandlePivotLine.SetLineWeight(2);
 
 # Curved Cup Line
 plot CupBowl = if ShowPattern and isCup and !isDoubleBottom then
@@ -477,7 +550,7 @@ CupBowl.HideBubble();
 CupBowl.HideTitle();
 
 # Double Bottom Pivot Line
-plot DBPivotLine = if ShowPattern and isDoubleBottom then scndPivHigh else Double.NaN;
+plot DBPivotLine = if ShowPattern and isDoubleBottom then scndPivHigh else if ShowPattern and dbBreakoutBars > 0 then dbBreakoutPx else Double.NaN;
 DBPivotLine.SetDefaultColor(GlobalColor("DB"));
 DBPivotLine.SetStyle(Curve.LONG_DASH);
 DBPivotLine.SetLineWeight(2);
