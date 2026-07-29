@@ -5,6 +5,10 @@
 # Ignore large generated historical files and metadata
 output/*_historical.csv
 output/*_metadata.json
+*.parquet
+data/yf_cache/
+ticker_cache/
+
 
 # Operating System
 .DS_Store
