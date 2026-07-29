@@ -8,6 +8,8 @@ output/*_metadata.json
 *.parquet
 data/yf_cache/
 ticker_cache/
+.venv/
+python/ibd_pattern_results.json
 
 
 # Operating System

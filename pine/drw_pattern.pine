@@ -500,11 +500,12 @@ i_displayBoxes = input(true, title = 'Display Trade Boxes', group = 'Chart Patte
 i_displayHistoricalBoxes = input(true, title = 'Display Historical Trade Boxes', group = 'Chart Pattern Recognition')
 i_baseDepth = input(35, title = 'Base: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
 i_baseLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters Base')
-i_dbDepth = input(50, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
+i_dbDepth = input(40, title = 'Double Bottom: Depth (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB', tooltip = 'Max base depth for Double Bottom (commonly forms in volatile environments, < 40%)')
 i_dbLength = input(65, title = 'Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB')
-i_dbPriorUptrend = input.float(15.0, title = 'Min Prior Uptrend (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum prior uptrend percentage before Double Bottom forms')
-i_dbMinLengthWeeks = input.int(7, title = 'Min Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum total length in weeks for Double Bottom')
+i_dbPriorUptrend = input.float(30.0, title = 'Min Prior Uptrend (%)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum prior uptrend percentage before Double Bottom forms (30% or more)')
+i_dbMinLengthWeeks = input.int(7, title = 'Min Length (Weeks)', group = 'Chart Pattern Recognition', inline = 'Parameters DB2', tooltip = 'Minimum total length in weeks for Double Bottom (7 weeks or more)')
 i_dbRequireUndercut = input.bool(true, title = 'Require 2nd Bottom Undercut', group = 'Chart Pattern Recognition', tooltip = 'If enabled, 2nd bottom low must undercut (be strictly lower than) 1st bottom low')
+i_dbVolBreakoutMult = input.float(1.35, title = 'DB Breakout Volume Multiplier', group = 'Chart Pattern Recognition', tooltip = 'Breakout volume should be running 30-40% above average (e.g. 1.35 = 35% above average volume MA)')
 i_showPatternTooltip = input(true, title = 'Show Pattern Hover Label', group = 'Chart Pattern Recognition')
 i_showCupHandleSep = input(true, title = 'Show Sep Cup-with-Handle (Early Handle)', group = 'Chart Pattern Recognition')
 i_handleMinBars = input(5, title = 'Handle: Min Bars', group = 'Chart Pattern Recognition')
@@ -621,7 +622,8 @@ if isBox[1] and not boxOver[1]
     isBox
 
 detectDoubleBottom = false
-_highSinceTopFull = ta.highest(high, 500)
+int _dbFL = array.size(pivotLowBars) > 0 ? math.min(14999, math.max(1, bar_index - array.get(pivotLowBars, 0) + 1)) : 1
+_dbHFL = ta.highest(high, _dbFL)
 _priorLowFull = ta.lowest(low, math.max(1, math.min(bar_index, 250)))
 if isBase
     if array.size(pivotHighPrices) > 1 and array.size(pivotLowPrices) > 1
@@ -635,7 +637,7 @@ if isBase
 
         condPricesH = true
         if array.size(startBasePrice) > 0
-            condPricesH := firstPivHigh == array.get(startBasePrice, 0)
+            condPricesH := math.abs(firstPivHigh - array.get(startBasePrice, 0)) < array.get(startBasePrice, 0) * 0.01
 
         condPricesA = i_dbRequireUndercut ? (scndPivLow < firstPivLow) : (scndPivLow <= firstPivLow )
 
@@ -685,7 +687,7 @@ if isBase
         condTimeF = bar_index - frthPivTime <=
           (thrdPivTime - firstPivTime) * 2
 
-        condBothA = _highSinceTopFull <= scndPivHigh
+        condBothA = _dbHFL <= scndPivHigh
 
         if condPriorTrend and condPricesA and condPricesB and condPricesC and
           condPricesD and condPricesE and condPricesF and condPricesG and

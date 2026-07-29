@@ -1489,16 +1489,17 @@ all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs(
         ["📈 Overview", "📊 Time Series", "🎯 Top Performers", "🔬 Deep Analysis",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card", "📸 MarketSurge Screenshots"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions", "🔬 Deep Analysis",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "📝 Daily Report Card", "📸 MarketSurge Screenshots"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots"])
 
-tab_drc = tab10 if has_historical else tab9
-tab_ms = tab11 if has_historical else tab10
+tab_ibd_pattern = tab10 if has_historical else tab9
+tab_drc = tab11 if has_historical else tab10
+tab_ms = tab12 if has_historical else tab11
 
 
 # ---------- TAB 1: Overview ----------
@@ -3014,6 +3015,233 @@ with (tab9 if has_historical else tab8):
             st.error(f"Error loading pattern data: {e}")
     else:
         st.warning("No patterns data found. Click the button above to run the extraction script for the first time.")
+
+# ---------- TAB: IBD Pattern Scanner ----------
+with tab_ibd_pattern:
+    st.subheader("🏆 IBD Pattern Scanner")
+    st.markdown("Automated MarketSmith / IBD pattern scanner logic (`drw_pattern_scanner.pine`). Categorizes active base patterns (Cup+Handle, Cup, Double Bottom, High Tight Flag, Flat Base, 6-Wk Flat, Base) from `ticker_cache` data.")
+    
+    col_scan1, col_scan2 = st.columns([4, 6])
+    with col_scan1:
+        if st.button("🔄 Run / Rerun IBD Pattern Scanner", key="run_ibd_pattern_scanner_btn"):
+            with st.spinner("Scanning 7,000+ ticker cache files for IBD patterns..."):
+                try:
+                    script_path = Path(__file__).resolve().parent / "python" / "ibd_pattern_scanner.py"
+                    result = subprocess.run([sys.executable, str(script_path)], cwd=str(Path(__file__).resolve().parent), capture_output=True, text=True)
+                    if result.returncode == 0:
+                        st.success("✅ Pattern scan completed successfully!")
+                        st.cache_data.clear()
+                        rerun_app()
+                    else:
+                        st.error(f"Scan failed:\n{result.stderr}")
+                except Exception as e:
+                    st.error(f"Error running pattern scanner: {e}")
+    with col_scan2:
+        search_ticker = st.text_input("🔍 Ticker Search", value="", placeholder="Type ticker (e.g. CMT, NVDA, AAPL)...", key="ibd_quick_ticker_search").strip().upper()
+                    
+    ibd_json_path = Path(__file__).resolve().parent / "python" / "ibd_pattern_results.json"
+    if ibd_json_path.exists():
+        try:
+            with open(ibd_json_path, 'r', encoding='utf-8') as f:
+                ibd_results = json.load(f)
+                
+            df_ibd_patterns = pd.DataFrame(ibd_results)
+            
+            if df_ibd_patterns.empty:
+                st.info("No active pattern signals found in current ticker cache.")
+            else:
+                # Merge stock dataset metrics (RS Rating / Percentile, 30D Avg Volume, Sector, Industry)
+                if 'df' in locals() and df is not None and not df.empty:
+                    if 'date' in df.columns:
+                        latest_stocks = df.sort_values('date').groupby('Ticker').last().reset_index()
+                    else:
+                        latest_stocks = df.drop_duplicates(subset=['Ticker']).copy()
+                        
+                    merge_fields = ['Ticker', 'Percentile', 'Relative Strength', 'AvgVol30', 'Sector', 'Industry']
+                    avail_m = [c for c in merge_fields if c in latest_stocks.columns]
+                    
+                    if len(avail_m) > 1:
+                        df_ibd_patterns = df_ibd_patterns.merge(
+                            latest_stocks[avail_m],
+                            left_on='ticker',
+                            right_on='Ticker',
+                            how='left'
+                        )
+                
+                # Format numeric merged columns
+                if 'Percentile' in df_ibd_patterns.columns:
+                    df_ibd_patterns['Percentile'] = pd.to_numeric(df_ibd_patterns['Percentile'], errors='coerce')
+                if 'AvgVol30' in df_ibd_patterns.columns:
+                    df_ibd_patterns['AvgVol30'] = pd.to_numeric(df_ibd_patterns['AvgVol30'], errors='coerce')
+
+                # Top Overview Metrics
+                m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+                with m_col1: st.metric("Total Pattern Tickers", len(df_ibd_patterns))
+                with m_col2: st.metric("In Base", len(df_ibd_patterns[df_ibd_patterns['status'] == 'In Base']))
+                with m_col3: st.metric("Post-BO", len(df_ibd_patterns[df_ibd_patterns['status'] == 'Post-BO']))
+                with m_col4: st.metric("Top Score (>=5)", len(df_ibd_patterns[df_ibd_patterns['composite_score'] >= 5]))
+                with m_col5: st.metric("Avg % Off 52W High", f"{df_ibd_patterns['pct_off_52w_high'].mean():.1f}%")
+                
+                st.divider()
+                
+                # Interactive Filters Expander
+                with st.expander("🎛️ Filter & Refine IBD Pattern Tickers", expanded=False):
+                    f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+                    with f_col1:
+                        avail_patterns = sorted(df_ibd_patterns['pattern_name'].unique().tolist())
+                        sel_patterns = st.multiselect("Pattern Name", avail_patterns, default=avail_patterns, key="ibd_p_sel")
+                        sel_status = st.radio("Base Status", ["All", "In Base", "Post-BO"], horizontal=True, key="ibd_status_sel")
+                    with f_col2:
+                        min_rs_rating = st.slider("Min RS Rating (1-99)", 0, 99, 0, key="ibd_min_rs")
+                        min_price     = st.number_input("Min Price ($)", value=0.0, step=1.0, key="ibd_min_price")
+                        max_price     = st.number_input("Max Price ($)", value=10000.0, step=10.0, key="ibd_max_price")
+                        min_avg_vol30 = st.number_input("Min 30D Avg Vol", value=0, step=50000, key="ibd_min_vol30")
+                    with f_col3:
+                        min_comp_score = st.slider("Min Composite Score (0-12)", 0, 12, 0, key="ibd_min_comp")
+                        min_pre_score  = st.slider("Min Before-BO Score (0-6)", 0, 6, 0, key="ibd_min_pre")
+                        min_post_score = st.slider("Min Post-BO Score (0-6)", 0, 6, 0, key="ibd_min_post")
+                    with f_col4:
+                        max_dist_pivot = st.number_input("Max Distance to Pivot %", value=100.0, key="ibd_max_dist")
+                        max_off_52w    = st.number_input("Max % Off 52W High", value=100.0, key="ibd_max_52w")
+                        sub_filter     = st.multiselect("Require Sub-signals", ["Volume Dry-Up", "Pocket Pivot", "Touched MA", "Shakeout Entry", "Upside Reversal", "RS New High"], default=[], key="ibd_sub_sig")
+
+                # Apply Filters
+                filtered_ibd = df_ibd_patterns.copy()
+                if search_ticker:
+                    filtered_ibd = filtered_ibd[filtered_ibd['ticker'].str.upper().str.contains(search_ticker, na=False)]
+                if sel_patterns:
+                    filtered_ibd = filtered_ibd[filtered_ibd['pattern_name'].isin(sel_patterns)]
+                if sel_status != "All":
+                    filtered_ibd = filtered_ibd[filtered_ibd['status'] == sel_status]
+                    
+                if 'Percentile' in filtered_ibd.columns and min_rs_rating > 0:
+                    filtered_ibd = filtered_ibd[filtered_ibd['Percentile'].fillna(0) >= min_rs_rating]
+                if min_price > 0:
+                    filtered_ibd = filtered_ibd[filtered_ibd['close'] >= min_price]
+                if max_price < 10000.0:
+                    filtered_ibd = filtered_ibd[filtered_ibd['close'] <= max_price]
+                if 'AvgVol30' in filtered_ibd.columns and min_avg_vol30 > 0:
+                    filtered_ibd = filtered_ibd[filtered_ibd['AvgVol30'].fillna(0) >= min_avg_vol30]
+                    
+                filtered_ibd = filtered_ibd[
+                    (filtered_ibd['composite_score'] >= min_comp_score) &
+                    (filtered_ibd['before_bo_score'] >= min_pre_score) &
+                    (filtered_ibd['post_bo_score'] >= min_post_score) &
+                    (filtered_ibd['pct_off_52w_high'] <= max_off_52w)
+                ]
+                if max_dist_pivot < 100.0:
+                    filtered_ibd = filtered_ibd[filtered_ibd['dist_pct'].fillna(999.0) <= max_dist_pivot]
+                    
+                if "Volume Dry-Up" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['vol_dry_up']]
+                if "Pocket Pivot" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['pocket_pivot']]
+                if "Touched MA" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['touched_ma']]
+                if "Shakeout Entry" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['shakeout_entry']]
+                if "Upside Reversal" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['upside_reversal']]
+                if "RS New High" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['rs_nh']]
+
+                # Output Views: Tabs for "Category View", "Data Table", and "Watchlist Export"
+                sub_tab1, sub_tab2, sub_tab3 = st.tabs(["📂 Tickers by Pattern Category", "📋 Detailed Data Table", "📤 Export Watchlists"])
+                
+                # --- Sub-tab 1: Categorized View ---
+                with sub_tab1:
+                    pattern_order = ["Cup+Handle", "Cup", "Dbl Bottom", "HTF", "6-Wk Flat", "Flat Base", "Base"]
+                    for pat in pattern_order:
+                        pat_df = filtered_ibd[filtered_ibd['pattern_name'] == pat]
+                        count_p = len(pat_df)
+                        
+                        with st.expander(f"📌 {pat} ({count_p} tickers)", expanded=(count_p > 0 and count_p < 50)):
+                            if count_p > 0:
+                                t_list = pat_df['ticker'].tolist()
+                                t_str = ",".join(t_list)
+                                col_t1, col_t2 = st.columns([8, 2])
+                                with col_t1:
+                                    st.code(t_str, language="text")
+                                with col_t2:
+                                    st.download_button(f"Download {pat}", t_str, f"{pat.replace('+', 'Plus').replace(' ', '_')}_tickers.txt", "text/plain", key=f"dl_{pat}")
+                                
+                                # Show summary table inside expander
+                                mini_cols = ['ticker', 'status', 'Percentile', 'close', 'AvgVol30', 'dist_pct', 'pct_off_52w_high', 'composite_score', 'before_bo_score', 'post_bo_score', 'rs_nh_count']
+                                mini_avail = [c for c in mini_cols if c in pat_df.columns]
+                                display_mini = pat_df[mini_avail].copy()
+                                display_mini = display_mini.rename(columns={'Percentile': 'RS Rating', 'close': 'Price ($)', 'AvgVol30': '30D Avg Vol'})
+                                st.dataframe(display_mini, hide_index=True, use_container_width=True)
+                            else:
+                                st.info(f"No tickers found matching filters for {pat}.")
+
+                # --- Sub-tab 2: Full Data Table ---
+                with sub_tab2:
+                    st.markdown(f"Showing **{len(filtered_ibd)}** pattern signals matching filters.")
+                    
+                    # Columns ordering
+                    table_cols = ['ticker', 'pattern_name', 'status', 'Percentile', 'close', 'AvgVol30', 'dist_pct', 'pct_off_52w_high', 'composite_score', 'before_bo_score', 'post_bo_score', 'rs_nh_count', 'days_in_base', 'bars_sbo', 'Sector', 'Industry', 'vol_dry_up', 'pocket_pivot', 'touched_ma', 'shakeout_entry', 'upside_reversal', 'rs_nh']
+                    table_cols = [c for c in table_cols if c in filtered_ibd.columns]
+                    
+                    renamed_cols = {
+                        'ticker': 'Ticker',
+                        'pattern_name': 'Pattern',
+                        'status': 'Status',
+                        'Percentile': 'RS Rating',
+                        'close': 'Close ($)',
+                        'AvgVol30': '30D Avg Vol',
+                        'dist_pct': 'Pivot Dist %',
+                        'pct_off_52w_high': '% Off 52W High',
+                        'composite_score': 'Comp Score',
+                        'before_bo_score': 'Pre Score',
+                        'post_bo_score': 'Post Score',
+                        'rs_nh_count': 'RS NH Count',
+                        'days_in_base': 'Days in Base',
+                        'bars_sbo': 'Bars Post-BO',
+                        'vol_dry_up': 'VDU',
+                        'pocket_pivot': 'PP',
+                        'touched_ma': 'MA Touch',
+                        'shakeout_entry': 'Shakeout',
+                        'upside_reversal': 'UpRev',
+                        'rs_nh': 'RS NH'
+                    }
+                    disp_df = filtered_ibd[table_cols].rename(columns=renamed_cols)
+                    st.dataframe(disp_df, hide_index=True, use_container_width=True)
+
+                # --- Sub-tab 3: Export Watchlists ---
+                with sub_tab3:
+                    st.subheader("📤 Export Categorized Watchlists")
+                    
+                    all_filtered_tickers = filtered_ibd['ticker'].unique().tolist()
+                    st.write(f"**Total Filtered Tickers:** {len(all_filtered_tickers)}")
+                    
+                    # TradingView format with section headers
+                    tv_lines = []
+                    ibkr_lines = []
+                    for pat in pattern_order:
+                        p_df = filtered_ibd[filtered_ibd['pattern_name'] == pat]
+                        if not p_df.empty:
+                            tv_lines.append(f"###{pat}")
+                            for t in p_df['ticker']:
+                                tv_lines.append(t)
+                                ibkr_lines.append(f"SYM, {t.upper()}, SMART/ARCA")
+                                
+                    tv_export_str = "\n".join(tv_lines)
+                    ibkr_export_str = "\n".join(ibkr_lines)
+                    csv_export_str = ",".join(all_filtered_tickers)
+                    
+                    col_ex1, col_ex2, col_ex3 = st.columns(3)
+                    with col_ex1:
+                        st.markdown("##### 📄 Plain CSV / List")
+                        st.code(csv_export_str, language="text")
+                        st.download_button("Download CSV List", csv_export_str, "ibd_patterns_list.txt", "text/plain", key="dl_ibd_csv")
+                    with col_ex2:
+                        st.markdown("##### 📈 TradingView Watchlist")
+                        st.code(tv_export_str, language="text")
+                        st.download_button("Download TradingView Watchlist", tv_export_str, "ibd_patterns_tv.txt", "text/plain", key="dl_ibd_tv")
+                    with col_ex3:
+                        st.markdown("##### 💼 IBKR Watchlist")
+                        st.code(ibkr_export_str, language="text")
+                        st.download_button("Download IBKR Watchlist", ibkr_export_str, "ibd_patterns_ibkr.txt", "text/plain", key="dl_ibd_ibkr")
+
+        except Exception as e:
+            st.error(f"Error loading IBD pattern results: {e}")
+    else:
+        st.info("No IBD pattern results JSON found. Click the button above to run the pattern scanner.")
+
 
 # ---------- TAB: Daily Report Card ----------
 with tab_drc:
