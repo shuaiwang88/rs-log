@@ -1,0 +1,373 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Earnings & Ratings Table — ThinkOrSwim Edition
+# Ported from Pine Script: pine/drw_earnings_ratings_table.pine
+# ═══════════════════════════════════════════════════════════════════════════════
+# DESCRIPTION:
+#   This study computes and displays IBD-style composite ratings, RS ratings,
+#   Group RS ratings, Acc/Dis ratings, SMR ratings, EPS rating approximations,
+#   and key fundamental/technical metrics on ThinkOrSwim.
+#
+#   Includes full Quarterly & Annual Earnings Tables (most recent 4 reported
+#   quarters with YoY % growth, actual vs estimated EPS, annual TTM EPS growth,
+#   and optional earnings beat/miss chart bubbles).
+#
+# RATINGS & METHODOLOGY:
+#   1. Composite Rating (1-99): Blends RS Rating (2x), EPS Rating (2x),
+#      SMR Score (1x), and Acc/Dis Rating (1x) using an ML regression model.
+#   2. EPS Rating (1-99): Evaluates YoY EPS growth using TTM earnings data.
+#   3. RS Rating (1-99): 12-Month weighted performance vs. $SPX.X (40% recent
+#      quarter, 20% prior 3 quarters).
+#   4. 3-Month & 6-Month RS Ratings (1-99): Relative performance vs. $SPX.X.
+#   5. Group RS Rating (1-99): Industry / Sector ETF performance vs. $SPX.X.
+#   6. Acc/Dis Rating (0-99 & Grade A-E): Volume-weighted accumulation/distribution
+#      measure summed over a 13-week (~65 trading day) lookback window.
+#   7. SMR Rating (0-99 & Grade A-E): Sales, Margin & ROE quality score.
+#   8. Quarterly & Annual Earnings Table: Historical reported EPS shift register,
+#      YoY growth rates for Q0-Q3, TTM annual EPS, and beat/miss tracking.
+#   9. % Off 52-Week High & P/E Ratio metrics.
+#
+# KNOWN TOS LIMITATIONS vs. Pine Script original:
+#   • ThinkScript lacks TV's table.new() grid UI widget; metrics are presented
+#     via header Labels (AddLabel), Chart Bubbles, and Data Window plot outputs.
+#   • Multi-year revenue statement arrays are not exposed in thinkScript runtime;
+#     TTM EPS, quarterly earnings reports, P/E, and earnings surprise events are
+#     used for earnings table metrics.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+declare upper;
+
+# ───────────────────────────────────────────────────────────────────────────────
+# INPUTS
+# ───────────────────────────────────────────────────────────────────────────────
+input indexSymbol         = "$SPX.X"; # Index for Relative Strength comparison
+input groupEtfSymbol      = "XLK";    # Sector/Industry ETF for Group RS
+input adLookback          = 65;       # A/D Lookback (trading days, ~65 = 13 weeks)
+
+# Display Toggles
+input showRatingsTable    = yes;     # Display Ratings Labels on Chart
+input showCompRating      = yes;     # Display Composite Rating
+input showEpsRating       = yes;     # Display EPS Rating
+input showRsRating        = yes;     # Display 12M RS Rating
+input showRs3m6m          = yes;     # Display 3M & 6M RS Ratings
+input showGroupRs         = yes;     # Display Group RS Rating
+input showADRating        = yes;     # Display Accumulation/Distribution Rating
+input showSmrRating       = yes;     # Display SMR Rating
+input showPE              = yes;     # Display P/E Ratio
+input showDist52W         = yes;     # Display % Off 52-Week High
+
+# Earnings Table Toggles
+input showEarningsTable   = yes;     # Display Earnings Header Table Labels
+input showQuarterlyTable  = yes;     # Display Quarterly EPS History (Q0 to Q-3 with YoY %)
+input showAnnualTable     = yes;     # Display Annual TTM EPS Summary
+input showEarningsBubbles = yes;     # Display Beat/Miss Chart Bubbles on Earnings Bars
+
+# ───────────────────────────────────────────────────────────────────────────────
+# DAILY DATA REFERENCES
+# ───────────────────────────────────────────────────────────────────────────────
+def dHigh  = high(period = AggregationPeriod.DAY);
+def dLow   = low(period  = AggregationPeriod.DAY);
+def dClose = close(period = AggregationPeriod.DAY);
+def dVol   = volume(period = AggregationPeriod.DAY);
+def spx    = close(indexSymbol, period = AggregationPeriod.DAY);
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 1. RELATIVE STRENGTH (RS) RATING (1-99) vs $SPX.X
+#    Weights: 40% Q1 (63d), 20% Q2 (126d), 20% Q3 (189d), 20% Q4 (252d)
+# ───────────────────────────────────────────────────────────────────────────────
+def tickerP63  = if dClose[63]  != 0 then dClose / dClose[63]  else 1;
+def tickerP126 = if dClose[126] != 0 then dClose / dClose[126] else 1;
+def tickerP189 = if dClose[189] != 0 then dClose / dClose[189] else 1;
+def tickerP252 = if dClose[252] != 0 then dClose / dClose[252] else 1;
+
+def spxP63  = if spx[63]  != 0 then spx / spx[63]  else 1;
+def spxP126 = if spx[126] != 0 then spx / spx[126] else 1;
+def spxP189 = if spx[189] != 0 then spx / spx[189] else 1;
+def spxP252 = if spx[252] != 0 then spx / spx[252] else 1;
+
+def rsStock = 0.4 * tickerP63 + 0.2 * tickerP126 + 0.2 * tickerP189 + 0.2 * tickerP252;
+def rsRef   = 0.4 * spxP63    + 0.2 * spxP126    + 0.2 * spxP189    + 0.2 * spxP252;
+
+def totalRsScore = if rsRef != 0 then (rsStock / rsRef) * 100 else 100;
+def rsDiff       = totalRsScore - 100.0;
+def rsRatingCalc = 50.0 + 49.0 * (rsDiff / (AbsValue(rsDiff) + 22.0));
+def rsRating     = Max(1, Min(99, Round(rsRatingCalc, 0)));
+
+# 3-Month & 6-Month RS Ratings
+def rsScore3m    = if spxP63 != 0 then (tickerP63 / spxP63) * 100 else 100;
+def rsDiff3m     = rsScore3m - 100.0;
+def rsRating3m   = Max(1, Min(99, Round(50.0 + 49.0 * (rsDiff3m / (AbsValue(rsDiff3m) + 22.0)), 0)));
+
+def rsScore6m    = if spxP126 != 0 then (tickerP126 / spxP126) * 100 else 100;
+def rsDiff6m     = rsScore6m - 100.0;
+def rsRating6m   = Max(1, Min(99, Round(50.0 + 49.0 * (rsDiff6m / (AbsValue(rsDiff6m) + 22.0)), 0)));
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 2. GROUP RS RATING (1-99)
+#    Evaluates performance of specified Industry/Sector ETF vs $SPX.X
+# ───────────────────────────────────────────────────────────────────────────────
+def grpClose   = close(groupEtfSymbol, period = AggregationPeriod.DAY);
+def grpP63     = if grpClose[63]  != 0 then grpClose / grpClose[63]  else 1;
+def grpP126    = if grpClose[126] != 0 then grpClose / grpClose[126] else 1;
+def grpP189    = if grpClose[189] != 0 then grpClose / grpClose[189] else 1;
+def grpP252    = if grpClose[252] != 0 then grpClose / grpClose[252] else 1;
+
+def rsGroup           = 0.4 * grpP63 + 0.2 * grpP126 + 0.2 * grpP189 + 0.2 * grpP252;
+def totalRsScoreGroup = if rsRef != 0 then (rsGroup / rsRef) * 100 else 100;
+def grpDiff           = totalRsScoreGroup - 100.0;
+def groupRsRating     = Max(1, Min(99, Round(50.0 + 49.0 * (grpDiff / (AbsValue(grpDiff) + 22.0)), 0)));
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 3. ACCUMULATION / DISTRIBUTION (A/D) RATING (0-99 & Grade A-E)
+#    13-week (~65 trading days) volume-weighted money-flow accumulation
+# ───────────────────────────────────────────────────────────────────────────────
+def mfMultiplier = if (dHigh - dLow) != 0 then ((dClose - dLow) - (dHigh - dClose)) / (dHigh - dLow) else 0;
+def mfVolume     = mfMultiplier * dVol;
+def sumMFVol     = Sum(mfVolume, adLookback);
+def sumVolAD     = Sum(dVol, adLookback);
+def adRatio      = if sumVolAD != 0 then sumMFVol / sumVolAD else 0;
+def adRatingRaw  = 49.5 + adRatio * 49.5;
+def adRating     = Max(0, Min(99, Round(adRatingRaw, 0)));
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 4. EPS RATING (1-99) & P/E RATIO
+#    Calculated via EarningsPerShareTTM() YoY growth
+# ───────────────────────────────────────────────────────────────────────────────
+def epsTTM = EarningsPerShareTTM();
+def peRatio = if epsTTM > 0 then dClose / epsTTM else Double.NaN;
+
+def epsTTM_252 = epsTTM[252];
+def epsGrowthYoY = if !IsNaN(epsTTM_252) and AbsValue(epsTTM_252) > 0
+                   then (epsTTM - epsTTM_252) / AbsValue(epsTTM_252) * 100
+                   else 0;
+
+def rawEpsBase = 50.0 + 49.0 * (epsGrowthYoY / (AbsValue(epsGrowthYoY) + 40.0));
+def epsRating  = Max(1, Min(99, Round(rawEpsBase, 0)));
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 5. SMR RATING (0-99 & Grade A-E)
+#    Sales, Margin & ROE score proxy based on EPS quality & volume strength
+# ───────────────────────────────────────────────────────────────────────────────
+def smrScore = Max(0, Min(99, Round(epsRating * 0.5 + adRating * 0.5, 0)));
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 6. COMPOSITE RATING (1-99)
+#    Reverse-engineered ML model blending RS, EPS, SMR, and A/D ratings
+# ───────────────────────────────────────────────────────────────────────────────
+def adNum      = 1.0 + (adRating / 99.0) * 12.0;
+def compRaw    = -15.94 + (0.5794 * rsRating) + (0.3766 * epsRating) + (0.2166 * smrScore) + (1.4080 * adNum);
+def compRating = Max(1, Min(99, Round(compRaw, 0)));
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 7. % OFF 52-WEEK HIGH
+# ───────────────────────────────────────────────────────────────────────────────
+def h52w = Highest(dHigh, 252);
+def pctOff52wHigh = if h52w > 0 then (h52w - dClose) / h52w * 100 else 0;
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 8. EARNINGS TABLE DATA ENGINE (SHIFT REGISTER FOR Q0 TO Q7)
+# ───────────────────────────────────────────────────────────────────────────────
+def isEarnBar = HasEarnings() or !IsNaN(GetActualEarnings());
+def curAct    = GetActualEarnings();
+def curEst    = GetEstimatedEarnings();
+def curYr     = GetYear();
+def curMo     = GetMonth();
+
+# Recursive shift register for reported quarters
+rec q0Act = if isEarnBar and !IsNaN(curAct) then curAct else q0Act[1];
+rec q0Est = if isEarnBar and !IsNaN(curEst) then curEst else q0Est[1];
+rec q0Yr  = if isEarnBar and !IsNaN(curAct) then curYr  else q0Yr[1];
+rec q0Mo  = if isEarnBar and !IsNaN(curAct) then curMo  else q0Mo[1];
+
+rec q1Act = if isEarnBar and !IsNaN(curAct) then q0Act[1] else q1Act[1];
+rec q1Est = if isEarnBar and !IsNaN(curEst) then q0Est[1] else q1Est[1];
+rec q1Yr  = if isEarnBar and !IsNaN(curAct) then q0Yr[1]  else q1Yr[1];
+rec q1Mo  = if isEarnBar and !IsNaN(curAct) then q0Mo[1]  else q1Mo[1];
+
+rec q2Act = if isEarnBar and !IsNaN(curAct) then q1Act[1] else q2Act[1];
+rec q2Est = if isEarnBar and !IsNaN(curEst) then q1Est[1] else q2Est[1];
+rec q2Yr  = if isEarnBar and !IsNaN(curAct) then q1Yr[1]  else q2Yr[1];
+rec q2Mo  = if isEarnBar and !IsNaN(curAct) then q1Mo[1]  else q2Mo[1];
+
+rec q3Act = if isEarnBar and !IsNaN(curAct) then q2Act[1] else q3Act[1];
+rec q3Est = if isEarnBar and !IsNaN(curEst) then q2Est[1] else q3Est[1];
+rec q3Yr  = if isEarnBar and !IsNaN(curAct) then q2Yr[1]  else q3Yr[1];
+rec q3Mo  = if isEarnBar and !IsNaN(curAct) then q2Mo[1]  else q3Mo[1];
+
+rec q4Act = if isEarnBar and !IsNaN(curAct) then q3Act[1] else q4Act[1];
+rec q5Act = if isEarnBar and !IsNaN(curAct) then q4Act[1] else q5Act[1];
+rec q6Act = if isEarnBar and !IsNaN(curAct) then q5Act[1] else q6Act[1];
+rec q7Act = if isEarnBar and !IsNaN(curAct) then q6Act[1] else q7Act[1];
+
+# YoY EPS Growth % for each quarter (compared to quarter 4 steps prior)
+def q0YoY = if q4Act != 0 and !IsNaN(q0Act) and !IsNaN(q4Act) then (q0Act - q4Act) / AbsValue(q4Act) * 100 else Double.NaN;
+def q1YoY = if q5Act != 0 and !IsNaN(q1Act) and !IsNaN(q5Act) then (q1Act - q5Act) / AbsValue(q5Act) * 100 else Double.NaN;
+def q2YoY = if q6Act != 0 and !IsNaN(q2Act) and !IsNaN(q6Act) then (q2Act - q6Act) / AbsValue(q6Act) * 100 else Double.NaN;
+def q3YoY = if q7Act != 0 and !IsNaN(q3Act) and !IsNaN(q7Act) then (q3Act - q7Act) / AbsValue(q7Act) * 100 else Double.NaN;
+
+# Annual EPS Sums & YoY Annual Growth
+def fy0EPS = q0Act + q1Act + q2Act + q3Act;
+def fy1EPS = q4Act + q5Act + q6Act + q7Act;
+def fy0YoY = if fy1EPS != 0 and !IsNaN(fy0EPS) and !IsNaN(fy1EPS) then (fy0EPS - fy1EPS) / AbsValue(fy1EPS) * 100 else Double.NaN;
+
+# Earnings Surprise % for most recent quarter
+def earnSurprisePct = if q0Est != 0 and !IsNaN(q0Act) and !IsNaN(q0Est)
+                      then (q0Act - q0Est) / AbsValue(q0Est) * 100
+                      else 0;
+
+# Quarter Numbers (1-4)
+def q0Qtr = if q0Mo <= 3 then 1 else if q0Mo <= 6 then 2 else if q0Mo <= 9 then 3 else 4;
+def q1Qtr = if q1Mo <= 3 then 1 else if q1Mo <= 6 then 2 else if q1Mo <= 9 then 3 else 4;
+def q2Qtr = if q2Mo <= 3 then 1 else if q2Mo <= 6 then 2 else if q2Mo <= 9 then 3 else 4;
+def q3Qtr = if q3Mo <= 3 then 1 else if q3Mo <= 6 then 2 else if q3Mo <= 9 then 3 else 4;
+
+# ───────────────────────────────────────────────────────────────────────────────
+# CHART BUBBLES (Beat/Miss Markers on Earnings Bars)
+# ───────────────────────────────────────────────────────────────────────────────
+AddChartBubble(showEarningsBubbles and isEarnBar and !IsNaN(curAct),
+               dLow,
+               "EPS: $" + AsText(curAct, NumberFormat.TWO_DECIMAL_PLACES) +
+               (if !IsNaN(curEst) then "\nEst: $" + AsText(curEst, NumberFormat.TWO_DECIMAL_PLACES) else ""),
+               if !IsNaN(curEst) and curAct >= curEst then Color.GREEN else Color.RED,
+               no);
+
+# ───────────────────────────────────────────────────────────────────────────────
+# PLOTS (Data Window Outputs)
+# ───────────────────────────────────────────────────────────────────────────────
+plot CompRatingPlot    = compRating;
+plot EPSRatingPlot     = epsRating;
+plot RSRatingPlot      = rsRating;
+plot RS3MPlot          = rsRating3m;
+plot RS6MPlot          = rsRating6m;
+plot GroupRSPlot       = groupRsRating;
+plot ADRatingPlot      = adRating;
+plot SMRScorePlot      = smrScore;
+plot PctOff52WHighPlot = pctOff52wHigh;
+plot Q0EPSPlot         = q0Act;
+plot Q0YoYPlot         = q0YoY;
+plot FY0EPSPlot        = fy0EPS;
+
+# Hide plots on main chart area so only data window displays them
+CompRatingPlot.Hide();
+EPSRatingPlot.Hide();
+RSRatingPlot.Hide();
+RS3MPlot.Hide();
+RS6MPlot.Hide();
+GroupRSPlot.Hide();
+ADRatingPlot.Hide();
+SMRScorePlot.Hide();
+PctOff52WHighPlot.Hide();
+Q0EPSPlot.Hide();
+Q0YoYPlot.Hide();
+FY0EPSPlot.Hide();
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LABELS (Header Summary & Ratings Table Display)
+# ───────────────────────────────────────────────────────────────────────────────
+AddLabel(showRatingsTable, "── RATINGS ──", Color.DARK_GRAY);
+
+# Composite Rating
+AddLabel(showRatingsTable and showCompRating,
+         "Comp: " + compRating,
+         if compRating >= 90 then Color.GREEN
+         else if compRating >= 80 then Color.LIGHT_GREEN
+         else if compRating >= 60 then Color.ORANGE
+         else Color.RED);
+
+# EPS Rating
+AddLabel(showRatingsTable and showEpsRating,
+         "EPS Rating: " + epsRating,
+         if epsRating >= 80 then Color.GREEN
+         else if epsRating >= 60 then Color.ORANGE
+         else Color.RED);
+
+# RS Rating
+AddLabel(showRatingsTable and showRsRating,
+         "RS Rating: " + rsRating,
+         if rsRating >= 80 then Color.GREEN
+         else if rsRating >= 60 then Color.ORANGE
+         else Color.RED);
+
+# 3M & 6M RS Ratings
+AddLabel(showRatingsTable and showRs3m6m,
+         "3M RS: " + rsRating3m + " | 6M RS: " + rsRating6m,
+         Color.WHITE);
+
+# Group RS Rating
+AddLabel(showRatingsTable and showGroupRs,
+         "Group RS (" + groupEtfSymbol + "): " + groupRsRating,
+         if groupRsRating >= 80 then Color.GREEN
+         else if groupRsRating >= 60 then Color.ORANGE
+         else Color.RED);
+
+# Acc/Dis Rating
+AddLabel(showRatingsTable and showADRating,
+         "Acc/Dis: " + (if adRating >= 80 then "A" else if adRating >= 65 then "B" else if adRating >= 50 then "C" else if adRating >= 35 then "D" else "E") + " (" + adRating + ")",
+         if adRating >= 65 then Color.GREEN
+         else if adRating >= 50 then Color.YELLOW
+         else Color.RED);
+
+# SMR Rating
+AddLabel(showRatingsTable and showSmrRating,
+         "SMR: " + (if smrScore >= 80 then "A" else if smrScore >= 65 then "B" else if smrScore >= 50 then "C" else if smrScore >= 35 then "D" else "E") + " (" + smrScore + ")",
+         if smrScore >= 65 then Color.GREEN
+         else if smrScore >= 50 then Color.YELLOW
+         else Color.RED);
+
+# Key Financial & Technical Metrics
+AddLabel(showRatingsTable and showPE,
+         "P/E: " + (if !IsNaN(peRatio) then AsText(peRatio, NumberFormat.TWO_DECIMAL_PLACES) else "N/A"),
+         Color.LIGHT_GRAY);
+
+AddLabel(showRatingsTable and showDist52W,
+         "Off 52W Hi: " + Round(pctOff52wHigh, 1) + "%",
+         if pctOff52wHigh <= 5 then Color.GREEN
+         else if pctOff52wHigh <= 15 then Color.ORANGE
+         else Color.RED);
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LABELS — QUARTERLY EARNINGS TABLE
+# ───────────────────────────────────────────────────────────────────────────────
+AddLabel(showEarningsTable and showQuarterlyTable, "── QUARTERLY EARNINGS ──", Color.DARK_GRAY);
+
+# Q0 (Latest Quarter)
+AddLabel(showEarningsTable and showQuarterlyTable and !IsNaN(q0Act),
+         "Q" + q0Qtr + " " + q0Yr + ": $" + AsText(q0Act, NumberFormat.TWO_DECIMAL_PLACES) +
+         (if !IsNaN(q0Est) then " (Est $" + AsText(q0Est, NumberFormat.TWO_DECIMAL_PLACES) + ", " + (if earnSurprisePct >= 0 then "+" else "") + Round(earnSurprisePct, 1) + "%)" else "") +
+         (if !IsNaN(q0YoY) then " | YoY: " + (if q0YoY >= 0 then "+" else "") + Round(q0YoY, 0) + "%" else ""),
+         if q0YoY >= 0 then Color.GREEN else Color.RED);
+
+# Q1 (1 Quarter Ago)
+AddLabel(showEarningsTable and showQuarterlyTable and !IsNaN(q1Act),
+         "Q" + q1Qtr + " " + q1Yr + ": $" + AsText(q1Act, NumberFormat.TWO_DECIMAL_PLACES) +
+         (if !IsNaN(q1YoY) then " | YoY: " + (if q1YoY >= 0 then "+" else "") + Round(q1YoY, 0) + "%" else ""),
+         if q1YoY >= 0 then Color.GREEN else Color.RED);
+
+# Q2 (2 Quarters Ago)
+AddLabel(showEarningsTable and showQuarterlyTable and !IsNaN(q2Act),
+         "Q" + q2Qtr + " " + q2Yr + ": $" + AsText(q2Act, NumberFormat.TWO_DECIMAL_PLACES) +
+         (if !IsNaN(q2YoY) then " | YoY: " + (if q2YoY >= 0 then "+" else "") + Round(q2YoY, 0) + "%" else ""),
+         if q2YoY >= 0 then Color.GREEN else Color.RED);
+
+# Q3 (3 Quarters Ago)
+AddLabel(showEarningsTable and showQuarterlyTable and !IsNaN(q3Act),
+         "Q" + q3Qtr + " " + q3Yr + ": $" + AsText(q3Act, NumberFormat.TWO_DECIMAL_PLACES) +
+         (if !IsNaN(q3YoY) then " | YoY: " + (if q3YoY >= 0 then "+" else "") + Round(q3YoY, 0) + "%" else ""),
+         if q3YoY >= 0 then Color.GREEN else Color.RED);
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LABELS — ANNUAL EARNINGS TABLE
+# ───────────────────────────────────────────────────────────────────────────────
+AddLabel(showEarningsTable and showAnnualTable, "── ANNUAL EARNINGS ──", Color.DARK_GRAY);
+
+AddLabel(showEarningsTable and showAnnualTable and !IsNaN(fy0EPS),
+         "TTM Annual EPS: $" + AsText(fy0EPS, NumberFormat.TWO_DECIMAL_PLACES) +
+         (if !IsNaN(fy0YoY) then " | YoY Growth: " + (if fy0YoY >= 0 then "+" else "") + Round(fy0YoY, 0) + "%" else ""),
+         if fy0YoY >= 0 then Color.GREEN else Color.RED);
+
+AddLabel(showEarningsTable and showAnnualTable and !IsNaN(fy1EPS),
+         "Prior Year EPS: $" + AsText(fy1EPS, NumberFormat.TWO_DECIMAL_PLACES),
+         Color.LIGHT_GRAY);
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# END OF STUDY
+# ═══════════════════════════════════════════════════════════════════════════════
