@@ -5,7 +5,7 @@ update_ticker_cache.py
 Automates updating and maintaining max daily OHLCV historical parquet files in `ticker_cache/`.
 - For new tickers: Fetches full max daily historical data via yfinance.
 - For existing tickers: Fetches latest bars (period='5d'), merges incrementally, and updates parquets.
-- Maintains both `<TICKER>_1d.parquet` (full history) and `<TICKER>_250d.parquet` (last 250 bars).
+- Maintains `<TICKER>_1d.parquet` (full history).
 """
 
 import sys
@@ -164,11 +164,6 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
 
                         # Save full history as <TICKER>_1d.parquet
                         df_t.to_parquet(p_1d)
-
-                        # Save last 250 rows as <TICKER>_250d.parquet
-                        p_250d = CACHE_DIR / f"{clean_t}_250d.parquet"
-                        df_250 = df_t.tail(250)
-                        df_250.to_parquet(p_250d)
 
                         success_count += 1
 

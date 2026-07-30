@@ -33,8 +33,6 @@ def clean_num(val):
 def load_spy_reference(cache_dir: Path) -> pd.Series:
     spy_path = cache_dir / "SPY_1d.parquet"
     if not spy_path.exists():
-        spy_path = cache_dir / "SPY_250d.parquet"
-    if not spy_path.exists():
         raise FileNotFoundError(f"No SPY parquet file found in {cache_dir}")
     
     spy_df = pd.read_parquet(spy_path)
@@ -54,9 +52,8 @@ def compute_ticker_performance(ticker: str, cache_dir: Path, spy_perf: dict, win
     t_clean = str(ticker).strip()
     cdf = None
     for p_cand in [
-        cache_dir / f"{t_clean}_250d.parquet",
         cache_dir / f"{t_clean}_1d.parquet",
-        cache_dir / f"{t_clean.replace('.', '-')}_250d.parquet",
+        cache_dir / f"{t_clean.replace('.', '-')}_1d.parquet",
     ]:
         if p_cand.exists():
             try:

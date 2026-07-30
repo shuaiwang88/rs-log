@@ -150,9 +150,8 @@ def extract_ticker_ad_features(ticker: str, cache_dir: Path):
     t_clean = str(ticker).strip()
     cdf = None
     for p_cand in [
-        cache_dir / f"{t_clean}_250d.parquet",
         cache_dir / f"{t_clean}_1d.parquet",
-        cache_dir / f"{t_clean.replace('.', '-')}_250d.parquet",
+        cache_dir / f"{t_clean.replace('.', '-')}_1d.parquet",
     ]:
         if p_cand.exists():
             try:

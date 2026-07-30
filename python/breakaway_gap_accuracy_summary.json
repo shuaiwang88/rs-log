@@ -1,0 +1,57 @@
+{
+  "total_events": 177,
+  "pattern_detected_count": 169,
+  "pattern_detected_pct": 95.5,
+  "exact_match_count": 61,
+  "exact_match_pct": 34.5,
+  "broad_match_count": 71,
+  "broad_match_pct": 40.1,
+  "mean_pivot_error_pct": 10.81,
+  "median_pivot_error_pct": 5.68,
+  "mean_length_error_bars": 0.0,
+  "median_length_error_bars": 0.0,
+  "breakdown_by_base_type": {
+    "Ascending Base": {
+      "count": 5,
+      "detection_rate_pct": 100.0,
+      "exact_match_pct": 80.0,
+      "broad_match_pct": 80.0,
+      "mean_pivot_err_pct": 9.83
+    },
+    "Consolidation": {
+      "count": 36,
+      "detection_rate_pct": 97.2,
+      "exact_match_pct": 52.8,
+      "broad_match_pct": 52.8,
+      "mean_pivot_err_pct": 14.09
+    },
+    "Cup With Handle": {
+      "count": 46,
+      "detection_rate_pct": 97.8,
+      "exact_match_pct": 6.5,
+      "broad_match_pct": 17.4,
+      "mean_pivot_err_pct": 11.36
+    },
+    "Cup Without Handle": {
+      "count": 59,
+      "detection_rate_pct": 93.2,
+      "exact_match_pct": 49.2,
+      "broad_match_pct": 49.2,
+      "mean_pivot_err_pct": 9.23
+    },
+    "Double Bottom": {
+      "count": 7,
+      "detection_rate_pct": 85.7,
+      "exact_match_pct": 0.0,
+      "broad_match_pct": 0.0,
+      "mean_pivot_err_pct": 9.56
+    },
+    "Flat Base": {
+      "count": 24,
+      "detection_rate_pct": 95.8,
+      "exact_match_pct": 25.0,
+      "broad_match_pct": 45.8,
+      "mean_pivot_err_pct": 9.06
+    }
+  }
+}

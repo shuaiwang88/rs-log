@@ -187,12 +187,11 @@ def compute_historical_heavy_volume_features(tickers: list, repo_dir: Path, hist
 
     def process_single_ticker(t):
         t_clean = str(t).strip()
-        p1 = cache_dir / f"{t_clean}_250d.parquet"
-        p2 = cache_dir / f"{t_clean}_1d.parquet"
-        p3 = cache_dir / f"{t_clean.replace('.', '-')}_250d.parquet"
+        p1 = cache_dir / f"{t_clean}_1d.parquet"
+        p2 = cache_dir / f"{t_clean.replace('.', '-')}_1d.parquet"
 
         cdf = None
-        for p_cand in [p1, p2, p3]:
+        for p_cand in [p1, p2]:
             if p_cand.exists():
                 try:
                     cdf = pd.read_parquet(p_cand)
@@ -279,8 +278,6 @@ def rs_rating_section(df: pd.DataFrame, repo_dir: Path, output_report: list):
     # ── Load SPY reference prices ──────────────────────────────────────────
     spy_path = cache_dir / "SPY_1d.parquet"
     if not spy_path.exists():
-        spy_path = cache_dir / "SPY_250d.parquet"
-    if not spy_path.exists():
         print("ERROR: No SPY parquet file found in ticker_cache. Skipping RS section.")
         return
 
@@ -320,9 +317,8 @@ def rs_rating_section(df: pd.DataFrame, repo_dir: Path, output_report: list):
         t_clean = str(ticker).strip()
         cdf = None
         for p_cand in [
-            cache_dir / f"{t_clean}_250d.parquet",
             cache_dir / f"{t_clean}_1d.parquet",
-            cache_dir / f"{t_clean.replace('.', '-')}_250d.parquet",
+            cache_dir / f"{t_clean.replace('.', '-')}_1d.parquet",
         ]:
             if p_cand.exists():
                 try:
