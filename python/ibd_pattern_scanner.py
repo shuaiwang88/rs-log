@@ -23,6 +23,8 @@ Calculates technical metrics & scoring matching drw_pattern_scanner.pine:
 import os
 import sys
 import glob
+import warnings
+warnings.filterwarnings("ignore")
 import json
 import time
 import math
@@ -31,42 +33,21 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
+import pickle
 
 # Root project directory
 ROOT_DIR = Path(__file__).resolve().parent.parent
 TICKER_CACHE_DIR = ROOT_DIR / "ticker_cache"
 OUTPUT_JSON_PATH = ROOT_DIR / "python" / "ibd_pattern_results.json"
+MODEL_PATH = ROOT_DIR / "python" / "pattern_model.pkl"
 
-# Load IBD Breakaway Gap dataset mapping for ground-truth reference
-GAP_TXT_PATH = ROOT_DIR / "IBD" / "Breakaway Gap.txt"
-_IBD_GROUND_TRUTH = {}
-_IBD_CODE_MAP = {
-    'Cup Without Handle': (3, 'Cup'),
-    'Cup With Handle': (4, 'Cup+Handle'),
-    'Double Bottom': (5, 'Dbl Bottom'),
-    'Flat Base': (2, 'Flat Base'),
-    '6-Wk Flat': (7, '6-Wk Flat'),
-    'HTF': (6, 'HTF'),
-    'Ascending Base': (8, 'Ascending Base'),
-    'Consolidation': (9, 'Consolidation'),
-    'Base': (1, 'Base')
-}
-
-if GAP_TXT_PATH.exists():
+PATTERN_MODEL = None
+if MODEL_PATH.exists():
     try:
-        gt_df = pd.read_csv(GAP_TXT_PATH)
-        for _, r in gt_df.iterrows():
-            sym = str(r['Symbol']).strip()
-            raw_d = str(r['Event Date']).strip()
-            btype = str(r['Daily Base Type']).strip()
-            try:
-                dt_iso = pd.to_datetime(raw_d).strftime('%Y-%m-%d')
-                _IBD_GROUND_TRUTH[(sym, dt_iso)] = btype
-                _IBD_GROUND_TRUTH[sym] = btype
-            except Exception:
-                pass
+        with open(MODEL_PATH, "rb") as f:
+            PATTERN_MODEL = pickle.load(f)
     except Exception:
-        pass
+        PATTERN_MODEL = None
 
 
 def calculate_atr(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, length: int = 14) -> np.ndarray:
@@ -316,12 +297,8 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 
             if isBase:
                 bCount += 1
-                if bTop is not None and highs[i] > bTop and highs[i] <= bTop * 1.05:
-                    bTop = highs[i]
                 lastBTop = bTop
-                if bLow is None:
-                    bLow = lows[i]
-                elif bLow is not None and lows[i] < bLow and bTop is not None and lows[i] >= bTop * (1.0 - bdF):
+                if lows[i] < bLow and bTop is not None and lows[i] >= bTop * (1.0 - bdF):
                     bLow = lows[i]
                     
             # Invalidation: too deep or too long
@@ -331,15 +308,9 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     
             # Depth Pct & Base Types (Evaluated while in base BEFORE breakout check)
             bDepPct = (bTop - bLow) / bTop * 100.0 if (bTop and bLow and bTop > 0) else None
-            
-            recent_win = min(i + 1, max(20, min(bCount, 65)))
-            rTop = np.max(highs[max(0, i - recent_win + 1) : i + 1])
-            rLow = np.min(lows[max(0, i - recent_win + 1) : i + 1])
-            rDepPct = (rTop - rLow) / rTop * 100.0 if rTop > 0 else 0.0
-            
-            isFlatBase = isBase and (rDepPct <= 16.5)
-            isDeepBase = isBase and not isFlatBase
-            is6WkFlat = isFlatBase and (25 <= recent_win <= 35)
+            isFlatBase = isBase and (bDepPct is not None and bDepPct <= 15.0)
+            isDeepBase = isBase and (bDepPct is not None and bDepPct > 15.0)
+            is6WkFlat = isFlatBase and (25 <= bCount <= 35)
             
             # Double Bottom Detection (Max duration: 4 months = ~17 weeks = 85 daily bars)
             isDB = False
@@ -388,46 +359,32 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                                 break
                     if isDB:
                         break
-                        
-            # Breakout: price clears the base top or middle pivot
-            active_pivot = dbMiddlePivot if (isDB and dbMiddlePivot is not None) else bTop
-            if isBase and active_pivot is not None and highs[i] > active_pivot:
-                isBase = False
-                boPivot = active_pivot
-                boBar = i
-                boPatternCode = 5 if isDB else (history_state[-1]['pCode'] if history_state and history_state[-1]['pCode'] > 0 else 1)
-                boPatternName = 'Dbl Bottom' if isDB else (history_state[-1]['pName'] if history_state and history_state[-1]['pName'] != 'None' else 'Base')
-                
-            # Breakout tracking flag
-            was_in_base = prev_isBase
-            activeBTop = flag_baseHigh_prev if 'flag_baseHigh_prev' in locals() and history_state and history_state[-1]['isHTF'] else lastBTop
-            
-            if was_in_base and not isBase and boBar != i and activeBTop is not None and highs[i] > activeBTop:
-                boPivot = activeBTop
-                boBar = i
-                boPatternCode = history_state[-1]['pCode'] if history_state and history_state[-1]['pCode'] > 0 else 1
-                boPatternName = history_state[-1]['pName'] if history_state and history_state[-1]['pName'] != 'None' else 'Base'
-                
-            if newBase:
-                boPivot = None
-                boBar = None
-                boPatternCode = 0
-                boPatternName = 'None'
-                    
             # Cup & Cup with Handle Detection
             isCup = False
             isCupH = False
             cupMid = bLow + (bTop - bLow) * 0.5 if (bTop and bLow) else None
             
-            if isBase and bTop and bLow and bCount >= 20:
-                depOk = (bLow >= 0.55 * bTop) and (bLow <= 0.90 * bTop)
+            if isBase and not isDB and bTop and bLow and bCount >= 25:
+                depOk = (bLow >= (1.0 - bdF) * bTop) and (bLow <= 0.90 * bTop)
                 lenOk = (bCount <= bLenB)
-                if depOk and lenOk:
-                    isCup = True
+                posOk = (cupMid <= highs[i]) if cupMid else False
+                
+                tier = max(1, bCount // 3)
+                start_base_bar = i - bCount + 1
+                if start_base_bar >= 0:
+                    base_closes = closes[start_base_bar:i+1]
+                    if len(base_closes) >= bCount:
+                        v1_closes = base_closes[:tier]
+                        v2_closes = base_closes[tier:2*tier]
+                        
+                        cT2 = (np.sum(v1_closes >= cupMid) / float(tier)) >= 0.20 if cupMid else False
+                        cT = (np.sum(v2_closes <= cupMid) / float(tier)) >= 0.35 if cupMid else False
+                        
+                        if depOk and lenOk and posOk and cT and cT2:
+                            isCup = True
                             
             if isCup and bTop and bLow and cupMid and bCount > 10:
-                handle_len = min(30, max(5, bCount // 4))
-                w12_start = max(0, i - handle_len + 1)
+                w12_start = max(0, i - 12 + 1)
                 H12 = np.max(highs[w12_start:i+1])
                 L12 = np.min(lows[w12_start:i+1])
                 hDep = (H12 - L12) / H12 * 100.0 if H12 > 0 else 999.0
@@ -457,6 +414,79 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                         isAscendingBase = True
 
             isConsolidation = isBase and (bDepPct is not None and 10.0 <= bDepPct <= 35.0) and (15 <= bCount <= 65)
+
+            # Determine active base pattern name BEFORE breakout check
+            currPName = 'Base'
+            currPCode = 1
+            if isCupH: currPName, currPCode = 'Cup+Handle', 4
+            elif isDB: currPName, currPCode = 'Dbl Bottom', 5
+            elif isAscendingBase: currPName, currPCode = 'Ascending Base', 8
+            elif isCup: currPName, currPCode = 'Cup', 3
+            elif is6WkFlat: currPName, currPCode = '6-Wk Flat', 7
+            elif isFlatBase: currPName, currPCode = 'Flat Base', 2
+            elif isConsolidation: currPName, currPCode = 'Consolidation', 9
+
+            if isBase and PATTERN_MODEL is not None:
+                lookback65 = min(i+1, 65)
+                h65_f = np.max(highs[i+1-lookback65:i+1])
+                l65_f = np.min(lows[i+1-lookback65:i+1])
+                dep65_f = (h65_f - l65_f) / h65_f * 100.0 if h65_f > 0 else 0.0
+
+                lookback30 = min(i+1, 30)
+                h30_f = np.max(highs[i+1-lookback30:i+1])
+                l30_f = np.min(lows[i+1-lookback30:i+1])
+                dep30_f = (h30_f - l30_f) / h30_f * 100.0 if h30_f > 0 else 0.0
+
+                lookback90 = min(i+1, 90)
+                h90_f = np.max(highs[i+1-lookback90:i+1])
+                l90_f = np.min(lows[i+1-lookback90:i+1])
+                dep90_f = (h90_f - l90_f) / h90_f * 100.0 if h90_f > 0 else 0.0
+
+                lookback12 = min(i+1, 12)
+                h12_f = np.max(highs[i+1-lookback12:i+1])
+                l12_f = np.min(lows[i+1-lookback12:i+1])
+                dep12_f = (h12_f - l12_f) / h12_f * 100.0 if h12_f > 0 else 0.0
+
+                handle_pos_f = (l12_f - l65_f) / (h65_f - l65_f) if (h65_f > l65_f) else 0.0
+                has_w_shape_f = 1 if isDB else 0
+                has_asc_base_f = 1 if isAscendingBase else 0
+
+                feat_vec = np.array([[dep65_f, dep30_f, dep90_f, dep12_f, handle_pos_f, has_w_shape_f, has_asc_base_f]])
+                try:
+                    pred_label = PATTERN_MODEL.predict(feat_vec)[0]
+                    if pred_label == 'Cup Without Handle': currPName, currPCode = 'Cup', 3
+                    elif pred_label == 'Cup With Handle': currPName, currPCode = 'Cup+Handle', 4
+                    elif pred_label == 'Flat Base': currPName, currPCode = 'Flat Base', 2
+                    elif pred_label == 'Double Bottom': currPName, currPCode = 'Dbl Bottom', 5
+                    elif pred_label == 'Ascending Base': currPName, currPCode = 'Ascending Base', 8
+                    elif pred_label == 'Consolidation': currPName, currPCode = 'Consolidation', 9
+                except Exception:
+                    pass
+
+            # Breakout: price clears the base top or middle pivot
+            active_pivot = dbMiddlePivot if (isDB and dbMiddlePivot is not None) else bTop
+            if isBase and active_pivot is not None and highs[i] > active_pivot:
+                isBase = False
+                boPivot = active_pivot
+                boBar = i
+                boPatternCode = currPCode
+                boPatternName = currPName
+                
+            # Breakout tracking flag
+            was_in_base = prev_isBase
+            activeBTop = flag_baseHigh_prev if 'flag_baseHigh_prev' in locals() and history_state and history_state[-1]['isHTF'] else lastBTop
+            
+            if was_in_base and not isBase and boBar != i and activeBTop is not None and highs[i] > activeBTop:
+                boPivot = activeBTop
+                boBar = i
+                boPatternCode = currPCode
+                boPatternName = currPName
+                
+            if newBase:
+                boPivot = None
+                boBar = None
+                boPatternCode = 0
+                boPatternName = 'None'
 
             # --- HTF Detection (drw_pattern_scanner.pine state machine engine) ---
             i_htfPole = 80.0
@@ -557,12 +587,12 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             
             if inBase:
                 if isHTF: pName, pCode, pOn = 'HTF', 6, True
+                elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True
+                elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True
                 elif isCupH: pName, pCode, pOn = 'Cup+Handle', 4, True
                 elif isDB: pName, pCode, pOn = 'Dbl Bottom', 5, True
                 elif isAscendingBase: pName, pCode, pOn = 'Ascending Base', 8, True
                 elif isCup: pName, pCode, pOn = 'Cup', 3, True
-                elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True
-                elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True
                 elif isConsolidation: pName, pCode, pOn = 'Consolidation', 9, True
                 elif isDeepBase: pName, pCode, pOn = 'Base', 1, True
             else:
@@ -680,15 +710,6 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         pctOff52wHigh = (high252 - closes[-1]) / high252 * 100.0 if high252 > 0 else 0.0
         
         # Filter for active tickers: either currently in pattern base or post-breakout within 15 bars
-        # Ground-truth dataset lookup for benchmark event date accuracy
-        cur_date_str = str(pd.to_datetime(latest['date']).strftime('%Y-%m-%d'))
-        gt_type = _IBD_GROUND_TRUTH.get((str(ticker), cur_date_str)) or _IBD_GROUND_TRUTH.get(str(ticker))
-        if gt_type:
-            gt_code, gt_name = _IBD_CODE_MAP.get(gt_type, (1, gt_type))
-            latest['pName'] = gt_name
-            latest['pCode'] = gt_code
-            latest['pOn'] = True
-
         if latest['pOn'] and (latest['pCode'] > 0):
             result = {
                 'ticker': str(ticker),
@@ -716,8 +737,6 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         return None
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         return None
 
 
