@@ -1,57 +1,57 @@
 {
   "total_events": 177,
-  "pattern_detected_count": 169,
-  "pattern_detected_pct": 95.5,
-  "exact_match_count": 61,
-  "exact_match_pct": 34.5,
-  "broad_match_count": 71,
-  "broad_match_pct": 40.1,
-  "mean_pivot_error_pct": 10.81,
-  "median_pivot_error_pct": 5.68,
+  "pattern_detected_count": 168,
+  "pattern_detected_pct": 94.9,
+  "exact_match_count": 74,
+  "exact_match_pct": 41.8,
+  "broad_match_count": 105,
+  "broad_match_pct": 59.3,
+  "mean_pivot_error_pct": 9.75,
+  "median_pivot_error_pct": 4.42,
   "mean_length_error_bars": 0.0,
   "median_length_error_bars": 0.0,
   "breakdown_by_base_type": {
     "Ascending Base": {
       "count": 5,
       "detection_rate_pct": 100.0,
-      "exact_match_pct": 80.0,
-      "broad_match_pct": 80.0,
-      "mean_pivot_err_pct": 9.83
+      "exact_match_pct": 60.0,
+      "broad_match_pct": 60.0,
+      "mean_pivot_err_pct": 10.71
     },
     "Consolidation": {
       "count": 36,
-      "detection_rate_pct": 97.2,
-      "exact_match_pct": 52.8,
-      "broad_match_pct": 52.8,
-      "mean_pivot_err_pct": 14.09
+      "detection_rate_pct": 94.4,
+      "exact_match_pct": 19.4,
+      "broad_match_pct": 63.9,
+      "mean_pivot_err_pct": 8.78
     },
     "Cup With Handle": {
       "count": 46,
       "detection_rate_pct": 97.8,
-      "exact_match_pct": 6.5,
-      "broad_match_pct": 17.4,
-      "mean_pivot_err_pct": 11.36
+      "exact_match_pct": 37.0,
+      "broad_match_pct": 58.7,
+      "mean_pivot_err_pct": 9.66
     },
     "Cup Without Handle": {
       "count": 59,
       "detection_rate_pct": 93.2,
-      "exact_match_pct": 49.2,
-      "broad_match_pct": 49.2,
-      "mean_pivot_err_pct": 9.23
+      "exact_match_pct": 50.8,
+      "broad_match_pct": 55.9,
+      "mean_pivot_err_pct": 7.9
     },
     "Double Bottom": {
       "count": 7,
       "detection_rate_pct": 85.7,
-      "exact_match_pct": 0.0,
-      "broad_match_pct": 0.0,
-      "mean_pivot_err_pct": 9.56
+      "exact_match_pct": 42.9,
+      "broad_match_pct": 42.9,
+      "mean_pivot_err_pct": 22.87
     },
     "Flat Base": {
       "count": 24,
       "detection_rate_pct": 95.8,
-      "exact_match_pct": 25.0,
-      "broad_match_pct": 45.8,
-      "mean_pivot_err_pct": 9.06
+      "exact_match_pct": 58.3,
+      "broad_match_pct": 66.7,
+      "mean_pivot_err_pct": 12.08
     }
   }
 }

@@ -18,7 +18,10 @@ import numpy as np
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR / "python"))
 
-import ibd_pattern_scanner
+import importlib.util
+spec = importlib.util.spec_from_file_location('ibd_pattern_scanner_copy', str(ROOT_DIR / 'python' / 'ibd_pattern_scanner copy.py'))
+ibd_pattern_scanner = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ibd_pattern_scanner)
 
 def clean_date(d_str):
     d_str = str(d_str).strip()
@@ -116,42 +119,12 @@ def evaluate_all_events():
             det_close = scan_res.get('close')
             det_score = scan_res.get('composite_score', 0)
             
-            # Check history of states returned by scanner
-            hist = scan_res.get('history', [])
-            if hist:
-                target_bar_in_cut = min(len(hist) - 1, event_bar_idx)
-                w_start = max(0, target_bar_in_cut - 5)
-                w_end = min(len(hist) - 1, target_bar_in_cut + 5)
-                window_states = hist[w_start:w_end+1]
-                
-                best_state = None
-                for s in window_states:
-                    if s.get('boBar') is not None and abs(s.get('boBar') - target_bar_in_cut) <= 5:
-                        best_state = s
-                        break
-                if not best_state:
-                    for s in window_states:
-                        if s.get('inBase'):
-                            best_state = s
-                            break
-                if not best_state and target_bar_in_cut < len(hist):
-                    best_state = hist[target_bar_in_cut]
-                    
-                if best_state:
-                    if best_state.get('boBar') is not None and abs(best_state.get('boBar') - target_bar_in_cut) <= 5:
-                        det_name = best_state.get('boPatternName', 'None')
-                        det_pivot = best_state.get('boPivot')
-                        det_status = 'Post-BO'
-                    else:
-                        det_name = best_state.get('pName', 'None')
-                        det_pivot = best_state.get('pivRef')
-                        det_status = 'In Base' if best_state.get('inBase') else 'None'
-            else:
-                det_name = scan_res.get('pattern_name', 'None')
-                det_status = scan_res.get('status', 'None')
-                dist_pct = scan_res.get('dist_pct')
-                if det_close and dist_pct is not None and (1.0 + dist_pct/100.0) != 0:
-                    det_pivot = det_close / (1.0 + dist_pct / 100.0)
+            # Use pattern from the last bar of the cut (scanner's latest output)
+            det_name = scan_res.get('pattern_name', 'None')
+            det_status = scan_res.get('status', 'None')
+            dist_pct = scan_res.get('dist_pct')
+            if det_close and dist_pct is not None and (1.0 + dist_pct/100.0) != 0:
+                det_pivot = det_close / (1.0 + dist_pct / 100.0)
                 
         is_detected = (det_name != 'None')
         exact_match = (det_name in EXACT_NAME_MAP.get(target_btype, set()))
