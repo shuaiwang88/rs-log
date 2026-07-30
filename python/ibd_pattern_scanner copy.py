@@ -336,7 +336,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             cupMid = bLow + (bTop - bLow) * 0.5 if (bTop and bLow) else None
 
             # 6. Cup With Handle (independent of cup detection — allows handles on long cups)
-            if isBase and bTop and bLow and cupMid and bCount >= 20 and (not prevIsFlatBase or not isFlatBase) and (bDepPct is not None and 20.0 <= bDepPct <= 50.0) and rDepPct > 15:
+            if isBase and bTop and bLow and cupMid and bCount >= 20 and (not prevIsFlatBase or not isFlatBase) and (bDepPct is not None and 20.0 <= bDepPct <= 50.0) and rDepPct > 12:
                 handle_len = min(25, max(5, bCount // 4))
                 is_cuph_bo = (boPatternName == 'Cup+Handle')
                 end_h_idx = max(1, min(i - 1, boBar - 1 if (boBar is not None and i - boBar <= 10 and is_cuph_bo) else i - 1))
@@ -344,12 +344,12 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 H12 = np.max(highs[w12_start:end_h_idx + 1]) if end_h_idx >= w12_start else highs[i]
                 L12 = np.min(lows[w12_start:end_h_idx + 1])
                 hDep = (H12 - L12) / H12 * 100.0 if H12 > 0 else 999.0
-                inTop = (L12 >= cupMid * 0.80)
+                inTop = (L12 >= cupMid * 0.70)
                 max_hDep = 20.0 if bCount > 250 else 30.0
                 depOk_h = (2.0 <= hDep <= max_hDep)
                 if inTop and depOk_h and H12 < bTop * 1.02:
                     hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
-                    if hdRatio <= 0.75:
+                    if hdRatio <= 0.80:
                         isCupH = True
                         cupHandlePivot = H12
 
@@ -370,7 +370,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                         isCup = True
 
             # Flat Base (guarded by not isCupH)
-            isFlatBase = isBase and (rDepPct <= 18.0) and (20 <= bCount <= 130) and not isCupH and not isLikelyConsolidation
+            isFlatBase = isBase and (rDepPct <= 20.0) and (20 <= bCount <= 130) and not isCupH and not isLikelyConsolidation
             # Additional flat base check: recent 25-bar depth
             if isBase and not isFlatBase and not isCupH:
                 rTop25 = np.max(highs[max(0, end_r_idx - 24) : end_r_idx + 1])
