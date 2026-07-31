@@ -42,7 +42,7 @@ def clean_date(d_str):
         return f'{m.group(1)}/{m.group(2)}/{m.group(3)}'
     return d_str
 
-# Base type mapping
+# Base type mapping — exact match requires specific pattern name
 EXACT_NAME_MAP = {
     'Cup Without Handle': {'Cup'},
     'Cup With Handle': {'Cup+Handle'},
@@ -51,12 +51,22 @@ EXACT_NAME_MAP = {
     'Double Bottom': {'Dbl Bottom'}
 }
 
+# Pivot groups: patterns that share the same pivot type
+#   bTop-based  = Cup, Flat Base, 6-Wk Flat, Consolidation  (all use bTop as pivot)
+#   lower-based = Cup+Handle (handle high), Dbl Bottom (middle pivot)
+PIVOT_BTOP_NAMES = {'Cup', 'Flat Base', '6-Wk Flat', 'Consolidation', 'Base'}
+PIVOT_LOWER_NAMES = {'Cup+Handle', 'Dbl Bottom'}
+
+# Broad match: generous matching reflecting pivot-aware similarity.
+# bTop-based patterns broadly match each other (same pivot).
+# Cup+Handle broadly matches Cup & Flat Base (handle undetected → bTop pivot, still close).
+# Double Bottom broadly matches Cup (W-shape can look like a cup).
 BROAD_NAME_MAP = {
-    'Cup Without Handle': {'Cup', 'Base', 'Consolidation'},
-    'Cup With Handle': {'Cup+Handle', 'Cup'},
-    'Flat Base': {'Flat Base', '6-Wk Flat', 'Consolidation'},
-    'Consolidation': {'Consolidation', 'Base', 'Flat Base', 'Cup'},
-    'Double Bottom': {'Dbl Bottom', 'Base'}
+    'Cup Without Handle': {'Cup', 'Base', 'Consolidation', 'Flat Base', '6-Wk Flat'},
+    'Cup With Handle': {'Cup+Handle', 'Cup', 'Flat Base', '6-Wk Flat', 'Consolidation'},
+    'Flat Base': {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup'},
+    'Consolidation': {'Consolidation', 'Base', 'Flat Base', 'Cup', '6-Wk Flat'},
+    'Double Bottom': {'Dbl Bottom', 'Base', 'Cup'}
 }
 
 def evaluate_all_events():
@@ -151,6 +161,20 @@ def evaluate_all_events():
         exact_match = (det_name in EXACT_NAME_MAP.get(target_btype, set()))
         broad_match = (det_name in BROAD_NAME_MAP.get(target_btype, set()))
         
+        # Pivot-safe match: detected pattern shares the same pivot type as ground truth.
+        # bTop-based (Cup/Flat/Consolidation) detected as another bTop-based → OK (same pivot).
+        # Cup+Handle detected as Cup+Handle → OK. Dbl Bottom detected as Dbl Bottom → OK.
+        target_is_btop = target_btype != 'Cup With Handle' and target_btype != 'Double Bottom'
+        det_is_btop = det_name in PIVOT_BTOP_NAMES
+        
+        if target_is_btop:
+            pivot_safe = det_is_btop  # any bTop-based detection is safe
+        else:
+            pivot_safe = exact_match  # Cup+Handle/DB must match exactly
+        
+        # Pivot-critical: these patterns have lower pivots — exact match matters
+        pivot_critical_target = target_btype in ('Cup With Handle', 'Double Bottom')
+        
         piv_err_pct = abs(det_pivot - target_pivot) / target_pivot * 100.0 if (det_pivot and target_pivot > 0) else None
         len_diff = abs(det_length - target_length) if (det_length and target_length > 0) else None
         
@@ -169,6 +193,8 @@ def evaluate_all_events():
             'is_detected': is_detected,
             'exact_match': exact_match,
             'broad_match': broad_match,
+            'pivot_safe': pivot_safe,
+            'pivot_critical': pivot_critical_target,
             'pivot_err_pct': round(piv_err_pct, 2) if piv_err_pct is not None else None,
             'len_diff_bars': len_diff
         })
@@ -179,6 +205,12 @@ def evaluate_all_events():
     pattern_detected = res_df['is_detected'].sum()
     exact_matches = res_df['exact_match'].sum()
     broad_matches = res_df['broad_match'].sum()
+    pivot_safe_matches = res_df['pivot_safe'].sum()
+    
+    # Pivot-critical metrics: Cup+Handle + Double Bottom exact match
+    pivot_critical = res_df[res_df['pivot_critical'] == True]
+    pc_total = len(pivot_critical)
+    pc_exact = pivot_critical['exact_match'].sum()
     
     piv_errs = res_df['pivot_err_pct'].dropna()
     mean_piv_err = piv_errs.mean() if len(piv_errs) > 0 else 0
@@ -188,38 +220,60 @@ def evaluate_all_events():
     mean_len_diff = len_diffs.mean() if len(len_diffs) > 0 else 0
     median_len_diff = len_diffs.median() if len(len_diffs) > 0 else 0
     
-    print(f"OVERALL EVALUATION ACCURACY METRICS:")
+    # Pivot-safe by type
+    pc_ch = pivot_critical[pivot_critical['csv_base_type'] == 'Cup With Handle']
+    pc_db = pivot_critical[pivot_critical['csv_base_type'] == 'Double Bottom']
+    
+    print(f"🎯 PIVOT-CRITICAL ACCURACY (Cup+Handle & Double Bottom)")
     print(f"-------------------------------------------------------")
-    print(f"Total Evaluated Events          : {total}")
-    print(f"Pattern Detected on Event Date  : {pattern_detected} / {total} ({pattern_detected/total*100:.1f}%)")
-    print(f"Exact Pattern Type Match        : {exact_matches} / {total} ({exact_matches/total*100:.1f}%)")
-    print(f"Broad Pattern Type Match        : {broad_matches} / {total} ({broad_matches/total*100:.1f}%)")
-    print(f"Pivot Price Error %             : Mean = {mean_piv_err:.2f}%, Median = {median_piv_err:.2f}%")
-    print(f"Base Length Error (Bars)        : Mean = {mean_len_diff:.1f} bars, Median = {median_len_diff:.1f} bars\n")
+    print(f"Pivot-Critical Events            : {pc_total}")
+    print(f"  Cup+Handle Exact               : {pc_ch['exact_match'].sum()} / {len(pc_ch)} ({pc_ch['exact_match'].mean()*100:.1f}%)")
+    print(f"  Double Bottom Exact            : {pc_db['exact_match'].sum()} / {len(pc_db)} ({pc_db['exact_match'].mean()*100:.1f}%)")
+    print(f"  Combined                       : {pc_exact} / {pc_total} ({pc_exact/pc_total*100:.1f}%)")
+    if len(pc_ch) > 0:
+        print(f"  Cup+Handle Pivot Err % (mean)  : {pc_ch['pivot_err_pct'].dropna().mean():.2f}%")
+    if len(pc_db) > 0:
+        print(f"  Double Bottom Pivot Err % (mean): {pc_db['pivot_err_pct'].dropna().mean():.2f}%")
+    print()
+    
+    print(f"📊 OVERALL ACCURACY")
+    print(f"-------------------------------------------------------")
+    print(f"Total Evaluated Events           : {total}")
+    print(f"Pattern Detected                 : {pattern_detected} / {total} ({pattern_detected/total*100:.1f}%)")
+    print(f"Exact Pattern Match              : {exact_matches} / {total} ({exact_matches/total*100:.1f}%)")
+    print(f"Pivot-Safe Match (same pivot)    : {pivot_safe_matches} / {total} ({pivot_safe_matches/total*100:.1f}%)")
+    print(f"Broad Match                      : {broad_matches} / {total} ({broad_matches/total*100:.1f}%)")
+    print(f"Pivot Price Error (mean/median)  : {mean_piv_err:.2f}% / {median_piv_err:.2f}%")
+    print(f"Base Length Error (mean/median)  : {mean_len_diff:.1f} / {median_len_diff:.1f} bars\n")
     
     print(f"ACCURACY BREAKDOWN BY GROUND TRUTH DAILY BASE TYPE:")
-    print(f"-----------------------------------------------------------------------------------------")
-    print(f"{'CSV Base Type':<20} | {'Count':<5} | {'Detected %':<10} | {'Exact Match %':<13} | {'Broad Match %':<13} | {'Piv Err %':<10}")
-    print(f"-----------------------------------------------------------------------------------------")
+    print(f"--------------------------------------------------------------------------------------------------------------")
+    print(f"{'CSV Base Type':<20} | {'Count':<5} | {'Detect %':<9} | {'Exact %':<8} | {'Pivot-Safe %':<12} | {'Broad %':<8} | {'Piv Err %':<9}")
+    print(f"--------------------------------------------------------------------------------------------------------------")
     
     summary_by_type = {}
     for btype, group in res_df.groupby('csv_base_type'):
         cnt = len(group)
         det_pct = group['is_detected'].mean() * 100
         exact_pct = group['exact_match'].mean() * 100
+        safe_pct = group['pivot_safe'].mean() * 100
         broad_pct = group['broad_match'].mean() * 100
         piv_err = group['pivot_err_pct'].dropna().mean()
+        is_pc = "🔴" if btype in ('Cup With Handle', 'Double Bottom') else "  "
         
-        print(f"{btype:<20} | {cnt:<5} | {det_pct:9.1f}% | {exact_pct:12.1f}% | {broad_pct:12.1f}% | {piv_err:9.1f}%")
+        print(f"{is_pc} {btype:<18} | {cnt:<5} | {det_pct:8.1f}% | {exact_pct:7.1f}% | {safe_pct:11.1f}% | {broad_pct:7.1f}% | {piv_err:8.1f}%")
         
         summary_by_type[btype] = {
             'count': int(cnt),
             'detection_rate_pct': float(round(det_pct, 1)),
             'exact_match_pct': float(round(exact_pct, 1)),
+            'pivot_safe_pct': float(round(safe_pct, 1)),
             'broad_match_pct': float(round(broad_pct, 1)),
             'mean_pivot_err_pct': float(round(piv_err, 2)) if pd.notna(piv_err) else None
         }
-    print(f"-----------------------------------------------------------------------------------------\n")
+    print(f"--------------------------------------------------------------------------------------------------------------")
+    print(f"  🔴 = pivot-critical pattern (lower pivot — exact match matters)")
+    print()
     
     # Save CSV report. 'copy' keeps the original unsuffixed filenames (other tooling, e.g.
     # evaluate_pivot_equiv.py, reads these directly); 'prod' gets its own so the two targets
@@ -233,6 +287,17 @@ def evaluate_all_events():
     out_json = ROOT_DIR / "python" / f"breakaway_gap_accuracy_summary{suffix}.json"
     summary_data = {
         'total_events': int(total),
+        'pivot_critical_total': int(pc_total),
+        'pivot_critical_exact': int(pc_exact),
+        'pivot_critical_exact_pct': float(round(pc_exact/pc_total*100, 1)),
+        'cup_handle_exact': int(pc_ch['exact_match'].sum()),
+        'cup_handle_total': int(len(pc_ch)),
+        'cup_handle_exact_pct': float(round(pc_ch['exact_match'].mean()*100, 1)),
+        'double_bottom_exact': int(pc_db['exact_match'].sum()),
+        'double_bottom_total': int(len(pc_db)),
+        'double_bottom_exact_pct': float(round(pc_db['exact_match'].mean()*100, 1)),
+        'pivot_safe_count': int(pivot_safe_matches),
+        'pivot_safe_pct': float(round(pivot_safe_matches/total*100, 1)),
         'pattern_detected_count': int(pattern_detected),
         'pattern_detected_pct': float(round(pattern_detected/total*100, 1)),
         'exact_match_count': int(exact_matches),
