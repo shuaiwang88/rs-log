@@ -1417,7 +1417,7 @@ def load_industry_data(reload_sig: str):
 
 # ---------------------- Main data load ----------------------
 output_sig  = compute_output_signature()
-df          = load_csv_files(output_sig)
+df          = load_csv_files(output_sig + "_force_reload_1")
 df_industry = load_industry_data(output_sig)
 company_descriptions = load_company_descriptions()
 ibd_industry_mapping = load_ibd_ticker_industry_mapping()

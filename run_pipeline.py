@@ -29,6 +29,10 @@ def get_current_branch():
         return r.stdout.strip()
     return "main"
 
+def configure_git_merge_driver():
+    run_cmd(["git", "config", "merge.keep_theirs.name", "Always keep upstream/remote version of generated CSVs"])
+    run_cmd(["git", "config", "merge.keep_theirs.driver", "cp %B %A"])
+
 def sync_upstream(branch="main"):
     print("🔄 Fetching remotes (origin and upstream)...")
     run_cmd(["git", "fetch", "upstream"])
@@ -147,6 +151,7 @@ def execute_consolidated_pipeline():
     run_cmd(["git", "commit", "-m", "chore: pipeline auto-update derived columns and history"])
 
 def main():
+    configure_git_merge_driver()
     parser = argparse.ArgumentParser(description="Run consolidated RS log pipeline.")
     parser.add_argument('--force', action='store_true', help="Force pipeline execution even if no new upstream commits.")
     parser.add_argument('--no-sync', action='store_true', help="Skip git fetch/merge from upstream.")

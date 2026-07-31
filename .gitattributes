@@ -1,0 +1,7 @@
+output/rs_stocks.csv merge=keep_theirs
+output/rs_stocks_1.csv merge=keep_theirs
+output/rs_stocks_2.csv merge=keep_theirs
+output/rs_stocks_historical.csv merge=keep_theirs
+output/rs_industries_historical.csv merge=keep_theirs
+output/rs_stocks_metadata.json merge=keep_theirs
+output/rs_industries_metadata.json merge=keep_theirs
