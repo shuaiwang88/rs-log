@@ -68,7 +68,7 @@ row_id,symbol,event_date,csv_base_type,csv_pivot,csv_length,detected_pattern,det
 70,ENTG,2026-06-15,Consolidation,159.15,34,Cup,In Base,168.41,41.0,5,True,False,True,True,False,5.82,7.0
 71,EPC,2026-06-23,Cup Without Handle,25.23,32,Cup,In Base,24.6,85.0,5,True,True,True,True,False,2.5,53.0
 72,FLYW,2026-05-06,Consolidation,18.05,36,Cup,In Base,14.87,214.0,5,True,False,True,True,False,17.62,178.0
-73,FOXF,2026-05-08,Consolidation,20.98,56,Dbl Bottom,In Base,20.36,65.0,4,True,False,False,False,False,2.96,9.0
+73,FOXF,2026-05-08,Consolidation,20.98,56,Cup,In Base,20.46,65.0,4,True,False,True,True,False,2.5,9.0
 74,FUJIY,2026-07-27,Cup Without Handle,12.58,217,Cup+Handle,In Base,11.59,210.0,5,True,False,False,False,False,7.87,7.0
 75,GALDY,2026-06-24,Cup With Handle,44.04,32,Flat Base,In Base,45.15,39.0,5,True,False,False,False,True,2.53,7.0
 76,GIII,2026-06-05,Cup With Handle,36.33,33,Cup,In Base,35.15,158.0,5,True,False,False,False,True,3.25,125.0

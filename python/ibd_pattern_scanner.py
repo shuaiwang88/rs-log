@@ -424,7 +424,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # 3. Double Bottom Detection (W-shape symmetry)
             isDB = False
             dbMiddlePivot = None
-            dbMaxBars = 85
+            dbMaxBars = 75
             if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0) and len(aHP_list) >= 2 and len(aLP_list) >= 2:
                 for hp_i in range(min(5, len(aHP_list) - 1)):
                     for hp_j in range(hp_i + 1, min(len(aHP_list), hp_i + 5)):
@@ -459,7 +459,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                             cSh = (highest_since_2nd_low <= sH * 1.10)
                             # Volume asymmetry: a genuine double bottom typically sees higher
                             # volume on the first low (capitulation) than the second (retest).
-                            cVol = volumes[fLt] >= volumes[sLt] * 0.90
+                            cVol = volumes[fLt] >= volumes[sLt] * 0.85
 
                             if cPT and cA and cB and cC and cD and cE and cTA and cTB and cTC and cSh and cVol and second_leg_undercut:
                                 isDB = True
