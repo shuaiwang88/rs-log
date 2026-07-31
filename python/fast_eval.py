@@ -45,7 +45,7 @@ STD_TRUTH = {'Flat Base', 'Consolidation', 'Cup Without Handle'}
 STD_DET = {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup', 'Base'}
 FOCUS_MAP = {'Double Bottom': 'Dbl Bottom', 'Cup With Handle': 'Cup+Handle'}
 PIVOT_BASELINE_EXACT = 104
-BROAD_BASELINE = 135
+BROAD_BASELINE = 104
 
 
 def bucket_truth(t):
@@ -65,10 +65,10 @@ EXACT_NAME_MAP = {
 }
 BROAD_NAME_MAP = {
     'Cup Without Handle': {'Cup', 'Base', 'Consolidation', 'Flat Base', '6-Wk Flat'},
-    'Cup With Handle': {'Cup+Handle', 'Cup', 'Flat Base', '6-Wk Flat', 'Consolidation'},
+    'Cup With Handle': {'Cup+Handle'},
     'Flat Base': {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup'},
     'Consolidation': {'Consolidation', 'Base', 'Flat Base', 'Cup', '6-Wk Flat'},
-    'Double Bottom': {'Dbl Bottom', 'Base', 'Cup'},
+    'Double Bottom': {'Dbl Bottom'},
 }
 
 

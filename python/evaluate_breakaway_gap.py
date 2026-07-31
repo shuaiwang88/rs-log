@@ -57,16 +57,14 @@ EXACT_NAME_MAP = {
 PIVOT_BTOP_NAMES = {'Cup', 'Flat Base', '6-Wk Flat', 'Consolidation', 'Base'}
 PIVOT_LOWER_NAMES = {'Cup+Handle', 'Dbl Bottom'}
 
-# Broad match: generous matching reflecting pivot-aware similarity.
-# bTop-based patterns broadly match each other (same pivot).
-# Cup+Handle broadly matches Cup & Flat Base (handle undetected → bTop pivot, still close).
-# Double Bottom broadly matches Cup (W-shape can look like a cup).
+# Broad match: bTop-based patterns are interchangeable (same pivot).
+# Cup+Handle and Double Bottom must match EXACTLY - wrong pivot otherwise.
 BROAD_NAME_MAP = {
     'Cup Without Handle': {'Cup', 'Base', 'Consolidation', 'Flat Base', '6-Wk Flat'},
-    'Cup With Handle': {'Cup+Handle', 'Cup', 'Flat Base', '6-Wk Flat', 'Consolidation'},
+    'Cup With Handle': {'Cup+Handle'},
     'Flat Base': {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup'},
     'Consolidation': {'Consolidation', 'Base', 'Flat Base', 'Cup', '6-Wk Flat'},
-    'Double Bottom': {'Dbl Bottom', 'Base', 'Cup'}
+    'Double Bottom': {'Dbl Bottom'}
 }
 
 def evaluate_all_events():

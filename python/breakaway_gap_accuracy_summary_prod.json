@@ -15,8 +15,8 @@
   "pattern_detected_pct": 93.6,
   "exact_match_count": 71,
   "exact_match_pct": 41.3,
-  "broad_match_count": 135,
-  "broad_match_pct": 78.5,
+  "broad_match_count": 104,
+  "broad_match_pct": 60.5,
   "mean_pivot_error_pct": 6.17,
   "median_pivot_error_pct": 2.69,
   "mean_length_error_bars": 91.7,
@@ -35,7 +35,7 @@
       "detection_rate_pct": 97.8,
       "exact_match_pct": 28.3,
       "pivot_safe_pct": 28.3,
-      "broad_match_pct": 89.1,
+      "broad_match_pct": 28.3,
       "mean_pivot_err_pct": 7.37
     },
     "Cup Without Handle": {
@@ -51,7 +51,7 @@
       "detection_rate_pct": 85.7,
       "exact_match_pct": 28.6,
       "pivot_safe_pct": 28.6,
-      "broad_match_pct": 71.4,
+      "broad_match_pct": 28.6,
       "mean_pivot_err_pct": 3.56
     },
     "Flat Base": {
