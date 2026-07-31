@@ -9,26 +9,26 @@
   "double_bottom_exact": 2,
   "double_bottom_total": 7,
   "double_bottom_exact_pct": 28.6,
-  "pivot_safe_count": 104,
-  "pivot_safe_pct": 60.5,
+  "pivot_safe_count": 106,
+  "pivot_safe_pct": 61.6,
   "pattern_detected_count": 161,
   "pattern_detected_pct": 93.6,
-  "exact_match_count": 71,
-  "exact_match_pct": 41.3,
-  "broad_match_count": 104,
-  "broad_match_pct": 60.5,
-  "mean_pivot_error_pct": 6.17,
-  "median_pivot_error_pct": 2.69,
+  "exact_match_count": 72,
+  "exact_match_pct": 41.9,
+  "broad_match_count": 106,
+  "broad_match_pct": 61.6,
+  "mean_pivot_error_pct": 6.16,
+  "median_pivot_error_pct": 2.73,
   "mean_length_error_bars": 91.7,
   "median_length_error_bars": 74.0,
   "breakdown_by_base_type": {
     "Consolidation": {
       "count": 36,
       "detection_rate_pct": 91.7,
-      "exact_match_pct": 16.7,
-      "pivot_safe_pct": 77.8,
-      "broad_match_pct": 77.8,
-      "mean_pivot_err_pct": 5.75
+      "exact_match_pct": 19.4,
+      "pivot_safe_pct": 80.6,
+      "broad_match_pct": 80.6,
+      "mean_pivot_err_pct": 5.77
     },
     "Cup With Handle": {
       "count": 46,
@@ -42,9 +42,9 @@
       "count": 59,
       "detection_rate_pct": 89.8,
       "exact_match_pct": 59.3,
-      "pivot_safe_pct": 67.8,
-      "broad_match_pct": 67.8,
-      "mean_pivot_err_pct": 4.87
+      "pivot_safe_pct": 69.5,
+      "broad_match_pct": 69.5,
+      "mean_pivot_err_pct": 4.82
     },
     "Double Bottom": {
       "count": 7,

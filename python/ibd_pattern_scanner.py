@@ -364,7 +364,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 depOk_h = (5.0 <= hDep <= max_hDep)
                 ref_vol = sma20_vol[w12_start] if (w12_start < len(sma20_vol) and not np.isnan(sma20_vol[w12_start])) else None
                 handle_avg_vol = np.mean(volumes[w12_start:end_h_idx + 1])
-                volOk_h = (ref_vol is None or ref_vol <= 0) or (handle_avg_vol < ref_vol * 1.0)
+                volOk_h = (ref_vol is None or ref_vol <= 0) or (handle_avg_vol < ref_vol * 1.05)
                 if inTop and depOk_h and volOk_h and H12 < bTop * 1.02:
                     hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
                     if hdRatio <= 0.55:
@@ -425,7 +425,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             isDB = False
             dbMiddlePivot = None
             dbMaxBars = 85
-            if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and len(aHP_list) >= 2 and len(aLP_list) >= 2:
+            if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0) and len(aHP_list) >= 2 and len(aLP_list) >= 2:
                 for hp_i in range(min(5, len(aHP_list) - 1)):
                     for hp_j in range(hp_i + 1, min(len(aHP_list), hp_i + 5)):
                         sH_t, sH = aHP_list[hp_i]

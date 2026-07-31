@@ -89,7 +89,7 @@ row_id,symbol,event_date,csv_base_type,csv_pivot,csv_length,detected_pattern,det
 91,IQV,2026-07-23,Cup With Handle,212.36,133,Cup,In Base,245.08,255.0,5,True,False,False,False,True,15.41,122.0
 92,IX,2026-05-11,Cup Without Handle,37.04,59,Cup,In Base,33.51,106.0,5,True,True,True,True,False,9.52,47.0
 93,JAN,2026-06-24,Cup Without Handle,28.52,30,None,None,,,0,False,False,False,False,False,,
-94,JBAXY,2026-07-03,Cup Without Handle,17.36,33,Cup+Handle,In Base,18.44,220.0,6,True,False,False,False,False,6.22,187.0
+94,JBAXY,2026-07-03,Cup Without Handle,17.36,33,Flat Base,In Base,17.98,220.0,6,True,False,True,True,False,3.57,187.0
 95,KB,2026-07-10,Consolidation,119.71,92,Dbl Bottom,In Base,115.85,169.0,6,True,False,False,False,False,3.23,77.0
 96,KEYS,2026-06-22,Flat Base,370.18,27,6-Wk Flat,In Base,365.57,34.0,6,True,True,True,True,False,1.24,7.0
 97,KRNT,2026-05-13,Cup Without Handle,17.96,62,Cup+Handle,In Base,16.7,89.0,5,True,False,False,False,False,7.02,27.0
@@ -101,7 +101,7 @@ row_id,symbol,event_date,csv_base_type,csv_pivot,csv_length,detected_pattern,det
 103,LQDA,2026-05-11,Consolidation,46.67,66,Cup,In Base,45.5,110.0,6,True,False,True,True,False,2.5,44.0
 105,LXFR,2026-05-25,Cup With Handle,16.0,83,Cup,In Base,17.01,211.0,5,True,False,False,False,True,6.34,128.0
 106,LZB,2026-06-17,Consolidation,40.75,134,Cup,In Base,41.28,140.0,6,True,False,True,True,False,1.31,6.0
-107,MATW,2026-05-01,Consolidation,29.11,72,Dbl Bottom,In Base,28.33,6.0,1,True,False,False,False,False,2.68,66.0
+107,MATW,2026-05-01,Consolidation,29.11,72,Consolidation,In Base,30.16,6.0,1,True,True,True,True,False,3.6,66.0
 108,MEDP,2026-07-23,Cup Without Handle,628.92,128,Cup,In Base,613.2,257.0,5,True,True,True,True,False,2.5,129.0
 109,MMM,2026-07-21,Cup With Handle,169.76,107,Flat Base,In Base,180.28,23.0,5,True,False,False,False,True,6.2,84.0
 110,MNST,2026-05-08,Cup Without Handle,87.38,49,Dbl Bottom,In Base,87.38,78.0,4,True,False,False,False,False,0.0,29.0
