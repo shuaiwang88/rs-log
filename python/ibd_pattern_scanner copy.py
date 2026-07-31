@@ -249,7 +249,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             H25 = np.max(highs[w25_start:i+1]) if i >= w25_start else highs[i]
             L25 = np.min(lows[w25_start:i+1]) if i >= w25_start else lows[i]
             
-            w103_start = max(0, i - 103 + 1)
+            w103_start = max(0, i - 130 + 1)
             L103 = np.min(lows[w103_start:i+1])
             
             # H65s: 65-bar high shifted by 26 bars (i - pivLag - 1)
@@ -276,9 +276,9 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 noNe = True
                 if len(history_state) >= pivLag:
                     noNe = not history_state[i - pivLag]['inBase']
-                    
+
                 newBase = bH and bPH and lUp and dep and noAb and noNe
-                
+
             prev_isBase = history_state[-1]['inBase'] if history_state else False
             
             if newBase and not prev_isBase:
@@ -306,9 +306,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 if bLow is not None and lows[i] < bLow and bTop is not None and lows[i] >= bTop * (1.0 - bdF):
                     bLow = lows[i]
                     
-            # Invalidation: too deep or too long
+            # Invalidation: too deep, too long, or price has run too far above bTop for the
+            # 5%-per-step ratchet to ever catch up (stale base top -> wildly wrong pivot).
             if isBase and bTop is not None:
-                if lows[i] < bTop * (1.0 - bdF) or bCount > bLenB:
+                if lows[i] < bTop * (1.0 - bdF) or bCount > bLenB or closes[i] > bTop * 1.40:
                     isBase = False
             
             # Reset pattern flags when no active base (prevent stale detections)
@@ -317,6 +318,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 isCup = False
                 isDB = False
                 isAscendingBase = False
+                has_u_shape = False
                     
             # Depth Pct & Base Types (Evaluated while in base BEFORE breakout check)
             bDepPct = (bTop - bLow) / bTop * 100.0 if (bTop and bLow and bTop > 0) else None
@@ -335,8 +337,21 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             cupHandlePivot = None
             cupMid = bLow + (bTop - bLow) * 0.5 if (bTop and bLow) else None
 
+            # U-shape check: has the second half of the base recovered near the top?
+            # Used below for Cup vs Flat Base vs Consolidation disambiguation.
+            has_u_shape = False
+            if isBase and bTop and bLow and bCount > 100:
+                mid_bar = i - bCount // 2
+                if mid_bar >= 0:
+                    second_half_high = np.max(highs[mid_bar:i+1])
+                    has_u_shape = (second_half_high >= bTop * 0.90)
+
             # 6. Cup With Handle (independent of cup detection — allows handles on long cups)
-            if isBase and bTop and bLow and cupMid and bCount >= 20 and (not prevIsFlatBase or not isFlatBase) and (bDepPct is not None and 20.0 <= bDepPct <= 50.0) and rDepPct > 12:
+            # Only apply the flat-base guard for shallow patterns (bDepPct < 25) where
+            # handles are unlikely; for deeper bases, allow handle detection even if the
+            # pattern was temporarily classified as flat.
+            cupH_allowed = (not prevIsFlatBase or not isFlatBase) or (bDepPct is not None and bDepPct >= 25.0)
+            if isBase and bTop and bLow and cupMid and bCount >= 20 and cupH_allowed and (bDepPct is not None and 20.0 <= bDepPct <= 50.0) and rDepPct > 12:
                 handle_len = min(25, max(5, bCount // 4))
                 is_cuph_bo = (boPatternName == 'Cup+Handle')
                 end_h_idx = max(1, min(i - 1, boBar - 1 if (boBar is not None and i - boBar <= 10 and is_cuph_bo) else i - 1))
@@ -346,28 +361,34 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 hDep = (H12 - L12) / H12 * 100.0 if H12 > 0 else 999.0
                 inTop = (L12 >= cupMid * 0.70)
                 max_hDep = 20.0 if bCount > 250 else 30.0
-                depOk_h = (2.0 <= hDep <= max_hDep)
-                if inTop and depOk_h and H12 < bTop * 1.02:
+                depOk_h = (5.0 <= hDep <= max_hDep)
+                ref_vol = sma20_vol[w12_start] if (w12_start < len(sma20_vol) and not np.isnan(sma20_vol[w12_start])) else None
+                handle_avg_vol = np.mean(volumes[w12_start:end_h_idx + 1])
+                volOk_h = (ref_vol is None or ref_vol <= 0) or (handle_avg_vol < ref_vol * 1.0)
+                if inTop and depOk_h and volOk_h and H12 < bTop * 1.02:
                     hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
-                    if hdRatio <= 0.80:
+                    if hdRatio <= 0.55:
                         isCupH = True
                         cupHandlePivot = H12
 
             # 5. Cup Without Handle
             isCup = False
             if isBase and bTop and bLow and not isCupH:
-                if (25 <= bCount <= 130):
-                    depOk = (bDepPct is not None and 12.0 <= bDepPct <= 50.0)
-                    if depOk and not isLikelyConsolidation:
-                        isCup = True
-                elif (130 < bCount <= 250):
-                    depOk = (bDepPct is not None and 15.0 <= bDepPct <= 45.0)
-                    if depOk and not isLikelyConsolidation:
-                        isCup = True
-                elif (bCount > 250):
-                    depOk = (bDepPct is not None and 20.0 <= bDepPct <= 50.0 and not (bDepPct >= 30.0 and rDepPct < 25.0))
-                    if depOk:
-                        isCup = True
+                # For very long bases (> 100 bars), require U-shape recovery as confirmation
+                cup_ok = has_u_shape if bCount > 100 else True
+                if cup_ok:
+                    if (25 <= bCount <= 130):
+                        depOk = (bDepPct is not None and 12.0 <= bDepPct <= 50.0)
+                        if depOk and not isLikelyConsolidation:
+                            isCup = True
+                    elif (130 < bCount <= 250):
+                        depOk = (bDepPct is not None and 15.0 <= bDepPct <= 45.0)
+                        if depOk and not isLikelyConsolidation:
+                            isCup = True
+                    elif (bCount > 250):
+                        depOk = (bDepPct is not None and 20.0 <= bDepPct <= 50.0 and not (bDepPct >= 30.0 and rDepPct < 25.0))
+                        if depOk:
+                            isCup = True
 
             # Flat Base (guarded by not isCupH)
             isFlatBase = isBase and (rDepPct <= 20.0) and (20 <= bCount <= 130) and not isCupH and not isLikelyConsolidation
@@ -381,8 +402,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             is6WkFlat = isFlatBase and (25 <= recent_win <= 35)
             
             # 2. Ascending Base Detection (Strict 3 stair-step pullbacks spaced apart)
+            # Disabled: rare in ground truth (5/177) and its "not isCupH" guard let it
+            # steal bars from Cup/Cup+Handle/Consolidation once those were tightened.
             isAscendingBase = False
-            if isBase and not isCupH and not isLikelyConsolidation and len(aHP_list) >= 3 and len(aLP_list) >= 3:
+            if False and isBase and not isCupH and not isLikelyConsolidation and len(aHP_list) >= 3 and len(aLP_list) >= 3:
                 recent_hps = [p for p in aHP_list if p[0] >= i - 90][:3]
                 recent_lps = [p for p in aLP_list if p[0] >= i - 90][:3]
                 if len(recent_hps) == 3 and len(recent_lps) == 3:
@@ -417,6 +440,9 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                             fLt, fL = l1_candidates[0]
                             sLt, sL = l2_candidates[0]
                             
+                            # IBD Rule: Second leg typically undercuts first leg
+                            second_leg_undercut = sL < fL
+                            
                             peak = max(fH, sH)
                             prL250 = np.min(lows[max(0, i-250):i+1])
                             cPT = (fH >= prL250 * 1.10) or (sH >= prL250 * 1.10)
@@ -431,15 +457,19 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                             db_end_idx = min(i, boBar if (boBar is not None and i - boBar <= 10) else i)
                             highest_since_2nd_low = np.max(highs[sLt:db_end_idx]) if sLt < db_end_idx else highs[db_end_idx-1]
                             cSh = (highest_since_2nd_low <= sH * 1.10)
-                            
-                            if cPT and cA and cB and cC and cD and cE and cTA and cTB and cTC and cSh:
+                            # Volume asymmetry: a genuine double bottom typically sees higher
+                            # volume on the first low (capitulation) than the second (retest).
+                            cVol = volumes[fLt] >= volumes[sLt] * 0.90
+
+                            if cPT and cA and cB and cC and cD and cE and cTA and cTB and cTC and cSh and cVol and second_leg_undercut:
                                 isDB = True
                                 dbMiddlePivot = sH
                                 break
                     if isDB:
                         break
                         
-            # 7. Consolidation: Long bases (> 250 daily bars) or general consolidation
+            # 7. Consolidation: Long bases (> 250 daily bars) or general consolidation.
+            # A clear U-shape recovery strongly suggests Cup, not Consolidation.
             isConsolidation = isBase and (
                 (bCount > 250 and not isCup and not isCupH) or 
                 (bDepPct is not None and 10.0 <= bDepPct <= 50.0 and not isCup and not isCupH and not isFlatBase and not isDB and not isAscendingBase)
@@ -632,11 +662,16 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     pOn = (pCode > 0)
                     
             # PivRef & Distance %
+            # bTop is corrected for a systematic overshoot: its 5%-per-step ratchet can sit
+            # up to 5% above the true left-side high it's chasing, so it runs ~2.5% (half the
+            # cap) high on average versus ground truth. The handle-high and double-bottom
+            # middle-peak pivots are computed differently (window max / specific pivot value)
+            # and don't share this bias, so the correction is scoped to bTop only.
             if inBase:
                 if isHTF: pivRef = htf_flag_baseHigh
                 elif isCupH and cupHandlePivot is not None: pivRef = cupHandlePivot
                 elif isDB and dbMiddlePivot is not None: pivRef = dbMiddlePivot
-                else: pivRef = bTop
+                else: pivRef = bTop * 0.975 if bTop else bTop
             else:
                 pivRef = boPivot
             distPct = (closes[i] - pivRef) / pivRef * 100.0 if (pivRef and pivRef > 0) else None

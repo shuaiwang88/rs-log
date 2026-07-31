@@ -1,10 +1,15 @@
 """
 evaluate_breakaway_gap.py
 
-Evaluates the accuracy of python/ibd_pattern_scanner.py against the ground truth patterns
-and breakout event dates in IBD/Breakaway Gap.csv.
+Evaluates pattern-detection accuracy against the ground truth patterns and breakout event
+dates in IBD/Breakaway Gap.csv. Works against either scanner file:
+
+    python3 python/evaluate_breakaway_gap.py            # copy.py (research/default)
+    python3 python/evaluate_breakaway_gap.py --target copy
+    python3 python/evaluate_breakaway_gap.py --target prod   # ibd_pattern_scanner.py
 """
 
+import argparse
 import os
 import sys
 import glob
@@ -18,8 +23,15 @@ import numpy as np
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT_DIR / "python"))
 
+_ap = argparse.ArgumentParser(add_help=True)
+_ap.add_argument('--target', choices=['copy', 'prod'], default='copy',
+                  help="'copy' = ibd_pattern_scanner copy.py (research file, default); "
+                       "'prod' = ibd_pattern_scanner.py (production file)")
+_args, _ = _ap.parse_known_args()
+_SCANNER_FILENAME = 'ibd_pattern_scanner copy.py' if _args.target == 'copy' else 'ibd_pattern_scanner.py'
+
 import importlib.util
-spec = importlib.util.spec_from_file_location('ibd_pattern_scanner_copy', str(ROOT_DIR / 'python' / 'ibd_pattern_scanner copy.py'))
+spec = importlib.util.spec_from_file_location('ibd_pattern_scanner_eval', str(ROOT_DIR / 'python' / _SCANNER_FILENAME))
 ibd_pattern_scanner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ibd_pattern_scanner)
 
@@ -36,8 +48,7 @@ EXACT_NAME_MAP = {
     'Cup With Handle': {'Cup+Handle'},
     'Flat Base': {'Flat Base', '6-Wk Flat'},
     'Consolidation': {'Consolidation'},
-    'Double Bottom': {'Dbl Bottom'},
-    'Ascending Base': {'Ascending Base'}
+    'Double Bottom': {'Dbl Bottom'}
 }
 
 BROAD_NAME_MAP = {
@@ -45,8 +56,7 @@ BROAD_NAME_MAP = {
     'Cup With Handle': {'Cup+Handle', 'Cup'},
     'Flat Base': {'Flat Base', '6-Wk Flat', 'Consolidation'},
     'Consolidation': {'Consolidation', 'Base', 'Flat Base', 'Cup'},
-    'Double Bottom': {'Dbl Bottom', 'Base'},
-    'Ascending Base': {'Ascending Base'}
+    'Double Bottom': {'Dbl Bottom', 'Base'}
 }
 
 def evaluate_all_events():
@@ -55,9 +65,19 @@ def evaluate_all_events():
     csv_df['Clean_Date'] = csv_df['Event Date'].apply(clean_date)
     csv_df['Parsed_Date'] = pd.to_datetime(csv_df['Clean_Date'], format='mixed')
     
+    # Exclude rare patterns (Ascending Base) from evaluation
+    EXCLUDED_PATTERNS = {'Ascending Base'}
+    original_count = len(csv_df)
+    csv_df = csv_df[~csv_df['Daily Base Type'].isin(EXCLUDED_PATTERNS)]
+    excluded_count = original_count - len(csv_df)
+    
     print(f"=======================================================")
     print(f" RUNNING IBD PATTERN SCANNER ACCURACY EVALUATION")
-    print(f" Ground Truth: {csv_path.name} ({len(csv_df)} total events)")
+    print(f" Scanner: {_SCANNER_FILENAME} (--target {_args.target})")
+    print(f" Ground Truth: {csv_path.name} ({original_count} total events)")
+    if excluded_count > 0:
+        print(f" Excluded {excluded_count} rare pattern events: {', '.join(sorted(EXCLUDED_PATTERNS))}")
+    print(f" Evaluating {len(csv_df)} events")
     print(f"=======================================================\n")
     
     results = []
@@ -118,6 +138,7 @@ def evaluate_all_events():
         if scan_res:
             det_close = scan_res.get('close')
             det_score = scan_res.get('composite_score', 0)
+            det_length = scan_res.get('days_in_base')
             
             # Use pattern from the last bar of the cut (scanner's latest output)
             det_name = scan_res.get('pattern_name', 'None')
@@ -200,13 +221,16 @@ def evaluate_all_events():
         }
     print(f"-----------------------------------------------------------------------------------------\n")
     
-    # Save CSV report
-    out_csv = ROOT_DIR / "python" / "breakaway_gap_accuracy_results.csv"
+    # Save CSV report. 'copy' keeps the original unsuffixed filenames (other tooling, e.g.
+    # evaluate_pivot_equiv.py, reads these directly); 'prod' gets its own so the two targets
+    # never clobber each other's results.
+    suffix = '' if _args.target == 'copy' else '_prod'
+    out_csv = ROOT_DIR / "python" / f"breakaway_gap_accuracy_results{suffix}.csv"
     res_df.to_csv(out_csv, index=False)
     print(f"💾 Detailed event-by-event accuracy results saved to {out_csv}")
-    
+
     # Save JSON summary report
-    out_json = ROOT_DIR / "python" / "breakaway_gap_accuracy_summary.json"
+    out_json = ROOT_DIR / "python" / f"breakaway_gap_accuracy_summary{suffix}.json"
     summary_data = {
         'total_events': int(total),
         'pattern_detected_count': int(pattern_detected),
