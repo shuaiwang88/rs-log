@@ -129,6 +129,10 @@ PIVOT_AMBIGUITY_PCT = 5.0
 # the final bar alone. 20 bars = about a month.
 PATTERN_WINDOW_BARS = 20
 
+# Two readings quoting buy points within this of each other are the same decision, so the
+# lower-ranked name is folded into `also_reads_as` rather than listed separately.
+PIVOT_SAME_PCT = 1.0
+
 
 def detect_vcp(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray,
                pivot_highs: dict, pivot_lows: dict, pivLen: int = 5,
@@ -1149,15 +1153,27 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 prev = layered.get(_nm)
                 if prev is None or _st['bar'] >= prev[1]:
                     layered[_nm] = (_pv, _st['bar'], _st['date'])
+        # Collapse readings that quote the SAME buy point. Flat Base, Cup and Consolidation
+        # all price off the base high, so listing three of them is a naming distinction, not
+        # a decision - it changes nothing you would do. A second entry earns its place only
+        # when it moves the entry price, which in practice means Cup+Handle (handle high) or
+        # Double Bottom (middle peak) disagreeing with the base high. Names that share a
+        # pivot are folded into `also_reads_as` on the entry that owns it.
         patterns = []
         for _nm in sorted(layered, key=lambda k: PATTERN_RANK.get(k, 9)):
             _pv, _bar, _dt = layered[_nm]
+            _dup = next((p for p in patterns
+                         if abs(p['pivot'] - _pv) / max(_pv, 1e-9) * 100.0 <= PIVOT_SAME_PCT), None)
+            if _dup is not None:
+                _dup['also_reads_as'].append(_nm)
+                continue
             patterns.append({
                 'name': _nm,
                 'pivot': float(round(_pv, 2)),
                 'dist_pct': float(round((latest['close'] - _pv) / _pv * 100.0, 2)),
                 'bars_ago': int(latest['bar'] - _bar),
                 'last_seen': _dt,
+                'also_reads_as': [],
             })
 
         cons_pivot = amb_pct = cons_dist = None
