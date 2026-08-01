@@ -285,6 +285,94 @@ def detect_vcp(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray,
     return out
 
 
+def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
+                           bLenB=325, max_bases=4, min_bars=20, dedupe_pct=1.5,
+                           seed_lookback=40):
+    """Track several candidate bases at once and return those still alive on the last bar.
+
+    The scanner carries exactly ONE base, so when a tighter structure forms inside or after
+    an older one it has to choose, and it keeps the older. Measured against MarketSmith
+    progressions supplied for real tickers:
+
+      PBI   truth switches on 4/2 to a newer base, pivot 11.62 (2/18/26 high). We hold the
+            older 13.11 throughout. Capping base length to 160 bars yields 11.62 exactly -
+            the newer base IS there, we simply never adopt it.
+      GIII  truth base is 33 bars; ours runs 188 back to Oct 2025, which drags bLow from
+            24.61 and corrupts cupMid, bDepPct and the cupH_allowed guard.
+
+    But length caps are the wrong instrument: FTNT's base legitimately spans 2/18/2025 to
+    5/11/2026 (~15 months) and MarketSmith keeps that left high the whole way, so `bLenB 90`
+    would fix PBI and destroy FTNT. The distinction is not age - it is that a NEWER, tighter
+    base can coexist with an older one, and both are defensible readings. Webster calls this
+    the Microsoft problem ("where you used to see a consolidation, now you see two bases")
+    and lists it as a later phase.
+
+    So: track them concurrently and report each with its own pivot, rather than forcing one
+    to win. Runs standalone over the series, so it cannot perturb the base state machine -
+    its output feeds only the layered `patterns` list.
+    """
+    n = len(highs)
+    live = []          # each: dict(start, top, low, count)
+    for i in range(n):
+        conf = i - pivLen
+        # A confirmed pivot high that tops the prior `seed_lookback` bars seeds a base.
+        # Webster's primary rule is a 13-week (65-bar) high, but that is the rule for the
+        # ONE base he draws; the alternatives MarketSmith also shows sit below it. Measured
+        # against the supplied progressions, 65 bars misses FTNT's true left high entirely
+        # and 40 recovers PBI, FTNT, GIII and CLMT - all four base pivots.
+        if conf >= 0 and conf in pivot_highs:
+            ph = highs[conf]
+            w0 = max(0, conf - seed_lookback)
+            if conf > w0 and ph >= np.max(highs[w0:conf]):
+                if not any(abs(ph - b['top']) / max(b['top'], 1e-9) * 100.0 <= dedupe_pct
+                           for b in live):
+                    live.append({'start': conf, 'top': float(ph),
+                                 'low': float(np.min(lows[conf:i + 1])), 'count': i - conf})
+                    live.sort(key=lambda b: -b['start'])
+                    del live[max_bases:]
+        for b in live:
+            b['count'] += 1
+            if highs[i] > b['top'] and highs[i] <= b['top'] * 1.05:
+                b['top'] = float(highs[i])
+            if lows[i] < b['low'] and lows[i] >= b['top'] * (1.0 - bdF):
+                b['low'] = float(lows[i])
+        live = [b for b in live
+                if lows[i] >= b['top'] * (1.0 - bdF)
+                and b['count'] <= bLenB
+                and closes[i] <= b['top'] * 1.40]
+    return [b for b in live if b['count'] >= min_bars]
+
+
+def classify_candidate_base(highs, lows, top, low, count, end, lag=8):
+    """Name a candidate base and give its pivot.
+
+    Mirrors the depth/length gates in the main loop (Cup bands by length, Flat Base by
+    recent depth, Consolidation as the fallback). Cup+Handle is deliberately NOT decided
+    here - the handle needs the volume and drift tests that only the main loop computes, so
+    a candidate that would be a Cup+Handle is reported as a Cup at the base pivot, which is
+    the conservative (higher) buy point.
+    """
+    if top <= 0 or count < 20:
+        return None, None
+    dep = (top - low) / top * 100.0
+    rw = max(20, min(count, 65))
+    s = max(0, end - rw + 1)
+    rTop = float(np.max(highs[s:end + 1]))
+    rLow = float(np.min(lows[s:end + 1]))
+    rDep = (rTop - rLow) / rTop * 100.0 if rTop > 0 else 0.0
+    e = end + 1 - lag
+    pivot = float(np.max(highs[max(0, end - count):e])) if e > max(0, end - count) else top
+    if rDep <= 20.0 and 20 <= count <= 130:
+        return 'Flat Base', pivot
+    if (25 <= count <= 130 and 8.0 <= dep <= 55.0) or \
+       (130 < count <= 250 and 15.0 <= dep <= 45.0) or \
+       (count > 250 and 20.0 <= dep <= 50.0):
+        return 'Cup', pivot
+    if count > 200 or 5.0 <= dep <= 35.0:
+        return 'Consolidation', pivot
+    return None, None
+
+
 def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series = None):
     """
     Scan a single ticker parquet file for patterns & metrics matching drw_pattern_scanner.pine.
@@ -1174,6 +1262,29 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'bars_ago': int(latest['bar'] - _bar),
                 'last_seen': _dt,
                 'also_reads_as': [],
+            })
+
+        # Concurrent candidate bases - the structures the single-base machine passed over.
+        # Matched on PIVOT, not name: the whole point is a different buy point, and the
+        # candidate often carries the same label as the primary (PBI reads Flat Base at both
+        # 13.11 and 11.62). Keying on name silently dropped exactly the cases this is for.
+        for _cb in detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=pivLen,
+                                          bdF=bdF, bLenB=bLenB):
+            _nm, _pv = classify_candidate_base(highs, lows, _cb['top'], _cb['low'],
+                                               _cb['count'], n - 1)
+            if not _nm or not _pv:
+                continue
+            if any(abs(p['pivot'] - _pv) / max(_pv, 1e-9) * 100.0 <= PIVOT_SAME_PCT
+                   for p in patterns):
+                continue
+            patterns.append({
+                'name': _nm,
+                'pivot': float(round(_pv, 2)),
+                'dist_pct': float(round((latest['close'] - _pv) / _pv * 100.0, 2)),
+                'bars_ago': 0,
+                'last_seen': latest['date'],
+                'also_reads_as': [],
+                'alt_base': True,          # from a concurrent base, not the primary one
             })
 
         cons_pivot = amb_pct = cons_dist = None
