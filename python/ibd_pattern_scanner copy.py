@@ -123,6 +123,12 @@ VCP_PARAMS = {}
 # more than this. Below it the two levels are close enough that the choice is immaterial.
 PIVOT_AMBIGUITY_PCT = 5.0
 
+# How far back to gather layered readings. A base is identified long before it breaks out
+# (Cup Without Handle a median 66 bars ahead, Flat Base 86), and the breakout bar is where
+# the instantaneous label is least reliable, so the recent window is more informative than
+# the final bar alone. 20 bars = about a month.
+PATTERN_WINDOW_BARS = 20
+
 
 def detect_vcp(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray,
                pivot_highs: dict, pivot_lows: dict, pivLen: int = 5,
@@ -643,7 +649,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # Tighter W span: 85 bars let unrelated swing pairs far apart in time qualify,
             # which produced most of the Double Bottom false positives.
             dbMaxBars = 55
-            if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0) and len(aHP_list) >= 2 and len(aLP_list) >= 2:
+            # Guard relaxed to `not isLikelyConsolidation` only, so the W is evaluated on its
+            # own merits for the layered output below. The Flat Base / Cup+Handle exclusions
+            # are re-applied immediately after, leaving isDB itself bit-for-bit unchanged.
+            if isBase and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0) and len(aHP_list) >= 2 and len(aLP_list) >= 2:
                 for hp_i in range(min(5, len(aHP_list) - 1)):
                     for hp_j in range(hp_i + 1, min(len(aHP_list), hp_i + 5)):
                         sH_t, sH = aHP_list[hp_i]
@@ -688,12 +697,56 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     if isDB:
                         break
                         
+            # --- LAYERED READINGS -------------------------------------------------------
+            # Independent verdicts, before the priority chain discards all but one.
+            #
+            # The detectors are written mutually exclusive (isCup requires `not isCupH`,
+            # isFlatBase requires `not isCupH`, isDB requires neither, isConsolidation
+            # requires none of the others), so a base can never register two readings even
+            # when two are defensible. Webster is explicit that it often is - "we could both
+            # look at the same chart and see it differently, and Bill would agree we were
+            # both right" - and the ambiguity is measurable: IBD's own Depth and Length
+            # recover their own labels only 43.6% of the time.
+            #
+            # Judged independently, 78 of 165 bases carry two readings, 36 carry three.
+            # Reporting the runner-up costs nothing - it is already computed.
+            isDB_ind = isDB
+            dbMiddlePivot_ind = dbMiddlePivot
+            if isFlatBase or isCupH:          # restore the original isDB semantics exactly
+                isDB = False
+                dbMiddlePivot = None
+
+            isFlat_ind = isBase and (rDepPct <= 20.0) and (20 <= bCount <= 130) and not isLikelyConsolidation
+            if isBase and not isFlat_ind:
+                _t25 = np.max(highs[max(0, end_r_idx - 24): end_r_idx + 1])
+                _l25 = np.min(lows[max(0, end_r_idx - 24): end_r_idx + 1])
+                _d25 = (_t25 - _l25) / _t25 * 100.0 if _t25 > 0 else 0.0
+                isFlat_ind = (_d25 <= 15.0) and (20 <= bCount <= 300)
+            isCup_ind = False
+            if isBase and bTop and bLow:
+                if (25 <= bCount <= 130):
+                    isCup_ind = (bDepPct is not None and 8.0 <= bDepPct <= 55.0) and not isLikelyConsolidation
+                elif (130 < bCount <= 250):
+                    isCup_ind = (bDepPct is not None and 15.0 <= bDepPct <= 45.0) and not isLikelyConsolidation
+                elif (bCount > 250):
+                    isCup_ind = (bDepPct is not None and 20.0 <= bDepPct <= 50.0
+                                 and not (bDepPct >= 30.0 and rDepPct < 25.0))
+
             # 7. Consolidation: Long bases (> 250 daily bars) or general consolidation.
             # A clear U-shape recovery strongly suggests Cup, not Consolidation.
             isConsolidation = isBase and (
                 (bCount > 200 and not isCup and not isCupH) or
                 (bDepPct is not None and 5.0 <= bDepPct <= 35.0 and not isCup and not isCupH and not isFlatBase and not isDB and not isAscendingBase)
             )
+
+            # Independent Consolidation verdict + the base-top pivot the bTop-family
+            # patterns all price off (same 8-bar lag as pivRef below, so they agree).
+            isConsol_ind = isBase and (
+                bCount > 200 or (bDepPct is not None and 5.0 <= bDepPct <= 35.0)
+            )
+            _pe = i + 1 - 8
+            basePivot = (float(np.max(highs[bStart:_pe]))
+                         if (isBase and bStart is not None and _pe > bStart) else bTop)
 
             # Determine active base pattern name BEFORE breakout check (align with final pName priority)
             currPName = 'Base'
@@ -1024,6 +1077,18 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'upsideReversal': upsideReversal,
                 'rsNH': bool(rs_nh_any[i]),
                 'isCupH': isCupH,
+                # Layered readings for this bar: (name, pivot). Each pattern prices off a
+                # DIFFERENT level, so the pivot travels with the label - Cup+Handle buys the
+                # handle high, Double Bottom the middle peak, the rest the base high.
+                'altPat': tuple(
+                    (nm, pv) for nm, ok, pv in (
+                        ('Cup+Handle', isCupH, cupHandlePivot),
+                        ('Dbl Bottom', isDB_ind, dbMiddlePivot_ind),
+                        ('Flat Base', isFlat_ind, basePivot),
+                        ('Cup', isCup_ind, basePivot),
+                        ('Consolidation', isConsol_ind, basePivot),
+                    ) if ok and pv
+                ),
                 # VCP sub-pattern state, so the contraction sequence can be painted as it forms
                 'vcpReady': bool(vcp['ready'][i]),
                 'vcpActive': bool(vcp['active'][i]),
@@ -1065,6 +1130,35 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         latest_pivot = None
         if latest['distPct'] is not None and (1.0 + latest['distPct'] / 100.0) != 0:
             latest_pivot = latest['close'] / (1.0 + latest['distPct'] / 100.0)
+
+        # --- layered readings over the formation window --------------------------------
+        # A base is identified well before it breaks out - a Cup Without Handle a median 66
+        # bars ahead, a Flat Base 86 - because their pivot is the base high, which exists
+        # from the start. Only Cup+Handle is late (median 6 bars), since the handle is the
+        # last thing to form. But the breakout bar is where the label is LEAST stable: the
+        # trailing handle window swallows the thrust and 9 of 15 lost labels flip into
+        # Cup+Handle exactly there. So collect what the base was read as across the window,
+        # not just on the final bar, and rank by specificity.
+        PATTERN_RANK = {'Cup+Handle': 0, 'Dbl Bottom': 1, 'Flat Base': 2,
+                        'Cup': 3, 'Consolidation': 4}
+        layered = {}
+        for _st in history_state[-(PATTERN_WINDOW_BARS + 1):]:
+            if not _st.get('pOn'):
+                continue
+            for _nm, _pv in _st.get('altPat', ()):
+                prev = layered.get(_nm)
+                if prev is None or _st['bar'] >= prev[1]:
+                    layered[_nm] = (_pv, _st['bar'], _st['date'])
+        patterns = []
+        for _nm in sorted(layered, key=lambda k: PATTERN_RANK.get(k, 9)):
+            _pv, _bar, _dt = layered[_nm]
+            patterns.append({
+                'name': _nm,
+                'pivot': float(round(_pv, 2)),
+                'dist_pct': float(round((latest['close'] - _pv) / _pv * 100.0, 2)),
+                'bars_ago': int(latest['bar'] - _bar),
+                'last_seen': _dt,
+            })
 
         cons_pivot = amb_pct = cons_dist = None
         if latest['inBase'] and bStart is not None:
@@ -1109,6 +1203,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'shakeout_entry': bool(latest['shakeoutEntry']),
                 'upside_reversal': bool(latest['upsideReversal']),
                 'rs_nh': bool(latest['rsNH']),
+                # --- layered readings: every defensible pattern for this base, ranked by
+                # specificity, each with the pivot IT prices off. patterns[0] is the primary.
+                'patterns': patterns,
+                'pattern_count': len(patterns),
                 # --- buy point (see the note above the computation) ---
                 'pivot': float(round(latest_pivot, 2)) if latest_pivot else None,
                 'conservative_pivot': float(round(cons_pivot, 2)) if cons_pivot else None,
