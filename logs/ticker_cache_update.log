@@ -1,0 +1,209 @@
+
+1 Failed download:
+['AD']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+$AMTR: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AMTR']: possibly delisted; no price data found  (period=5d)
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$KORE: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['KORE']: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NSA']: possibly delisted; no price data found  (period=5d)
+$SACC: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['SACC']: possibly delisted; no price data found  (period=5d)
+$TMHC: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+$VIASP: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['VIASP']: possibly delisted; no price data found  (period=5d)
+$WUCT: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['WUCT']: possibly delisted; no price data found  (period=5d)
+$APLS: possibly delisted; no timezone found
+HTTP Error 401: {"finance":{"result":null,"error":{"code":"Unauthorized","description":"Invalid Crumb"}}}
+$AGH: possibly delisted; no timezone found
+$ALCYU: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+HTTP Error 401: {"finance":{"result":null,"error":{"code":"Unauthorized","description":"User is unable to access this feature - https://bit.ly/yahoo-finance-api-feedback"}}}
+$APAD: possibly delisted; no timezone found
+$APADU: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+
+13 Failed downloads:
+['AMWD', 'ACLX', 'AGAE', 'ALEX', 'AL']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['APLS', 'AGH', 'ALCYU', 'ALTS', 'APAD', 'APADU', 'AHH']: possibly delisted; no timezone found
+['ALCY']: TypeError("argument of type 'NoneType' is not iterable")
+$BACQ: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$BLFY: possibly delisted; no timezone found
+$ASGN: possibly delisted; no timezone found
+
+9 Failed downloads:
+['BK', 'BITF', 'BACQU', 'ATON', 'BHAT', 'BBU']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['BACQ']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+['BLFY', 'ASGN']: possibly delisted; no timezone found
+$CLSD: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$CAEP: possibly delisted; no timezone found
+$BTM: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$CHAC: possibly delisted; no timezone found
+$CCLDO: possibly delisted; no timezone found
+
+11 Failed downloads:
+['BXMX', 'COEP', 'CFLT', 'CHACU', 'CMBM']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['CLSD', 'CGCT']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+['CAEP', 'BTM', 'CHAC', 'CCLDO']: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$DAWN: possibly delisted; no timezone found
+$CTRA: possibly delisted; no timezone found
+$CSGS: possibly delisted; no timezone found
+$EICC: possibly delisted; no timezone found
+$CTLP: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+$DCOMP: possibly delisted; no timezone found
+$EB: possibly delisted; no timezone found
+
+17 Failed downloads:
+['EKSO', 'EHAB', 'ECCX', 'DIAX', 'CUK', 'ECCW', 'DHIL', 'DCOMG']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['DTCK', 'DAWN', 'CTRA', 'CSGS', 'EICC', 'CTLP', 'DVS', 'DCOMP', 'EB']: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+$EWCZ: possibly delisted; no timezone found
+$ETHM: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+$ESHA: possibly delisted; no timezone found
+$FIHL: possibly delisted; no timezone found
+$FTEL: possibly delisted; no timezone found
+$FCRX: possibly delisted; no timezone found
+$FCO: possibly delisted; no timezone found
+$FRGE: possibly delisted; no timezone found
+
+18 Failed downloads:
+['EXPI', 'EM', 'ETHMU', 'FOLD', 'EXAS', 'ESGL', 'FORA', 'FARM']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['FFWM', 'EWCZ', 'ETHM', 'ETHZ', 'ESHA', 'FIHL', 'FTEL', 'FCRX', 'FCO', 'FRGE']: possibly delisted; no timezone found
+$HSPT: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$GMGI: possibly delisted; no timezone found
+$GLTO: possibly delisted; no timezone found
+$GDEN: possibly delisted; no timezone found
+
+8 Failed downloads:
+['HOLX', 'GLPG', 'GLDD', 'GAINN']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['HSPT']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+['GMGI', 'GLTO', 'GDEN']: possibly delisted; no timezone found
+$HYAC: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01) (Yahoo error = "No data found, symbol may be delisted")
+$HTBK: possibly delisted; no timezone found
+
+11 Failed downloads:
+['ITRM', 'JMG', 'IROQ', 'IINN', 'JFBR', 'IOBT', 'KFS', 'IMG', 'KLTO']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['HYAC']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01) (Yahoo error = "No data found, symbol may be delisted")
+['HTBK']: possibly delisted; no timezone found
+$LOKV: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$LNKB: possibly delisted; no timezone found
+
+7 Failed downloads:
+['KZR', 'MAXN', 'MBCN', 'LITM', 'LGCB']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['LOKV']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+['LNKB']: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+$MEG: possibly delisted; no timezone found
+$MLAC: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$NQP: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+
+10 Failed downloads:
+['NOM', 'MYNZ', 'MPX', 'MRCC', 'MIGI']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['NGD', 'MEG', 'NQP', 'NBY']: possibly delisted; no timezone found
+['MLAC']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$OCCIO: possibly delisted; no timezone found
+$PELIU: possibly delisted; no timezone found
+$PKST: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+
+10 Failed downloads:
+['OTH', 'ONTF', 'NXJ', 'PELI', 'OAKU', 'OAKUU']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['OCCIO', 'PELIU', 'PKST', 'OS']: possibly delisted; no timezone found
+$QVCGA: possibly delisted; no timezone found
+$QVCC: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$RCB: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+$RAAQ: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+
+14 Failed downloads:
+['RILYK', 'PSTG', 'RVYL', 'RGNT', 'QVCD', 'RWAYZ', 'RNAM', 'RAPT']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['QVCGA', 'QVCC', 'QVCGP', 'RCB', 'QIPT']: possibly delisted; no timezone found
+['RAAQ']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$SGMO: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$SAVA: possibly delisted; no timezone found
+$SEMR: possibly delisted; no timezone found
+$SEE: possibly delisted; no timezone found
+
+8 Failed downloads:
+['SBLX', 'SGN', 'SLNO', 'SNCY']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['SGMO']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+['SAVA', 'SEMR', 'SEE']: possibly delisted; no timezone found
+$SVA: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$TIRX: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$UBFO: possibly delisted; no timezone found
+$TERN: possibly delisted; no timezone found
+$TBH: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$TBMCR: possibly delisted; no timezone found
+$TICKER: possibly delisted; no timezone found
+$TFSA: possibly delisted; no timezone found
+
+17 Failed downloads:
+['TSE', 'UDMY', 'SWKH', 'TBMC', 'TPH', 'TIVC', 'STKL', 'TGNA']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['SVA', 'SVAC', 'TBH']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+['TIRX', 'UBFO', 'TERN', 'TBMCR', 'TICKER', 'TFSA']: possibly delisted; no timezone found
+$WLAC: possibly delisted; no timezone found
+$VCIC: possibly delisted; no timezone found
+$VACH: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$VBIX: possibly delisted; no timezone found
+$VCICU: possibly delisted; no timezone found
+
+12 Failed downloads:
+['VVPR', 'UOKA', 'UHG', 'VTYX', 'WLACU', 'VRE', 'ULY']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['WLAC', 'VCIC', 'VBIX', 'VCICU']: possibly delisted; no timezone found
+['VACH']: possibly delisted; no price data found  (1d 1927-08-26 -> 2026-08-01)
+$XWIN: possibly delisted; no timezone found
+$ZBAI: possibly delisted; no timezone found
+
+4 Failed downloads:
+['ZENV', 'XTKG']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+['XWIN', 'ZBAI']: possibly delisted; no timezone found
+🔄 Starting ticker_cache update for 7,257 tickers (Target earliest date: 2024-06-04)...
+  • 5,824 tickers with complete cache (incremental 5d update)
+  • 1,433 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 5,824 tickers (498 saved successfully)...
+    Batch 10: Processed 1,000 / 5,824 tickers (997 saved successfully)...
+    Batch 15: Processed 1,500 / 5,824 tickers (1,497 saved successfully)...
+    Batch 20: Processed 2,000 / 5,824 tickers (1,997 saved successfully)...
+    Batch 25: Processed 2,500 / 5,824 tickers (2,497 saved successfully)...
+    Batch 30: Processed 3,000 / 5,824 tickers (2,996 saved successfully)...
+    Batch 35: Processed 3,500 / 5,824 tickers (3,496 saved successfully)...
+    Batch 40: Processed 4,000 / 5,824 tickers (3,995 saved successfully)...
+    Batch 45: Processed 4,500 / 5,824 tickers (4,495 saved successfully)...
+    Batch 50: Processed 5,000 / 5,824 tickers (4,994 saved successfully)...
+    Batch 55: Processed 5,500 / 5,824 tickers (5,492 saved successfully)...
+    Batch 59: Processed 5,824 / 5,824 tickers (5,815 saved successfully)...
+  ✓ Updated 5,815 / 5,824 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 1,433 tickers (432 saved successfully)...
+    Batch 10: Processed 1,000 / 1,433 tickers (886 saved successfully)...
+    Batch 15: Processed 1,433 / 1,433 tickers (1,264 saved successfully)...
+  ✓ Created/Backfilled 1,264 / 1,433 ticker parquets.
+✅ Ticker cache update finished in 194.45 seconds.

@@ -20,9 +20,25 @@ CACHE_DIR = REPO_DIR / "ticker_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 BENCHMARKS = ['SPY', 'QQQ', 'IWM', 'DIA', 'VTI']
+# ETFs the IBD Live tab references that aren't core benchmarks but should be kept current too.
+WATCHLIST_ETFS = ['VOO', 'XLF', 'TBT', 'XBI', 'RSP', 'MUZ', 'JMKE']
+# Sector & industry ETFs (GICS Select Sector SPDRs + key industry/thematic funds the show follows).
+SECTOR_ETFS = [
+    'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY',  # Select Sector SPDRs
+    'SMH', 'SOXX', 'IGV',            # semiconductors / software
+    'XBI', 'IBB', 'IHI',            # biotech / health care
+    'KRE',                          # regional banks
+    'XOP', 'OIH',                   # energy producers / oil services
+    'ITA', 'XHB', 'IYT',            # aerospace-defense / homebuilders / transports
+    'XRT',                          # retail
+    'URA', 'TAN',                   # uranium / clean energy
+    'VNQ',                          # REITs
+    'KWEB',                         # China internet
+    'GLD', 'SLV', 'GDX', 'XME', 'EWZ',  # commodities / metals / emerging markets
+]
 
 def get_target_tickers():
-    tickers = set(BENCHMARKS)
+    tickers = set(BENCHMARKS + WATCHLIST_ETFS + SECTOR_ETFS)
 
     # Add tickers from rs_stocks.csv if present
     rs_file = REPO_DIR / "output" / "rs_stocks.csv"
