@@ -2,8 +2,9 @@
 Pivot-equivalence evaluation of the committed scanner.
 
 Rationale: for trading, the label only matters insofar as it sets the BUY POINT.
-Flat Base, Consolidation, Cup Without Handle and Ascending Base all pivot off the base
-top, so confusing them with each other costs nothing - same entry price. Two patterns
+Flat Base, Consolidation and Cup Without Handle all pivot off the base top, so confusing
+them with each other costs nothing - same entry price. Ascending Base is excluded
+entirely (rare, 5/177 ground truth, detection disabled in the scanner). Two patterns
 carry a genuinely different pivot and must be identified correctly:
 
     Double Bottom   -> pivot is the middle peak of the W, not the base top
@@ -25,12 +26,10 @@ sys.path.insert(0, str(ROOT / "python"))
 from fast_eval import FastEval, N_EVENTS   # noqa: E402
 
 # Ground-truth classes that share the base-top pivot.
-STD_TRUTH_WITH_ASC = {'Flat Base', 'Consolidation', 'Cup Without Handle', 'Ascending Base'}
-STD_TRUTH_NO_ASC = {'Flat Base', 'Consolidation', 'Cup Without Handle'}
+STD_TRUTH = {'Flat Base', 'Consolidation', 'Cup Without Handle'}
 
 # Detected labels that resolve to the base-top pivot.
-STD_DET_WITH_ASC = {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup', 'Base', 'Ascending Base'}
-STD_DET_NO_ASC = {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup', 'Base'}
+STD_DET = {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup', 'Base'}
 
 FOCUS = {'Double Bottom': 'Dbl Bottom', 'Cup With Handle': 'Cup+Handle'}
 
@@ -78,15 +77,12 @@ def main():
     print(f"scanner: committed baseline, strict-label score {res['exact']}/{N_EVENTS} "
           f"({res['exact']/N_EVENTS*100:.1f}%)")
 
-    a = score(df, STD_TRUTH_WITH_ASC, STD_DET_WITH_ASC,
-              "A. Ascending Base INSIDE the shared-pivot group")
-    score(df, STD_TRUTH_NO_ASC, STD_DET_NO_ASC,
-          "B. Ascending Base scored separately")
+    score(df, STD_TRUTH, STD_DET, "Pivot-equivalence scoring")
 
     # ---- empirically check the premise: does confusing StdPivot patterns keep the pivot? ----
     full = pd.read_csv(ROOT / 'python' / 'breakaway_gap_accuracy_results.csv')
-    full['t'] = full['csv_base_type'].apply(lambda x: bucket_truth(x, STD_TRUTH_WITH_ASC))
-    full['p'] = full['detected_pattern'].apply(lambda x: bucket_det(x, STD_DET_WITH_ASC))
+    full['t'] = full['csv_base_type'].apply(lambda x: bucket_truth(x, STD_TRUTH))
+    full['p'] = full['detected_pattern'].apply(lambda x: bucket_det(x, STD_DET))
     e = full.dropna(subset=['pivot_err_pct'])
 
     within = e[(e['t'] == 'StdPivot') & (e['p'] == 'StdPivot') &

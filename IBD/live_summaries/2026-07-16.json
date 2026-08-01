@@ -1,0 +1,20 @@
+{
+  "date": "2026-07-16",
+  "market_summary": "Market 'in repair' — NASDAQ trying to reclaim 50-day. TSMC announces +$100B US investment, UNH +56% EPS blowout. Semis showing tentative signs of life but breadth still narrow. Panel advocating patience: small probing positions only, wait for follow-through day. Defensive rotation still in place (healthcare, defense, financials leading).",
+  "panel": ["Ken Shreve (host)", "Arnie Gutierrez", "Justin Nielsen", "Ed Carson"],
+  "exposure": "Low — SwingTrader <20%, Leaderboard reduced, all panelists cautious",
+  "tickers": ["TSMC","UNH","MU","SNDK","NVDA","ASML","SMH","LLY","JNJ","HON","RTX","LMT","JPM","BLK","AAPL","GOOGL","META","TSLA","DELL","CRDO","FTNT","HNGE","XBI","XOM","CVX","DINO","AMAT","LRCX"],
+  "ticker_details": {
+    "TSMC": {"actionability": "Leading — actionable on pullback", "technical_action": "Strong, leading chip rally", "story": "+$100B US investment — second major expansion"},
+    "UNH": {"actionability": "Actionable", "technical_action": "+56% EPS, strong guidance raise", "story": "UnitedHealth crushing estimates — major rotation beneficiary"},
+    "MU": {"actionability": "Actionable on 50-day bounce", "technical_action": "Bouncing from 50-day, TSMC spend benefits memory", "story": "Memory supercycle thesis intact"},
+    "LLY": {"actionability": "Hold — buy on 21-day pullback", "technical_action": "Extended but extremely strong RS line", "story": "Obesity drug franchise leader"},
+    "ASML": {"actionability": "Hold — defending 50-day", "technical_action": "Defending key moving average", "story": "Lithography monopoly — best in breed"},
+    "HNGE": {"actionability": "Actionable — Leaderboard winner", "technical_action": "Extremely strong RS since breakout, 2-3% market share", "story": "Cloud fitness platform — early growth stage"},
+    "XBI": {"actionability": "Watch — testing 21-day", "technical_action": "3/4 position on Leaderboard, testing 21-day support", "story": "Biotech ETF — sector rotation play"}
+  },
+  "sectors": {
+    "leading": ["Healthcare (UNH, LLY, JNJ)", "Defense (RTX, LMT, HON)", "Financials (JPM, BLK)", "Energy (XOM, CVX, DINO)", "Cybersecurity (FTNT)"],
+    "lagging": ["AI Hardware (TSLA, META)", "Autos (TSLA)"]
+  }
+}

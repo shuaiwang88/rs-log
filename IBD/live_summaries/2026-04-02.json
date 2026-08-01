@@ -1,0 +1,347 @@
+{
+  "date": "2026-04-02",
+  "source_file": "/Users/sw/Documents/Zoom/2026-04-02 10.59.28 IBD Live/meeting_saved_closed_caption.txt",
+  "market_summary": "Benchmark Movements & Technical Levels: Comprehensive technical review of the NASDAQ Composite, S&P 500, Dow Jones Industrial Average, Russell 2000, and RSP (Equal-Weight S&P 500) relative to key moving averages (21-day EMA, 50-day SMA, 200-day SMA, and 10-week lines). Evaluation of the IBD Power Trend status and Follow-Through Day (FTD) signals.",
+  "tickers": [
+    "FAQ",
+    "TJX",
+    "SPX",
+    "USO",
+    "SM",
+    "GWH",
+    "BYD",
+    "BYDF",
+    "EV",
+    "STLA",
+    "PYD",
+    "LEAP",
+    "AMZN",
+    "GSAT",
+    "AYI",
+    "NBA",
+    "LNG",
+    "ENSG",
+    "GSK",
+    "ROS",
+    "TGX",
+    "GLW",
+    "COHR",
+    "LUNR",
+    "NASA",
+    "IPO",
+    "CF",
+    "CW",
+    "ITA",
+    "UFO",
+    "AOL",
+    "AAOI",
+    "VSAT",
+    "CME",
+    "CBOE",
+    "VIX",
+    "HTR",
+    "MRX",
+    "PW",
+    "GE",
+    "DRS",
+    "UI",
+    "JPM",
+    "GEV",
+    "TE",
+    "TER",
+    "SNDK",
+    "SNDX",
+    "SN",
+    "DK",
+    "WDC",
+    "SQM",
+    "FTI",
+    "CTVA",
+    "WAB",
+    "SMT"
+  ],
+  "ticker_details": {
+    "FAQ": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "TJX": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SPX": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "USO": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SM": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "GWH": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "BYD": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "BYDF": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "EV": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "STLA": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "PYD": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "LEAP": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "AMZN": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "GSAT": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "AYI": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "NBA": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "LNG": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "ENSG": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "GSK": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "ROS": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "TGX": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "GLW": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "COHR": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "LUNR": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "NASA": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "IPO": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "CF": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "CW": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "ITA": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "UFO": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "AOL": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "AAOI": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "VSAT": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "CME": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "CBOE": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "VIX": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "HTR": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "MRX": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "PW": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "GE": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "DRS": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "UI": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "JPM": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "GEV": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "TE": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "TER": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SNDK": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SNDX": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SN": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "DK": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "WDC": {
+      "actionability": "Actionable",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SQM": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "FTI": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "CTVA": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "WAB": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    },
+    "SMT": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing key moving averages (21-day/50-day/200-day line or 10-week support); base consolidation or breakout pattern",
+      "story": "Fundamental growth story, quarterly earnings beat/acceleration, revenue expansion, or sector catalyst discussed on show"
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": []
+}

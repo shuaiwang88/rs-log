@@ -1,0 +1,23 @@
+{
+  "date": "2026-07-20",
+  "market_summary": "Range-bound frustration. Scott St. Clair guest: 'Very difficult psychologically' — quietly built shorts to 50% of portfolio through the show. Two-tier market persists: Dow at all-time highs, NASDAQ struggling below 50-day. Gap-up Monday as exit opportunity. Defense, energy, financials leading; AI/memory broken.",
+  "panel": ["Ed Carson", "Justin Nielsen", "Scott St. Clair (guest)"],
+  "exposure": "Scott ~50% short by end of show — shorted META, MU, TSLA, SOXL, KORU. Chris Gessel fully hedged on memory. SwingTrader very low.",
+  "tickers": ["SNDK","MU","NVDA","TSLA","META","GOOGL","AAPL","DOW","RSP","ASML","JPM","BLK","LLY","HON","RTX","LMT","XOM","CVX","RIVN","BYD","BILL","RKLB","KNSA","CRDO","DELL","GLW","SOXL","KORU","MUZ","SOXX","SMH"],
+  "ticker_details": {
+    "SNDK": {"actionability": "Avoid", "technical_action": "Up 27% then down 10% — massive volatility", "story": "SanDisk post-IPO wild swings"},
+    "TSLA": {"actionability": "Short (Scott — reluctant)", "technical_action": "Bad news failure despite strong deliveries", "story": "90% of valuation based on things not happening yet (Ed Carson)"},
+    "META": {"actionability": "Short (Scott)", "technical_action": "Breaking down from highs", "story": "Looks tired, very tired"},
+    "GOOGL": {"actionability": "Watch — potential short", "technical_action": "Heavy selloff, negative cash flow", "story": "CapEx concerns but 'it's Google' — Scott unsure about shorting"},
+    "JPM": {"actionability": "Actionable", "technical_action": "Mike Webster bought on outside day reversal", "story": "Banking earnings positive"},
+    "LLY": {"actionability": "Hold — buy on 21-day pullback", "technical_action": "Extended but strong RS line, ATR <4%", "story": "Obesity drug franchise"},
+    "RIVN": {"actionability": "Tradable but risky", "technical_action": "Up 12%, breaking resistance since February", "story": "Auto business extremely difficult"},
+    "RKLB": {"actionability": "Avoid — needs new base", "technical_action": "Up 62% from base", "story": "Rocket Lab — space"},
+    "KNSA": {"actionability": "Actionable — hold", "technical_action": "Very strong chart pattern", "story": "Kiniksa Pharmaceuticals"}
+  },
+  "sectors": {
+    "leading": ["Defense (RTX, LMT, HON)", "Energy (XOM, CVX)", "Financials (JPM, BLK)", "Value/Dow (AAPL, DOW)", "Healthcare (LLY, KNSA)"],
+    "lagging": ["AI/Memory (SNDK, MU, NVDA)", "Semis (SOXL, SMH)", "Growth Tech (META, GOOGL, TSLA)", "Enterprise Software (BILL, GLW)", "Space (RKLB)"]
+  },
+  "guest": "Scott St. Clair — US Investing Championship competitor, swing trader"
+}

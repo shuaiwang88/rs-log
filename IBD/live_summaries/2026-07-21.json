@@ -1,0 +1,24 @@
+{
+  "date": "2026-07-21",
+  "market_summary": "Heavy distribution day. David Ryan guest: 'Don't buy the dip — like 2000.' Two-tier market: growth/AI severely broken while defensives/value at highs. NASDAQ below 50-day. INTC +500% EPS ignored — classic bearish signal. Fed Warsh meeting, oil climbing, 10-year rising. Cash is king.",
+  "panel": ["Ed Carson", "Ken Shreve", "Justin Nielsen", "David Ryan (guest)"],
+  "exposure": "Very low — Ryan actively shorting, all panelists in heavy cash, Leaderboard significantly reduced",
+  "tickers": ["MXL","MRVL","WDC","CRDO","NBIS","DELL","MU","SANM","INTC","TSLA","GOOGL","META","AMZN","NVDA","ANET","CDNS","AVGO","SMH","WELL","KO","JNJ","NUE","STLD","DINO","XOM","CVX","GE","RTX","HWM","RSP","IVE","JPM","BLK"],
+  "ticker_details": {
+    "NBIS": {"actionability": "Short (Ryan)", "technical_action": "Rallied to 50-day and failed — Ryan actively shorting with 20-25% gain", "story": "AI infrastructure — relief rally rejected"},
+    "MXL": {"actionability": "Avoid", "technical_action": "Down 47-50% from highs, all moving averages broken", "story": "MaxLinear — severely broken chart"},
+    "MRVL": {"actionability": "Avoid", "technical_action": "Down ~48%, failed at 50-day repeatedly", "story": "Marvell — needs months to build base"},
+    "WDC": {"actionability": "Avoid", "technical_action": "Down ~45% from $799", "story": "Western Digital — memory/AI storage broken"},
+    "DELL": {"actionability": "Exit (Ryan sold)", "technical_action": "Ryan exited his position", "story": "When character changes, change with it"},
+    "INTC": {"actionability": "Avoid — bearish signal", "technical_action": "+500% EPS ignored by market", "story": "Good news ignored = classic bearish"},
+    "SANM": {"actionability": "Avoid", "technical_action": "-17% on beat-and-raise", "story": "NEW REGIME — good earnings punished"},
+    "WELL": {"actionability": "Actionable", "technical_action": "+37% YTD, FFO +15%, dividend growth", "story": "Healthcare REIT — defensive winner"},
+    "JPM": {"actionability": "Actionable", "technical_action": "Strong uptrend", "story": "Financials leading the rotation"},
+    "DINO": {"actionability": "Actionable (extended)", "technical_action": "+53% YTD", "story": "Refiner — energy rotation winner"}
+  },
+  "sectors": {
+    "leading": ["Defense (LMT, RTX, HWM, GE)", "Financials (JPM, BLK)", "Healthcare/REITs (WELL, JNJ)", "Energy (DINO, XOM, CVX)", "Value (RSP, IVE)"],
+    "lagging": ["AI/Memory (MXL, MRVL, WDC)", "Semis (SMH, NVDA, AVGO)", "Growth/Software (META, GOOGL)", "Autos (TSLA)"]
+  },
+  "guest": "David Ryan — three-time US Investing Champion, O'Neil protégé"
+}

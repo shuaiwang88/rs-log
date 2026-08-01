@@ -1,0 +1,22 @@
+{
+  "date": "2026-07-29",
+  "source_file": "/Users/sw/Documents/Zoom/2026-07-29 10.27.55 IBD Live/IBD Live transcript_2026-07-29_11.13.10.txt",
+  "market_summary": "Market in correction ahead of 2PM Fed/Warsh. Oil +7% to $84 on Iran missiles hitting US base in Jordan. Guest Mark Minervini: hedged/short S&P, margin debt at records matching 2000/2008 tops, Aug/Sep seasonality. '43 years trading, never seen the market this split.' The 70% Rule: biggest winners from 4-5 sectors. 'Don't bottom-fish broken leaders. Hope is a f*****.'",
+  "tickers": ["CAT", "PG", "V", "STX", "SKHY", "KLAC", "TER", "BE", "CAKE", "APH", "HUM", "VRT", "ARCB", "BAND", "CHEF", "FLEX", "FTNT", "HOOD", "GRMN", "NUE", "STLD", "MS", "C", "EOG", "FANG", "TRGP", "KMI", "ATRO", "PAX", "NET", "VIK", "SNOW", "DDOG", "YOU", "YETI", "SBUX", "EBAY", "SNDK", "GKOS", "VCYT", "MDGL", "INDV", "ANRO", "COGT", "VSXY", "LLY", "JNJ", "MRK", "HSBC"],
+  "ticker_details": {
+    "CAKE": {"actionability": "Actionable", "technical_action": "Near all-time highs, hasn't tested 50-day in months", "story": "Cheesecake Factory: restaurant group leader. Dave and Minervini highlight."},
+    "PAX": {"actionability": "Actionable", "technical_action": "Bought Jun 24 from base, up 20%+, trimming 15-25% into strength", "story": "Minervini financing break-even stop before earnings. 2x implied volatility sizing."},
+    "NET": {"actionability": "Watchlist", "technical_action": "Holding up on right side of base, higher lows while tech crashes 50-80%", "story": "Cloudflare: tech resistor. Minervini waiting for confirmation turn-up, not bottom-fishing."},
+    "VIK": {"actionability": "Actionable", "technical_action": "Holding near 50-day on low volume despite oil spike", "story": "Viking Holdings: cruise leader. Minervini traded out into strength, added back."},
+    "YOU": {"actionability": "Watchlist", "technical_action": "IPO approaching all-time highs, earnings turned positive", "story": "Clear Secure: competing with TSA PreCheck. Minervini using Livermore IPO playbook. Needs tight base."},
+    "SNDK": {"actionability": "Watchlist", "technical_action": "Down massively, approaching large haircut", "story": "SanDisk: Minervini: 'I would never be buying here. The snapback rally is the gift to EXIT.'"},
+    "LLY": {"actionability": "Actionable", "technical_action": "Held with de-risked earnings cushion", "story": "Eli Lilly: held by Minervini and Ali Coram."},
+    "GRMN": {"actionability": "Watchlist", "technical_action": "Massive earnings breakout", "story": "Garmin: Ken Shreve: don't chase — wait 1-2 weeks for tight consolidation."},
+    "TER": {"actionability": "Watchlist", "technical_action": "+13% pre-market on strong results", "story": "Teradyne: robotics + chip equipment strength."},
+    "VRT": {"actionability": "Watchlist", "technical_action": "Gapped below 200-day on earnings", "story": "Vertiv: AI trade in severe trouble — strong numbers, broken chart."},
+    "BAND": {"actionability": "Watchlist", "technical_action": "Down 20%+ on earnings", "story": "Bandwidth: former speculative leader, character change."},
+    "NUE": {"actionability": "Watchlist", "technical_action": "Coming up right side of cup base on expanding volume", "story": "Nucor: Ken watching. Cyclical — Minervini gives demerits vs growth sectors."}
+  },
+  "sector_leaders": ["Biotech/medical", "Pharma defensives", "Restaurants", "Cybersecurity (holding up)", "Cruise lines", "Energy pipelines"],
+  "sector_laggards": ["Tech (50/80 rule — leaders can correct 50-80%)", "AI infrastructure", "Semiconductors", "Financials", "Oil E&P (headline risk)"]
+}

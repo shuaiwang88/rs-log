@@ -1,0 +1,18 @@
+{
+  "date": "2026-07-08",
+  "market_summary": "Trump ends Iran ceasefire — oil spikes, risk-off. Mike Webster delivers ascending base rules masterclass: multiple AI names violating key ascending base formation rules (DELL, SNDK, MRVL spacing/RS line issues). Two-tier market persists — NASDAQ heavy, S&P/RSP holding. Panel advocating extreme caution.",
+  "panel": ["Ali Coram (host)", "Mike Webster", "Ken Shreve", "Harold Morris"],
+  "exposure": "Very low — Webster sold shotguns, SwingTrader minimal, Harold in cash",
+  "tickers": ["DELL","SNDK","MRVL","CRDO","MU","NVDA","ASML","TSMC","JPM","LLY","RTX","HON","JNJ"],
+  "ticker_details": {
+    "DELL": {"actionability": "Avoid — ascending base violation", "technical_action": "Third high too close to second — invalid ascending base per Webster", "story": "Ascending base rules violated"},
+    "SNDK": {"actionability": "Avoid", "technical_action": "RS line breaking on daily, moving averages losing support", "story": "Post-IPO base forming but RS line weakness a red flag"},
+    "MRVL": {"actionability": "Avoid", "technical_action": "Failed 21-day, testing 50-day — too much volatility", "story": "Ascending base attempt failing"},
+    "MU": {"actionability": "Watch — not actionable", "technical_action": "Holding 50-day, below 21-day — long-term thesis valid", "story": "Memory supercycle intact but short-term dangerous"},
+    "ASML": {"actionability": "Hold — defending 50-day", "technical_action": "Best in breed holding key level", "story": "When ASML holds, there's hope"}
+  },
+  "sectors": {
+    "leading": ["Defense (RTX, HON)", "Healthcare (LLY, JNJ)", "Financials (JPM)"],
+    "lagging": ["AI/Memory (SNDK, MRVL, MU)", "Semis (NVDA)", "Autos (TSLA)"]
+  }
+}

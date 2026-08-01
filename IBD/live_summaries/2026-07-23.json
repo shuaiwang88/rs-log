@@ -1,0 +1,28 @@
+{
+  "date": "2026-07-23",
+  "market_summary": "Correction deepens: NASDAQ -1.6%, oil spikes to $91 on Houthi attack on Saudi tankers in Red Sea. 10-year yield at 4.71% (18-month high), 30-year at 18-year highs. Fed rate hike 81% by September. Power trend still on for S&P/RSP but buy switch off on NASDAQ. Two-tier market reminiscent of post-March 2000.",
+  "panel": ["Ken Shreve (host)", "Arnie Gutierrez", "Justin Nielsen", "Ed Carson"],
+  "exposure": "Very low — all panelists largely in cash, probing positions only",
+  "tickers": ["ET","ILMN","QQQ","SPY","DIA","IWM","TNX","USO","GOOGL","TSLA","LLY","UNP","NSC","IMAX","KNX","NOW","IBM","URI","DGX","LMT","RTX","TXN","STM","HON","CVX","MRK","JNJ","MU","STX","WFRD","MOH","ARGX","NEPT","MTDR","AAL","MEDP","TMUS","CX","FCFS","ACI","SCHW","SMH","SOXX","HACK","FTNT","DDOG","TWLO","SNOW","CRDO","JPM","BLK","IVZ","AMG","SEIC","XBI","OOMA","ELVN","HNGE","SEZL","PAX","FIX","YETI","AMRX","GE","CAT","NTAP","DAVE","GLW","RKLB","BILL","KNSA","ARBK","DE","ASML","NBIS","AAPL","RIVN","META","SOXL","KORU","MUZ","FLYW","CPAY","XYZ","VRTX","SGHC","CRSP","XHB","TVTX"],
+  "ticker_details": {
+    "LMT": {"actionability": "Breakout", "technical_action": "Above Trinity line — solid beat, 12.5% revenue, upped guidance", "story": "Defense spending surge"},
+    "RTX": {"actionability": "Breakout", "technical_action": "Breaking out — beat, 14.5% revenue, upped outlook", "story": "Defense + commercial aero"},
+    "HON": {"actionability": "Strong move", "technical_action": "Leading Dow +6.6% — beat, 3% revenue", "story": "Defense/industrial"},
+    "LLY": {"actionability": "Actionable on pullback", "technical_action": "Strong RS line, ATR <4%, extended from 10-day", "story": "Reditrude approval slightly delayed to Q1 2027"},
+    "GOOGL": {"actionability": "Watchlist — broken", "technical_action": "Tumbling toward 200-day line — first negative cash flow $5.95B", "story": "CapEx surge, Gemini concerns, EU $1B fine"},
+    "TSLA": {"actionability": "Avoid", "technical_action": "Stumbling — badly missed EPS, margins weak", "story": "Musk: 'Be patient' — Robotaxis/Optimus timelines pushed"},
+    "MU": {"actionability": "Watchlist — 50-day bounce", "technical_action": "Memory rallying on Google CapEx, up on weak market day", "story": "SK Hynix competitor reports next week"},
+    "BLK": {"actionability": "Strong — actionable", "technical_action": "+6% on strong earnings, holding gain", "story": "Investment management group top-performing industry"},
+    "JPM": {"actionability": "Actionable", "technical_action": "Outside day upside reversal post-earnings, bought by Webster", "story": "Banking strength"},
+    "PAX": {"actionability": "Actionable", "technical_action": "Base-on-base, tighter than last, use high of yesterday entry", "story": "Not in AI — boring home/nursing"},
+    "HNGE": {"actionability": "Actionable at 21-day", "technical_action": "Leaderboard big winner, super strong RS since breakout", "story": "Cloud fitness platform, 2-3% market share"},
+    "SEZL": {"actionability": "Hold/trim", "technical_action": "Up 4% in weak tape, money flowing into financials", "story": "C-caliber stock, payments theme"},
+    "GE": {"actionability": "Watch ahead of earnings", "technical_action": "Holding 21-day", "story": "Earnings coming"},
+    "CAT": {"actionability": "Avoid", "technical_action": "Breaking 50-day, RS moving averages broken on daily/weekly", "story": "After big move — warning"},
+    "NTAP": {"actionability": "Exit", "technical_action": "At breaking point level", "story": "Would be out unless from very low cost basis"}
+  },
+  "sectors": {
+    "leading": ["Oil & Gas", "Defense", "Financials/Investment Mgmt", "Healthcare/Biotech", "Rails"],
+    "lagging": ["AI/Memory (volatility)", "Software", "Tech broadly", "Semis (individuals -30%)", "Autos"]
+  }
+}

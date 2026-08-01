@@ -1,0 +1,15 @@
+{
+  "date": "2026-06-30",
+  "market_summary": "Last trading day before July 4th holiday. Market rallying — exposure lifted to 80-100%. NASDAQ rebounding to 50-day, S&P retaking 50-day. Oil down to $75 as Iran ceasefire holds. Chris Gessel: old positions working, new buys getting knocked out. MU earnings Wednesday — Bernstein PT $1300.",
+  "panel": ["Ed Carson (host)", "Chris Gessel", "Justin Nielsen", "David Saito-Chung"],
+  "exposure": "80-100% — Hatman Dave ~86%, Chris using UPRO for exposure, Justin watching for 50-day reclaim",
+  "tickers": ["UPRO","ENVA","NBIS","AVAV","ABBV","DLR","RDW","GMAB","PATK","LCII","VSH","APD","MU","SNDK","SPCE","CRDO","SYRE","GOOGL","NVDA","ANET","CSCO","LEN","ADBE","JPM","BKU","TFC","OZK","LLY","BROS","CAKE","CXW","BTSG","MRVL","OLLI","EZPW","GEV","BE","TNNB","XBI","TD"],
+  "ticker_details": {
+    "MU": {"actionability": "Actionable ahead of earnings", "technical_action": "Rallying into Wednesday earnings, strong mem cycle", "story": "Bernstein PT $1300, Needham $1550 — memory supercycle thesis intact"},
+    "SPCE": {"actionability": "Watch — wait for IPO base", "technical_action": "Priced $135, high $225.64, pulled back sharply", "story": "555M shares, 20% retail — classic IPO base needed per Chris Gessel"},
+    "CRDO": {"actionability": "Actionable", "technical_action": "Evercore ISI upgrade, PT $325 — joining memory rally", "story": "AI networking — strong momentum"},
+    "LLY": {"actionability": "Buy on pullback", "technical_action": "At highs, RS strong", "story": "Retatrutide compassionate use approved — next-gen obesity drug coming"},
+    "BROS": {"actionability": "Actionable — IPO basing", "technical_action": "Near end of due diligence phase for IPO", "story": "Dave invested with covered calls"},
+    "ENVA": {"actionability": "Actionable — breakout", "technical_action": "Breaking out per David Ryan", "story": "Financial stock, #24-25 on IBD 50"}
+  }
+}

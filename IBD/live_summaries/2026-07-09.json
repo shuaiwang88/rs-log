@@ -1,0 +1,23 @@
+{
+  "date": "2026-07-09",
+  "market_summary": "Market in repair — choppy sideways. NASDAQ tightening into potential triangle, but breakout failures and bounces that don't work dominate. Rachel Fox hosts. AZN/IONS ATTR-CM heart drug fails (ALNY/BBIO up), Micron accelerating spend to $250B through 2035, SK Hynix NASDAQ listing Friday. Two-tier market: NASDAQ buy switch off, S&P/RSP power trend still on. Money rotating from AI into financials, cybersecurity, healthcare.",
+  "panel": ["Rachel Fox (host)", "Justin Nielsen", "Ed Carson", "Arnie Gutierrez", "Chris Gessel (Q&A)", "Scott St. Clair (Q&A)", "Mike Webster (Q&A)"],
+  "exposure": "Low — Justin raised cash significantly, Arnie freed up cash, Scott ~50% short, Chris fully hedged MU/SNDK",
+  "tickers": ["EBAY","SOXX","SMH","QQQ","QQQM","SPY","VOO","IWM","MU","SNDK","AVGO","AZN","IONS","ALNY","BBIO","PEP","MNST","PSMT","COST","AZZ","LEVI","TSLA","CRM","DDOG","TWLO","SNOW","FTNT","HACK","DELL","GLW","LLY","AAPL","META","GOOGL","RIVN","ASML","JPM","BLK","IVZ","AMG","SEIC","RKLB","BILL","KNSA","CRSP","CRDO","NBIS","VRTX","MRVL","XHB","SGHC","DE","SOXL","KORU","MUZ","MUD","XLF","QQQE"],
+  "ticker_details": {
+    "MU": {"actionability": "Watch — hedged", "technical_action": "Up on $250B through 2035 CapEx announcement, extended from 50-day bounce", "story": "Memory supercycle — accelerating planned investments massively"},
+    "SNDK": {"actionability": "Avoid", "technical_action": "Volatile — up 27% yesterday, down 10% today", "story": "Post-IPO wild swings — 'not good for AI space in short term' (Webster)"},
+    "DELL": {"actionability": "Watch — trend line", "technical_action": "Consolidating gap up, tight with 21-day", "story": "Fantastic move, setting up again — Chris watching trend line break"},
+    "GLW": {"actionability": "Avoid / would be out", "technical_action": "Continuing to sell off after breakdown", "story": "Would have kicked out swing traders yesterday"},
+    "LLY": {"actionability": "Actionable — buy on 21-day pullback", "technical_action": "Extended from 10-day, strong RS line, ATR 3.47%", "story": "Obesity drug franchise — 'one of the very few showing strong price action below 4% ATR'"},
+    "FTNT": {"actionability": "Overextended (Arnie)", "technical_action": "At highs after strong run", "story": "Cybersecurity — 'security software stocks still ripping'"},
+    "JPM": {"actionability": "Actionable", "technical_action": "Outside day upside reversal post-earnings", "story": "Webster bought yesterday — banking strength"},
+    "VRTX": {"actionability": "Actionable — breakout", "technical_action": "Breakout on +65% above average volume, RS line pointing up", "story": "Biotech — Arnie's final pick, has position"},
+    "META": {"actionability": "Short (Scott)", "technical_action": "Breaking down, looks tired", "story": "FANG exhaustion"},
+    "TSLA": {"actionability": "Short (Scott — reluctant)", "technical_action": "Bad news failure, -7% YTD", "story": "90% of valuation based on things not happening yet (Ed Carson)"}
+  },
+  "sectors": {
+    "leading": ["Cybersecurity (FTNT, HACK)", "Investment Management (BLK, IVZ, AMG, SEIC)", "Healthcare/Biotech (LLY, VRTX, KNSA, CRSP)", "Financials (JPM, XLF)", "Equal-weight (RSP)"],
+    "lagging": ["AI Hardware (NVDA, META, TSLA)", "Memory (SNDK volatility, MU hedged)", "Legacy Semis (MRVL)", "Autos (TSLA, RIVN)"]
+  }
+}

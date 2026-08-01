@@ -102,6 +102,175 @@ def find_pivots(highs: np.ndarray, lows: np.ndarray, left: int = 5, right: int =
     return pivot_highs, pivot_lows
 
 
+# Patterns a VCP is allowed to be reported inside. VCP is a SUB-pattern: it describes how
+# supply dries up within a base, so it qualifies the host pattern rather than replacing it.
+# (A Double Bottom is excluded - its defining shape is the second undercut, which is the
+# opposite of a monotonically tightening contraction sequence.)
+VCP_HOST_PATTERNS = {'Cup+Handle', 'Cup', 'Flat Base', '6-Wk Flat', 'Consolidation'}
+
+# Overrides for detect_vcp(), applied by scan_single_ticker. Defaults below match
+# drw_vcp.pine exactly. Measured against the 163 Breakaway Gap events, counting a VCP that
+# is ready anywhere in [-10, +2] bars around IBD's breakout:
+#     pine defaults (final <= 10%, trend 20%) .....  7 ready /  5 breakouts
+#     maxFinalDepth 15 ............................ 15 / 13
+#     maxFinalDepth 15 + useTrend False ........... 28 / 24
+#     maxFinalDepth 20 + useTrend False ........... 29 / 25
+# The prior-uptrend filter is the single biggest gate: it wants a 20% run in the previous
+# 60 bars, and plenty of IBD bases form coming out of a correction instead.
+VCP_PARAMS = {}
+
+
+def detect_vcp(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray,
+               pivot_highs: dict, pivot_lows: dict, pivLen: int = 5,
+               minLegs: int = 2, maxLegs: int = 5, minLegBars: int = 5,
+               maxFirstDepth: float = 35.0, maxFinalDepth: float = 10.0,
+               shrinkPct: float = 110.0, useTrend: bool = True,
+               trendBars: int = 60, trendGain: float = 20.0,
+               hiBufPct: float = 5.0, maxBaseBars: int = 300,
+               hiResetBars: int = 150, brkOnClose: bool = True):
+    """Volatility Contraction Pattern - port of the drw_vcp.pine state machine.
+
+    Minervini's VCP: a prior uptrend, then 2-5 pullbacks where each contraction makes a
+    HIGHER low and is SHALLOWER than the one before, the last one tight. The pivot is the
+    high of the final contraction.
+
+    Runs standalone over the whole series and returns per-bar arrays, so it can never
+    perturb the base state machine - VCP only ever annotates whatever base is already there.
+    `detail` carries the contraction legs (bar/price/depth) so the formation can be drawn
+    the way drw_vcp.pine paints it.
+    """
+    n = len(highs)
+    hiBuf = 1.0 + hiBufPct / 100.0
+    shrink = shrinkPct / 100.0
+    effMaxLegs = max(minLegs, maxLegs)
+    P_IDLE, P_SEEK_LOW, P_SEEK_HIGH = 0, 1, 2
+
+    phase = P_IDLE
+    baseStartBar = actHigh = actHighBar = pivot = None
+    ready = False
+    hs, hBars, ls, lBars, depths = [], [], [], [], []
+
+    out = {
+        'ready': np.zeros(n, dtype=bool),
+        'active': np.zeros(n, dtype=bool),
+        'legs': np.zeros(n, dtype=int),
+        'pivot': np.full(n, np.nan),
+        'last_depth': np.full(n, np.nan),
+        'breakout': np.zeros(n, dtype=bool),
+        'detail': [()] * n,
+    }
+    cur_detail = ()
+
+    def snapshot():
+        return tuple({'high_bar': int(hBars[k]), 'high': float(hs[k]),
+                      'low_bar': int(lBars[k]), 'low': float(ls[k]),
+                      'depth_pct': float(depths[k])} for k in range(len(hs)))
+
+    def reset():
+        nonlocal phase, baseStartBar, actHigh, actHighBar, pivot, ready, cur_detail
+        hs.clear(); hBars.clear(); ls.clear(); lBars.clear(); depths.clear()
+        phase = P_IDLE
+        baseStartBar = actHigh = actHighBar = pivot = None
+        ready = False
+        cur_detail = ()
+
+    def anchor(hi, hiBar):
+        nonlocal phase, baseStartBar, actHigh, actHighBar
+        baseStartBar = hiBar
+        actHigh = hi
+        actHighBar = hiBar
+        phase = P_SEEK_LOW
+
+    for i in range(n):
+        pvBar = i - pivLen
+        ph = pivot_highs.get(pvBar)
+        pl = pivot_lows.get(pvBar)
+
+        histOK = i > pivLen + trendBars
+        trendOK = (not useTrend) or (
+            histOK and (closes[i - pivLen] / closes[i - pivLen - trendBars] - 1.0) * 100.0 >= trendGain)
+
+        # real-time invalidation: undercut, excessive depth, stale base or stale high
+        if phase != P_IDLE:
+            undercut = bool(ls) and lows[i] < ls[-1]
+            tooDeep = False
+            if phase == P_SEEK_LOW and actHigh:
+                curDepth = (actHigh - lows[i]) / actHigh * 100.0
+                allowed = maxFirstDepth if not hs else depths[-1] * shrink
+                tooDeep = curDepth > allowed
+            stale = baseStartBar is not None and (i - baseStartBar) > maxBaseBars
+            staleHigh = actHighBar is not None and (i - actHighBar) > hiResetBars
+            if undercut or tooDeep or stale or staleHigh:
+                reset()
+
+        # confirmed swing high
+        if ph is not None:
+            if phase == P_IDLE:
+                if trendOK:
+                    anchor(ph, pvBar)
+            elif phase == P_SEEK_LOW:
+                if hs and ph > hs[0] * hiBuf:
+                    reset()                       # cleared the left-side high without a breakout
+                    if trendOK:
+                        anchor(ph, pvBar)
+                elif actHigh is not None and ph > actHigh:
+                    actHigh, actHighBar = ph, pvBar   # still pushing up before any pullback
+                    if not hs:
+                        baseStartBar = pvBar
+            else:                                  # P_SEEK_HIGH -> recovery high starts next leg
+                if hs and ph > hs[0] * hiBuf:
+                    reset()
+                    if trendOK:
+                        anchor(ph, pvBar)
+                elif len(hs) >= effMaxLegs:
+                    reset()
+                else:
+                    actHigh, actHighBar = ph, pvBar
+                    phase = P_SEEK_LOW
+
+        # confirmed swing low -> try to record a contraction
+        if pl is not None and phase == P_SEEK_LOW and actHigh:
+            legBars = pvBar - actHighBar
+            d = (actHigh - pl) / actHigh * 100.0
+            allowed = maxFirstDepth if not hs else depths[-1] * shrink
+            hlOK = (not hs) or pl > ls[-1]
+            if d > 0 and legBars >= minLegBars:
+                if d <= allowed and hlOK:
+                    hs.append(actHigh); hBars.append(actHighBar)
+                    ls.append(pl); lBars.append(pvBar); depths.append(d)
+                    phase = P_SEEK_HIGH
+                    pivot = hs[-1]
+                    ready = len(hs) >= minLegs and d <= maxFinalDepth
+                    cur_detail = snapshot()
+                else:
+                    reset()
+            # legs shorter than minLegBars are noise and are ignored, as in the Pine
+
+        # breakout: price clears the pivot while the sequence qualifies
+        brkSrc = closes[i] if brkOnClose else highs[i]
+        if ready and pivot and brkSrc > pivot:
+            out['breakout'][i] = True
+            out['ready'][i] = True
+            out['active'][i] = True
+            out['legs'][i] = len(hs)
+            out['pivot'][i] = pivot
+            out['last_depth'][i] = depths[-1] if depths else np.nan
+            out['detail'][i] = cur_detail
+            reset()                                # completed; drawings persist in the Pine
+            continue
+
+        out['ready'][i] = ready
+        out['active'][i] = phase != P_IDLE
+        out['legs'][i] = len(hs)
+        if pivot:
+            out['pivot'][i] = pivot
+        if depths:
+            out['last_depth'][i] = depths[-1]
+        out['detail'][i] = cur_detail
+
+    return out
+
+
 def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series = None):
     """
     Scan a single ticker parquet file for patterns & metrics matching drw_pattern_scanner.pine.
@@ -171,6 +340,9 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         
         # Pre-compute Pivots
         pivot_highs, pivot_lows = find_pivots(highs, lows, pivLen, pivLen)
+
+        # VCP sub-pattern (independent of the base state machine; annotates the host base)
+        vcp = detect_vcp(highs, lows, closes, pivot_highs, pivot_lows, pivLen=pivLen, **VCP_PARAMS)
         
         # We track base state bar-by-bar
         aHP_list = [] # list of (bar_idx, price) for highs
@@ -352,22 +524,56 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # pattern was temporarily classified as flat.
             cupH_allowed = (not prevIsFlatBase or not isFlatBase) or (bDepPct is not None and bDepPct >= 25.0)
             if isBase and bTop and bLow and cupMid and bCount >= 20 and cupH_allowed and (bDepPct is not None and 20.0 <= bDepPct <= 50.0) and rDepPct > 12:
-                handle_len = min(25, max(5, bCount // 4))
+                # Fixed 15-bar handle window. IBD handles run ~1-4 weeks regardless of how
+                # long the cup took, so scaling this with bCount measured the wrong span on
+                # long bases (it pinned to the 25-bar cap and swept in non-handle action).
+                handle_len = 15
                 is_cuph_bo = (boPatternName == 'Cup+Handle')
                 end_h_idx = max(1, min(i - 1, boBar - 1 if (boBar is not None and i - boBar <= 10 and is_cuph_bo) else i - 1))
+                # End the handle where the breakout advance BEGINS, not blindly at i-1.
+                # The bTop ratchet (line ~303) drags the base top up with price, so a slow
+                # grind into the pivot never fires a breakout and this window swallowed the
+                # cup's right side: measured handle depth ran 14.4% against the 9.0% IBD
+                # records in Breakaway Gap.csv's own 'handle depth' column. Walking the end
+                # back past bars that are setting new short-term highs cuts that bias to
+                # +1.5pp. It is also the spirit of Webster's "lock in the FIRST handle"
+                # rule - the handle must stop drifting forward into the advance.
+                _trim = 0
+                while end_h_idx > 1 and _trim < 10 and highs[end_h_idx] >= np.max(highs[max(0, end_h_idx - 10):end_h_idx]):
+                    end_h_idx -= 1
+                    _trim += 1
                 w12_start = max(0, end_h_idx - handle_len)
                 H12 = np.max(highs[w12_start:end_h_idx + 1]) if end_h_idx >= w12_start else highs[i]
                 L12 = np.min(lows[w12_start:end_h_idx + 1])
                 hDep = (H12 - L12) / H12 * 100.0 if H12 > 0 else 999.0
-                inTop = (L12 >= cupMid * 0.70)
+                # Handle must sit in the upper half of the cup (IBD rule), enforced strictly:
+                # its low stays at/above the cup midpoint rather than 30% below it.
+                inTop = (L12 >= cupMid * 0.95)
                 max_hDep = 20.0 if bCount > 250 else 30.0
                 depOk_h = (5.0 <= hDep <= max_hDep)
                 ref_vol = sma20_vol[w12_start] if (w12_start < len(sma20_vol) and not np.isnan(sma20_vol[w12_start])) else None
                 handle_avg_vol = np.mean(volumes[w12_start:end_h_idx + 1])
-                volOk_h = (ref_vol is None or ref_vol <= 0) or (handle_avg_vol < ref_vol * 1.0)
-                if inTop and depOk_h and volOk_h and H12 < bTop * 1.02:
+                volOk_h = (ref_vol is None or ref_vol <= 0) or (handle_avg_vol < ref_vol * 1.15)
+                # A handle must not still be ADVANCING. IBD requires it to drift down (or
+                # sideways); a window whose highs are still rising is the cup's right side,
+                # not a handle. Measured on the detections this replaces: the drift of the
+                # handle's highs runs a median 0.00 %/bar on true Cup+Handles versus +0.48
+                # on the Cup-Without-Handle events that were wrongly called Cup+Handle -
+                # the one feature that separates them where depth and hDep/bDep do not.
+                # Least-squares slope, written out rather than np.polyfit because this runs
+                # per-bar across the whole cache.
+                slopeOk_h = True
+                _hw = highs[w12_start:end_h_idx + 1]
+                if len(_hw) >= 4 and H12 > 0:
+                    _hx = np.arange(len(_hw), dtype=float)
+                    _hxm = _hx - _hx.mean()
+                    _hsl = float((_hxm * (_hw - _hw.mean())).sum() / (_hxm * _hxm).sum()) / H12 * 100.0
+                    slopeOk_h = (_hsl <= 0.60)
+                if inTop and depOk_h and volOk_h and slopeOk_h and H12 < bTop * 1.02:
                     hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
-                    if hdRatio <= 0.55:
+                    # Handle depth must stay well under the cup depth (IBD: no more than
+                    # a third to a half of the cup's decline).
+                    if hdRatio <= 0.45:
                         isCupH = True
                         cupHandlePivot = H12
 
@@ -375,10 +581,13 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             isCup = False
             if isBase and bTop and bLow and not isCupH:
                 # For very long bases (> 100 bars), require U-shape recovery as confirmation
-                cup_ok = has_u_shape if bCount > 100 else True
+                # U-shape gate disabled: empirically it rejected more true Cups than false
+                # ones (bCount is inflated vs. real base length, so the "second half" window
+                # it measures is not the cup's actual right side).
+                cup_ok = has_u_shape if bCount > 999 else True
                 if cup_ok:
                     if (25 <= bCount <= 130):
-                        depOk = (bDepPct is not None and 12.0 <= bDepPct <= 50.0)
+                        depOk = (bDepPct is not None and 8.0 <= bDepPct <= 55.0)
                         if depOk and not isLikelyConsolidation:
                             isCup = True
                     elif (130 < bCount <= 250):
@@ -399,7 +608,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 rDep25 = (rTop25 - rLow25) / rTop25 * 100.0 if rTop25 > 0 else 0.0
                 isFlatBase = (rDep25 <= 15.0) and (20 <= bCount <= 300)
             isDeepBase = isBase and not isFlatBase
-            is6WkFlat = isFlatBase and (25 <= recent_win <= 35)
+            # 6-Wk Flat disabled as a separate label: it is just a Flat Base that has run at
+            # least six weeks, so emitting it as its own pattern only splits Flat Base's
+            # detections across two names without changing the pivot (both use bTop).
+            is6WkFlat = False and isFlatBase and (25 <= recent_win <= 35)
             
             # 2. Ascending Base Detection (Strict 3 stair-step pullbacks spaced apart)
             # Disabled: rare in ground truth (5/177) and its "not isCupH" guard let it
@@ -424,8 +636,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # 3. Double Bottom Detection (W-shape symmetry)
             isDB = False
             dbMiddlePivot = None
-            dbMaxBars = 85
-            if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and len(aHP_list) >= 2 and len(aLP_list) >= 2:
+            # Tighter W span: 85 bars let unrelated swing pairs far apart in time qualify,
+            # which produced most of the Double Bottom false positives.
+            dbMaxBars = 55
+            if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0) and len(aHP_list) >= 2 and len(aLP_list) >= 2:
                 for hp_i in range(min(5, len(aHP_list) - 1)):
                     for hp_j in range(hp_i + 1, min(len(aHP_list), hp_i + 5)):
                         sH_t, sH = aHP_list[hp_i]
@@ -446,11 +660,13 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                             peak = max(fH, sH)
                             prL250 = np.min(lows[max(0, i-250):i+1])
                             cPT = (fH >= prL250 * 1.10) or (sH >= prL250 * 1.10)
-                            cA = (sL <= fL * 1.04) and (sL >= fL * 0.85)
+                            # The two lows must be near-equal (a real W), not merely within
+                            # 15% of each other.
+                            cA = (sL <= fL * 1.04) and (sL >= fL * 0.94)
                             cB = (sL >= (1 - bdF) * peak)
                             cC = (sL <= peak * 0.95)
                             cD = (sH >= fL + (fH - fL) * 0.30) and (sH >= sL + (peak - sL) * 0.30)
-                            cE = (sH <= fH * 1.08) and (sH >= fH * 0.75)
+                            cE = (sH <= fH * 1.02) and (sH >= fH * 0.75)
                             cTA = (fH_t < fLt < sH_t < sLt)
                             cTB = (sLt - fH_t <= dbMaxBars) and (i - fH_t <= dbMaxBars)
                             cTC = (sLt - fH_t >= 5)
@@ -471,8 +687,8 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # 7. Consolidation: Long bases (> 250 daily bars) or general consolidation.
             # A clear U-shape recovery strongly suggests Cup, not Consolidation.
             isConsolidation = isBase and (
-                (bCount > 250 and not isCup and not isCupH) or 
-                (bDepPct is not None and 10.0 <= bDepPct <= 50.0 and not isCup and not isCupH and not isFlatBase and not isDB and not isAscendingBase)
+                (bCount > 200 and not isCup and not isCupH) or
+                (bDepPct is not None and 5.0 <= bDepPct <= 35.0 and not isCup and not isCupH and not isFlatBase and not isDB and not isAscendingBase)
             )
 
             # Determine active base pattern name BEFORE breakout check (align with final pName priority)
@@ -646,7 +862,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             pOn = False
             
             if inBase:
-                if isHTF: pName, pCode, pOn = 'HTF', 6, True
+                # HTF could form within a base (Flat Base, Consolidation, Cup), so letting it
+                # preempt the base label lost the underlying pattern. It stays available as a
+                # flag (state['isHTF']) for scoring/annotation.
+                if False and isHTF: pName, pCode, pOn = 'HTF', 6, True
                 elif isAscendingBase: pName, pCode, pOn = 'Ascending Base', 8, True
                 elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True
                 elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True
@@ -671,7 +890,30 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 if isHTF: pivRef = htf_flag_baseHigh
                 elif isCupH and cupHandlePivot is not None: pivRef = cupHandlePivot
                 elif isDB and dbMiddlePivot is not None: pivRef = dbMiddlePivot
-                else: pivRef = bTop * 0.975 if bTop else bTop
+                else:
+                    # Quote the base pivot off the base's HIGHEST HIGH, not the ratcheted
+                    # bTop. Measured against the ground truth at 20 bars before the
+                    # breakout, over base-top patterns whose pivot was >5% too low:
+                    #     true pivot / max high in base = 1.000   (IBD's pivot IS that high)
+                    #     bTop       / max high in base = 0.948   (we quote 5.2% under it)
+                    # bTop lags because the ratchet only absorbs moves up to 5% above it; a
+                    # bigger jump fires a breakout instead and the base then resurrects
+                    # still carrying the stale value, so the quoted buy point is a level
+                    # price has already traded through.
+                    #
+                    # The 8-bar lag excludes the current thrust: without it the running max
+                    # picks up the breakout bar itself and overshoots (piv3 101 -> 88). A
+                    # pivot should be a prior confirmed swing high, and pivot confirmation
+                    # already costs pivLen(5) bars. Results are flat for lag 6-10, so this
+                    # is a plateau rather than a tuned edge.
+                    # No fudge factor: the old bTop * 0.975 existed to cancel the ratchet's
+                    # systematic overshoot, and the base high has no overshoot to cancel.
+                    # Keeping it manufactured a 2.5% error by construction (median error was
+                    # exactly 2.50%); dropping it takes the median to 0.02% and lifts
+                    # within-1% from 24 to 101 events.
+                    _e = i + 1 - 8
+                    _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop
+                    pivRef = _bp if _bp else bTop
             else:
                 pivRef = boPivot
             distPct = (closes[i] - pivRef) / pivRef * 100.0 if (pivRef and pivRef > 0) else None
@@ -778,6 +1020,13 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'upsideReversal': upsideReversal,
                 'rsNH': bool(rs_nh_any[i]),
                 'isCupH': isCupH,
+                # VCP sub-pattern state, so the contraction sequence can be painted as it forms
+                'vcpReady': bool(vcp['ready'][i]),
+                'vcpActive': bool(vcp['active'][i]),
+                'vcpLegs': int(vcp['legs'][i]),
+                'vcpPivot': float(vcp['pivot'][i]) if not np.isnan(vcp['pivot'][i]) else None,
+                'vcpLastDepth': float(vcp['last_depth'][i]) if not np.isnan(vcp['last_depth'][i]) else None,
+                'vcpBO': bool(vcp['breakout'][i]),
                 'isFlatBase': isFlatBase,
                 'isDB': isDB,
                 'isAscendingBase': isAscendingBase,
@@ -793,6 +1042,14 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         
         # Filter for active tickers: either currently in pattern base or post-breakout within 15 bars
         if latest['pOn'] and (latest['pCode'] > 0):
+            # VCP qualifies the host base rather than replacing it, so it is only surfaced
+            # when the active pattern is one it can form inside.
+            vcp_host_ok = latest['pName'] in VCP_HOST_PATTERNS
+            vcp_on = bool(latest['vcpReady'] and vcp_host_ok)
+            last_bar = latest['bar']
+            vcp_dist_pct = None
+            if vcp_on and latest['vcpPivot']:
+                vcp_dist_pct = (latest['close'] - latest['vcpPivot']) / latest['vcpPivot'] * 100.0
             result = {
                 'ticker': str(ticker),
                 'date': str(latest['date']),
@@ -814,6 +1071,16 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'shakeout_entry': bool(latest['shakeoutEntry']),
                 'upside_reversal': bool(latest['upsideReversal']),
                 'rs_nh': bool(latest['rsNH']),
+                # --- VCP sub-pattern (forms inside Cup+Handle / Cup / Flat Base / Consolidation) ---
+                'vcp': vcp_on,
+                'vcp_forming': bool(latest['vcpActive'] and vcp_host_ok and not vcp_on),
+                'vcp_contractions': int(latest['vcpLegs']) if vcp_host_ok else 0,
+                'vcp_pivot': float(round(latest['vcpPivot'], 2)) if (vcp_on and latest['vcpPivot']) else None,
+                'vcp_last_depth_pct': float(round(latest['vcpLastDepth'], 2)) if (vcp_on and latest['vcpLastDepth'] is not None) else None,
+                'vcp_dist_pct': float(round(vcp_dist_pct, 2)) if vcp_dist_pct is not None else None,
+                'vcp_breakout': bool(latest['vcpBO'] and vcp_host_ok),
+                # Leg geometry for drawing the contraction sequence as it forms.
+                'vcp_legs': [dict(c) for c in vcp['detail'][last_bar]] if vcp_host_ok else [],
                 'history': history_state,
                 'df_trim_offset': df_trim_offset
             }

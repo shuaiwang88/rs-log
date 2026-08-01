@@ -1,0 +1,18 @@
+{
+  "date": "2026-07-15",
+  "market_summary": "Correction continues, breakout failures abound. Fitzpatrick guest: 'When win rates drop, pull back.' LLY buying ATAI for $2.8B (psychedelic therapeutics). ASML and PYPL beat earnings but market environment too hostile for breakouts to work. Two-tier market persists — defensives/healthcare/financials at highs, growth/AI still struggling below 50-day MAs.",
+  "panel": ["Ken Shreve (host)", "Justin Nielsen", "Ed Carson", "Fitzpatrick (guest)"],
+  "exposure": "Very low — Fitzpatrick reduced significantly, SwingTrader <15%, Leaderboard holding winners at reduced size",
+  "tickers": ["LLY","ATAI","ASML","PYPL","MU","SNDK","NVDA","GOOGL","META","TSLA","CRDO","DELL","MRVL","JPM","BLK","HON","RTX","XOM","JNJ","XBI"],
+  "ticker_details": {
+    "LLY": {"actionability": "Hold — buy on 21-day pullback", "technical_action": "At highs, extended, dominant RS line", "story": "Buying ATAI for $2.8B — obesity + psychedelic therapeutics now"},
+    "ATAI": {"actionability": "M&A — LLY buyout", "technical_action": "+40% on acquisition news", "story": "LLY buying for $2.8B — psychedelic mental health therapeutics"},
+    "ASML": {"actionability": "Hold — bounced from 50-day on earnings beat", "technical_action": "Strong earnings beat, bouncing from 50-day", "story": "Lithography monopoly — orders strong, TSMC +$100B catalyst"},
+    "PYPL": {"actionability": "Watch — earnings beat, trying to break out", "technical_action": "Beat earnings, attempting breakout", "story": "Payments turnaround narrative gaining traction"}
+  },
+  "sectors": {
+    "leading": ["Healthcare/Pharma (LLY, JNJ)", "Defense (RTX, HON, LMT)", "Energy (XOM, CVX)", "Financials (JPM, BLK)"],
+    "lagging": ["AI Hardware (NVDA, META)", "Autos (TSLA)", "Memory (SNDK, MU)"]
+  },
+  "guest": "Fitzpatrick — veteran trader, IBD contributor"
+}

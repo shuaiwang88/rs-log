@@ -1,0 +1,13 @@
+{
+  "date": "2026-07-06",
+  "market_summary": "Gap-up Monday = exit opportunity. Mike Webster: 'Take this gift to reduce.' NASDAQ broke 50-day and 21-day into the weekend; Monday gap up was a selling opportunity, not a buying opportunity. Rallies within a downtrend are for trimming, not adding.",
+  "panel": ["Ken Shreve", "Mike Webster", "Ed Carson"],
+  "exposure": "Reducing — Webster advising using gap-up to trim positions",
+  "tickers": ["NVDA","MU","SNDK","MRVL","DELL","TSLA","JPM","LLY"],
+  "ticker_details": {
+    "NVDA": {"actionability": "Sell the gap", "technical_action": "Gap up failing to hold", "story": "Use Monday gap to reduce"},
+    "MU": {"actionability": "Trim on strength", "technical_action": "Bouncing from 50-day but fading", "story": "Memory supercycle thesis intact long-term"},
+    "JPM": {"actionability": "Actionable", "technical_action": "At highs", "story": "Financials rotation"},
+    "LLY": {"actionability": "Buy on pullback", "technical_action": "Extended but strong", "story": "Obesity drug franchise"}
+  }
+}

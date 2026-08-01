@@ -1,0 +1,17 @@
+{
+  "date": "2026-07-02",
+  "market_summary": "Jobs miss (+57K vs +114K expected) but TSLA 480K deliveries blowout steals focus. Correction deepening — air pockets persist: stocks gap down 5-8% overnight. TSLA paradox: record deliveries but stock fades — priced on Robotaxi/Optimus, not deliveries. Two-tier market: defensives at highs, growth broken.",
+  "panel": ["Ken Shreve", "Justin Nielsen", "Ed Carson", "Scott St. Clair"],
+  "exposure": "Low — air pockets making risk management difficult",
+  "tickers": ["TSLA","MU","SNDK","NVDA","MRVL","DELL","JPM","RTX","LLY"],
+  "ticker_details": {
+    "TSLA": {"actionability": "Avoid — fades on good news", "technical_action": "480K deliveries blowout, initially up then faded", "story": "Record quarter but stock priced on Robotaxi/Optimus — not deliveries"},
+    "MU": {"actionability": "Wait for base", "technical_action": "Below 50-day — memory supercycle thesis intact long-term", "story": "Wait for base to form"},
+    "JPM": {"actionability": "Actionable", "technical_action": "At highs", "story": "Financials leading rotation"},
+    "LLY": {"actionability": "Hold — buy on pullback", "technical_action": "At highs, extended", "story": "Obesity drug franchise"}
+  },
+  "sectors": {
+    "leading": ["Financials (JPM)", "Defense (RTX)", "Healthcare (LLY)"],
+    "lagging": ["AI/Memory (MU, SNDK, NVDA, MRVL)", "Autos (TSLA)"]
+  }
+}

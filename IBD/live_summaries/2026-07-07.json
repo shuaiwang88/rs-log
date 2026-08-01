@@ -1,0 +1,19 @@
+{
+  "date": "2026-07-07",
+  "market_summary": "Trap doors & air pockets. Samsung +19x profit but -7% — David Ryan: institutional distribution using good news to exit. Ryan actively shorting AI relief rallies. Chris Gessel's screens EMPTY — no buy setups. Former leaders down 40-50%. Two-tier market: defensives at highs, growth broken.",
+  "panel": ["Ken Shreve", "Justin Nielsen", "Ed Carson", "David Ryan (guest)", "Chris Gessel"],
+  "exposure": "Very low — Ryan shorting, Gessel screens empty, all panelists in heavy cash",
+  "tickers": ["Samsung","SNDK","MU","MXL","WDC","NBIS","NVDA","GOOGL","META","TSLA","JPM","RTX","LLY","JNJ","WELL"],
+  "ticker_details": {
+    "Samsung": {"actionability": "Avoid — bearish signal", "technical_action": "-7% on +19x profit surge", "story": "Massive earnings ignored — institutional distribution"},
+    "NBIS": {"actionability": "Short (Ryan)", "technical_action": "Rallied to 50-day and failed — classic short setup", "story": "Ryan actively shorting AI infrastructure relief rallies"},
+    "MXL": {"actionability": "Avoid", "technical_action": "Down 40%+ from highs — months to repair", "story": "MaxLinear severely broken"},
+    "WDC": {"actionability": "Avoid", "technical_action": "Down 45%+ — broken", "story": "Western Digital"},
+    "JPM": {"actionability": "Actionable", "technical_action": "At highs", "story": "Financials leading rotation"},
+    "LLY": {"actionability": "Buy on pullback", "technical_action": "Extended but strong", "story": "Obesity drug franchise"}
+  },
+  "sectors": {
+    "leading": ["Financials (JPM)", "Defense (RTX)", "Healthcare (LLY, JNJ, WELL)"],
+    "lagging": ["AI/Memory (Samsung, SNDK, MU, MXL, WDC, NBIS)", "Growth Tech (META, GOOGL)", "Autos (TSLA)"]
+  }
+}

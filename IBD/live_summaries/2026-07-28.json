@@ -1,0 +1,21 @@
+{
+  "date": "2026-07-28",
+  "source_file": "/Users/sw/Documents/Zoom/2026-07-28 09.53.25 IBD Live/IBD Live transcript_2026-07-28_09.53.23.txt",
+  "market_summary": "Two-tier market definitive. Growth/AI severely broken (QQQ below all key MAs, RS deteriorating) while value/healthcare/steel/defense hit new highs. 'Beat-and-raise' now sold aggressively — SANM -17% is new regime. David Ryan actively shorting: 2-4 day rallies into declining 50/21-day MAs = short entries. NBIS short +20-25% in 3 days. 'Once a stock drops 50%, they're not coming back.' Fed Warsh meeting. Iran de-escalation FAILED to lift market. Gessel screening shorts. Morris: 'Cash is a position.'",
+  "tickers": ["SMH", "IGV", "AMD", "MXL", "WDC", "MU", "NBIS", "CRDO", "DELL", "INTC", "APLD", "NVTS", "AMKR", "SANM", "CDNS", "FFIV", "CVLT", "GLW", "PYPL", "ANET", "WELL", "BRX", "NUE", "STLD", "JNJ", "BA", "GE", "RTX", "HWM", "KO", "DINO", "RSP", "IVE", "IVW", "LLY", "CVS"],
+  "ticker_details": {
+    "MXL": {"actionability": "Watchlist", "technical_action": "Down 50%+ from $128 to $58; EPS +1,650% ignored", "story": "MaxLinear: poster child for broken growth. Ryan: 'Once down 50%, rarely comes back quickly.'"},
+    "WDC": {"actionability": "Watchlist", "technical_action": "Down 45% from $799 ATH toward 200-day; climactic collapse", "story": "Western Digital: climactic vertical run, complete breakdown. Classic short pattern."},
+    "NBIS": {"actionability": "Actionable", "technical_action": "Ryan shorted at 50-day rejection; +20-25% gain in 3 days", "story": "Nebius: $300→$260, 4-day rally into declining 50-day. Textbook short entry."},
+    "CRDO": {"actionability": "Watchlist", "technical_action": "Rallied into 50/21-day MAs, sharp downside rejection", "story": "Credo Technology: identical short setup to NBIS."},
+    "SANM": {"actionability": "Watchlist", "technical_action": "-17% on beat-and-raise (beat EPS, beat revenue, raised FY26 guidance)", "story": "Sanmina: THE new sell regime example. Beat-and-raise = sell signal now."},
+    "INTC": {"actionability": "Watchlist", "technical_action": "+500% EPS growth ignored, stock stays in downtrend", "story": "Intel: 'When great earnings are ignored, market direction is fundamentally broken.'"},
+    "WELL": {"actionability": "Actionable", "technical_action": "+37% revenue, raised FFO, dividend +15% to 85¢", "story": "Welltower: REIT leader in two-tier market."},
+    "NUE": {"actionability": "Actionable", "technical_action": "Solid uptrend, beat +23% revenue", "story": "Nucor: steel leader, value rotation."},
+    "KO": {"actionability": "Actionable", "technical_action": "Beat (+7% revenue), raised guidance, broke out", "story": "Coca-Cola: defensive/value breakout."},
+    "DINO": {"actionability": "Actionable", "technical_action": "Solid beat, +53% revenue, div +5%, spinoff", "story": "HF Sinclair: unlocking lubricants value."},
+    "RSP": {"actionability": "Actionable", "technical_action": "New highs", "story": "Equal-weight S&P: value leadership."}
+  },
+  "sector_leaders": ["Value (RSP/IVE new highs)", "Steel", "Refiners", "REITs", "Defense/aerospace", "Consumer staples"],
+  "sector_laggards": ["Semis (SMH, MXL, WDC, MU)", "AI infrastructure (NBIS, CRDO, APLD)", "Hardware (DELL, ANET)", "Growth broadly (IVW new lows)"]
+}

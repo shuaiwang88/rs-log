@@ -1,173 +1,173 @@
 row_id,symbol,event_date,csv_base_type,csv_pivot,csv_length,detected_pattern,detected_status,detected_pivot,detected_length,composite_score,is_detected,exact_match,broad_match,pivot_safe,pivot_critical,pivot_err_pct,len_diff_bars
-1,A,2026-07-23,Flat Base,160.27,111,Flat Base,In Base,138.85,271.0,6,True,True,True,True,False,13.36,160.0
-2,A,2025-09-04,Flat Base,126.44,38,Cup+Handle,Post-BO,126.3,,6,True,False,False,False,False,0.11,
-4,AAON,2026-05-07,Cup Without Handle,112.94,47,Cup,In Base,110.11,162.0,5,True,True,True,True,False,2.5,115.0
+1,A,2026-07-23,Flat Base,160.27,111,Flat Base,In Base,160.26,271.0,6,True,True,True,True,False,0.0,160.0
+2,A,2025-09-04,Flat Base,126.44,38,Flat Base,In Base,126.44,51.0,5,True,True,True,True,False,0.0,13.0
+4,AAON,2026-05-07,Cup Without Handle,112.94,47,Cup,In Base,116.04,162.0,5,True,True,True,True,False,2.74,115.0
 5,AAON,2026-03-02,Cup With Handle,106.85,76,Cup+Handle,In Base,106.85,115.0,5,True,True,True,True,True,0.0,39.0
 6,AKZOY,2026-05-27,Consolidation,24.39,156,None,None,,,0,False,False,False,False,False,,
-7,AMLX,2026-04-16,Cup Without Handle,17.49,58,Cup,In Base,18.14,142.0,6,True,True,True,True,False,3.72,84.0
-8,AMLX,2026-01-20,Double Bottom,15.39,61,Cup,In Base,15.39,82.0,5,True,False,True,False,True,0.03,21.0
-9,AMLX,2026-06-25,Cup Without Handle,18.61,46,Cup,In Base,18.67,190.0,6,True,True,True,True,False,0.33,144.0
-10,ANCTF,2026-06-23,Consolidation,62.58,66,Cup,In Base,64.83,240.0,6,True,False,True,True,False,3.59,174.0
-11,ANCTF,2026-02-05,Cup Without Handle,58.75,139,Cup,In Base,60.19,146.0,5,True,True,True,True,False,2.44,7.0
-12,APGE,2026-06-22,Cup With Handle,91.9,43,Dbl Bottom,Post-BO,93.13,,6,True,False,False,False,True,1.34,
-13,APGE,2026-08-22,Cup Without Handle,84.56,47,6-Wk Flat,In Base,131.09,26.0,3,True,False,True,True,False,55.03,21.0
-14,APOG,2026-06-26,Consolidation,49.99,249,Cup,In Base,49.61,256.0,6,True,False,True,True,False,0.77,7.0
+7,AMLX,2026-04-16,Cup Without Handle,17.49,58,Cup,In Base,17.49,142.0,6,True,True,True,True,False,0.0,84.0
+8,AMLX,2026-01-20,Double Bottom,15.39,61,Cup,In Base,16.96,82.0,5,True,False,False,False,True,10.21,21.0
+9,AMLX,2026-06-25,Cup Without Handle,18.61,46,Cup,In Base,18.6,190.0,6,True,True,True,True,False,0.03,144.0
+10,ANCTF,2026-06-23,Consolidation,62.58,66,Cup,In Base,62.58,240.0,6,True,False,True,True,False,0.0,174.0
+11,ANCTF,2026-02-05,Cup Without Handle,58.75,139,Cup,In Base,58.75,146.0,5,True,True,True,True,False,0.0,7.0
+12,APGE,2026-06-22,Cup With Handle,91.9,43,Cup,Post-BO,93.13,,6,True,False,False,False,True,1.34,
+13,APGE,2026-08-22,Cup Without Handle,84.56,47,Flat Base,In Base,134.32,26.0,3,True,False,True,True,False,58.85,21.0
+14,APOG,2026-06-26,Consolidation,49.99,249,Cup,In Base,49.99,256.0,6,True,False,True,True,False,0.01,7.0
 15,ASH,2026-12-01,Cup Without Handle,57.01,64,Cup+Handle,In Base,69.66,265.0,5,True,False,False,False,False,22.18,201.0
-16,ASH,2026-06-26,Flat Base,55.44,30,Cup,In Base,66.55,248.0,5,True,False,True,True,False,20.05,218.0
-17,ASH,2026-06-10,Consolidation,65.64,86,Cup,In Base,65.52,237.0,5,True,False,True,True,False,0.18,151.0
-18,ATLKY,2026-07-24,Cup With Handle,21.09,111,Cup+Handle,In Base,21.13,213.0,6,True,True,True,True,True,0.19,102.0
-19,ATLKY,2025-12-24,Cup With Handle,18.25,55,Flat Base,In Base,18.09,71.0,5,True,False,True,False,True,0.9,16.0
+16,ASH,2026-06-26,Flat Base,55.44,30,Cup,In Base,68.26,248.0,5,True,False,True,True,False,23.13,218.0
+17,ASH,2026-06-10,Consolidation,65.64,86,Cup,In Base,65.65,237.0,5,True,False,True,True,False,0.01,151.0
+18,ATLKY,2026-07-24,Cup With Handle,21.09,111,Cup+Handle,In Base,20.88,213.0,6,True,True,True,True,True,0.99,102.0
+19,ATLKY,2025-12-24,Cup With Handle,18.25,55,Flat Base,In Base,18.4,71.0,5,True,False,False,False,True,0.82,16.0
 20,ATLKY,2025-09-18,Cup With Handle,17.2,133,None,None,,,0,False,False,False,False,True,,
-21,AUPH,2026-06-22,Cup With Handle,16.7,50,Cup,In Base,17.28,162.0,6,True,False,True,False,True,3.46,112.0
-22,AUPH,2026-04-14,Cup With Handle,16.32,75,Flat Base,In Base,16.13,115.0,5,True,False,True,False,True,1.19,40.0
-23,AUPH,2026-07-23,Cup With Handle,9.19,141,Cup,In Base,17.28,183.0,6,True,False,True,False,True,88.0,42.0
-24,AVTX,2026-05-06,Flat Base,20.72,99,Cup,In Base,20.38,141.0,5,True,False,True,True,False,1.65,42.0
-25,AXTA,2026-07-28,Cup With Handle,35.43,109,Cup+Handle,In Base,35.43,142.0,6,True,True,True,True,True,0.0,33.0
+21,AUPH,2026-06-22,Cup With Handle,16.7,50,Cup,In Base,16.88,162.0,6,True,False,False,False,True,1.07,112.0
+22,AUPH,2026-04-14,Cup With Handle,16.32,75,Flat Base,In Base,16.54,115.0,5,True,False,False,False,True,1.34,40.0
+23,AUPH,2026-07-23,Cup With Handle,9.19,141,Cup+Handle,In Base,16.7,183.0,6,True,True,True,True,True,81.72,42.0
+24,AVTX,2026-05-06,Flat Base,20.72,99,Cup,In Base,20.72,141.0,5,True,False,True,True,False,0.0,42.0
+25,AXTA,2026-07-28,Cup With Handle,35.43,109,Cup+Handle,In Base,35.3,142.0,6,True,True,True,True,True,0.37,33.0
 26,BAP,2026-06-09,Cup Without Handle,365.46,39,None,None,,,0,False,False,False,False,False,,
 27,BAP,2026-04-13,Double Bottom,360.83,46,None,None,,,0,False,False,False,False,True,,
-28,BAYRY,2026-07-03,Cup Without Handle,14.56,93,Cup,In Base,14.85,100.0,5,True,True,True,True,False,1.98,7.0
-29,BBIO,2026-07-09,Cup Without Handle,84.75,49,Cup,In Base,83.25,178.0,5,True,True,True,True,False,1.77,129.0
+28,BAYRY,2026-07-03,Cup Without Handle,14.56,93,Cup,In Base,14.85,114.0,5,True,True,True,True,False,1.99,21.0
+29,BBIO,2026-07-09,Cup Without Handle,84.75,49,Cup,In Base,84.94,178.0,5,True,True,True,True,False,0.22,129.0
 30,BBIO,2026-04-28,Cup With Handle,79.62,50,Cup+Handle,In Base,79.62,129.0,5,True,True,True,True,True,0.01,79.0
-31,BCBP,2026-06-01,Consolidation,11.71,39,Cup,In Base,10.24,43.0,5,True,False,True,True,False,12.58,4.0
-33,BCS,2026-07-03,Cup Without Handle,27.7,102,Cup+Handle,In Base,28.43,200.0,6,True,False,False,False,False,2.63,98.0
-34,BHP,2026-05-06,Cup With Handle,81.26,45,Cup+Handle,In Base,87.93,232.0,6,True,True,True,True,True,8.2,187.0
-35,BRDCY,2026-07-29,Cup Without Handle,12.46,113,Cup,In Base,12.35,295.0,6,True,True,True,True,False,0.86,182.0
-36,BTI,2026-05-12,Flat Base,67.3,51,Flat Base,In Base,65.62,109.0,6,True,True,True,True,False,2.5,58.0
-37,BUD,2026-05-05,Cup Without Handle,81.56,55,Cup+Handle,In Base,81.6,278.0,6,True,False,False,False,False,0.05,223.0
-38,CALY,2026-05-08,Cup With Handle,15.57,73,Base,Post-BO,16.0,,7,True,False,False,False,True,2.76,
-39,CBT,2026-05-06,Cup Without Handle,81.15,62,Cup,In Base,84.27,69.0,6,True,True,True,True,False,3.84,7.0
-40,CBT,2026-02-04,Cup With Handle,74.06,111,Consolidation,In Base,79.12,6.0,1,True,False,True,False,True,6.83,105.0
+31,BCBP,2026-06-01,Consolidation,11.71,39,Cup,In Base,10.5,43.0,5,True,False,True,True,False,10.33,4.0
+33,BCS,2026-07-03,Cup Without Handle,27.7,102,Cup,In Base,27.7,200.0,6,True,True,True,True,False,0.0,98.0
+34,BHP,2026-05-06,Cup With Handle,81.26,45,Cup+Handle,In Base,85.14,232.0,6,True,True,True,True,True,4.77,187.0
+35,BRDCY,2026-07-29,Cup Without Handle,12.46,113,Cup+Handle,In Base,12.06,295.0,6,True,False,False,False,False,3.21,182.0
+36,BTI,2026-05-12,Flat Base,67.3,51,Flat Base,In Base,63.22,109.0,6,True,True,True,True,False,6.06,58.0
+37,BUD,2026-05-05,Cup Without Handle,81.56,55,Cup+Handle,In Base,82.91,278.0,6,True,False,False,False,False,1.66,223.0
+38,CALY,2026-05-08,Cup With Handle,15.57,73,Cup,In Base,16.65,80.0,6,True,False,False,False,True,6.94,7.0
+39,CBT,2026-05-06,Cup Without Handle,81.15,62,Cup,In Base,81.15,82.0,6,True,True,True,True,False,0.0,20.0
+40,CBT,2026-02-04,Cup With Handle,74.06,111,Consolidation,In Base,74.06,19.0,4,True,False,False,False,True,0.0,92.0
 41,CCEP,2026-07-28,Cup With Handle,109.5,102,Cup+Handle,In Base,109.5,281.0,5,True,True,True,True,True,0.0,179.0
-42,CCSI,2026-05-08,Consolidation,37.3,33,Cup,In Base,30.87,58.0,5,True,False,True,True,False,17.23,25.0
-43,CDNA,2026-06-04,Consolidation,23.24,33,Consolidation,In Base,23.53,252.0,6,True,True,True,True,False,1.23,219.0
-44,CGON,2026-06-30,Cup Without Handle,75.5,31,Cup,In Base,75.08,78.0,5,True,True,True,True,False,0.56,47.0
-45,CLFD,2026-05-26,Cup With Handle,46.75,210,Consolidation,In Base,48.63,16.0,5,True,False,True,False,True,4.03,194.0
-46,CLH,2026-07-29,Flat Base,316.98,77,Cup+Handle,In Base,311.99,299.0,6,True,False,False,False,False,1.57,222.0
-47,CLMT,2026-06-03,Cup With Handle,36.63,44,Cup,In Base,36.79,79.0,5,True,False,True,False,True,0.43,35.0
-49,CMI,2026-06-17,Flat Base,718.08,28,Flat Base,In Base,719.32,230.0,6,True,True,True,True,False,0.17,202.0
-50,CNK,2026-06-01,Cup Without Handle,31.08,35,Dbl Bottom,In Base,29.82,67.0,5,True,False,False,False,False,4.06,32.0
-51,CNMD,2026-07-28,Cup With Handle,45.31,104,Cup,In Base,45.9,106.0,4,True,False,True,False,True,1.31,2.0
-52,COLD,2026-05-07,Cup With Handle,12.98,53,Dbl Bottom,In Base,14.05,60.0,5,True,False,False,False,True,8.21,7.0
+42,CCSI,2026-05-08,Consolidation,37.3,33,Cup,In Base,31.66,58.0,5,True,False,True,True,False,15.11,25.0
+43,CDNA,2026-06-04,Consolidation,23.24,33,Consolidation,In Base,23.24,252.0,6,True,True,True,True,False,0.0,219.0
+44,CGON,2026-06-30,Cup Without Handle,75.5,31,Cup,In Base,75.5,123.0,5,True,True,True,True,False,0.0,92.0
+45,CLFD,2026-05-26,Cup With Handle,46.75,210,Consolidation,In Base,46.75,16.0,5,True,False,False,False,True,0.0,194.0
+46,CLH,2026-07-29,Flat Base,316.98,77,Flat Base,In Base,316.99,103.0,6,True,True,True,True,False,0.0,26.0
+47,CLMT,2026-06-03,Cup With Handle,36.63,44,Cup,In Base,36.94,79.0,5,True,False,False,False,True,0.85,35.0
+49,CMI,2026-06-17,Flat Base,718.08,28,Flat Base,In Base,718.11,230.0,6,True,True,True,True,False,0.0,202.0
+50,CNK,2026-06-01,Cup Without Handle,31.08,35,Cup,In Base,31.08,67.0,5,True,True,True,True,False,0.0,32.0
+51,CNMD,2026-07-28,Cup With Handle,45.31,104,Cup,In Base,47.08,106.0,4,True,False,False,False,True,3.91,2.0
+52,COLD,2026-05-07,Cup With Handle,12.98,53,Cup,In Base,14.05,60.0,5,True,False,False,False,True,8.21,7.0
 53,CORZ,2026-05-06,Consolidation,23.63,125,Consolidation,In Base,,478.0,6,True,True,True,True,False,,353.0
-54,CRNX,2026-07-07,Cup Without Handle,57.99,124,Cup+Handle,Post-BO,53.6,,6,True,False,False,False,False,7.57,
-55,CRVL,2026-07-01,Flat Base,64.38,27,6-Wk Flat,In Base,64.81,34.0,5,True,True,True,True,False,0.67,7.0
-56,CTS,2026-05-06,Cup Without Handle,59.66,58,Cup,In Base,60.47,217.0,5,True,True,True,True,False,1.36,159.0
-57,CVS,2026-05-06,Consolidation,85.15,129,Cup,In Base,95.76,260.0,6,True,False,True,True,False,12.46,131.0
-58,CYRX,2026-05-05,Flat Base,16.73,27,Cup,In Base,11.16,171.0,5,True,False,True,True,False,33.27,144.0
-59,CYTK,2026-05-05,Consolidation,80.2,31,Cup,In Base,69.2,171.0,6,True,False,True,True,False,13.71,140.0
-60,D,2026-05-18,Flat Base,67.57,63,Flat Base,In Base,67.25,255.0,5,True,True,True,True,False,0.48,192.0
-61,DBX,2026-07-07,Double Bottom,28.94,38,Flat Base,In Base,29.36,45.0,5,True,False,False,False,True,1.44,7.0
-62,DHI,2026-06-24,Cup Without Handle,166.96,43,Cup,In Base,179.93,237.0,6,True,True,True,True,False,7.77,194.0
+54,CRNX,2026-07-07,Cup Without Handle,57.99,124,Cup,Post-BO,56.99,,5,True,True,True,True,False,1.73,
+55,CRVL,2026-07-01,Flat Base,64.38,27,Flat Base,In Base,64.38,34.0,5,True,True,True,True,False,0.0,7.0
+56,CTS,2026-05-06,Cup Without Handle,59.66,58,Cup,In Base,59.66,217.0,5,True,True,True,True,False,0.0,159.0
+57,CVS,2026-05-06,Consolidation,85.15,129,Cup,In Base,85.15,260.0,6,True,False,True,True,False,0.0,131.0
+58,CYRX,2026-05-05,Flat Base,16.73,27,Cup+Handle,In Base,10.88,171.0,5,True,False,False,False,False,34.97,144.0
+59,CYTK,2026-05-05,Consolidation,80.2,31,Cup,In Base,70.98,171.0,6,True,False,True,True,False,11.5,140.0
+60,D,2026-05-18,Flat Base,67.57,63,Flat Base,In Base,67.57,255.0,5,True,True,True,True,False,0.0,192.0
+61,DBX,2026-07-07,Double Bottom,28.94,38,Flat Base,In Base,29.1,45.0,5,True,False,False,False,True,0.55,7.0
+62,DHI,2026-06-24,Cup Without Handle,166.96,43,Cup,In Base,184.56,246.0,6,True,True,True,True,False,10.54,203.0
 63,DLO,2026-07-01,Cup Without Handle,14.49,37,None,None,,,0,False,False,False,False,False,,
-64,DSP,2026-06-01,Cup With Handle,13.11,88,Cup,In Base,13.81,142.0,6,True,False,True,False,True,5.31,54.0
-65,DUOT,2026-05-25,Cup Without Handle,12.17,98,Cup,In Base,11.1,274.0,6,True,True,True,True,False,8.83,176.0
-66,DVA,2026-05-06,Cup Without Handle,178.47,313,None,None,,,0,False,False,False,False,False,,
-67,DY,2026-05-05,Cup Without Handle,445.52,56,Cup,In Base,453.19,113.0,6,True,True,True,True,False,1.72,57.0
+64,DSP,2026-06-01,Cup With Handle,13.11,88,Cup,In Base,13.2,142.0,6,True,False,False,False,True,0.69,54.0
+65,DUOT,2026-05-25,Cup Without Handle,12.17,98,Cup,In Base,12.17,274.0,6,True,True,True,True,False,0.0,176.0
+66,DVA,2026-05-06,Cup Without Handle,178.47,313,Cup,In Base,159.42,63.0,6,True,True,True,True,False,10.67,250.0
+67,DY,2026-05-05,Cup Without Handle,445.52,56,Cup,In Base,445.53,62.0,5,True,True,True,True,False,0.0,6.0
 68,EADSY,2026-07-27,Cup With Handle,59.77,132,Cup+Handle,In Base,60.02,256.0,6,True,True,True,True,True,0.42,124.0
-69,ELTX,2026-06-04,Double Bottom,13.89,65,Cup,In Base,12.56,258.0,6,True,False,True,False,True,9.55,193.0
-70,ENTG,2026-06-15,Consolidation,159.15,34,Cup,In Base,168.41,41.0,5,True,False,True,True,False,5.82,7.0
-71,EPC,2026-06-23,Cup Without Handle,25.23,32,Cup,In Base,24.6,85.0,5,True,True,True,True,False,2.5,53.0
-72,FLYW,2026-05-06,Consolidation,18.05,36,Cup,In Base,14.87,214.0,5,True,False,True,True,False,17.62,178.0
-73,FOXF,2026-05-08,Consolidation,20.98,56,Dbl Bottom,In Base,20.36,65.0,4,True,False,False,False,False,2.96,9.0
-74,FUJIY,2026-07-27,Cup Without Handle,12.58,217,Cup+Handle,In Base,11.59,210.0,5,True,False,False,False,False,7.87,7.0
-75,GALDY,2026-06-24,Cup With Handle,44.04,32,Flat Base,In Base,45.15,39.0,5,True,False,True,False,True,2.53,7.0
-76,GIII,2026-06-05,Cup With Handle,36.33,33,Cup,In Base,35.15,158.0,5,True,False,True,False,True,3.25,125.0
+69,ELTX,2026-06-04,Double Bottom,13.89,65,Cup,In Base,14.93,258.0,6,True,False,False,False,True,7.49,193.0
+70,ENTG,2026-06-15,Consolidation,159.15,34,Cup,In Base,159.15,41.0,5,True,False,True,True,False,0.0,7.0
+71,EPC,2026-06-23,Cup Without Handle,25.23,32,Cup,In Base,25.23,85.0,5,True,True,True,True,False,0.0,53.0
+72,FLYW,2026-05-06,Consolidation,18.05,36,Cup,In Base,15.25,214.0,5,True,False,True,True,False,15.51,178.0
+73,FOXF,2026-05-08,Consolidation,20.98,56,Cup,In Base,20.36,65.0,4,True,False,True,True,False,2.96,9.0
+74,FUJIY,2026-07-27,Cup Without Handle,12.58,217,Flat Base,In Base,12.99,210.0,5,True,False,True,True,False,3.26,7.0
+75,GALDY,2026-06-24,Cup With Handle,44.04,32,Flat Base,In Base,44.06,39.0,5,True,False,False,False,True,0.05,7.0
+76,GIII,2026-06-05,Cup With Handle,36.33,33,Cup,In Base,34.83,158.0,5,True,False,False,False,True,4.13,125.0
 77,GM,2026-07-27,Flat Base,85.41,27,Flat Base,Post-BO,62.14,,6,True,True,True,True,False,27.25,
-78,GOLF,2026-06-19,Cup Without Handle,103.33,42,Cup,In Base,115.73,283.0,6,True,True,True,True,False,12.0,241.0
-79,GRMN,2026-07-29,Cup Without Handle,273.32,70,None,None,,,0,False,False,False,False,False,,
-80,GRND,2026-07-01,Cup Without Handle,15.18,35,Cup,In Base,14.8,42.0,5,True,True,True,True,False,2.5,7.0
-81,GTX,2026-04-30,Cup Without Handle,21.42,51,Cup,In Base,20.89,58.0,5,True,True,True,True,False,2.48,7.0
-82,GWW,2026-05-07,Cup With Handle,1183.01,58,Base,In Base,1254.34,6.0,4,True,False,False,False,True,6.03,52.0
-83,HESM,2026-07-23,Cup Without Handle,41.09,43,Cup+Handle,In Base,41.25,250.0,6,True,False,False,False,False,0.39,207.0
-84,HLIO,2026-05-12,Consolidation,76.47,49,Cup+Handle,In Base,80.0,184.0,5,True,False,False,False,False,4.61,135.0
+78,GOLF,2026-06-19,Cup Without Handle,103.33,42,Cup,In Base,104.81,283.0,6,True,True,True,True,False,1.43,241.0
+79,GRMN,2026-07-29,Cup Without Handle,273.32,70,Cup,In Base,273.32,71.0,5,True,True,True,True,False,0.0,1.0
+80,GRND,2026-07-01,Cup Without Handle,15.18,35,Cup,In Base,15.18,42.0,5,True,True,True,True,False,0.0,7.0
+81,GTX,2026-04-30,Cup Without Handle,21.42,51,Cup,In Base,21.43,58.0,5,True,True,True,True,False,0.02,7.0
+82,GWW,2026-05-07,Cup With Handle,1183.01,58,Consolidation,In Base,1286.51,6.0,4,True,False,False,False,True,8.75,52.0
+83,HESM,2026-07-23,Cup Without Handle,41.09,43,Cup+Handle,In Base,40.86,250.0,6,True,False,False,False,False,0.56,207.0
+84,HLIO,2026-05-12,Consolidation,76.47,49,Cup,In Base,76.47,184.0,5,True,False,True,True,False,0.0,135.0
 85,HQ,2026-06-15,Consolidation,15.53,254,Consolidation,Post-BO,14.65,,5,True,True,True,True,False,5.67,
-86,HSBC,2026-05-26,Flat Base,92.98,25,Flat Base,In Base,93.22,102.0,5,True,True,True,True,False,0.25,77.0
-87,HWM,2026-05-07,Flat Base,280.74,27,Cup,In Base,253.32,135.0,5,True,False,True,True,False,9.77,108.0
-88,IBM,2026-06-01,Cup Without Handle,324.9,135,Cup,In Base,324.16,264.0,6,True,True,True,True,False,0.23,129.0
-89,IFS,2026-06-09,Cup Without Handle,53.0,42,Cup,In Base,55.67,49.0,5,True,True,True,True,False,5.04,7.0
-90,INDV,2026-04-30,Cup Without Handle,41.0,32,Cup,In Base,39.98,104.0,6,True,True,True,True,False,2.5,72.0
-91,IQV,2026-07-23,Cup With Handle,212.36,133,Cup,In Base,245.08,255.0,5,True,False,True,False,True,15.41,122.0
-92,IX,2026-05-11,Cup Without Handle,37.04,59,Cup,In Base,33.51,106.0,5,True,True,True,True,False,9.52,47.0
+86,HSBC,2026-05-26,Flat Base,92.98,25,Flat Base,In Base,94.8,102.0,5,True,True,True,True,False,1.96,77.0
+87,HWM,2026-05-07,Flat Base,280.74,27,Cup,In Base,267.32,135.0,5,True,False,True,True,False,4.78,108.0
+88,IBM,2026-06-01,Cup Without Handle,324.9,135,Cup,In Base,324.91,264.0,6,True,True,True,True,False,0.0,129.0
+89,IFS,2026-06-09,Cup Without Handle,53.0,42,Cup,In Base,53.0,49.0,5,True,True,True,True,False,0.0,7.0
+90,INDV,2026-04-30,Cup Without Handle,41.0,32,Cup,In Base,38.0,104.0,6,True,True,True,True,False,7.32,72.0
+91,IQV,2026-07-23,Cup With Handle,212.36,133,Cup+Handle,In Base,217.04,191.0,5,True,True,True,True,True,2.21,58.0
+92,IX,2026-05-11,Cup Without Handle,37.04,59,Cup,In Base,37.04,106.0,5,True,True,True,True,False,0.0,47.0
 93,JAN,2026-06-24,Cup Without Handle,28.52,30,None,None,,,0,False,False,False,False,False,,
-94,JBAXY,2026-07-03,Cup Without Handle,17.36,33,Cup+Handle,In Base,18.44,220.0,6,True,False,False,False,False,6.22,187.0
-95,KB,2026-07-10,Consolidation,119.71,92,Dbl Bottom,In Base,115.85,169.0,6,True,False,False,False,False,3.23,77.0
-96,KEYS,2026-06-22,Flat Base,370.18,27,6-Wk Flat,In Base,365.57,34.0,6,True,True,True,True,False,1.24,7.0
+94,JBAXY,2026-07-03,Cup Without Handle,17.36,33,Flat Base,In Base,17.7,220.0,6,True,False,True,True,False,1.95,187.0
+95,KB,2026-07-10,Consolidation,119.71,92,Cup,In Base,119.71,169.0,6,True,False,True,True,False,0.0,77.0
+96,KEYS,2026-06-22,Flat Base,370.18,27,Flat Base,In Base,370.19,34.0,6,True,True,True,True,False,0.0,7.0
 97,KRNT,2026-05-13,Cup Without Handle,17.96,62,Cup+Handle,In Base,16.7,89.0,5,True,False,False,False,False,7.02,27.0
-98,KRYS,2026-05-05,Cup Without Handle,298.3,53,Cup,In Base,307.3,103.0,6,True,True,True,True,False,3.02,50.0
+98,KRYS,2026-05-05,Cup Without Handle,298.3,53,Cup,In Base,298.29,103.0,6,True,True,True,True,False,0.0,50.0
 99,KTB,2026-05-07,Cup With Handle,82.22,33,Cup+Handle,In Base,80.0,170.0,6,True,True,True,True,True,2.7,137.0
 100,LAKE,2026-06-10,Double Bottom,11.32,36,Dbl Bottom,In Base,11.28,42.0,5,True,True,True,True,True,0.35,6.0
-101,LH,2026-07-23,Cup With Handle,292.02,188,Cup,In Base,307.89,255.0,6,True,False,True,False,True,5.43,67.0
+101,LH,2026-07-23,Cup With Handle,292.02,188,Cup,In Base,293.73,281.0,6,True,False,False,False,True,0.58,93.0
 102,LOCO,2026-05-08,Double Bottom,14.49,35,Dbl Bottom,In Base,14.49,135.0,6,True,True,True,True,True,0.0,100.0
-103,LQDA,2026-05-11,Consolidation,46.67,66,Cup,In Base,45.5,110.0,6,True,False,True,True,False,2.5,44.0
-105,LXFR,2026-05-25,Cup With Handle,16.0,83,Cup,In Base,17.01,211.0,5,True,False,True,False,True,6.34,128.0
-106,LZB,2026-06-17,Consolidation,40.75,134,Cup,In Base,41.28,140.0,6,True,False,True,True,False,1.31,6.0
-107,MATW,2026-05-01,Consolidation,29.11,72,Dbl Bottom,In Base,28.33,6.0,1,True,False,False,False,False,2.68,66.0
-108,MEDP,2026-07-23,Cup Without Handle,628.92,128,Cup,In Base,613.2,257.0,5,True,True,True,True,False,2.5,129.0
-109,MMM,2026-07-21,Cup With Handle,169.76,107,Flat Base,In Base,180.28,23.0,5,True,False,True,False,True,6.2,84.0
-110,MNST,2026-05-08,Cup Without Handle,87.38,49,Dbl Bottom,In Base,87.38,78.0,4,True,False,False,False,False,0.0,29.0
-111,MO,2026-07-17,Flat Base,74.56,51,Flat Base,In Base,73.4,102.0,5,True,True,True,True,False,1.55,51.0
-112,MORN,2026-07-27,Cup Without Handle,196.92,40,Cup+Handle,In Base,185.11,41.0,5,True,False,False,False,False,6.0,1.0
-113,MTH,2026-06-24,Cup Without Handle,81.77,88,Cup,In Base,83.25,114.0,5,True,True,True,True,False,1.81,26.0
-114,NBBK,2026-07-23,Cup With Handle,21.94,65,Flat Base,In Base,22.69,174.0,6,True,False,True,False,True,3.44,109.0
-115,NBIX,2026-05-13,Cup Without Handle,160.18,107,Cup,In Base,158.33,215.0,5,True,True,True,True,False,1.16,108.0
-116,NOVT,2026-05-12,Cup Without Handle,149.95,54,Cup,In Base,152.38,221.0,5,True,True,True,True,False,1.62,167.0
-117,NVCR,2026-07-23,Consolidation,18.92,49,Cup,In Base,16.62,138.0,6,True,False,True,True,False,12.14,89.0
-118,NWSA,2026-07-10,Flat Base,27.72,41,Flat Base,In Base,28.25,115.0,5,True,True,True,True,False,1.93,74.0
-119,OCS,2026-05-07,Consolidation,30.68,50,Consolidation,In Base,28.97,19.0,5,True,True,True,True,False,5.57,31.0
+103,LQDA,2026-05-11,Consolidation,46.67,66,Cup,In Base,46.67,110.0,6,True,False,True,True,False,0.0,44.0
+105,LXFR,2026-05-25,Cup With Handle,16.0,83,Cup+Handle,In Base,16.0,228.0,5,True,True,True,True,True,0.0,145.0
+106,LZB,2026-06-17,Consolidation,40.75,134,Cup,In Base,40.75,140.0,6,True,False,True,True,False,0.0,6.0
+107,MATW,2026-05-01,Consolidation,29.11,72,Consolidation,In Base,30.93,6.0,1,True,True,True,True,False,6.25,66.0
+108,MEDP,2026-07-23,Cup Without Handle,628.92,128,Cup,In Base,628.89,257.0,5,True,True,True,True,False,0.0,129.0
+109,MMM,2026-07-21,Cup With Handle,169.76,107,Flat Base,In Base,169.76,23.0,5,True,False,False,False,True,0.0,84.0
+110,MNST,2026-05-08,Cup Without Handle,87.38,49,Cup,In Base,87.38,78.0,4,True,True,True,True,False,0.0,29.0
+111,MO,2026-07-17,Flat Base,74.56,51,Flat Base,In Base,74.56,102.0,5,True,True,True,True,False,0.0,51.0
+112,MORN,2026-07-27,Cup Without Handle,196.92,40,Cup,In Base,196.93,41.0,5,True,True,True,True,False,0.0,1.0
+113,MTH,2026-06-24,Cup Without Handle,81.77,88,Cup,In Base,81.77,114.0,5,True,True,True,True,False,0.0,26.0
+114,NBBK,2026-07-23,Cup With Handle,21.94,65,Flat Base,In Base,22.86,174.0,6,True,False,False,False,True,4.19,109.0
+115,NBIX,2026-05-13,Cup Without Handle,160.18,107,Cup,In Base,160.18,215.0,5,True,True,True,True,False,0.0,108.0
+116,NOVT,2026-05-12,Cup Without Handle,149.95,54,Cup,In Base,149.94,221.0,5,True,True,True,True,False,0.0,167.0
+117,NVCR,2026-07-23,Consolidation,18.92,49,Cup,In Base,18.92,138.0,6,True,False,True,True,False,0.0,89.0
+118,NWSA,2026-07-10,Flat Base,27.72,41,Flat Base,In Base,27.73,115.0,5,True,True,True,True,False,0.04,74.0
+119,OCS,2026-05-07,Consolidation,30.68,50,Consolidation,In Base,29.43,19.0,5,True,True,True,True,False,4.07,31.0
 120,OKTA,2026-05-29,Cup Without Handle,97.45,92,Cup,Post-BO,97.45,,6,True,True,True,True,False,0.0,
-121,ORA,2026-05-13,Cup Without Handle,132.58,68,Cup,In Base,135.06,260.0,6,True,True,True,True,False,1.87,192.0
-122,OSS,2026-05-06,Consolidation,12.75,77,Cup,In Base,12.43,84.0,6,True,False,True,True,False,2.5,7.0
-123,PARR,2026-07-13,Cup Without Handle,70.39,45,Base,Post-BO,54.63,,8,True,False,True,True,False,22.39,
-124,PESI,2026-07-16,Cup With Handle,16.2,107,Consolidation,In Base,16.89,291.0,6,True,False,True,False,True,4.25,184.0
-125,PM,2026-07-17,Flat Base,193.05,39,Flat Base,In Base,194.79,112.0,5,True,True,True,True,False,0.9,73.0
-126,PNTG,2026-05-07,Consolidation,37.54,35,Cup,In Base,36.6,113.0,6,True,False,True,True,False,2.5,78.0
+121,ORA,2026-05-13,Cup Without Handle,132.58,68,Cup,In Base,132.58,260.0,6,True,True,True,True,False,0.0,192.0
+122,OSS,2026-05-06,Consolidation,12.75,77,Cup,In Base,12.75,84.0,6,True,False,True,True,False,0.0,7.0
+123,PARR,2026-07-13,Cup Without Handle,70.39,45,Cup,In Base,70.39,72.0,6,True,True,True,True,False,0.0,27.0
+124,PESI,2026-07-16,Cup With Handle,16.2,107,Consolidation,In Base,16.5,291.0,6,True,False,False,False,True,1.85,184.0
+125,PM,2026-07-17,Flat Base,193.05,39,Flat Base,In Base,193.06,112.0,5,True,True,True,True,False,0.0,73.0
+126,PNTG,2026-05-07,Consolidation,37.54,35,Cup,In Base,35.0,113.0,6,True,False,True,True,False,6.77,78.0
 127,QTTB,2026-05-27,Consolidation,8.04,40,Cup,Post-BO,6.13,,7,True,False,True,True,False,23.7,
-128,RAL,2026-05-12,Cup Without Handle,57.02,66,Cup,In Base,57.96,108.0,5,True,True,True,True,False,1.64,42.0
-129,RDVT,2026-06-30,Consolidation,64.14,158,None,None,,,0,False,False,False,False,False,,
-130,RDW,2026-05-14,Cup Without Handle,14.55,74,Base,In Base,15.0,81.0,6,True,False,True,True,False,3.1,7.0
-131,RELL,2026-07-23,Consolidation,19.86,46,Base,Post-BO,19.17,,7,True,False,True,True,False,3.47,
-132,RJET,2026-05-26,Consolidation,25.8,132,Cup,In Base,24.14,182.0,5,True,False,True,True,False,6.44,50.0
-133,RKLB,2026-05-08,Cup With Handle,93.1,76,Cup,In Base,97.09,83.0,4,True,False,True,False,True,4.29,7.0
-134,RLAY,2026-06-02,Cup Without Handle,17.32,30,Cup,In Base,17.03,37.0,5,True,True,True,True,False,1.65,7.0
-135,RLYB,2026-05-04,Flat Base,11.49,41,HTF,In Base,15.31,49.0,5,True,False,False,False,False,33.25,8.0
-136,RNG,2026-07-24,Cup Without Handle,49.85,36,Cup,In Base,48.89,59.0,5,True,True,True,True,False,1.93,23.0
-137,ROAD,2026-05-08,Cup Without Handle,141.9,58,Dbl Bottom,In Base,139.65,6.0,1,True,False,False,False,False,1.58,52.0
-138,ROAD,2026-02-12,Cup Without Handle,138.9,98,Consolidation,In Base,138.35,318.0,6,True,False,True,True,False,0.4,220.0
-139,ROIV,2026-05-20,Cup With Handle,30.18,49,Cup,In Base,23.31,137.0,6,True,False,True,False,True,22.75,88.0
-140,ROK,2026-05-05,Cup With Handle,421.03,62,Cup,In Base,451.92,251.0,6,True,False,True,False,True,7.34,189.0
-141,RRX,2026-06-30,Cup Without Handle,236.34,36,Cup,In Base,241.61,289.0,6,True,True,True,True,False,2.23,253.0
-142,RTX,2026-07-23,Cup With Handle,203.94,98,Cup,In Base,215.81,149.0,6,True,False,True,False,True,5.82,51.0
-143,SAIC,2026-06-01,Cup With Handle,117.65,31,Cup,In Base,121.0,280.0,5,True,False,True,False,True,2.85,249.0
-144,SAN,2026-06-15,Cup With Handle,13.05,75,Consolidation,In Base,13.44,290.0,6,True,False,True,False,True,2.96,215.0
-145,SBCF,2026-06-25,Cup Without Handle,33.56,46,Flat Base,In Base,34.66,142.0,6,True,False,True,True,False,3.28,96.0
-146,SCHW,2026-07-21,Cup With Handle,103.97,110,Cup,In Base,104.82,298.0,6,True,False,True,False,True,0.81,188.0
-147,SCSC,2026-05-07,Cup Without Handle,45.23,63,Cup,In Base,45.48,253.0,6,True,True,True,True,False,0.54,190.0
-148,SHG,2026-07-10,Consolidation,73.4,100,Consolidation,In Base,71.95,255.0,5,True,True,True,True,False,1.97,155.0
-149,SIBN,2026-07-28,Cup With Handle,18.17,137,Consolidation,In Base,21.34,178.0,6,True,False,True,False,True,17.46,41.0
-150,SJM,2026-07-22,Cup With Handle,117.74,99,Cup+Handle,In Base,121.67,106.0,5,True,True,True,True,True,3.33,7.0
-151,SKM,2026-06-01,Consolidation,40.49,27,Cup,In Base,40.46,78.0,6,True,False,True,True,False,0.07,51.0
+128,RAL,2026-05-12,Cup Without Handle,57.02,66,Cup,In Base,57.02,108.0,5,True,True,True,True,False,0.0,42.0
+129,RDVT,2026-06-30,Consolidation,64.14,158,Cup,In Base,59.38,26.0,5,True,False,True,True,False,7.42,132.0
+130,RDW,2026-05-14,Cup Without Handle,14.55,74,Cup,In Base,14.55,81.0,6,True,True,True,True,False,0.0,7.0
+131,RELL,2026-07-23,Consolidation,19.86,46,Consolidation,In Base,19.86,253.0,6,True,True,True,True,False,0.0,207.0
+132,RJET,2026-05-26,Consolidation,25.8,132,Cup,In Base,25.8,198.0,5,True,False,True,True,False,0.01,66.0
+133,RKLB,2026-05-08,Cup With Handle,93.1,76,Cup,In Base,99.58,83.0,4,True,False,False,False,True,6.96,7.0
+134,RLAY,2026-06-02,Cup Without Handle,17.32,30,Cup,In Base,17.32,37.0,5,True,True,True,True,False,0.0,7.0
+135,RLYB,2026-05-04,Flat Base,11.49,41,Cup,In Base,15.31,49.0,5,True,False,True,True,False,33.25,8.0
+136,RNG,2026-07-24,Cup Without Handle,49.85,36,Cup,In Base,49.85,59.0,5,True,True,True,True,False,0.0,23.0
+137,ROAD,2026-05-08,Cup Without Handle,141.9,58,Cup,In Base,141.9,254.0,6,True,True,True,True,False,0.0,196.0
+138,ROAD,2026-02-12,Cup Without Handle,138.9,98,Cup,In Base,138.9,195.0,6,True,True,True,True,False,0.0,97.0
+139,ROIV,2026-05-20,Cup With Handle,30.18,49,Cup,In Base,30.33,75.0,6,True,False,False,False,True,0.49,26.0
+140,ROK,2026-05-05,Cup With Handle,421.03,62,Cup+Handle,In Base,463.47,251.0,6,True,True,True,True,True,10.08,189.0
+141,RRX,2026-06-30,Cup Without Handle,236.34,36,Cup,In Base,236.35,289.0,6,True,True,True,True,False,0.01,253.0
+142,RTX,2026-07-23,Cup With Handle,203.94,98,Cup+Handle,In Base,203.93,111.0,6,True,True,True,True,True,0.0,13.0
+143,SAIC,2026-06-01,Cup With Handle,117.65,31,Cup,In Base,124.11,280.0,5,True,False,False,False,True,5.49,249.0
+144,SAN,2026-06-15,Cup With Handle,13.05,75,Consolidation,In Base,13.24,290.0,6,True,False,False,False,True,1.45,215.0
+145,SBCF,2026-06-25,Cup Without Handle,33.56,46,Flat Base,In Base,35.55,142.0,6,True,False,True,True,False,5.93,96.0
+146,SCHW,2026-07-21,Cup With Handle,103.97,110,Cup+Handle,In Base,104.48,298.0,6,True,True,True,True,True,0.49,188.0
+147,SCSC,2026-05-07,Cup Without Handle,45.23,63,Cup,In Base,46.25,253.0,6,True,True,True,True,False,2.26,190.0
+148,SHG,2026-07-10,Consolidation,73.4,100,Consolidation,In Base,73.4,255.0,5,True,True,True,True,False,0.0,155.0
+149,SIBN,2026-07-28,Cup With Handle,18.17,137,Cup+Handle,In Base,18.17,178.0,6,True,True,True,True,True,0.0,41.0
+150,SJM,2026-07-22,Cup With Handle,117.74,99,Cup+Handle,In Base,118.14,106.0,5,True,True,True,True,True,0.34,7.0
+151,SKM,2026-06-01,Consolidation,40.49,27,Cup,In Base,40.49,78.0,6,True,False,True,True,False,0.0,51.0
 152,SKM,2026-01-23,Cup Without Handle,23.8,140,None,None,,,0,False,False,False,False,False,,
-153,SKYW,2026-07-24,Cup With Handle,101.34,101,Cup,In Base,111.41,106.0,5,True,False,True,False,True,9.94,5.0
+153,SKYW,2026-07-24,Cup With Handle,101.34,101,Cup+Handle,In Base,101.23,106.0,5,True,True,True,True,True,0.11,5.0
 154,SOLS,2026-05-05,Cup With Handle,54.0,72,Cup+Handle,In Base,84.99,62.0,6,True,True,True,True,True,57.39,10.0
-155,SOLV,2026-07-28,Cup With Handle,83.42,161,Flat Base,In Base,86.43,37.0,5,True,False,True,False,True,3.61,124.0
-156,SRCE,2026-07-24,Flat Base,86.64,25,Flat Base,In Base,89.18,129.0,6,True,True,True,True,False,2.93,104.0
-157,SVM,2026-05-07,Double Bottom,13.98,71,Cup,In Base,15.38,54.0,5,True,False,True,False,True,9.99,17.0
-158,SWBI,2026-06-19,Flat Base,15.79,32,Consolidation,In Base,11.85,257.0,6,True,False,True,True,False,24.97,225.0
-160,SXT,2026-07-27,Consolidation,129.35,61,Consolidation,In Base,127.76,305.0,6,True,True,True,True,False,1.23,244.0
-161,SXT,2026-04-24,Cup Without Handle,121.54,174,Cup,In Base,126.12,245.0,6,True,True,True,True,False,3.77,71.0
+155,SOLV,2026-07-28,Cup With Handle,83.42,161,Flat Base,In Base,83.42,37.0,5,True,False,False,False,True,0.0,124.0
+156,SRCE,2026-07-24,Flat Base,86.64,25,Cup+Handle,In Base,85.06,268.0,6,True,False,False,False,False,1.82,243.0
+157,SVM,2026-05-07,Double Bottom,13.98,71,Cup,In Base,13.98,54.0,5,True,False,False,False,True,0.02,17.0
+158,SWBI,2026-06-19,Flat Base,15.79,32,Consolidation,In Base,15.79,257.0,6,True,False,True,True,False,0.0,225.0
+160,SXT,2026-07-27,Consolidation,129.35,61,Cup+Handle,In Base,125.58,305.0,6,True,False,False,False,False,2.92,244.0
+161,SXT,2026-04-24,Cup Without Handle,121.54,174,Cup,In Base,121.53,245.0,6,True,True,True,True,False,0.0,71.0
 162,SYY,2026-07-28,Cup With Handle,85.31,111,Cup+Handle,In Base,85.31,256.0,5,True,True,True,True,True,0.0,145.0
-163,TER,2026-06-15,Consolidation,422.11,34,Cup,In Base,447.7,41.0,4,True,False,True,True,False,6.06,7.0
-164,THG,2026-04-30,Flat Base,188.18,102,Flat Base,In Base,186.86,277.0,5,True,True,True,True,False,0.7,175.0
-165,TSN,2026-05-04,Consolidation,69.48,59,Flat Base,In Base,67.74,65.0,6,True,False,True,True,False,2.5,6.0
-166,UAL,2026-06-15,Consolidation,119.21,109,Cup,In Base,121.67,235.0,6,True,False,True,True,False,2.06,126.0
-167,UBS,2026-06-15,Cup Without Handle,49.36,95,Cup+Handle,In Base,51.12,240.0,6,True,False,False,False,False,3.56,145.0
-168,URGN,2026-05-08,Cup With Handle,27.76,110,Cup,In Base,26.74,157.0,5,True,False,True,False,True,3.66,47.0
-169,VIST,2026-05-19,Consolidation,79.2,34,None,None,,,0,False,False,False,False,False,,
-170,VSXY,2026-06-02,Consolidation,66.89,97,Cup,In Base,65.22,104.0,5,True,False,True,True,False,2.5,7.0
-171,VVX,2026-05-05,Consolidation,75.0,42,Dbl Bottom,In Base,72.75,194.0,6,True,False,False,False,False,3.0,152.0
+163,TER,2026-06-15,Consolidation,422.11,34,Cup,In Base,422.1,41.0,4,True,False,True,True,False,0.0,7.0
+164,THG,2026-04-30,Flat Base,188.18,102,Flat Base,In Base,188.18,277.0,5,True,True,True,True,False,0.0,175.0
+165,TSN,2026-05-04,Consolidation,69.48,59,Flat Base,In Base,66.41,65.0,6,True,False,True,True,False,4.42,6.0
+166,UAL,2026-06-15,Consolidation,119.21,109,Cup,In Base,119.21,235.0,6,True,False,True,True,False,0.0,126.0
+167,UBS,2026-06-15,Cup Without Handle,49.36,95,Cup+Handle,In Base,48.73,240.0,6,True,False,False,False,False,1.28,145.0
+168,URGN,2026-05-08,Cup With Handle,27.76,110,Cup,In Base,30.0,157.0,5,True,False,False,False,True,8.07,47.0
+169,VIST,2026-05-19,Consolidation,79.2,34,Cup,In Base,79.2,41.0,6,True,False,True,True,False,0.0,7.0
+170,VSXY,2026-06-02,Consolidation,66.89,97,Cup,In Base,66.89,104.0,5,True,False,True,True,False,0.0,7.0
+171,VVX,2026-05-05,Consolidation,75.0,42,Cup,In Base,75.0,194.0,6,True,False,True,True,False,0.0,152.0
 172,WAT,2026-07-23,Cup With Handle,385.29,162,Cup+Handle,In Base,389.97,193.0,6,True,True,True,True,True,1.21,31.0
-173,WDAY,2026-07-27,Cup With Handle,149.88,37,Cup+Handle,In Base,150.24,41.0,5,True,True,True,True,True,0.24,4.0
-174,WMK,2026-05-06,Flat Base,83.74,31,Consolidation,In Base,74.11,6.0,1,True,False,True,True,False,11.5,25.0
-175,YUM,2026-07-07,Flat Base,169.39,91,Flat Base,In Base,165.89,97.0,4,True,True,True,True,False,2.06,6.0
-176,ZETA,2026-06-01,Cup Without Handle,24.9,96,Cup,In Base,23.25,241.0,5,True,True,True,True,False,6.62,145.0
-177,ZWS,2026-07-29,Flat Base,53.76,64,Flat Base,In Base,53.63,65.0,5,True,True,True,True,False,0.25,1.0
+173,WDAY,2026-07-27,Cup With Handle,149.88,37,Cup,In Base,158.63,41.0,5,True,False,False,False,True,5.84,4.0
+174,WMK,2026-05-06,Flat Base,83.74,31,Consolidation,In Base,76.01,6.0,1,True,False,True,True,False,9.23,25.0
+175,YUM,2026-07-07,Flat Base,169.39,91,Flat Base,In Base,169.39,97.0,4,True,True,True,True,False,0.0,6.0
+176,ZETA,2026-06-01,Cup Without Handle,24.9,96,Cup,In Base,24.9,241.0,5,True,True,True,True,False,0.0,145.0
+177,ZWS,2026-07-29,Flat Base,53.76,64,Flat Base,In Base,53.76,65.0,5,True,True,True,True,False,0.0,1.0
