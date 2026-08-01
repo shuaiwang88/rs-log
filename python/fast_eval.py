@@ -554,6 +554,66 @@ def _apply_bo_pivot_fix(src, lag=8):
     return src.replace(anchor, new, 1)
 
 
+def _apply_handle_locator(src, min_age, lo_frac, hi_frac, pick):
+    """Locate the handle high as a confirmed swing high, instead of a trailing-window max.
+
+    The scanner takes H12 = max of a trailing ~15-bar window. Against MarketSmith
+    progressions that is often NOT the handle IBD identified: every one of the 41
+    ground-truth Cup+Handles has its handle high at least 7 sessions before the breakout
+    (median 47), yet forcing that age onto our H12 collapses detections 19 -> 9. So our
+    correct labels are frequently reached through a recent high that is not the handle -
+    which also explains CLMT (36.94 vs 36.63), hDep correlating only 0.57-0.71 with IBD's
+    recorded handle depth, and the true-handle signature making detection worse when gated.
+
+    So find it structurally: a confirmed swing high (already in aHP_list, so it has bars on
+    both sides), at least `min_age` sessions old, sitting in the upper part of the base -
+    the ground truth puts handle high / base high at p25 0.920, median 0.950. The handle low
+    is then the lowest low SINCE that high, which is what IBD's handle depth measures.
+    """
+    anchor = "                w12_start = max(0, end_h_idx - handle_len)"
+    if anchor not in src:
+        raise RuntimeError("handle_locator anchor not found")
+    sel = "_hc[0]" if pick == 'recent' else "max(_hc, key=lambda t: t[1])"
+    new = (
+        "                _bh_e = i + 1 - 8\n"
+        "                _bh = float(np.max(highs[bStart:_bh_e])) if (bStart is not None and _bh_e > bStart) else bTop\n"
+        "                _loB = (bStart + int(np.argmin(lows[bStart:i + 1]))) if (bStart is not None and i > bStart) else 0\n"
+        "                _hc = [(bb, pp) for (bb, pp) in aHP_list\n"
+        "                       if bStart is not None and bb > _loB and (i - bb) >= %d\n"
+        "                       and _bh and %s <= pp / _bh <= %s]\n" % (min_age, lo_frac, hi_frac) +
+        "                if _hc:\n"
+        f"                    _hb, _hp = {sel}\n"
+        "                    w12_start = _hb\n"
+        "                    end_h_idx = i - 1\n"
+        "                else:\n"
+        "                    w12_start = max(0, end_h_idx - handle_len)")
+    return src.replace(anchor, new, 1)
+
+
+def _apply_handle_age(src, min_age):
+    """Require the handle HIGH to be at least `min_age` sessions old.
+
+    Derived from MarketSmith progressions supplied for real tickers, where the Cup+Handle
+    label appears a consistent 6-9 sessions AFTER the handle high forms - never on it:
+        CLMT high 5/06 -> labelled 5/14 (6)   GIII high 7/17 -> 7/27 (7)
+        BTSG high 5/16 -> 5/28 (8)            BTSG high 8/22 -> 9/05 (9)
+    A high needs bars on its right to prove it is a swing point, and the handle needs to
+    actually drift down from it.
+
+    Checked against all 41 ground-truth Cup+Handle events: the handle high precedes the
+    breakout by a MINIMUM of 7 sessions (median 47). Not one exception - so this gate cannot
+    cost recall, only remove premature detections. GIII fired Cup+Handle on 7/06, eleven
+    sessions BEFORE its handle high existed.
+    """
+    anchor = "                if inTop and depOk_h and volOk_h and slopeOk_h and H12 < bTop * 1.02:"
+    if anchor not in src:
+        raise RuntimeError("handle_age anchor not found")
+    pre = ("                _hi_rel = int(np.argmax(highs[w12_start:end_h_idx + 1])) if end_h_idx >= w12_start else 0\n"
+           f"                ageOk = bool((i - (w12_start + _hi_rel)) >= {min_age})\n")
+    return src.replace(anchor, pre +
+        "                if inTop and depOk_h and volOk_h and slopeOk_h and ageOk and H12 < bTop * 1.02:", 1)
+
+
 def _apply_old_pivot(src):
     """Restore the pre-session pivot (ratcheted bTop x 0.975) for exact A/B comparison."""
     a = ("                    _e = i + 1 - 8\n"
@@ -1361,6 +1421,8 @@ class FastEval:
         hcand = overrides.pop('handle_candidate', None)
         hvb = overrides.pop('handle_vs_basehigh', None)
         bofix = overrides.pop('bo_pivot_fix', None)
+        hloc = overrides.pop('handle_locator', None)
+        hage = overrides.pop('handle_age', None)
         oldpiv = overrides.pop('old_pivot', False)
         bpswing = overrides.pop('base_pivot_swing', None)
         bpmax = overrides.pop('base_pivot_max', None)
@@ -1416,6 +1478,10 @@ class FastEval:
             src = _apply_handle_vs_basehigh(src, hvb[0], hvb[1])
         if bofix is not None:
             src = _apply_bo_pivot_fix(src, bofix)
+        if hloc is not None:
+            src = _apply_handle_locator(src, *hloc)
+        if hage is not None:
+            src = _apply_handle_age(src, hage)
         if oldpiv:
             src = _apply_old_pivot(src)
         if bpswing is not None:

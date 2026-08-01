@@ -343,6 +343,57 @@ def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
     return [b for b in live if b['count'] >= min_bars]
 
 
+def locate_handle(highs, lows, volumes, sma20_vol, start, top, low, end,
+                  min_age=6, lo_frac=0.88, hi_frac=1.01,
+                  max_hdep=30.0, max_hdratio=0.55, vol_ratio=1.15):
+    """Find a handle inside a GIVEN base frame, and return (handle_high, handle_low).
+
+    Separate from the main loop's trailing-window handle so it can be run per candidate
+    base. The main loop measures a fixed ~15-bar window ending at the current bar; that
+    finds a recent consolidation, which empirically prices the entry well (median pivot
+    error 0.49% vs 1.13% for structurally-located handles) but is often NOT the handle IBD
+    drew. This locates the structural one: a swing high at least `min_age` sessions old -
+    every one of the 41 ground-truth Cup+Handles has its handle high >=7 sessions before the
+    breakout - sitting in the upper part of the base, with the handle low taken as the
+    lowest low since that high, which is what IBD's handle depth measures.
+
+    Run per candidate base because "upper part of the base" is meaningless when the base
+    frame is wrong: GIII's primary base ran 188 bars back to a low nine months stale, which
+    dragged cupMid down and made the test vacuous.
+    """
+    if top <= 0 or end - start < 20:
+        return None, None, None
+    rng = max(top - low, 1e-9)
+    lo_i = start + int(np.argmin(lows[start:end + 1]))
+    best = None
+    for b in range(end - min_age, lo_i, -1):
+        if b - 5 < start or b + 5 > end:
+            continue
+        if highs[b] < np.max(highs[b - 5:b + 6]):      # not a confirmed swing high
+            continue
+        if not (lo_frac <= highs[b] / top <= hi_frac):
+            continue
+        best = b
+        break
+    if best is None:
+        return None, None, None
+    h_hi = float(highs[best])
+    h_lo = float(np.min(lows[best:end + 1]))
+    hdep = (h_hi - h_lo) / h_hi * 100.0 if h_hi > 0 else 999.0
+    bdep = (top - low) / top * 100.0
+    if not (2.0 <= hdep <= max_hdep):
+        return None, None, None
+    if bdep > 0 and hdep / bdep > max_hdratio:
+        return None, None, None
+    # handle must sit in the upper half of the base (Webster: midpoint vs midpoint)
+    if (h_hi + h_lo) / 2.0 < (top + low) / 2.0:
+        return None, None, None
+    ref = sma20_vol[best] if (best < len(sma20_vol) and not np.isnan(sma20_vol[best])) else None
+    if ref and ref > 0 and np.mean(volumes[best:end + 1]) >= ref * vol_ratio:
+        return None, None, None
+    return h_hi, h_lo, best
+
+
 def classify_candidate_base(highs, lows, top, low, count, end, lag=8):
     """Name a candidate base and give its pivot.
 
@@ -1272,6 +1323,12 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                                           bdF=bdF, bLenB=bLenB):
             _nm, _pv = classify_candidate_base(highs, lows, _cb['top'], _cb['low'],
                                                _cb['count'], n - 1)
+            # A handle located inside THIS base's frame overrides the base-top reading:
+            # it is a more specific pattern and prices off a lower level.
+            _hh, _hl, _hb = locate_handle(highs, lows, volumes, sma20_vol, _cb['start'],
+                                          _cb['top'], _cb['low'], n - 1)
+            if _hh:
+                _nm, _pv = 'Cup+Handle', _hh
             if not _nm or not _pv:
                 continue
             if any(abs(p['pivot'] - _pv) / max(_pv, 1e-9) * 100.0 <= PIVOT_SAME_PCT
