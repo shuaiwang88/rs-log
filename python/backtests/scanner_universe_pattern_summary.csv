@@ -1,0 +1,1815 @@
+pattern,strategy,exit_rule,trades,win_pct,avg_ret
+Cup+Handle,Composite Score,stop_loss,1324,18.1,-8.7
+Cup+Handle,Composite Score,trail_2atr,1324,8.4,-2.86
+Cup+Handle,Composite Score,target_3r,1321,18.1,-8.35
+Cup+Handle,MA Touch,stop_loss,1240,30.6,-2.53
+Cup+Handle,MA Touch,trail_2atr,1240,36.9,-0.11
+Cup+Handle,MA Touch,target_3r,1240,61.9,2.02
+Cup+Handle,MA Touch+Pivot Breakout,stop_loss,1186,30.4,-2.58
+Cup+Handle,MA Touch+Pivot Breakout,trail_2atr,1186,36.8,-0.13
+Cup+Handle,MA Touch+Pivot Breakout,target_3r,1186,62.0,2.09
+Cup+Handle,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,698,32.1,-2.86
+Cup+Handle,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,698,36.8,-0.23
+Cup+Handle,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,698,58.2,1.49
+Cup+Handle,MA Touch+Pivot Breakout+RS New High,stop_loss,816,31.7,-2.71
+Cup+Handle,MA Touch+Pivot Breakout+RS New High,trail_2atr,816,37.0,-0.04
+Cup+Handle,MA Touch+Pivot Breakout+RS New High,target_3r,816,60.4,1.69
+Cup+Handle,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,1065,28.4,-3.45
+Cup+Handle,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,1065,34.6,-0.46
+Cup+Handle,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,1065,59.9,1.62
+Cup+Handle,MA Touch+Pivot Breakout+Shakeout,stop_loss,220,30.9,-3.28
+Cup+Handle,MA Touch+Pivot Breakout+Shakeout,trail_2atr,220,33.6,-0.4
+Cup+Handle,MA Touch+Pivot Breakout+Shakeout,target_3r,220,55.5,0.71
+Cup+Handle,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,1181,30.6,-2.57
+Cup+Handle,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,1181,36.7,-0.13
+Cup+Handle,MA Touch+Pivot Breakout+Upside Reversal,target_3r,1181,62.2,2.1
+Cup+Handle,MA Touch+Pivot Breakout+Volume Dry-Up,stop_loss,281,37.0,-2.66
+Cup+Handle,MA Touch+Pivot Breakout+Volume Dry-Up,trail_2atr,281,37.7,-0.22
+Cup+Handle,MA Touch+Pivot Breakout+Volume Dry-Up,target_3r,281,57.3,1.02
+Cup+Handle,MA Touch+Pocket Pivot,stop_loss,748,32.0,-2.89
+Cup+Handle,MA Touch+Pocket Pivot,trail_2atr,748,37.0,-0.2
+Cup+Handle,MA Touch+Pocket Pivot,target_3r,748,57.8,1.35
+Cup+Handle,MA Touch+Pocket Pivot+RS New High,stop_loss,702,31.8,-2.77
+Cup+Handle,MA Touch+Pocket Pivot+RS New High,trail_2atr,702,37.7,-0.05
+Cup+Handle,MA Touch+Pocket Pivot+RS New High,target_3r,702,58.0,1.36
+Cup+Handle,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,711,30.9,-3.28
+Cup+Handle,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,711,35.7,-0.42
+Cup+Handle,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,711,56.7,1.06
+Cup+Handle,MA Touch+Pocket Pivot+Shakeout,stop_loss,238,31.1,-3.13
+Cup+Handle,MA Touch+Pocket Pivot+Shakeout,trail_2atr,238,35.7,-0.29
+Cup+Handle,MA Touch+Pocket Pivot+Shakeout,target_3r,238,55.9,0.55
+Cup+Handle,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,747,32.0,-2.87
+Cup+Handle,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,747,37.2,-0.18
+Cup+Handle,MA Touch+Pocket Pivot+Upside Reversal,target_3r,747,57.8,1.35
+Cup+Handle,MA Touch+Pocket Pivot+Volume Dry-Up,stop_loss,304,36.5,-2.76
+Cup+Handle,MA Touch+Pocket Pivot+Volume Dry-Up,trail_2atr,304,37.8,-0.26
+Cup+Handle,MA Touch+Pocket Pivot+Volume Dry-Up,target_3r,304,56.9,0.82
+Cup+Handle,MA Touch+RS New High,stop_loss,869,31.6,-2.78
+Cup+Handle,MA Touch+RS New High,trail_2atr,869,37.1,-0.05
+Cup+Handle,MA Touch+RS New High,target_3r,869,59.8,1.51
+Cup+Handle,MA Touch+RS New High+SMA50 Bounce,stop_loss,821,30.2,-3.26
+Cup+Handle,MA Touch+RS New High+SMA50 Bounce,trail_2atr,821,35.3,-0.33
+Cup+Handle,MA Touch+RS New High+SMA50 Bounce,target_3r,821,58.5,1.17
+Cup+Handle,MA Touch+RS New High+Shakeout,stop_loss,236,31.4,-3.03
+Cup+Handle,MA Touch+RS New High+Shakeout,trail_2atr,236,35.6,-0.27
+Cup+Handle,MA Touch+RS New High+Shakeout,target_3r,236,56.4,0.53
+Cup+Handle,MA Touch+RS New High+Upside Reversal,stop_loss,867,31.7,-2.75
+Cup+Handle,MA Touch+RS New High+Upside Reversal,trail_2atr,867,37.3,-0.03
+Cup+Handle,MA Touch+RS New High+Upside Reversal,target_3r,867,59.9,1.51
+Cup+Handle,MA Touch+RS New High+Volume Dry-Up,stop_loss,278,36.7,-2.59
+Cup+Handle,MA Touch+RS New High+Volume Dry-Up,trail_2atr,278,38.5,-0.09
+Cup+Handle,MA Touch+RS New High+Volume Dry-Up,target_3r,278,57.2,0.79
+Cup+Handle,MA Touch+SMA50 Bounce,stop_loss,1118,28.4,-3.52
+Cup+Handle,MA Touch+SMA50 Bounce,trail_2atr,1118,34.7,-0.47
+Cup+Handle,MA Touch+SMA50 Bounce,target_3r,1118,59.4,1.45
+Cup+Handle,MA Touch+SMA50 Bounce+Shakeout,stop_loss,243,30.9,-3.26
+Cup+Handle,MA Touch+SMA50 Bounce+Shakeout,trail_2atr,243,35.4,-0.32
+Cup+Handle,MA Touch+SMA50 Bounce+Shakeout,target_3r,243,55.6,0.52
+Cup+Handle,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,1116,28.4,-3.53
+Cup+Handle,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,1116,34.7,-0.47
+Cup+Handle,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,1116,59.4,1.44
+Cup+Handle,MA Touch+SMA50 Bounce+Volume Dry-Up,stop_loss,300,36.3,-2.84
+Cup+Handle,MA Touch+SMA50 Bounce+Volume Dry-Up,trail_2atr,300,37.3,-0.37
+Cup+Handle,MA Touch+SMA50 Bounce+Volume Dry-Up,target_3r,300,56.3,0.66
+Cup+Handle,MA Touch+Shakeout,stop_loss,244,30.7,-3.3
+Cup+Handle,MA Touch+Shakeout,trail_2atr,244,34.8,-0.33
+Cup+Handle,MA Touch+Shakeout,target_3r,244,55.7,0.5
+Cup+Handle,MA Touch+Shakeout+Upside Reversal,stop_loss,244,30.7,-3.31
+Cup+Handle,MA Touch+Shakeout+Upside Reversal,trail_2atr,244,34.8,-0.35
+Cup+Handle,MA Touch+Shakeout+Upside Reversal,target_3r,244,55.7,0.5
+Cup+Handle,MA Touch+Shakeout+Volume Dry-Up,stop_loss,126,36.5,-2.73
+Cup+Handle,MA Touch+Shakeout+Volume Dry-Up,trail_2atr,126,37.3,-0.14
+Cup+Handle,MA Touch+Shakeout+Volume Dry-Up,target_3r,126,60.3,1.26
+Cup+Handle,MA Touch+Upside Reversal,stop_loss,1235,30.7,-2.54
+Cup+Handle,MA Touch+Upside Reversal,trail_2atr,1235,36.8,-0.12
+Cup+Handle,MA Touch+Upside Reversal,target_3r,1235,62.0,2.02
+Cup+Handle,MA Touch+Upside Reversal+Volume Dry-Up,stop_loss,308,36.7,-2.73
+Cup+Handle,MA Touch+Upside Reversal+Volume Dry-Up,trail_2atr,308,38.0,-0.23
+Cup+Handle,MA Touch+Upside Reversal+Volume Dry-Up,target_3r,308,56.8,0.78
+Cup+Handle,MA Touch+Volume Dry-Up,stop_loss,308,36.7,-2.69
+Cup+Handle,MA Touch+Volume Dry-Up,trail_2atr,308,38.3,-0.22
+Cup+Handle,MA Touch+Volume Dry-Up,target_3r,308,56.8,0.84
+Cup+Handle,Pivot Breakout,stop_loss,1288,16.9,-9.2
+Cup+Handle,Pivot Breakout,trail_2atr,1288,7.7,-2.95
+Cup+Handle,Pivot Breakout,target_3r,1285,16.9,-8.95
+Cup+Handle,Pivot Breakout+Pocket Pivot,stop_loss,703,44.2,-2.62
+Cup+Handle,Pivot Breakout+Pocket Pivot,trail_2atr,703,27.5,-1.39
+Cup+Handle,Pivot Breakout+Pocket Pivot,target_3r,700,46.4,-1.41
+Cup+Handle,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,657,45.8,-1.54
+Cup+Handle,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,657,30.7,-0.89
+Cup+Handle,Pivot Breakout+Pocket Pivot+RS New High,target_3r,654,50.8,-0.02
+Cup+Handle,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,662,37.6,-2.1
+Cup+Handle,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,662,38.7,0.15
+Cup+Handle,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,662,58.0,1.76
+Cup+Handle,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,215,40.9,-2.54
+Cup+Handle,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,215,23.3,-1.37
+Cup+Handle,Pivot Breakout+Pocket Pivot+Shakeout,target_3r,215,46.5,-0.87
+Cup+Handle,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,699,38.6,-1.68
+Cup+Handle,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,699,38.1,-0.07
+Cup+Handle,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,699,60.5,2.13
+Cup+Handle,Pivot Breakout+Pocket Pivot+Volume Dry-Up,stop_loss,281,44.1,-2.17
+Cup+Handle,Pivot Breakout+Pocket Pivot+Volume Dry-Up,trail_2atr,281,33.1,-0.79
+Cup+Handle,Pivot Breakout+Pocket Pivot+Volume Dry-Up,target_3r,279,48.0,-0.9
+Cup+Handle,Pivot Breakout+RS New High,stop_loss,821,45.4,-1.87
+Cup+Handle,Pivot Breakout+RS New High,trail_2atr,821,27.5,-1.13
+Cup+Handle,Pivot Breakout+RS New High,target_3r,818,49.0,-0.49
+Cup+Handle,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,769,38.0,-1.75
+Cup+Handle,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,769,38.9,0.1
+Cup+Handle,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,769,59.7,1.74
+Cup+Handle,Pivot Breakout+RS New High+Shakeout,stop_loss,212,41.5,-2.5
+Cup+Handle,Pivot Breakout+RS New High+Shakeout,trail_2atr,212,28.3,-0.94
+Cup+Handle,Pivot Breakout+RS New High+Shakeout,target_3r,212,49.1,-0.35
+Cup+Handle,Pivot Breakout+RS New High+Upside Reversal,stop_loss,816,38.8,-1.61
+Cup+Handle,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,816,37.5,-0.05
+Cup+Handle,Pivot Breakout+RS New High+Upside Reversal,target_3r,816,61.8,2.15
+Cup+Handle,Pivot Breakout+RS New High+Volume Dry-Up,stop_loss,253,44.3,-2.14
+Cup+Handle,Pivot Breakout+RS New High+Volume Dry-Up,trail_2atr,253,29.2,-0.78
+Cup+Handle,Pivot Breakout+RS New High+Volume Dry-Up,target_3r,251,49.0,-0.6
+Cup+Handle,Pivot Breakout+SMA50 Bounce,stop_loss,1068,38.1,-1.18
+Cup+Handle,Pivot Breakout+SMA50 Bounce,trail_2atr,1068,43.2,0.52
+Cup+Handle,Pivot Breakout+SMA50 Bounce,target_3r,1068,63.5,2.71
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Shakeout,stop_loss,219,40.6,-1.75
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Shakeout,trail_2atr,219,44.7,0.73
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Shakeout,target_3r,219,58.4,1.25
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,1066,33.2,-2.36
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,1066,37.3,-0.23
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,1066,60.6,2.02
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,stop_loss,273,39.6,-2.3
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,trail_2atr,273,39.6,-0.18
+Cup+Handle,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,target_3r,273,55.3,1.14
+Cup+Handle,Pivot Breakout+Shakeout,stop_loss,220,41.8,-1.6
+Cup+Handle,Pivot Breakout+Shakeout,trail_2atr,220,29.1,-0.47
+Cup+Handle,Pivot Breakout+Shakeout,target_3r,220,48.2,0.21
+Cup+Handle,Pivot Breakout+Shakeout+Upside Reversal,stop_loss,220,38.6,-2.38
+Cup+Handle,Pivot Breakout+Shakeout+Upside Reversal,trail_2atr,220,33.2,-0.33
+Cup+Handle,Pivot Breakout+Shakeout+Upside Reversal,target_3r,220,59.1,1.02
+Cup+Handle,Pivot Breakout+Shakeout+Volume Dry-Up,stop_loss,113,33.6,-3.35
+Cup+Handle,Pivot Breakout+Shakeout+Volume Dry-Up,trail_2atr,113,19.5,-1.3
+Cup+Handle,Pivot Breakout+Shakeout+Volume Dry-Up,target_3r,113,38.9,-1.03
+Cup+Handle,Pivot Breakout+Upside Reversal,stop_loss,1197,38.0,-1.49
+Cup+Handle,Pivot Breakout+Upside Reversal,trail_2atr,1197,38.3,-0.07
+Cup+Handle,Pivot Breakout+Upside Reversal,target_3r,1197,63.0,2.36
+Cup+Handle,Pivot Breakout+Upside Reversal+Volume Dry-Up,stop_loss,281,41.3,-2.19
+Cup+Handle,Pivot Breakout+Upside Reversal+Volume Dry-Up,trail_2atr,281,36.3,-0.51
+Cup+Handle,Pivot Breakout+Upside Reversal+Volume Dry-Up,target_3r,281,59.1,1.17
+Cup+Handle,Pivot Breakout+Volume Dry-Up,stop_loss,283,35.0,-4.11
+Cup+Handle,Pivot Breakout+Volume Dry-Up,trail_2atr,283,30.4,-1.03
+Cup+Handle,Pivot Breakout+Volume Dry-Up,target_3r,281,36.3,-2.87
+Cup+Handle,Pocket Pivot,stop_loss,753,45.6,-1.92
+Cup+Handle,Pocket Pivot,trail_2atr,753,32.0,-0.92
+Cup+Handle,Pocket Pivot,target_3r,749,47.7,-0.73
+Cup+Handle,Pocket Pivot+RS New High,stop_loss,707,46.4,-1.38
+Cup+Handle,Pocket Pivot+RS New High,trail_2atr,707,32.2,-0.68
+Cup+Handle,Pocket Pivot+RS New High,target_3r,703,51.2,0.1
+Cup+Handle,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,666,36.6,-2.48
+Cup+Handle,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,666,34.8,-0.16
+Cup+Handle,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,666,56.3,1.07
+Cup+Handle,Pocket Pivot+RS New High+Shakeout,stop_loss,231,43.7,-2.23
+Cup+Handle,Pocket Pivot+RS New High+Shakeout,trail_2atr,231,26.4,-1.01
+Cup+Handle,Pocket Pivot+RS New High+Shakeout,target_3r,231,50.6,-0.49
+Cup+Handle,Pocket Pivot+RS New High+Upside Reversal,stop_loss,704,38.4,-1.78
+Cup+Handle,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,704,38.1,0.01
+Cup+Handle,Pocket Pivot+RS New High+Upside Reversal,target_3r,703,60.0,1.92
+Cup+Handle,Pocket Pivot+RS New High+Volume Dry-Up,stop_loss,278,45.0,-1.78
+Cup+Handle,Pocket Pivot+RS New High+Volume Dry-Up,trail_2atr,278,28.8,-0.7
+Cup+Handle,Pocket Pivot+RS New High+Volume Dry-Up,target_3r,276,50.7,-0.35
+Cup+Handle,Pocket Pivot+SMA50 Bounce,stop_loss,711,37.4,-2.19
+Cup+Handle,Pocket Pivot+SMA50 Bounce,trail_2atr,711,38.7,0.1
+Cup+Handle,Pocket Pivot+SMA50 Bounce,target_3r,711,57.4,1.56
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Shakeout,stop_loss,237,39.7,-2.07
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Shakeout,trail_2atr,237,36.7,-0.07
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Shakeout,target_3r,237,57.0,0.81
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,711,34.7,-2.65
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,711,37.1,-0.28
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,711,58.5,1.57
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,stop_loss,298,38.6,-2.49
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,trail_2atr,298,34.2,-0.39
+Cup+Handle,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,target_3r,298,54.0,0.66
+Cup+Handle,Pocket Pivot+Shakeout,stop_loss,238,40.3,-2.63
+Cup+Handle,Pocket Pivot+Shakeout,trail_2atr,238,22.7,-1.4
+Cup+Handle,Pocket Pivot+Shakeout,target_3r,238,45.4,-1.1
+Cup+Handle,Pocket Pivot+Shakeout+Upside Reversal,stop_loss,238,38.2,-2.25
+Cup+Handle,Pocket Pivot+Shakeout+Upside Reversal,trail_2atr,238,34.5,-0.34
+Cup+Handle,Pocket Pivot+Shakeout+Upside Reversal,target_3r,238,59.2,0.87
+Cup+Handle,Pocket Pivot+Shakeout+Volume Dry-Up,stop_loss,125,40.0,-2.5
+Cup+Handle,Pocket Pivot+Shakeout+Volume Dry-Up,trail_2atr,125,19.2,-1.32
+Cup+Handle,Pocket Pivot+Shakeout+Volume Dry-Up,target_3r,125,46.4,-0.71
+Cup+Handle,Pocket Pivot+Upside Reversal,stop_loss,749,38.6,-1.71
+Cup+Handle,Pocket Pivot+Upside Reversal,trail_2atr,749,38.2,-0.07
+Cup+Handle,Pocket Pivot+Upside Reversal,target_3r,748,60.6,2.0
+Cup+Handle,Pocket Pivot+Upside Reversal+Volume Dry-Up,stop_loss,304,40.1,-2.3
+Cup+Handle,Pocket Pivot+Upside Reversal+Volume Dry-Up,trail_2atr,304,34.9,-0.59
+Cup+Handle,Pocket Pivot+Upside Reversal+Volume Dry-Up,target_3r,304,59.2,0.98
+Cup+Handle,Pocket Pivot+Volume Dry-Up,stop_loss,306,42.2,-2.31
+Cup+Handle,Pocket Pivot+Volume Dry-Up,trail_2atr,306,33.3,-0.77
+Cup+Handle,Pocket Pivot+Volume Dry-Up,target_3r,304,45.7,-1.14
+Cup+Handle,RS New High,stop_loss,874,50.7,-0.72
+Cup+Handle,RS New High,trail_2atr,874,31.0,-0.71
+Cup+Handle,RS New High,target_3r,870,54.5,0.64
+Cup+Handle,RS New High+SMA50 Bounce,stop_loss,821,37.5,-1.88
+Cup+Handle,RS New High+SMA50 Bounce,trail_2atr,821,38.5,0.04
+Cup+Handle,RS New High+SMA50 Bounce,target_3r,821,58.7,1.52
+Cup+Handle,RS New High+SMA50 Bounce+Shakeout,stop_loss,235,36.2,-2.57
+Cup+Handle,RS New High+SMA50 Bounce+Shakeout,trail_2atr,235,34.9,-0.3
+Cup+Handle,RS New High+SMA50 Bounce+Shakeout,target_3r,235,53.6,0.23
+Cup+Handle,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,820,35.2,-2.42
+Cup+Handle,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,820,37.0,-0.22
+Cup+Handle,RS New High+SMA50 Bounce+Upside Reversal,target_3r,820,59.8,1.5
+Cup+Handle,RS New High+SMA50 Bounce+Volume Dry-Up,stop_loss,272,36.8,-2.67
+Cup+Handle,RS New High+SMA50 Bounce+Volume Dry-Up,trail_2atr,272,32.0,-0.63
+Cup+Handle,RS New High+SMA50 Bounce+Volume Dry-Up,target_3r,272,51.8,0.33
+Cup+Handle,RS New High+Shakeout,stop_loss,236,41.9,-2.55
+Cup+Handle,RS New High+Shakeout,trail_2atr,236,27.1,-0.99
+Cup+Handle,RS New High+Shakeout,target_3r,236,49.2,-0.54
+Cup+Handle,RS New High+Shakeout+Upside Reversal,stop_loss,236,38.6,-2.49
+Cup+Handle,RS New High+Shakeout+Upside Reversal,trail_2atr,236,34.3,-0.28
+Cup+Handle,RS New High+Shakeout+Upside Reversal,target_3r,236,58.5,0.58
+Cup+Handle,RS New High+Shakeout+Volume Dry-Up,stop_loss,122,38.5,-3.16
+Cup+Handle,RS New High+Shakeout+Volume Dry-Up,trail_2atr,122,24.6,-1.3
+Cup+Handle,RS New High+Shakeout+Volume Dry-Up,target_3r,122,47.5,-0.59
+Cup+Handle,RS New High+Upside Reversal,stop_loss,869,38.8,-1.65
+Cup+Handle,RS New High+Upside Reversal,trail_2atr,869,38.0,-0.0
+Cup+Handle,RS New High+Upside Reversal,target_3r,868,61.6,2.02
+Cup+Handle,RS New High+Upside Reversal+Volume Dry-Up,stop_loss,278,40.3,-2.23
+Cup+Handle,RS New High+Upside Reversal+Volume Dry-Up,trail_2atr,278,36.3,-0.47
+Cup+Handle,RS New High+Upside Reversal+Volume Dry-Up,target_3r,278,58.3,0.93
+Cup+Handle,RS New High+Volume Dry-Up,stop_loss,280,43.2,-2.38
+Cup+Handle,RS New High+Volume Dry-Up,trail_2atr,280,28.6,-0.79
+Cup+Handle,RS New High+Volume Dry-Up,target_3r,278,47.8,-0.86
+Cup+Handle,SMA50 Bounce,stop_loss,1121,38.0,-1.23
+Cup+Handle,SMA50 Bounce,trail_2atr,1121,43.1,0.47
+Cup+Handle,SMA50 Bounce,target_3r,1121,62.8,2.6
+Cup+Handle,SMA50 Bounce+Shakeout,stop_loss,243,39.5,-1.81
+Cup+Handle,SMA50 Bounce+Shakeout,trail_2atr,243,44.0,0.62
+Cup+Handle,SMA50 Bounce+Shakeout,target_3r,243,56.8,0.99
+Cup+Handle,SMA50 Bounce+Shakeout+Upside Reversal,stop_loss,243,34.6,-2.94
+Cup+Handle,SMA50 Bounce+Shakeout+Upside Reversal,trail_2atr,243,36.6,-0.34
+Cup+Handle,SMA50 Bounce+Shakeout+Upside Reversal,target_3r,243,57.2,0.57
+Cup+Handle,SMA50 Bounce+Shakeout+Volume Dry-Up,stop_loss,126,35.7,-2.39
+Cup+Handle,SMA50 Bounce+Shakeout+Volume Dry-Up,trail_2atr,126,38.1,-0.31
+Cup+Handle,SMA50 Bounce+Shakeout+Volume Dry-Up,target_3r,126,54.0,1.24
+Cup+Handle,SMA50 Bounce+Upside Reversal,stop_loss,1119,33.3,-2.38
+Cup+Handle,SMA50 Bounce+Upside Reversal,trail_2atr,1119,37.5,-0.25
+Cup+Handle,SMA50 Bounce+Upside Reversal,target_3r,1119,60.5,1.92
+Cup+Handle,SMA50 Bounce+Upside Reversal+Volume Dry-Up,stop_loss,300,38.0,-2.69
+Cup+Handle,SMA50 Bounce+Upside Reversal+Volume Dry-Up,trail_2atr,300,37.3,-0.49
+Cup+Handle,SMA50 Bounce+Upside Reversal+Volume Dry-Up,target_3r,300,57.3,0.97
+Cup+Handle,SMA50 Bounce+Volume Dry-Up,stop_loss,300,38.3,-2.35
+Cup+Handle,SMA50 Bounce+Volume Dry-Up,trail_2atr,300,38.7,-0.27
+Cup+Handle,SMA50 Bounce+Volume Dry-Up,target_3r,300,53.7,0.95
+Cup+Handle,Shakeout,stop_loss,244,41.0,-1.79
+Cup+Handle,Shakeout,trail_2atr,244,28.3,-0.57
+Cup+Handle,Shakeout,target_3r,244,46.7,0.02
+Cup+Handle,Shakeout+Upside Reversal,stop_loss,244,37.3,-2.55
+Cup+Handle,Shakeout+Upside Reversal,trail_2atr,244,33.6,-0.37
+Cup+Handle,Shakeout+Upside Reversal,target_3r,244,58.2,0.68
+Cup+Handle,Shakeout+Upside Reversal+Volume Dry-Up,stop_loss,126,38.9,-2.54
+Cup+Handle,Shakeout+Upside Reversal+Volume Dry-Up,trail_2atr,126,32.5,-0.61
+Cup+Handle,Shakeout+Upside Reversal+Volume Dry-Up,target_3r,126,61.1,1.25
+Cup+Handle,Shakeout+Volume Dry-Up,stop_loss,126,33.3,-3.55
+Cup+Handle,Shakeout+Volume Dry-Up,trail_2atr,126,18.3,-1.35
+Cup+Handle,Shakeout+Volume Dry-Up,target_3r,126,38.1,-1.37
+Cup+Handle,Upside Reversal,stop_loss,1251,38.4,-0.98
+Cup+Handle,Upside Reversal,trail_2atr,1251,39.4,0.04
+Cup+Handle,Upside Reversal,target_3r,1251,64.6,2.75
+Cup+Handle,Upside Reversal+Volume Dry-Up,stop_loss,308,39.9,-2.3
+Cup+Handle,Upside Reversal+Volume Dry-Up,trail_2atr,308,36.7,-0.48
+Cup+Handle,Upside Reversal+Volume Dry-Up,target_3r,308,58.4,0.97
+Cup+Handle,Volume Dry-Up,stop_loss,310,33.9,-4.29
+Cup+Handle,Volume Dry-Up,trail_2atr,310,29.4,-1.0
+Cup+Handle,Volume Dry-Up,target_3r,308,35.4,-3.09
+Cup,Composite Score,stop_loss,2590,19.6,-9.66
+Cup,Composite Score,trail_2atr,2590,15.4,-2.87
+Cup,Composite Score,target_3r,2547,21.2,-9.77
+Cup,MA Touch,stop_loss,2276,31.4,-3.46
+Cup,MA Touch,trail_2atr,2276,35.7,-0.41
+Cup,MA Touch,target_3r,2273,51.9,-0.24
+Cup,MA Touch+Pivot Breakout,stop_loss,1468,38.4,0.88
+Cup,MA Touch+Pivot Breakout,trail_2atr,1468,39.9,0.47
+Cup,MA Touch+Pivot Breakout,target_3r,1466,64.9,4.77
+Cup,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,1026,39.5,0.65
+Cup,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,1026,40.1,0.66
+Cup,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,1022,60.5,3.95
+Cup,MA Touch+Pivot Breakout+RS New High,stop_loss,1023,41.4,2.08
+Cup,MA Touch+Pivot Breakout+RS New High,trail_2atr,1023,41.3,0.91
+Cup,MA Touch+Pivot Breakout+RS New High,target_3r,1017,65.5,5.22
+Cup,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,1108,35.6,-1.8
+Cup,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,1108,32.9,-1.02
+Cup,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,1108,60.7,3.5
+Cup,MA Touch+Pivot Breakout+Shakeout,stop_loss,242,39.3,-1.5
+Cup,MA Touch+Pivot Breakout+Shakeout,trail_2atr,242,33.1,-0.79
+Cup,MA Touch+Pivot Breakout+Shakeout,target_3r,242,59.9,2.59
+Cup,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,1434,38.4,0.83
+Cup,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,1434,39.3,0.32
+Cup,MA Touch+Pivot Breakout+Upside Reversal,target_3r,1432,65.2,5.0
+Cup,MA Touch+Pivot Breakout+Volume Dry-Up,stop_loss,434,41.0,-0.33
+Cup,MA Touch+Pivot Breakout+Volume Dry-Up,trail_2atr,434,37.6,-0.12
+Cup,MA Touch+Pivot Breakout+Volume Dry-Up,target_3r,434,54.1,1.28
+Cup,MA Touch+Pocket Pivot,stop_loss,1610,34.2,-2.47
+Cup,MA Touch+Pocket Pivot,trail_2atr,1610,37.6,0.09
+Cup,MA Touch+Pocket Pivot,target_3r,1606,51.2,0.43
+Cup,MA Touch+Pocket Pivot+RS New High,stop_loss,1352,36.5,-0.88
+Cup,MA Touch+Pocket Pivot+RS New High,trail_2atr,1352,39.3,0.48
+Cup,MA Touch+Pocket Pivot+RS New High,target_3r,1347,54.4,1.76
+Cup,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,1421,31.7,-4.5
+Cup,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,1421,33.3,-0.99
+Cup,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,1420,47.6,-0.83
+Cup,MA Touch+Pocket Pivot+Shakeout,stop_loss,486,38.3,-2.36
+Cup,MA Touch+Pocket Pivot+Shakeout,trail_2atr,486,35.0,-0.51
+Cup,MA Touch+Pocket Pivot+Shakeout,target_3r,486,52.5,-0.04
+Cup,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,1600,33.9,-2.51
+Cup,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,1600,36.9,-0.06
+Cup,MA Touch+Pocket Pivot+Upside Reversal,target_3r,1596,51.0,0.41
+Cup,MA Touch+Pocket Pivot+Volume Dry-Up,stop_loss,663,37.1,-1.55
+Cup,MA Touch+Pocket Pivot+Volume Dry-Up,trail_2atr,663,35.4,-0.3
+Cup,MA Touch+Pocket Pivot+Volume Dry-Up,target_3r,663,49.5,-0.13
+Cup,MA Touch+RS New High,stop_loss,1518,37.1,-0.47
+Cup,MA Touch+RS New High,trail_2atr,1518,39.7,0.48
+Cup,MA Touch+RS New High,target_3r,1512,56.7,2.31
+Cup,MA Touch+RS New High+SMA50 Bounce,stop_loss,1287,34.3,-2.94
+Cup,MA Touch+RS New High+SMA50 Bounce,trail_2atr,1287,34.5,-0.69
+Cup,MA Touch+RS New High+SMA50 Bounce,target_3r,1287,53.0,1.02
+Cup,MA Touch+RS New High+Shakeout,stop_loss,454,39.9,-1.74
+Cup,MA Touch+RS New High+Shakeout,trail_2atr,454,36.3,-0.33
+Cup,MA Touch+RS New High+Shakeout,target_3r,454,54.8,0.96
+Cup,MA Touch+RS New High+Upside Reversal,stop_loss,1509,36.8,-0.67
+Cup,MA Touch+RS New High+Upside Reversal,trail_2atr,1509,39.2,0.37
+Cup,MA Touch+RS New High+Upside Reversal,target_3r,1503,56.6,2.28
+Cup,MA Touch+RS New High+Volume Dry-Up,stop_loss,567,37.2,-1.28
+Cup,MA Touch+RS New High+Volume Dry-Up,trail_2atr,567,35.3,-0.14
+Cup,MA Touch+RS New High+Volume Dry-Up,target_3r,567,51.1,0.15
+Cup,MA Touch+SMA50 Bounce,stop_loss,1913,28.3,-6.14
+Cup,MA Touch+SMA50 Bounce,trail_2atr,1913,30.3,-1.53
+Cup,MA Touch+SMA50 Bounce,target_3r,1913,46.4,-2.1
+Cup,MA Touch+SMA50 Bounce+Shakeout,stop_loss,496,37.5,-2.84
+Cup,MA Touch+SMA50 Bounce+Shakeout,trail_2atr,496,34.3,-0.56
+Cup,MA Touch+SMA50 Bounce+Shakeout,target_3r,496,51.2,-0.43
+Cup,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,1900,28.3,-6.12
+Cup,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,1900,30.1,-1.53
+Cup,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,1900,46.5,-2.04
+Cup,MA Touch+SMA50 Bounce+Volume Dry-Up,stop_loss,645,34.9,-2.96
+Cup,MA Touch+SMA50 Bounce+Volume Dry-Up,trail_2atr,645,33.3,-0.73
+Cup,MA Touch+SMA50 Bounce+Volume Dry-Up,target_3r,645,47.1,-0.81
+Cup,MA Touch+Shakeout,stop_loss,504,37.9,-2.67
+Cup,MA Touch+Shakeout,trail_2atr,504,34.5,-0.53
+Cup,MA Touch+Shakeout,target_3r,504,52.2,-0.09
+Cup,MA Touch+Shakeout+Upside Reversal,stop_loss,502,37.6,-2.71
+Cup,MA Touch+Shakeout+Upside Reversal,trail_2atr,502,34.5,-0.54
+Cup,MA Touch+Shakeout+Upside Reversal,target_3r,502,52.0,-0.12
+Cup,MA Touch+Shakeout+Volume Dry-Up,stop_loss,286,37.4,-1.84
+Cup,MA Touch+Shakeout+Volume Dry-Up,trail_2atr,286,32.5,-0.49
+Cup,MA Touch+Shakeout+Volume Dry-Up,target_3r,286,52.8,0.48
+Cup,MA Touch+Upside Reversal,stop_loss,2237,31.1,-3.68
+Cup,MA Touch+Upside Reversal,trail_2atr,2237,34.8,-0.59
+Cup,MA Touch+Upside Reversal,target_3r,2235,51.8,-0.23
+Cup,MA Touch+Upside Reversal+Volume Dry-Up,stop_loss,683,36.3,-2.06
+Cup,MA Touch+Upside Reversal+Volume Dry-Up,trail_2atr,683,35.3,-0.36
+Cup,MA Touch+Upside Reversal+Volume Dry-Up,target_3r,683,48.8,-0.43
+Cup,MA Touch+Volume Dry-Up,stop_loss,690,36.7,-1.82
+Cup,MA Touch+Volume Dry-Up,trail_2atr,690,35.7,-0.25
+Cup,MA Touch+Volume Dry-Up,target_3r,690,49.0,-0.2
+Cup,Pivot Breakout,stop_loss,1833,19.4,-8.66
+Cup,Pivot Breakout,trail_2atr,1833,12.1,-2.9
+Cup,Pivot Breakout,target_3r,1790,20.1,-9.4
+Cup,Pivot Breakout+Pocket Pivot,stop_loss,1064,40.4,0.45
+Cup,Pivot Breakout+Pocket Pivot,trail_2atr,1064,32.2,0.06
+Cup,Pivot Breakout+Pocket Pivot,target_3r,1030,45.0,0.45
+Cup,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,899,47.4,3.12
+Cup,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,899,35.0,0.52
+Cup,Pivot Breakout+Pocket Pivot+RS New High,target_3r,867,53.2,2.37
+Cup,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,839,40.3,1.28
+Cup,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,839,42.6,1.67
+Cup,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,838,58.8,3.29
+Cup,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,236,44.9,0.13
+Cup,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,236,26.7,-1.13
+Cup,Pivot Breakout+Pocket Pivot+Shakeout,target_3r,231,49.8,0.37
+Cup,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,1020,43.0,3.57
+Cup,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,1020,40.4,1.44
+Cup,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,1018,60.4,4.3
+Cup,Pivot Breakout+Pocket Pivot+Volume Dry-Up,stop_loss,421,43.9,-1.09
+Cup,Pivot Breakout+Pocket Pivot+Volume Dry-Up,trail_2atr,421,34.7,-0.44
+Cup,Pivot Breakout+Pocket Pivot+Volume Dry-Up,target_3r,415,47.2,-0.17
+Cup,Pivot Breakout+RS New High,stop_loss,1066,47.6,2.36
+Cup,Pivot Breakout+RS New High,trail_2atr,1066,33.6,-0.06
+Cup,Pivot Breakout+RS New High,target_3r,1027,52.4,1.72
+Cup,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,795,43.8,2.46
+Cup,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,795,43.5,1.99
+Cup,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,795,63.9,4.55
+Cup,Pivot Breakout+RS New High+Shakeout,stop_loss,218,50.5,0.51
+Cup,Pivot Breakout+RS New High+Shakeout,trail_2atr,218,27.5,-1.2
+Cup,Pivot Breakout+RS New High+Shakeout,target_3r,212,58.5,1.89
+Cup,Pivot Breakout+RS New High+Upside Reversal,stop_loss,1022,46.5,4.76
+Cup,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,1022,40.9,1.61
+Cup,Pivot Breakout+RS New High+Upside Reversal,target_3r,1018,65.0,5.28
+Cup,Pivot Breakout+RS New High+Volume Dry-Up,stop_loss,339,44.2,-0.86
+Cup,Pivot Breakout+RS New High+Volume Dry-Up,trail_2atr,339,35.7,-0.32
+Cup,Pivot Breakout+RS New High+Volume Dry-Up,target_3r,333,48.9,-0.13
+Cup,Pivot Breakout+SMA50 Bounce,stop_loss,1112,42.8,2.46
+Cup,Pivot Breakout+SMA50 Bounce,trail_2atr,1112,47.3,2.13
+Cup,Pivot Breakout+SMA50 Bounce,target_3r,1112,64.7,4.6
+Cup,Pivot Breakout+SMA50 Bounce+Shakeout,stop_loss,235,43.4,0.37
+Cup,Pivot Breakout+SMA50 Bounce+Shakeout,trail_2atr,235,45.5,0.6
+Cup,Pivot Breakout+SMA50 Bounce+Shakeout,target_3r,234,58.5,2.76
+Cup,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,1104,40.1,0.7
+Cup,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,1104,37.4,0.63
+Cup,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,1104,62.9,4.01
+Cup,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,stop_loss,389,38.6,-1.39
+Cup,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,trail_2atr,389,43.2,0.15
+Cup,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,target_3r,389,52.2,1.12
+Cup,Pivot Breakout+Shakeout,stop_loss,247,46.2,0.66
+Cup,Pivot Breakout+Shakeout,trail_2atr,247,31.6,-0.76
+Cup,Pivot Breakout+Shakeout,target_3r,241,49.8,0.5
+Cup,Pivot Breakout+Shakeout+Upside Reversal,stop_loss,240,42.1,-1.2
+Cup,Pivot Breakout+Shakeout+Upside Reversal,trail_2atr,240,35.0,-0.32
+Cup,Pivot Breakout+Shakeout+Upside Reversal,target_3r,240,59.2,2.62
+Cup,Pivot Breakout+Shakeout+Volume Dry-Up,stop_loss,138,44.9,-1.11
+Cup,Pivot Breakout+Shakeout+Volume Dry-Up,trail_2atr,138,27.5,-0.93
+Cup,Pivot Breakout+Shakeout+Volume Dry-Up,target_3r,137,48.9,0.09
+Cup,Pivot Breakout+Upside Reversal,stop_loss,1472,43.4,2.54
+Cup,Pivot Breakout+Upside Reversal,trail_2atr,1472,40.1,0.97
+Cup,Pivot Breakout+Upside Reversal,target_3r,1472,63.7,4.44
+Cup,Pivot Breakout+Upside Reversal+Volume Dry-Up,stop_loss,428,43.7,0.23
+Cup,Pivot Breakout+Upside Reversal+Volume Dry-Up,trail_2atr,428,40.2,0.07
+Cup,Pivot Breakout+Upside Reversal+Volume Dry-Up,target_3r,428,55.1,2.0
+Cup,Pivot Breakout+Volume Dry-Up,stop_loss,440,33.6,-3.5
+Cup,Pivot Breakout+Volume Dry-Up,trail_2atr,440,29.8,-1.08
+Cup,Pivot Breakout+Volume Dry-Up,target_3r,434,35.3,-2.62
+Cup,Pocket Pivot,stop_loss,1648,35.8,-3.15
+Cup,Pocket Pivot,trail_2atr,1648,31.1,-0.46
+Cup,Pocket Pivot,target_3r,1612,38.9,-3.16
+Cup,Pocket Pivot+RS New High,stop_loss,1385,42.6,-0.23
+Cup,Pocket Pivot+RS New High,trail_2atr,1385,34.9,0.19
+Cup,Pocket Pivot+RS New High,target_3r,1351,46.6,-0.69
+Cup,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,1179,36.6,-1.45
+Cup,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,1179,38.3,0.81
+Cup,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,1179,51.7,0.4
+Cup,Pocket Pivot+RS New High+Shakeout,stop_loss,450,43.6,-1.49
+Cup,Pocket Pivot+RS New High+Shakeout,trail_2atr,450,28.2,-1.01
+Cup,Pocket Pivot+RS New High+Shakeout,target_3r,445,48.1,-0.9
+Cup,Pocket Pivot+RS New High+Upside Reversal,stop_loss,1350,40.0,1.05
+Cup,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,1350,38.0,0.91
+Cup,Pocket Pivot+RS New High+Upside Reversal,target_3r,1346,53.4,1.57
+Cup,Pocket Pivot+RS New High+Volume Dry-Up,stop_loss,565,42.1,-1.8
+Cup,Pocket Pivot+RS New High+Volume Dry-Up,trail_2atr,565,32.2,-0.5
+Cup,Pocket Pivot+RS New High+Volume Dry-Up,target_3r,559,46.0,-1.12
+Cup,Pocket Pivot+SMA50 Bounce,stop_loss,1421,33.7,-2.89
+Cup,Pocket Pivot+SMA50 Bounce,trail_2atr,1421,37.8,0.45
+Cup,Pocket Pivot+SMA50 Bounce,target_3r,1420,48.7,-0.86
+Cup,Pocket Pivot+SMA50 Bounce+Shakeout,stop_loss,479,38.8,-2.06
+Cup,Pocket Pivot+SMA50 Bounce+Shakeout,trail_2atr,479,36.7,-0.3
+Cup,Pocket Pivot+SMA50 Bounce+Shakeout,target_3r,479,50.5,-0.62
+Cup,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,1418,32.9,-3.24
+Cup,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,1418,34.7,-0.06
+Cup,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,1417,47.8,-0.78
+Cup,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,stop_loss,629,35.5,-2.69
+Cup,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,trail_2atr,629,36.7,-0.37
+Cup,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,target_3r,629,48.0,-0.69
+Cup,Pocket Pivot+Shakeout,stop_loss,491,39.7,-2.42
+Cup,Pocket Pivot+Shakeout,trail_2atr,491,26.9,-1.18
+Cup,Pocket Pivot+Shakeout,target_3r,486,42.6,-2.17
+Cup,Pocket Pivot+Shakeout+Upside Reversal,stop_loss,486,39.1,-2.44
+Cup,Pocket Pivot+Shakeout+Upside Reversal,trail_2atr,486,32.5,-0.6
+Cup,Pocket Pivot+Shakeout+Upside Reversal,target_3r,486,50.0,-0.43
+Cup,Pocket Pivot+Shakeout+Volume Dry-Up,stop_loss,284,44.7,-1.28
+Cup,Pocket Pivot+Shakeout+Volume Dry-Up,trail_2atr,284,28.9,-0.88
+Cup,Pocket Pivot+Shakeout+Volume Dry-Up,target_3r,283,47.3,-0.56
+Cup,Pocket Pivot+Upside Reversal,stop_loss,1603,37.0,-0.7
+Cup,Pocket Pivot+Upside Reversal,trail_2atr,1603,36.7,0.5
+Cup,Pocket Pivot+Upside Reversal,target_3r,1601,50.3,0.27
+Cup,Pocket Pivot+Upside Reversal+Volume Dry-Up,stop_loss,661,38.7,-1.26
+Cup,Pocket Pivot+Upside Reversal+Volume Dry-Up,trail_2atr,661,37.7,-0.27
+Cup,Pocket Pivot+Upside Reversal+Volume Dry-Up,target_3r,661,48.4,0.03
+Cup,Pocket Pivot+Volume Dry-Up,stop_loss,669,39.2,-2.7
+Cup,Pocket Pivot+Volume Dry-Up,trail_2atr,669,32.6,-0.75
+Cup,Pocket Pivot+Volume Dry-Up,target_3r,663,41.6,-2.11
+Cup,RS New High,stop_loss,1561,44.1,-0.18
+Cup,RS New High,trail_2atr,1561,33.8,-0.07
+Cup,RS New High,target_3r,1520,47.8,-0.65
+Cup,RS New High+SMA50 Bounce,stop_loss,1287,37.7,-1.09
+Cup,RS New High+SMA50 Bounce,trail_2atr,1287,39.2,0.87
+Cup,RS New High+SMA50 Bounce,target_3r,1287,53.5,0.87
+Cup,RS New High+SMA50 Bounce+Shakeout,stop_loss,447,40.9,-1.44
+Cup,RS New High+SMA50 Bounce+Shakeout,trail_2atr,447,39.1,-0.08
+Cup,RS New High+SMA50 Bounce+Shakeout,target_3r,446,52.0,0.25
+Cup,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,1284,37.0,-1.44
+Cup,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,1284,35.2,0.35
+Cup,RS New High+SMA50 Bounce+Upside Reversal,target_3r,1284,53.3,0.95
+Cup,RS New High+SMA50 Bounce+Volume Dry-Up,stop_loss,533,36.6,-2.46
+Cup,RS New High+SMA50 Bounce+Volume Dry-Up,trail_2atr,533,36.6,-0.34
+Cup,RS New High+SMA50 Bounce+Volume Dry-Up,target_3r,533,49.7,-0.49
+Cup,RS New High+Shakeout,stop_loss,459,42.0,-1.79
+Cup,RS New High+Shakeout,trail_2atr,459,27.0,-1.09
+Cup,RS New High+Shakeout,target_3r,453,46.4,-1.03
+Cup,RS New High+Shakeout+Upside Reversal,stop_loss,453,42.4,-1.7
+Cup,RS New High+Shakeout+Upside Reversal,trail_2atr,453,34.4,-0.57
+Cup,RS New High+Shakeout+Upside Reversal,target_3r,453,53.9,0.68
+Cup,RS New High+Shakeout+Volume Dry-Up,stop_loss,267,41.2,-1.37
+Cup,RS New High+Shakeout+Volume Dry-Up,trail_2atr,267,28.8,-0.84
+Cup,RS New High+Shakeout+Volume Dry-Up,target_3r,266,45.1,-0.43
+Cup,RS New High+Upside Reversal,stop_loss,1516,41.4,1.4
+Cup,RS New High+Upside Reversal,trail_2atr,1516,38.5,0.92
+Cup,RS New High+Upside Reversal,target_3r,1511,56.1,2.16
+Cup,RS New High+Upside Reversal+Volume Dry-Up,stop_loss,565,40.4,-0.92
+Cup,RS New High+Upside Reversal+Volume Dry-Up,trail_2atr,565,37.2,-0.09
+Cup,RS New High+Upside Reversal+Volume Dry-Up,target_3r,565,50.4,0.34
+Cup,RS New High+Volume Dry-Up,stop_loss,573,38.4,-2.46
+Cup,RS New High+Volume Dry-Up,trail_2atr,573,32.3,-0.57
+Cup,RS New High+Volume Dry-Up,target_3r,567,41.8,-1.91
+Cup,SMA50 Bounce,stop_loss,1917,33.3,-2.76
+Cup,SMA50 Bounce,trail_2atr,1917,40.1,0.53
+Cup,SMA50 Bounce,target_3r,1917,50.6,-0.65
+Cup,SMA50 Bounce+Shakeout,stop_loss,496,39.9,-1.67
+Cup,SMA50 Bounce+Shakeout,trail_2atr,496,40.3,0.13
+Cup,SMA50 Bounce+Shakeout,target_3r,495,51.7,0.01
+Cup,SMA50 Bounce+Shakeout+Upside Reversal,stop_loss,494,37.9,-2.84
+Cup,SMA50 Bounce+Shakeout+Upside Reversal,trail_2atr,494,34.4,-0.48
+Cup,SMA50 Bounce+Shakeout+Upside Reversal,target_3r,494,49.4,-0.59
+Cup,SMA50 Bounce+Shakeout+Volume Dry-Up,stop_loss,282,37.9,-1.4
+Cup,SMA50 Bounce+Shakeout+Volume Dry-Up,trail_2atr,282,34.8,-0.19
+Cup,SMA50 Bounce+Shakeout+Volume Dry-Up,target_3r,282,51.8,0.55
+Cup,SMA50 Bounce+Upside Reversal,stop_loss,1904,30.9,-4.4
+Cup,SMA50 Bounce+Upside Reversal,trail_2atr,1904,33.3,-0.48
+Cup,SMA50 Bounce+Upside Reversal,target_3r,1904,48.1,-1.53
+Cup,SMA50 Bounce+Upside Reversal+Volume Dry-Up,stop_loss,644,36.0,-2.75
+Cup,SMA50 Bounce+Upside Reversal+Volume Dry-Up,trail_2atr,644,37.0,-0.5
+Cup,SMA50 Bounce+Upside Reversal+Volume Dry-Up,target_3r,644,47.7,-0.59
+Cup,SMA50 Bounce+Volume Dry-Up,stop_loss,645,35.3,-2.78
+Cup,SMA50 Bounce+Volume Dry-Up,trail_2atr,645,38.3,-0.27
+Cup,SMA50 Bounce+Volume Dry-Up,target_3r,645,48.1,-0.8
+Cup,Shakeout,stop_loss,509,36.0,-2.72
+Cup,Shakeout,trail_2atr,509,27.3,-0.96
+Cup,Shakeout,target_3r,503,38.4,-2.82
+Cup,Shakeout+Upside Reversal,stop_loss,502,39.0,-2.61
+Cup,Shakeout+Upside Reversal,trail_2atr,502,32.3,-0.57
+Cup,Shakeout+Upside Reversal,target_3r,502,50.2,-0.4
+Cup,Shakeout+Upside Reversal+Volume Dry-Up,stop_loss,286,39.5,-1.31
+Cup,Shakeout+Upside Reversal+Volume Dry-Up,trail_2atr,286,34.3,-0.34
+Cup,Shakeout+Upside Reversal+Volume Dry-Up,target_3r,286,51.0,0.74
+Cup,Shakeout+Volume Dry-Up,stop_loss,287,36.9,-2.15
+Cup,Shakeout+Volume Dry-Up,trail_2atr,287,25.4,-0.96
+Cup,Shakeout+Volume Dry-Up,target_3r,286,39.5,-1.41
+Cup,Upside Reversal,stop_loss,2275,36.1,-1.22
+Cup,Upside Reversal,trail_2atr,2275,36.4,0.17
+Cup,Upside Reversal,target_3r,2275,53.5,0.4
+Cup,Upside Reversal+Volume Dry-Up,stop_loss,683,38.8,-1.6
+Cup,Upside Reversal+Volume Dry-Up,trail_2atr,683,36.7,-0.25
+Cup,Upside Reversal+Volume Dry-Up,target_3r,683,48.8,-0.06
+Cup,Volume Dry-Up,stop_loss,696,24.3,-5.71
+Cup,Volume Dry-Up,trail_2atr,696,23.6,-1.34
+Cup,Volume Dry-Up,target_3r,690,25.2,-5.02
+Flat Base,Composite Score,stop_loss,573,31.1,-5.23
+Flat Base,Composite Score,trail_2atr,573,27.4,-1.27
+Flat Base,Composite Score,target_3r,560,37.3,-4.75
+Flat Base,MA Touch,stop_loss,521,26.9,-2.48
+Flat Base,MA Touch,trail_2atr,521,38.0,0.1
+Flat Base,MA Touch,target_3r,521,58.2,0.54
+Flat Base,MA Touch+Pivot Breakout,stop_loss,227,37.4,1.88
+Flat Base,MA Touch+Pivot Breakout,trail_2atr,227,46.3,1.16
+Flat Base,MA Touch+Pivot Breakout,target_3r,227,73.6,4.76
+Flat Base,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,173,37.0,1.71
+Flat Base,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,173,44.5,0.96
+Flat Base,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,171,74.3,4.76
+Flat Base,MA Touch+Pivot Breakout+RS New High,stop_loss,166,40.4,2.24
+Flat Base,MA Touch+Pivot Breakout+RS New High,trail_2atr,166,47.0,1.28
+Flat Base,MA Touch+Pivot Breakout+RS New High,target_3r,162,77.2,5.3
+Flat Base,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,180,33.9,-0.02
+Flat Base,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,180,40.6,0.61
+Flat Base,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,180,71.7,4.66
+Flat Base,MA Touch+Pivot Breakout+Shakeout,stop_loss,42,40.5,2.25
+Flat Base,MA Touch+Pivot Breakout+Shakeout,trail_2atr,42,42.9,1.8
+Flat Base,MA Touch+Pivot Breakout+Shakeout,target_3r,41,73.2,3.69
+Flat Base,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,221,38.0,1.88
+Flat Base,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,221,45.2,1.13
+Flat Base,MA Touch+Pivot Breakout+Upside Reversal,target_3r,221,73.8,4.85
+Flat Base,MA Touch+Pivot Breakout+Volume Dry-Up,stop_loss,68,38.2,0.92
+Flat Base,MA Touch+Pivot Breakout+Volume Dry-Up,trail_2atr,68,41.2,0.1
+Flat Base,MA Touch+Pivot Breakout+Volume Dry-Up,target_3r,68,67.6,2.75
+Flat Base,MA Touch+Pocket Pivot,stop_loss,442,26.7,-2.34
+Flat Base,MA Touch+Pocket Pivot,trail_2atr,442,38.5,0.11
+Flat Base,MA Touch+Pocket Pivot,target_3r,440,59.1,1.02
+Flat Base,MA Touch+Pocket Pivot+RS New High,stop_loss,378,29.4,-1.28
+Flat Base,MA Touch+Pocket Pivot+RS New High,trail_2atr,378,41.5,0.43
+Flat Base,MA Touch+Pocket Pivot+RS New High,target_3r,374,63.4,2.03
+Flat Base,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,404,24.0,-3.51
+Flat Base,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,404,35.6,-0.13
+Flat Base,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,404,56.4,0.66
+Flat Base,MA Touch+Pocket Pivot+Shakeout,stop_loss,142,26.1,-1.7
+Flat Base,MA Touch+Pocket Pivot+Shakeout,trail_2atr,142,35.2,0.01
+Flat Base,MA Touch+Pocket Pivot+Shakeout,target_3r,141,58.2,1.01
+Flat Base,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,439,26.9,-2.35
+Flat Base,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,439,38.0,0.08
+Flat Base,MA Touch+Pocket Pivot+Upside Reversal,target_3r,437,59.0,1.01
+Flat Base,MA Touch+Pocket Pivot+Volume Dry-Up,stop_loss,167,28.7,-1.82
+Flat Base,MA Touch+Pocket Pivot+Volume Dry-Up,trail_2atr,167,37.7,0.07
+Flat Base,MA Touch+Pocket Pivot+Volume Dry-Up,target_3r,166,61.4,0.88
+Flat Base,MA Touch+RS New High,stop_loss,402,29.9,-1.33
+Flat Base,MA Touch+RS New High,trail_2atr,402,41.3,0.43
+Flat Base,MA Touch+RS New High,target_3r,398,63.1,1.95
+Flat Base,MA Touch+RS New High+SMA50 Bounce,stop_loss,357,25.5,-2.74
+Flat Base,MA Touch+RS New High+SMA50 Bounce,trail_2atr,357,38.4,0.14
+Flat Base,MA Touch+RS New High+SMA50 Bounce,target_3r,357,60.2,1.5
+Flat Base,MA Touch+RS New High+Shakeout,stop_loss,127,27.6,-0.67
+Flat Base,MA Touch+RS New High+Shakeout,trail_2atr,127,37.0,0.18
+Flat Base,MA Touch+RS New High+Shakeout,target_3r,126,61.9,2.08
+Flat Base,MA Touch+RS New High+Upside Reversal,stop_loss,400,29.8,-1.36
+Flat Base,MA Touch+RS New High+Upside Reversal,trail_2atr,400,41.0,0.4
+Flat Base,MA Touch+RS New High+Upside Reversal,target_3r,396,62.9,1.92
+Flat Base,MA Touch+RS New High+Volume Dry-Up,stop_loss,145,30.3,-1.52
+Flat Base,MA Touch+RS New High+Volume Dry-Up,trail_2atr,145,40.7,0.31
+Flat Base,MA Touch+RS New High+Volume Dry-Up,target_3r,143,65.7,1.36
+Flat Base,MA Touch+SMA50 Bounce,stop_loss,465,23.7,-3.88
+Flat Base,MA Touch+SMA50 Bounce,trail_2atr,465,34.4,-0.26
+Flat Base,MA Touch+SMA50 Bounce,target_3r,465,54.6,-0.11
+Flat Base,MA Touch+SMA50 Bounce+Shakeout,stop_loss,141,24.8,-1.86
+Flat Base,MA Touch+SMA50 Bounce+Shakeout,trail_2atr,141,35.5,0.04
+Flat Base,MA Touch+SMA50 Bounce+Shakeout,target_3r,141,57.4,0.93
+Flat Base,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,462,23.8,-3.88
+Flat Base,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,462,34.4,-0.25
+Flat Base,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,462,54.5,-0.14
+Flat Base,MA Touch+SMA50 Bounce+Volume Dry-Up,stop_loss,163,27.0,-2.59
+Flat Base,MA Touch+SMA50 Bounce+Volume Dry-Up,trail_2atr,163,34.4,-0.23
+Flat Base,MA Touch+SMA50 Bounce+Volume Dry-Up,target_3r,163,59.5,0.49
+Flat Base,MA Touch+Shakeout,stop_loss,143,25.9,-1.72
+Flat Base,MA Touch+Shakeout,trail_2atr,143,35.7,0.04
+Flat Base,MA Touch+Shakeout,target_3r,142,57.7,0.93
+Flat Base,MA Touch+Shakeout+Upside Reversal,stop_loss,143,25.9,-1.72
+Flat Base,MA Touch+Shakeout+Upside Reversal,trail_2atr,143,35.7,0.04
+Flat Base,MA Touch+Shakeout+Upside Reversal,target_3r,142,57.7,0.93
+Flat Base,MA Touch+Shakeout+Volume Dry-Up,stop_loss,61,21.3,-2.98
+Flat Base,MA Touch+Shakeout+Volume Dry-Up,trail_2atr,61,32.8,-0.25
+Flat Base,MA Touch+Shakeout+Volume Dry-Up,target_3r,60,58.3,0.74
+Flat Base,MA Touch+Upside Reversal,stop_loss,513,26.9,-2.58
+Flat Base,MA Touch+Upside Reversal,trail_2atr,513,37.2,0.05
+Flat Base,MA Touch+Upside Reversal,target_3r,513,57.9,0.51
+Flat Base,MA Touch+Upside Reversal+Volume Dry-Up,stop_loss,171,29.2,-1.97
+Flat Base,MA Touch+Upside Reversal+Volume Dry-Up,trail_2atr,171,36.3,-0.09
+Flat Base,MA Touch+Upside Reversal+Volume Dry-Up,target_3r,171,62.0,0.77
+Flat Base,MA Touch+Volume Dry-Up,stop_loss,173,28.3,-2.05
+Flat Base,MA Touch+Volume Dry-Up,trail_2atr,173,37.0,-0.03
+Flat Base,MA Touch+Volume Dry-Up,target_3r,173,60.7,0.62
+Flat Base,Pivot Breakout,stop_loss,285,32.6,-4.8
+Flat Base,Pivot Breakout,trail_2atr,285,20.7,-1.59
+Flat Base,Pivot Breakout,target_3r,272,34.2,-6.04
+Flat Base,Pivot Breakout+Pocket Pivot,stop_loss,188,54.3,3.74
+Flat Base,Pivot Breakout+Pocket Pivot,trail_2atr,188,43.1,0.39
+Flat Base,Pivot Breakout+Pocket Pivot,target_3r,172,66.3,5.02
+Flat Base,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,162,57.4,5.21
+Flat Base,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,162,43.2,0.6
+Flat Base,Pivot Breakout+Pocket Pivot+RS New High,target_3r,146,69.2,6.17
+Flat Base,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,144,43.1,2.44
+Flat Base,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,144,40.3,0.72
+Flat Base,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,143,72.0,5.96
+Flat Base,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,45,55.6,4.57
+Flat Base,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,45,37.8,1.15
+Flat Base,Pivot Breakout+Pocket Pivot+Shakeout,target_3r,41,68.3,4.54
+Flat Base,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,173,48.0,2.32
+Flat Base,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,173,42.2,0.55
+Flat Base,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,170,78.2,6.62
+Flat Base,Pivot Breakout+Pocket Pivot+Volume Dry-Up,stop_loss,70,54.3,2.51
+Flat Base,Pivot Breakout+Pocket Pivot+Volume Dry-Up,trail_2atr,70,35.7,-0.01
+Flat Base,Pivot Breakout+Pocket Pivot+Volume Dry-Up,target_3r,63,65.1,3.47
+Flat Base,Pivot Breakout+RS New High,stop_loss,184,61.4,5.16
+Flat Base,Pivot Breakout+RS New High,trail_2atr,184,38.0,0.12
+Flat Base,Pivot Breakout+RS New High,target_3r,165,69.1,5.6
+Flat Base,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,130,43.1,2.66
+Flat Base,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,130,40.8,1.05
+Flat Base,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,130,72.3,5.51
+Flat Base,Pivot Breakout+RS New High+Shakeout,stop_loss,42,50.0,3.66
+Flat Base,Pivot Breakout+RS New High+Shakeout,trail_2atr,42,28.6,0.78
+Flat Base,Pivot Breakout+RS New High+Shakeout,target_3r,38,60.5,3.6
+Flat Base,Pivot Breakout+RS New High+Upside Reversal,stop_loss,167,50.3,2.98
+Flat Base,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,167,45.5,1.16
+Flat Base,Pivot Breakout+RS New High+Upside Reversal,target_3r,163,77.3,6.67
+Flat Base,Pivot Breakout+RS New High+Volume Dry-Up,stop_loss,55,65.5,5.92
+Flat Base,Pivot Breakout+RS New High+Volume Dry-Up,trail_2atr,55,30.9,-0.4
+Flat Base,Pivot Breakout+RS New High+Volume Dry-Up,target_3r,48,72.9,5.34
+Flat Base,Pivot Breakout+SMA50 Bounce,stop_loss,181,44.2,3.4
+Flat Base,Pivot Breakout+SMA50 Bounce,trail_2atr,181,46.4,1.72
+Flat Base,Pivot Breakout+SMA50 Bounce,target_3r,181,73.5,5.79
+Flat Base,Pivot Breakout+SMA50 Bounce+Shakeout,stop_loss,41,51.2,5.1
+Flat Base,Pivot Breakout+SMA50 Bounce+Shakeout,trail_2atr,41,51.2,2.26
+Flat Base,Pivot Breakout+SMA50 Bounce+Shakeout,target_3r,41,75.6,5.51
+Flat Base,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,179,43.6,2.15
+Flat Base,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,179,43.6,0.76
+Flat Base,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,179,74.3,5.17
+Flat Base,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,stop_loss,61,49.2,3.27
+Flat Base,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,trail_2atr,61,47.5,0.85
+Flat Base,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,target_3r,61,67.2,4.57
+Flat Base,Pivot Breakout+Shakeout,stop_loss,45,68.9,7.79
+Flat Base,Pivot Breakout+Shakeout,trail_2atr,45,55.6,2.93
+Flat Base,Pivot Breakout+Shakeout,target_3r,41,75.6,6.45
+Flat Base,Pivot Breakout+Shakeout+Upside Reversal,stop_loss,42,54.8,3.71
+Flat Base,Pivot Breakout+Shakeout+Upside Reversal,trail_2atr,42,42.9,1.46
+Flat Base,Pivot Breakout+Shakeout+Upside Reversal,target_3r,41,73.2,3.46
+Flat Base,Pivot Breakout+Shakeout+Volume Dry-Up,stop_loss,17,64.7,2.58
+Flat Base,Pivot Breakout+Shakeout+Volume Dry-Up,trail_2atr,17,17.6,-0.59
+Flat Base,Pivot Breakout+Shakeout+Volume Dry-Up,target_3r,15,73.3,5.77
+Flat Base,Pivot Breakout+Upside Reversal,stop_loss,228,46.9,2.15
+Flat Base,Pivot Breakout+Upside Reversal,trail_2atr,228,44.3,1.02
+Flat Base,Pivot Breakout+Upside Reversal,target_3r,228,73.7,5.73
+Flat Base,Pivot Breakout+Upside Reversal+Volume Dry-Up,stop_loss,67,49.3,2.41
+Flat Base,Pivot Breakout+Upside Reversal+Volume Dry-Up,trail_2atr,67,40.3,0.33
+Flat Base,Pivot Breakout+Upside Reversal+Volume Dry-Up,target_3r,67,70.1,3.94
+Flat Base,Pivot Breakout+Volume Dry-Up,stop_loss,73,50.7,1.63
+Flat Base,Pivot Breakout+Volume Dry-Up,trail_2atr,73,41.1,0.52
+Flat Base,Pivot Breakout+Volume Dry-Up,target_3r,68,52.9,1.54
+Flat Base,Pocket Pivot,stop_loss,457,40.7,-1.66
+Flat Base,Pocket Pivot,trail_2atr,457,36.5,-0.3
+Flat Base,Pocket Pivot,target_3r,441,49.9,-0.31
+Flat Base,Pocket Pivot+RS New High,stop_loss,392,44.1,0.1
+Flat Base,Pocket Pivot+RS New High,trail_2atr,392,41.1,0.07
+Flat Base,Pocket Pivot+RS New High,target_3r,376,55.3,1.46
+Flat Base,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,341,31.7,-1.7
+Flat Base,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,341,39.6,0.32
+Flat Base,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,341,57.2,1.48
+Flat Base,Pocket Pivot+RS New High+Shakeout,stop_loss,129,38.0,-0.74
+Flat Base,Pocket Pivot+RS New High+Shakeout,trail_2atr,129,32.6,-0.32
+Flat Base,Pocket Pivot+RS New High+Shakeout,target_3r,125,55.2,0.77
+Flat Base,Pocket Pivot+RS New High+Upside Reversal,stop_loss,378,37.3,-0.83
+Flat Base,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,378,44.4,0.42
+Flat Base,Pocket Pivot+RS New High+Upside Reversal,target_3r,374,62.6,2.72
+Flat Base,Pocket Pivot+RS New High+Volume Dry-Up,stop_loss,149,43.0,-0.02
+Flat Base,Pocket Pivot+RS New High+Volume Dry-Up,trail_2atr,149,36.2,-0.46
+Flat Base,Pocket Pivot+RS New High+Volume Dry-Up,target_3r,142,57.7,1.22
+Flat Base,Pocket Pivot+SMA50 Bounce,stop_loss,404,30.7,-2.48
+Flat Base,Pocket Pivot+SMA50 Bounce,trail_2atr,404,37.4,0.15
+Flat Base,Pocket Pivot+SMA50 Bounce,target_3r,403,53.8,0.71
+Flat Base,Pocket Pivot+SMA50 Bounce+Shakeout,stop_loss,140,31.4,-1.51
+Flat Base,Pocket Pivot+SMA50 Bounce+Shakeout,trail_2atr,140,37.1,0.1
+Flat Base,Pocket Pivot+SMA50 Bounce+Shakeout,target_3r,140,55.0,0.92
+Flat Base,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,403,30.5,-2.78
+Flat Base,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,403,38.0,0.01
+Flat Base,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,402,56.7,0.9
+Flat Base,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,stop_loss,158,33.5,-1.42
+Flat Base,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,trail_2atr,158,41.8,0.26
+Flat Base,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,target_3r,157,57.3,1.26
+Flat Base,Pocket Pivot+Shakeout,stop_loss,145,36.6,-1.71
+Flat Base,Pocket Pivot+Shakeout,trail_2atr,145,33.1,-0.3
+Flat Base,Pocket Pivot+Shakeout,target_3r,141,51.1,-0.3
+Flat Base,Pocket Pivot+Shakeout+Upside Reversal,stop_loss,142,35.2,-1.57
+Flat Base,Pocket Pivot+Shakeout+Upside Reversal,trail_2atr,142,35.2,-0.35
+Flat Base,Pocket Pivot+Shakeout+Upside Reversal,target_3r,141,59.6,1.05
+Flat Base,Pocket Pivot+Shakeout+Volume Dry-Up,stop_loss,62,38.7,-2.3
+Flat Base,Pocket Pivot+Shakeout+Volume Dry-Up,trail_2atr,62,21.0,-1.21
+Flat Base,Pocket Pivot+Shakeout+Volume Dry-Up,target_3r,60,58.3,0.21
+Flat Base,Pocket Pivot+Upside Reversal,stop_loss,441,35.6,-1.84
+Flat Base,Pocket Pivot+Upside Reversal,trail_2atr,441,41.0,0.11
+Flat Base,Pocket Pivot+Upside Reversal,target_3r,438,59.6,1.76
+Flat Base,Pocket Pivot+Upside Reversal+Volume Dry-Up,stop_loss,167,37.1,-1.26
+Flat Base,Pocket Pivot+Upside Reversal+Volume Dry-Up,trail_2atr,167,41.9,-0.12
+Flat Base,Pocket Pivot+Upside Reversal+Volume Dry-Up,target_3r,165,61.8,1.55
+Flat Base,Pocket Pivot+Volume Dry-Up,stop_loss,172,42.4,-1.35
+Flat Base,Pocket Pivot+Volume Dry-Up,trail_2atr,172,33.1,-0.51
+Flat Base,Pocket Pivot+Volume Dry-Up,target_3r,165,53.9,-0.11
+Flat Base,RS New High,stop_loss,420,46.7,0.14
+Flat Base,RS New High,trail_2atr,420,34.5,-0.36
+Flat Base,RS New High,target_3r,400,52.8,0.89
+Flat Base,RS New High+SMA50 Bounce,stop_loss,357,32.8,-1.57
+Flat Base,RS New High+SMA50 Bounce,trail_2atr,357,38.4,0.27
+Flat Base,RS New High+SMA50 Bounce,target_3r,357,57.4,1.39
+Flat Base,RS New High+SMA50 Bounce+Shakeout,stop_loss,125,34.4,-0.6
+Flat Base,RS New High+SMA50 Bounce+Shakeout,trail_2atr,125,36.8,0.01
+Flat Base,RS New High+SMA50 Bounce+Shakeout,target_3r,125,56.8,1.6
+Flat Base,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,356,32.0,-1.71
+Flat Base,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,356,40.2,0.35
+Flat Base,RS New High+SMA50 Bounce+Upside Reversal,target_3r,356,59.6,1.71
+Flat Base,RS New High+SMA50 Bounce+Volume Dry-Up,stop_loss,136,33.8,-0.8
+Flat Base,RS New High+SMA50 Bounce+Volume Dry-Up,trail_2atr,136,41.9,0.32
+Flat Base,RS New High+SMA50 Bounce+Volume Dry-Up,target_3r,136,59.6,1.71
+Flat Base,RS New High+Shakeout,stop_loss,130,41.5,-0.74
+Flat Base,RS New High+Shakeout,trail_2atr,130,29.2,-0.38
+Flat Base,RS New High+Shakeout,target_3r,126,54.8,0.59
+Flat Base,RS New High+Shakeout+Upside Reversal,stop_loss,127,37.0,-0.49
+Flat Base,RS New High+Shakeout+Upside Reversal,trail_2atr,127,36.2,-0.0
+Flat Base,RS New High+Shakeout+Upside Reversal,target_3r,126,61.9,2.11
+Flat Base,RS New High+Shakeout+Volume Dry-Up,stop_loss,57,42.1,-1.28
+Flat Base,RS New High+Shakeout+Volume Dry-Up,trail_2atr,57,26.3,-0.7
+Flat Base,RS New High+Shakeout+Volume Dry-Up,target_3r,55,58.2,0.93
+Flat Base,RS New High+Upside Reversal,stop_loss,402,39.6,-0.58
+Flat Base,RS New High+Upside Reversal,trail_2atr,402,43.3,0.49
+Flat Base,RS New High+Upside Reversal,target_3r,398,63.1,2.79
+Flat Base,RS New High+Upside Reversal+Volume Dry-Up,stop_loss,145,38.6,-0.49
+Flat Base,RS New High+Upside Reversal+Volume Dry-Up,trail_2atr,145,46.2,0.2
+Flat Base,RS New High+Upside Reversal+Volume Dry-Up,target_3r,143,65.0,2.09
+Flat Base,RS New High+Volume Dry-Up,stop_loss,150,46.0,0.16
+Flat Base,RS New High+Volume Dry-Up,trail_2atr,150,28.7,-0.69
+Flat Base,RS New High+Volume Dry-Up,target_3r,143,53.8,0.36
+Flat Base,SMA50 Bounce,stop_loss,466,32.8,-1.7
+Flat Base,SMA50 Bounce,trail_2atr,466,40.3,0.47
+Flat Base,SMA50 Bounce,target_3r,466,55.4,0.66
+Flat Base,SMA50 Bounce+Shakeout,stop_loss,141,34.0,-0.49
+Flat Base,SMA50 Bounce+Shakeout,trail_2atr,141,46.1,0.76
+Flat Base,SMA50 Bounce+Shakeout,target_3r,141,55.3,1.42
+Flat Base,SMA50 Bounce+Shakeout+Upside Reversal,stop_loss,141,34.8,-1.12
+Flat Base,SMA50 Bounce+Shakeout+Upside Reversal,trail_2atr,141,34.8,0.05
+Flat Base,SMA50 Bounce+Shakeout+Upside Reversal,target_3r,141,58.9,1.12
+Flat Base,SMA50 Bounce+Shakeout+Volume Dry-Up,stop_loss,59,28.8,-1.74
+Flat Base,SMA50 Bounce+Shakeout+Volume Dry-Up,trail_2atr,59,47.5,0.44
+Flat Base,SMA50 Bounce+Shakeout+Volume Dry-Up,target_3r,59,50.8,1.34
+Flat Base,SMA50 Bounce+Upside Reversal,stop_loss,463,30.7,-2.73
+Flat Base,SMA50 Bounce+Upside Reversal,trail_2atr,463,37.1,-0.03
+Flat Base,SMA50 Bounce+Upside Reversal,target_3r,463,55.7,0.4
+Flat Base,SMA50 Bounce+Upside Reversal+Volume Dry-Up,stop_loss,162,32.1,-1.62
+Flat Base,SMA50 Bounce+Upside Reversal+Volume Dry-Up,trail_2atr,162,40.1,-0.01
+Flat Base,SMA50 Bounce+Upside Reversal+Volume Dry-Up,target_3r,162,59.9,0.94
+Flat Base,SMA50 Bounce+Volume Dry-Up,stop_loss,163,35.0,-0.84
+Flat Base,SMA50 Bounce+Volume Dry-Up,trail_2atr,163,42.9,0.37
+Flat Base,SMA50 Bounce+Volume Dry-Up,target_3r,163,55.8,1.37
+Flat Base,Shakeout,stop_loss,146,41.8,-0.22
+Flat Base,Shakeout,trail_2atr,146,42.5,0.69
+Flat Base,Shakeout,target_3r,142,50.7,0.82
+Flat Base,Shakeout+Upside Reversal,stop_loss,143,37.1,-1.05
+Flat Base,Shakeout+Upside Reversal,trail_2atr,143,37.8,-0.07
+Flat Base,Shakeout+Upside Reversal,target_3r,142,59.2,0.97
+Flat Base,Shakeout+Upside Reversal+Volume Dry-Up,stop_loss,61,27.9,-2.85
+Flat Base,Shakeout+Upside Reversal+Volume Dry-Up,trail_2atr,61,36.1,-0.56
+Flat Base,Shakeout+Upside Reversal+Volume Dry-Up,target_3r,60,58.3,0.59
+Flat Base,Shakeout+Volume Dry-Up,stop_loss,62,38.7,-1.77
+Flat Base,Shakeout+Volume Dry-Up,trail_2atr,62,25.8,-0.78
+Flat Base,Shakeout+Volume Dry-Up,target_3r,60,48.3,0.12
+Flat Base,Upside Reversal,stop_loss,520,36.9,-1.46
+Flat Base,Upside Reversal,trail_2atr,520,40.2,0.27
+Flat Base,Upside Reversal,target_3r,520,59.8,1.66
+Flat Base,Upside Reversal+Volume Dry-Up,stop_loss,171,36.3,-1.31
+Flat Base,Upside Reversal+Volume Dry-Up,trail_2atr,171,42.1,0.05
+Flat Base,Upside Reversal+Volume Dry-Up,target_3r,171,61.4,1.24
+Flat Base,Volume Dry-Up,stop_loss,178,37.1,-3.06
+Flat Base,Volume Dry-Up,trail_2atr,178,24.7,-0.65
+Flat Base,Volume Dry-Up,target_3r,173,38.2,-3.23
+Double Bottom,Composite Score,stop_loss,28,35.7,-6.44
+Double Bottom,Composite Score,trail_2atr,28,25.0,-2.15
+Double Bottom,Composite Score,target_3r,24,33.3,-13.16
+Double Bottom,MA Touch,stop_loss,17,17.6,-8.22
+Double Bottom,MA Touch,trail_2atr,17,47.1,1.56
+Double Bottom,MA Touch,target_3r,17,52.9,0.85
+Double Bottom,MA Touch+Pivot Breakout,stop_loss,15,13.3,-8.72
+Double Bottom,MA Touch+Pivot Breakout,trail_2atr,15,46.7,1.47
+Double Bottom,MA Touch+Pivot Breakout,target_3r,15,53.3,1.56
+Double Bottom,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,12,16.7,-8.98
+Double Bottom,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,12,33.3,0.7
+Double Bottom,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,12,50.0,1.46
+Double Bottom,MA Touch+Pivot Breakout+RS New High,stop_loss,11,18.2,-7.6
+Double Bottom,MA Touch+Pivot Breakout+RS New High,trail_2atr,11,45.5,2.68
+Double Bottom,MA Touch+Pivot Breakout+RS New High,target_3r,11,63.6,5.98
+Double Bottom,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,10,20.0,-4.18
+Double Bottom,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,10,30.0,-1.11
+Double Bottom,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,10,70.0,7.12
+Double Bottom,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,14,14.3,-8.05
+Double Bottom,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,14,42.9,1.04
+Double Bottom,MA Touch+Pivot Breakout+Upside Reversal,target_3r,14,57.1,2.3
+Double Bottom,MA Touch+Pocket Pivot,stop_loss,14,21.4,-8.34
+Double Bottom,MA Touch+Pocket Pivot,trail_2atr,14,35.7,0.93
+Double Bottom,MA Touch+Pocket Pivot,target_3r,14,50.0,0.61
+Double Bottom,MA Touch+Pocket Pivot+RS New High,stop_loss,12,25.0,-7.3
+Double Bottom,MA Touch+Pocket Pivot+RS New High,trail_2atr,12,41.7,2.44
+Double Bottom,MA Touch+Pocket Pivot+RS New High,target_3r,12,58.3,4.25
+Double Bottom,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,11,27.3,-4.37
+Double Bottom,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,11,27.3,-0.98
+Double Bottom,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,11,63.6,4.92
+Double Bottom,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,14,21.4,-8.34
+Double Bottom,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,14,35.7,0.93
+Double Bottom,MA Touch+Pocket Pivot+Upside Reversal,target_3r,14,50.0,0.61
+Double Bottom,MA Touch+RS New High,stop_loss,13,23.1,-6.94
+Double Bottom,MA Touch+RS New High,trail_2atr,13,46.2,2.59
+Double Bottom,MA Touch+RS New High,target_3r,13,61.5,4.55
+Double Bottom,MA Touch+RS New High+SMA50 Bounce,stop_loss,10,30.0,-2.01
+Double Bottom,MA Touch+RS New High+SMA50 Bounce,trail_2atr,10,40.0,1.32
+Double Bottom,MA Touch+RS New High+SMA50 Bounce,target_3r,10,80.0,10.9
+Double Bottom,MA Touch+RS New High+Upside Reversal,stop_loss,13,23.1,-6.94
+Double Bottom,MA Touch+RS New High+Upside Reversal,trail_2atr,13,46.2,2.59
+Double Bottom,MA Touch+RS New High+Upside Reversal,target_3r,13,61.5,4.55
+Double Bottom,MA Touch+SMA50 Bounce,stop_loss,12,25.0,-4.23
+Double Bottom,MA Touch+SMA50 Bounce,trail_2atr,12,33.3,-0.54
+Double Bottom,MA Touch+SMA50 Bounce,target_3r,12,66.7,5.19
+Double Bottom,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,12,25.0,-4.23
+Double Bottom,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,12,33.3,-0.54
+Double Bottom,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,12,66.7,5.19
+Double Bottom,MA Touch+Upside Reversal,stop_loss,16,18.8,-7.6
+Double Bottom,MA Touch+Upside Reversal,trail_2atr,16,43.8,1.2
+Double Bottom,MA Touch+Upside Reversal,target_3r,16,56.2,1.45
+Double Bottom,Pivot Breakout,stop_loss,26,34.6,-6.68
+Double Bottom,Pivot Breakout,trail_2atr,26,23.1,-2.48
+Double Bottom,Pivot Breakout,target_3r,22,31.8,-14.06
+Double Bottom,Pivot Breakout+Pocket Pivot,stop_loss,14,42.9,-1.37
+Double Bottom,Pivot Breakout+Pocket Pivot,trail_2atr,14,50.0,2.66
+Double Bottom,Pivot Breakout+Pocket Pivot,target_3r,12,41.7,-0.05
+Double Bottom,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,12,41.7,0.49
+Double Bottom,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,12,58.3,3.45
+Double Bottom,Pivot Breakout+Pocket Pivot+RS New High,target_3r,10,50.0,3.22
+Double Bottom,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,9,22.2,-1.73
+Double Bottom,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,9,44.4,3.24
+Double Bottom,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,9,55.6,1.88
+Double Bottom,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,4,75.0,15.9
+Double Bottom,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,4,25.0,4.72
+Double Bottom,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,12,16.7,-8.82
+Double Bottom,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,12,50.0,2.16
+Double Bottom,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,12,58.3,5.41
+Double Bottom,Pivot Breakout+RS New High,stop_loss,13,46.2,2.6
+Double Bottom,Pivot Breakout+RS New High,trail_2atr,13,46.2,2.25
+Double Bottom,Pivot Breakout+RS New High,target_3r,11,54.5,5.59
+Double Bottom,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,8,12.5,-3.7
+Double Bottom,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,8,37.5,0.48
+Double Bottom,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,8,75.0,9.75
+Double Bottom,Pivot Breakout+RS New High+Shakeout,stop_loss,4,50.0,6.75
+Double Bottom,Pivot Breakout+RS New High+Shakeout,trail_2atr,4,0.0,-4.44
+Double Bottom,Pivot Breakout+RS New High+Upside Reversal,stop_loss,11,18.2,-8.58
+Double Bottom,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,11,45.5,2.28
+Double Bottom,Pivot Breakout+RS New High+Upside Reversal,target_3r,11,63.6,8.24
+Double Bottom,Pivot Breakout+SMA50 Bounce,stop_loss,10,30.0,-1.72
+Double Bottom,Pivot Breakout+SMA50 Bounce,trail_2atr,10,50.0,4.2
+Double Bottom,Pivot Breakout+SMA50 Bounce,target_3r,10,70.0,3.38
+Double Bottom,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,10,20.0,-4.39
+Double Bottom,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,10,30.0,-0.82
+Double Bottom,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,10,70.0,7.06
+Double Bottom,Pivot Breakout+Shakeout,stop_loss,4,75.0,15.32
+Double Bottom,Pivot Breakout+Shakeout,trail_2atr,4,50.0,5.69
+Double Bottom,Pivot Breakout+Upside Reversal,stop_loss,14,14.3,-8.51
+Double Bottom,Pivot Breakout+Upside Reversal,trail_2atr,14,50.0,1.64
+Double Bottom,Pivot Breakout+Upside Reversal,target_3r,14,64.3,7.5
+Double Bottom,Pocket Pivot,stop_loss,16,37.5,-2.45
+Double Bottom,Pocket Pivot,trail_2atr,16,56.2,2.68
+Double Bottom,Pocket Pivot,target_3r,14,35.7,-1.48
+Double Bottom,Pocket Pivot+RS New High,stop_loss,14,42.9,-0.06
+Double Bottom,Pocket Pivot+RS New High,trail_2atr,14,57.1,3.25
+Double Bottom,Pocket Pivot+RS New High,target_3r,12,50.0,2.13
+Double Bottom,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,9,22.2,-3.0
+Double Bottom,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,9,44.4,1.21
+Double Bottom,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,9,66.7,7.59
+Double Bottom,Pocket Pivot+RS New High+Shakeout,stop_loss,4,50.0,6.75
+Double Bottom,Pocket Pivot+RS New High+Shakeout,trail_2atr,4,0.0,-4.44
+Double Bottom,Pocket Pivot+RS New High+Upside Reversal,stop_loss,12,25.0,-7.48
+Double Bottom,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,12,50.0,2.83
+Double Bottom,Pocket Pivot+RS New High+Upside Reversal,target_3r,12,58.3,4.19
+Double Bottom,Pocket Pivot+SMA50 Bounce,stop_loss,11,18.2,-2.59
+Double Bottom,Pocket Pivot+SMA50 Bounce,trail_2atr,11,45.5,2.99
+Double Bottom,Pocket Pivot+SMA50 Bounce,target_3r,11,45.5,0.36
+Double Bottom,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,11,27.3,-4.56
+Double Bottom,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,11,27.3,-0.72
+Double Bottom,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,11,63.6,4.86
+Double Bottom,Pocket Pivot+Shakeout,stop_loss,4,75.0,15.9
+Double Bottom,Pocket Pivot+Shakeout,trail_2atr,4,25.0,4.72
+Double Bottom,Pocket Pivot+Upside Reversal,stop_loss,14,21.4,-8.2
+Double Bottom,Pocket Pivot+Upside Reversal,trail_2atr,14,50.0,2.18
+Double Bottom,Pocket Pivot+Upside Reversal,target_3r,14,57.1,3.99
+Double Bottom,RS New High,stop_loss,15,46.7,1.63
+Double Bottom,RS New High,trail_2atr,15,46.7,2.14
+Double Bottom,RS New High,target_3r,13,53.8,4.02
+Double Bottom,RS New High+SMA50 Bounce,stop_loss,10,20.0,-4.0
+Double Bottom,RS New High+SMA50 Bounce,trail_2atr,10,40.0,0.56
+Double Bottom,RS New High+SMA50 Bounce,target_3r,10,70.0,6.76
+Double Bottom,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,10,30.0,-2.57
+Double Bottom,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,10,40.0,0.67
+Double Bottom,RS New High+SMA50 Bounce+Upside Reversal,target_3r,10,80.0,10.48
+Double Bottom,RS New High+Shakeout,stop_loss,4,50.0,6.75
+Double Bottom,RS New High+Shakeout,trail_2atr,4,0.0,-4.44
+Double Bottom,RS New High+Upside Reversal,stop_loss,13,23.1,-8.06
+Double Bottom,RS New High+Upside Reversal,trail_2atr,13,46.2,2.06
+Double Bottom,RS New High+Upside Reversal,target_3r,13,61.5,6.17
+Double Bottom,SMA50 Bounce,stop_loss,12,25.0,-3.22
+Double Bottom,SMA50 Bounce,trail_2atr,12,50.0,3.69
+Double Bottom,SMA50 Bounce,target_3r,12,58.3,-2.55
+Double Bottom,SMA50 Bounce+Upside Reversal,stop_loss,12,25.0,-4.94
+Double Bottom,SMA50 Bounce+Upside Reversal,trail_2atr,12,33.3,-0.63
+Double Bottom,SMA50 Bounce+Upside Reversal,target_3r,12,66.7,4.6
+Double Bottom,Shakeout,stop_loss,4,75.0,15.32
+Double Bottom,Shakeout,trail_2atr,4,50.0,5.69
+Double Bottom,Upside Reversal,stop_loss,16,18.8,-8.41
+Double Bottom,Upside Reversal,trail_2atr,16,50.0,1.47
+Double Bottom,Upside Reversal,target_3r,16,62.5,5.6
+Consolidation,Composite Score,stop_loss,1796,17.9,-7.84
+Consolidation,Composite Score,trail_2atr,1796,11.0,-2.51
+Consolidation,Composite Score,target_3r,1789,19.3,-7.2
+Consolidation,MA Touch,stop_loss,1728,36.2,-1.06
+Consolidation,MA Touch,trail_2atr,1728,39.5,0.21
+Consolidation,MA Touch,target_3r,1728,61.7,2.14
+Consolidation,MA Touch+Pivot Breakout,stop_loss,1284,36.7,-0.35
+Consolidation,MA Touch+Pivot Breakout,trail_2atr,1284,41.0,0.45
+Consolidation,MA Touch+Pivot Breakout,target_3r,1284,66.8,3.62
+Consolidation,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,652,40.5,-0.43
+Consolidation,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,652,39.3,0.08
+Consolidation,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,649,57.3,2.22
+Consolidation,MA Touch+Pivot Breakout+RS New High,stop_loss,700,38.7,-0.25
+Consolidation,MA Touch+Pivot Breakout+RS New High,trail_2atr,700,41.3,0.32
+Consolidation,MA Touch+Pivot Breakout+RS New High,target_3r,696,61.1,3.19
+Consolidation,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,1066,32.2,-1.9
+Consolidation,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,1066,34.2,-0.38
+Consolidation,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,1066,62.8,2.6
+Consolidation,MA Touch+Pivot Breakout+Shakeout,stop_loss,163,36.2,-1.04
+Consolidation,MA Touch+Pivot Breakout+Shakeout,trail_2atr,163,27.0,-0.97
+Consolidation,MA Touch+Pivot Breakout+Shakeout,target_3r,163,55.2,2.07
+Consolidation,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,1271,36.6,-0.33
+Consolidation,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,1271,40.7,0.42
+Consolidation,MA Touch+Pivot Breakout+Upside Reversal,target_3r,1271,67.0,3.67
+Consolidation,MA Touch+Pivot Breakout+Volume Dry-Up,stop_loss,268,43.7,-0.83
+Consolidation,MA Touch+Pivot Breakout+Volume Dry-Up,trail_2atr,268,37.7,-0.14
+Consolidation,MA Touch+Pivot Breakout+Volume Dry-Up,target_3r,267,53.2,1.17
+Consolidation,MA Touch+Pocket Pivot,stop_loss,1036,39.2,-1.41
+Consolidation,MA Touch+Pocket Pivot,trail_2atr,1036,38.0,-0.08
+Consolidation,MA Touch+Pocket Pivot,target_3r,1033,53.6,0.67
+Consolidation,MA Touch+Pocket Pivot+RS New High,stop_loss,890,41.0,-0.78
+Consolidation,MA Touch+Pocket Pivot+RS New High,trail_2atr,890,40.0,0.09
+Consolidation,MA Touch+Pocket Pivot+RS New High,target_3r,886,56.2,1.44
+Consolidation,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,928,37.0,-2.19
+Consolidation,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,928,34.6,-0.45
+Consolidation,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,928,50.3,-0.02
+Consolidation,MA Touch+Pocket Pivot+Shakeout,stop_loss,309,39.5,-0.96
+Consolidation,MA Touch+Pocket Pivot+Shakeout,trail_2atr,309,31.4,-0.63
+Consolidation,MA Touch+Pocket Pivot+Shakeout,target_3r,309,55.7,1.35
+Consolidation,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,1025,39.3,-1.39
+Consolidation,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,1025,38.0,-0.08
+Consolidation,MA Touch+Pocket Pivot+Upside Reversal,target_3r,1022,53.8,0.73
+Consolidation,MA Touch+Pocket Pivot+Volume Dry-Up,stop_loss,443,44.5,-0.83
+Consolidation,MA Touch+Pocket Pivot+Volume Dry-Up,trail_2atr,443,36.6,-0.3
+Consolidation,MA Touch+Pocket Pivot+Volume Dry-Up,target_3r,441,52.6,0.49
+Consolidation,MA Touch+RS New High,stop_loss,1038,40.0,-0.77
+Consolidation,MA Touch+RS New High,trail_2atr,1038,40.7,0.21
+Consolidation,MA Touch+RS New High,target_3r,1034,57.8,1.88
+Consolidation,MA Touch+RS New High+SMA50 Bounce,stop_loss,906,37.2,-1.76
+Consolidation,MA Touch+RS New High+SMA50 Bounce,trail_2atr,906,36.2,-0.34
+Consolidation,MA Touch+RS New High+SMA50 Bounce,target_3r,905,54.0,0.9
+Consolidation,MA Touch+RS New High+Shakeout,stop_loss,288,40.6,-0.63
+Consolidation,MA Touch+RS New High+Shakeout,trail_2atr,288,31.9,-0.6
+Consolidation,MA Touch+RS New High+Shakeout,target_3r,287,56.8,1.59
+Consolidation,MA Touch+RS New High+Upside Reversal,stop_loss,1031,40.0,-0.8
+Consolidation,MA Touch+RS New High+Upside Reversal,trail_2atr,1031,40.3,0.17
+Consolidation,MA Touch+RS New High+Upside Reversal,target_3r,1027,58.0,1.91
+Consolidation,MA Touch+RS New High+Volume Dry-Up,stop_loss,389,44.7,-0.56
+Consolidation,MA Touch+RS New High+Volume Dry-Up,trail_2atr,389,38.6,-0.07
+Consolidation,MA Touch+RS New High+Volume Dry-Up,target_3r,387,54.0,0.98
+Consolidation,MA Touch+SMA50 Bounce,stop_loss,1458,32.2,-2.51
+Consolidation,MA Touch+SMA50 Bounce,trail_2atr,1458,33.5,-0.48
+Consolidation,MA Touch+SMA50 Bounce,target_3r,1458,56.9,1.07
+Consolidation,MA Touch+SMA50 Bounce+Shakeout,stop_loss,305,39.0,-1.12
+Consolidation,MA Touch+SMA50 Bounce+Shakeout,trail_2atr,305,30.5,-0.7
+Consolidation,MA Touch+SMA50 Bounce+Shakeout,target_3r,305,54.1,1.0
+Consolidation,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,1444,32.3,-2.5
+Consolidation,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,1444,33.4,-0.48
+Consolidation,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,1444,56.9,1.08
+Consolidation,MA Touch+SMA50 Bounce+Volume Dry-Up,stop_loss,421,43.5,-1.16
+Consolidation,MA Touch+SMA50 Bounce+Volume Dry-Up,trail_2atr,421,35.9,-0.42
+Consolidation,MA Touch+SMA50 Bounce+Volume Dry-Up,target_3r,421,51.1,0.11
+Consolidation,MA Touch+Shakeout,stop_loss,317,39.1,-1.01
+Consolidation,MA Touch+Shakeout,trail_2atr,317,30.9,-0.68
+Consolidation,MA Touch+Shakeout,target_3r,317,55.2,1.29
+Consolidation,MA Touch+Shakeout+Upside Reversal,stop_loss,316,39.6,-0.96
+Consolidation,MA Touch+Shakeout+Upside Reversal,trail_2atr,316,31.3,-0.63
+Consolidation,MA Touch+Shakeout+Upside Reversal,target_3r,316,56.0,1.34
+Consolidation,MA Touch+Shakeout+Volume Dry-Up,stop_loss,183,43.2,-0.28
+Consolidation,MA Touch+Shakeout+Volume Dry-Up,trail_2atr,183,31.1,-0.68
+Consolidation,MA Touch+Shakeout+Volume Dry-Up,target_3r,183,54.6,1.28
+Consolidation,MA Touch+Upside Reversal,stop_loss,1696,36.0,-1.08
+Consolidation,MA Touch+Upside Reversal,trail_2atr,1696,39.1,0.2
+Consolidation,MA Touch+Upside Reversal,target_3r,1696,61.9,2.22
+Consolidation,MA Touch+Upside Reversal+Volume Dry-Up,stop_loss,447,44.3,-0.92
+Consolidation,MA Touch+Upside Reversal+Volume Dry-Up,trail_2atr,447,37.4,-0.21
+Consolidation,MA Touch+Upside Reversal+Volume Dry-Up,target_3r,446,53.1,0.55
+Consolidation,MA Touch+Volume Dry-Up,stop_loss,453,44.6,-0.9
+Consolidation,MA Touch+Volume Dry-Up,trail_2atr,453,37.7,-0.15
+Consolidation,MA Touch+Volume Dry-Up,target_3r,452,53.1,0.59
+Consolidation,Pivot Breakout,stop_loss,1423,13.1,-9.53
+Consolidation,Pivot Breakout,trail_2atr,1423,5.3,-2.91
+Consolidation,Pivot Breakout,target_3r,1413,13.4,-9.1
+Consolidation,Pivot Breakout+Pocket Pivot,stop_loss,659,44.2,-1.42
+Consolidation,Pivot Breakout+Pocket Pivot,trail_2atr,659,29.3,-1.25
+Consolidation,Pivot Breakout+Pocket Pivot,target_3r,650,45.8,-0.69
+Consolidation,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,570,54.2,0.43
+Consolidation,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,570,35.4,-0.69
+Consolidation,Pivot Breakout+Pocket Pivot+RS New High,target_3r,560,57.1,1.41
+Consolidation,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,585,44.4,-0.17
+Consolidation,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,585,37.3,-0.01
+Consolidation,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,585,59.5,2.21
+Consolidation,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,158,45.6,-1.03
+Consolidation,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,158,24.1,-1.54
+Consolidation,Pivot Breakout+Pocket Pivot+Shakeout,target_3r,158,50.6,0.57
+Consolidation,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,649,45.8,0.29
+Consolidation,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,649,38.5,-0.05
+Consolidation,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,646,60.7,3.15
+Consolidation,Pivot Breakout+Pocket Pivot+Volume Dry-Up,stop_loss,263,45.6,-1.47
+Consolidation,Pivot Breakout+Pocket Pivot+Volume Dry-Up,trail_2atr,263,33.5,-0.7
+Consolidation,Pivot Breakout+Pocket Pivot+Volume Dry-Up,target_3r,259,46.7,-1.03
+Consolidation,Pivot Breakout+RS New High,stop_loss,710,51.4,0.49
+Consolidation,Pivot Breakout+RS New High,trail_2atr,710,31.3,-0.89
+Consolidation,Pivot Breakout+RS New High,target_3r,699,53.6,0.9
+Consolidation,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,605,44.1,0.03
+Consolidation,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,605,38.2,0.12
+Consolidation,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,604,62.4,2.78
+Consolidation,Pivot Breakout+RS New High+Shakeout,stop_loss,147,51.0,-0.15
+Consolidation,Pivot Breakout+RS New High+Shakeout,trail_2atr,147,27.9,-1.4
+Consolidation,Pivot Breakout+RS New High+Shakeout,target_3r,146,56.2,1.17
+Consolidation,Pivot Breakout+RS New High+Upside Reversal,stop_loss,697,47.1,1.31
+Consolidation,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,697,40.3,0.12
+Consolidation,Pivot Breakout+RS New High+Upside Reversal,target_3r,693,65.2,4.23
+Consolidation,Pivot Breakout+RS New High+Volume Dry-Up,stop_loss,216,46.8,-0.86
+Consolidation,Pivot Breakout+RS New High+Volume Dry-Up,trail_2atr,216,32.9,-0.41
+Consolidation,Pivot Breakout+RS New High+Volume Dry-Up,target_3r,212,50.0,-0.17
+Consolidation,Pivot Breakout+SMA50 Bounce,stop_loss,1068,45.4,1.13
+Consolidation,Pivot Breakout+SMA50 Bounce,trail_2atr,1068,42.8,0.53
+Consolidation,Pivot Breakout+SMA50 Bounce,target_3r,1068,71.0,4.38
+Consolidation,Pivot Breakout+SMA50 Bounce+Shakeout,stop_loss,156,44.2,-0.42
+Consolidation,Pivot Breakout+SMA50 Bounce+Shakeout,trail_2atr,156,39.1,0.06
+Consolidation,Pivot Breakout+SMA50 Bounce+Shakeout,target_3r,156,60.3,1.95
+Consolidation,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,1064,38.9,-0.45
+Consolidation,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,1064,36.7,-0.17
+Consolidation,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,1064,65.5,3.28
+Consolidation,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,stop_loss,248,45.6,-0.9
+Consolidation,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,trail_2atr,248,35.5,-0.25
+Consolidation,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,target_3r,248,55.6,1.01
+Consolidation,Pivot Breakout+Shakeout,stop_loss,163,49.7,-0.36
+Consolidation,Pivot Breakout+Shakeout,trail_2atr,163,35.0,-0.25
+Consolidation,Pivot Breakout+Shakeout,target_3r,163,54.6,0.91
+Consolidation,Pivot Breakout+Shakeout+Upside Reversal,stop_loss,163,41.7,-0.21
+Consolidation,Pivot Breakout+Shakeout+Upside Reversal,trail_2atr,163,32.5,-0.78
+Consolidation,Pivot Breakout+Shakeout+Upside Reversal,target_3r,163,59.5,2.56
+Consolidation,Pivot Breakout+Shakeout+Volume Dry-Up,stop_loss,89,41.6,-1.42
+Consolidation,Pivot Breakout+Shakeout+Volume Dry-Up,trail_2atr,89,30.3,-0.71
+Consolidation,Pivot Breakout+Shakeout+Volume Dry-Up,target_3r,89,46.1,-0.38
+Consolidation,Pivot Breakout+Upside Reversal,stop_loss,1294,45.7,1.17
+Consolidation,Pivot Breakout+Upside Reversal,trail_2atr,1294,42.3,0.43
+Consolidation,Pivot Breakout+Upside Reversal,target_3r,1293,68.3,4.34
+Consolidation,Pivot Breakout+Upside Reversal+Volume Dry-Up,stop_loss,264,45.5,-0.36
+Consolidation,Pivot Breakout+Upside Reversal+Volume Dry-Up,trail_2atr,264,36.7,0.1
+Consolidation,Pivot Breakout+Upside Reversal+Volume Dry-Up,target_3r,263,55.5,1.67
+Consolidation,Pivot Breakout+Volume Dry-Up,stop_loss,270,30.0,-3.7
+Consolidation,Pivot Breakout+Volume Dry-Up,trail_2atr,270,31.1,-0.74
+Consolidation,Pivot Breakout+Volume Dry-Up,target_3r,267,31.8,-2.97
+Consolidation,Pocket Pivot,stop_loss,1043,41.3,-2.42
+Consolidation,Pocket Pivot,trail_2atr,1043,31.8,-0.89
+Consolidation,Pocket Pivot,target_3r,1034,43.7,-1.78
+Consolidation,Pocket Pivot+RS New High,stop_loss,897,49.6,-0.8
+Consolidation,Pocket Pivot+RS New High,trail_2atr,897,35.7,-0.58
+Consolidation,Pocket Pivot+RS New High,target_3r,887,52.8,0.04
+Consolidation,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,794,42.9,-0.91
+Consolidation,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,794,37.4,-0.1
+Consolidation,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,793,53.8,0.65
+Consolidation,Pocket Pivot+RS New High+Shakeout,stop_loss,283,45.9,-1.0
+Consolidation,Pocket Pivot+RS New High+Shakeout,trail_2atr,283,28.6,-1.14
+Consolidation,Pocket Pivot+RS New High+Shakeout,target_3r,282,51.4,0.14
+Consolidation,Pocket Pivot+RS New High+Upside Reversal,stop_loss,886,43.9,-0.5
+Consolidation,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,886,37.4,-0.15
+Consolidation,Pocket Pivot+RS New High+Upside Reversal,target_3r,882,56.5,1.74
+Consolidation,Pocket Pivot+RS New High+Volume Dry-Up,stop_loss,387,47.0,-1.35
+Consolidation,Pocket Pivot+RS New High+Volume Dry-Up,trail_2atr,387,32.0,-0.74
+Consolidation,Pocket Pivot+RS New High+Volume Dry-Up,target_3r,383,49.6,-0.89
+Consolidation,Pocket Pivot+SMA50 Bounce,stop_loss,928,41.3,-1.41
+Consolidation,Pocket Pivot+SMA50 Bounce,trail_2atr,928,36.9,-0.18
+Consolidation,Pocket Pivot+SMA50 Bounce,target_3r,928,52.3,0.23
+Consolidation,Pocket Pivot+SMA50 Bounce+Shakeout,stop_loss,298,43.6,-0.87
+Consolidation,Pocket Pivot+SMA50 Bounce+Shakeout,trail_2atr,298,36.2,-0.32
+Consolidation,Pocket Pivot+SMA50 Bounce+Shakeout,target_3r,298,55.0,0.78
+Consolidation,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,924,39.7,-1.78
+Consolidation,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,924,34.4,-0.5
+Consolidation,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,924,51.1,0.13
+Consolidation,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,stop_loss,418,44.3,-1.12
+Consolidation,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,trail_2atr,418,34.7,-0.35
+Consolidation,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,target_3r,418,50.7,-0.02
+Consolidation,Pocket Pivot+Shakeout,stop_loss,309,41.7,-1.89
+Consolidation,Pocket Pivot+Shakeout,trail_2atr,309,27.8,-1.18
+Consolidation,Pocket Pivot+Shakeout,target_3r,309,47.6,-0.63
+Consolidation,Pocket Pivot+Shakeout+Upside Reversal,stop_loss,309,42.1,-0.66
+Consolidation,Pocket Pivot+Shakeout+Upside Reversal,trail_2atr,309,32.4,-0.72
+Consolidation,Pocket Pivot+Shakeout+Upside Reversal,target_3r,309,55.7,1.21
+Consolidation,Pocket Pivot+Shakeout+Volume Dry-Up,stop_loss,182,41.8,-1.7
+Consolidation,Pocket Pivot+Shakeout+Volume Dry-Up,trail_2atr,182,30.2,-0.87
+Consolidation,Pocket Pivot+Shakeout+Volume Dry-Up,target_3r,182,45.1,-1.05
+Consolidation,Pocket Pivot+Upside Reversal,stop_loss,1026,42.2,-0.98
+Consolidation,Pocket Pivot+Upside Reversal,trail_2atr,1026,36.0,-0.25
+Consolidation,Pocket Pivot+Upside Reversal,target_3r,1023,53.8,1.13
+Consolidation,Pocket Pivot+Upside Reversal+Volume Dry-Up,stop_loss,441,46.7,-0.78
+Consolidation,Pocket Pivot+Upside Reversal+Volume Dry-Up,trail_2atr,441,35.6,-0.32
+Consolidation,Pocket Pivot+Upside Reversal+Volume Dry-Up,target_3r,439,53.5,0.5
+Consolidation,Pocket Pivot+Volume Dry-Up,stop_loss,445,41.1,-2.38
+Consolidation,Pocket Pivot+Volume Dry-Up,trail_2atr,445,31.5,-0.9
+Consolidation,Pocket Pivot+Volume Dry-Up,target_3r,441,42.6,-2.03
+Consolidation,RS New High,stop_loss,1048,49.6,-0.32
+Consolidation,RS New High,trail_2atr,1048,33.2,-0.61
+Consolidation,RS New High,target_3r,1036,51.8,0.13
+Consolidation,RS New High+SMA50 Bounce,stop_loss,906,42.5,-0.79
+Consolidation,RS New High+SMA50 Bounce,trail_2atr,906,37.9,-0.03
+Consolidation,RS New High+SMA50 Bounce,target_3r,905,55.5,1.13
+Consolidation,RS New High+SMA50 Bounce+Shakeout,stop_loss,277,44.0,-0.48
+Consolidation,RS New High+SMA50 Bounce+Shakeout,trail_2atr,277,35.0,-0.37
+Consolidation,RS New High+SMA50 Bounce+Shakeout,target_3r,276,54.7,0.9
+Consolidation,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,905,40.2,-1.27
+Consolidation,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,905,35.9,-0.37
+Consolidation,RS New High+SMA50 Bounce+Upside Reversal,target_3r,904,54.5,1.08
+Consolidation,RS New High+SMA50 Bounce+Volume Dry-Up,stop_loss,363,45.2,-0.78
+Consolidation,RS New High+SMA50 Bounce+Volume Dry-Up,trail_2atr,363,35.3,-0.25
+Consolidation,RS New High+SMA50 Bounce+Volume Dry-Up,target_3r,363,52.3,0.29
+Consolidation,RS New High+Shakeout,stop_loss,288,44.8,-1.21
+Consolidation,RS New High+Shakeout,trail_2atr,288,29.9,-1.01
+Consolidation,RS New High+Shakeout,target_3r,287,49.8,-0.15
+Consolidation,RS New High+Shakeout+Upside Reversal,stop_loss,288,41.7,-0.4
+Consolidation,RS New High+Shakeout+Upside Reversal,trail_2atr,288,33.7,-0.7
+Consolidation,RS New High+Shakeout+Upside Reversal,target_3r,287,54.7,1.37
+Consolidation,RS New High+Shakeout+Volume Dry-Up,stop_loss,171,43.9,-1.0
+Consolidation,RS New High+Shakeout+Volume Dry-Up,trail_2atr,171,30.4,-0.88
+Consolidation,RS New High+Shakeout+Volume Dry-Up,target_3r,171,47.4,-0.42
+Consolidation,RS New High+Upside Reversal,stop_loss,1033,44.7,0.22
+Consolidation,RS New High+Upside Reversal,trail_2atr,1033,38.7,-0.04
+Consolidation,RS New High+Upside Reversal,target_3r,1029,58.7,2.44
+Consolidation,RS New High+Upside Reversal+Volume Dry-Up,stop_loss,387,47.8,-0.32
+Consolidation,RS New High+Upside Reversal+Volume Dry-Up,trail_2atr,387,37.2,-0.07
+Consolidation,RS New High+Upside Reversal+Volume Dry-Up,target_3r,385,55.8,1.11
+Consolidation,RS New High+Volume Dry-Up,stop_loss,391,43.2,-1.79
+Consolidation,RS New High+Volume Dry-Up,trail_2atr,391,30.4,-0.72
+Consolidation,RS New High+Volume Dry-Up,target_3r,387,45.7,-1.35
+Consolidation,SMA50 Bounce,stop_loss,1460,43.4,0.06
+Consolidation,SMA50 Bounce,trail_2atr,1460,41.0,0.32
+Consolidation,SMA50 Bounce,target_3r,1460,63.4,2.52
+Consolidation,SMA50 Bounce+Shakeout,stop_loss,305,47.5,-0.24
+Consolidation,SMA50 Bounce+Shakeout,trail_2atr,305,41.6,0.19
+Consolidation,SMA50 Bounce+Shakeout,target_3r,305,59.3,1.31
+Consolidation,SMA50 Bounce+Shakeout+Upside Reversal,stop_loss,304,39.5,-0.8
+Consolidation,SMA50 Bounce+Shakeout+Upside Reversal,trail_2atr,304,34.2,-0.52
+Consolidation,SMA50 Bounce+Shakeout+Upside Reversal,target_3r,304,53.0,0.99
+Consolidation,SMA50 Bounce+Shakeout+Volume Dry-Up,stop_loss,179,47.5,0.06
+Consolidation,SMA50 Bounce+Shakeout+Volume Dry-Up,trail_2atr,179,41.3,0.07
+Consolidation,SMA50 Bounce+Shakeout+Volume Dry-Up,target_3r,179,57.0,1.34
+Consolidation,SMA50 Bounce+Upside Reversal,stop_loss,1446,37.8,-1.27
+Consolidation,SMA50 Bounce+Upside Reversal,trail_2atr,1446,35.9,-0.29
+Consolidation,SMA50 Bounce+Upside Reversal,target_3r,1446,58.5,1.58
+Consolidation,SMA50 Bounce+Upside Reversal+Volume Dry-Up,stop_loss,419,44.4,-1.07
+Consolidation,SMA50 Bounce+Upside Reversal+Volume Dry-Up,trail_2atr,419,33.4,-0.42
+Consolidation,SMA50 Bounce+Upside Reversal+Volume Dry-Up,target_3r,419,51.1,-0.0
+Consolidation,SMA50 Bounce+Volume Dry-Up,stop_loss,421,44.7,-1.04
+Consolidation,SMA50 Bounce+Volume Dry-Up,trail_2atr,421,36.1,-0.22
+Consolidation,SMA50 Bounce+Volume Dry-Up,target_3r,421,51.5,0.14
+Consolidation,Shakeout,stop_loss,317,43.2,-1.9
+Consolidation,Shakeout,trail_2atr,317,34.1,-0.35
+Consolidation,Shakeout,target_3r,317,46.7,-1.1
+Consolidation,Shakeout+Upside Reversal,stop_loss,316,42.1,-0.57
+Consolidation,Shakeout+Upside Reversal,trail_2atr,316,33.9,-0.66
+Consolidation,Shakeout+Upside Reversal,target_3r,316,56.0,1.37
+Consolidation,Shakeout+Upside Reversal+Volume Dry-Up,stop_loss,183,45.4,0.32
+Consolidation,Shakeout+Upside Reversal+Volume Dry-Up,trail_2atr,183,36.6,-0.5
+Consolidation,Shakeout+Upside Reversal+Volume Dry-Up,target_3r,183,54.1,1.35
+Consolidation,Shakeout+Volume Dry-Up,stop_loss,183,39.3,-2.16
+Consolidation,Shakeout+Volume Dry-Up,trail_2atr,183,30.1,-0.73
+Consolidation,Shakeout+Volume Dry-Up,target_3r,183,43.2,-1.5
+Consolidation,Upside Reversal,stop_loss,1719,43.7,0.61
+Consolidation,Upside Reversal,trail_2atr,1719,40.8,0.23
+Consolidation,Upside Reversal,target_3r,1718,63.5,3.11
+Consolidation,Upside Reversal+Volume Dry-Up,stop_loss,447,46.1,-0.65
+Consolidation,Upside Reversal+Volume Dry-Up,trail_2atr,447,36.0,-0.17
+Consolidation,Upside Reversal+Volume Dry-Up,target_3r,446,53.8,0.73
+Consolidation,Volume Dry-Up,stop_loss,455,22.4,-5.26
+Consolidation,Volume Dry-Up,trail_2atr,455,25.7,-1.11
+Consolidation,Volume Dry-Up,target_3r,452,23.9,-4.83
+Deep Base,Composite Score,stop_loss,396,12.9,-14.4
+Deep Base,Composite Score,trail_2atr,396,15.9,-3.84
+Deep Base,Composite Score,target_3r,393,18.1,-13.77
+Deep Base,MA Touch,stop_loss,346,28.0,-4.92
+Deep Base,MA Touch,trail_2atr,346,32.9,-1.24
+Deep Base,MA Touch,target_3r,345,45.2,-2.32
+Deep Base,MA Touch+Pivot Breakout,stop_loss,184,40.2,1.34
+Deep Base,MA Touch+Pivot Breakout,trail_2atr,184,44.0,0.99
+Deep Base,MA Touch+Pivot Breakout,target_3r,183,68.3,6.47
+Deep Base,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,106,46.2,2.15
+Deep Base,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,106,44.3,1.23
+Deep Base,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,105,60.0,5.41
+Deep Base,MA Touch+Pivot Breakout+RS New High,stop_loss,106,48.1,2.78
+Deep Base,MA Touch+Pivot Breakout+RS New High,trail_2atr,106,50.0,1.61
+Deep Base,MA Touch+Pivot Breakout+RS New High,target_3r,104,64.4,6.62
+Deep Base,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,124,35.5,-1.09
+Deep Base,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,124,35.5,-0.16
+Deep Base,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,124,66.1,5.89
+Deep Base,MA Touch+Pivot Breakout+Shakeout,stop_loss,16,50.0,4.18
+Deep Base,MA Touch+Pivot Breakout+Shakeout,trail_2atr,16,31.2,-1.93
+Deep Base,MA Touch+Pivot Breakout+Shakeout,target_3r,16,56.2,4.72
+Deep Base,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,173,41.6,2.45
+Deep Base,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,173,45.1,1.34
+Deep Base,MA Touch+Pivot Breakout+Upside Reversal,target_3r,172,70.3,7.21
+Deep Base,MA Touch+Pivot Breakout+Volume Dry-Up,stop_loss,34,41.2,-2.15
+Deep Base,MA Touch+Pivot Breakout+Volume Dry-Up,trail_2atr,34,44.1,0.24
+Deep Base,MA Touch+Pivot Breakout+Volume Dry-Up,target_3r,34,50.0,1.38
+Deep Base,MA Touch+Pocket Pivot,stop_loss,191,36.1,-2.27
+Deep Base,MA Touch+Pocket Pivot,trail_2atr,191,40.8,0.55
+Deep Base,MA Touch+Pocket Pivot,target_3r,190,43.7,-0.42
+Deep Base,MA Touch+Pocket Pivot+RS New High,stop_loss,149,40.3,-0.42
+Deep Base,MA Touch+Pocket Pivot+RS New High,trail_2atr,149,47.7,0.96
+Deep Base,MA Touch+Pocket Pivot+RS New High,target_3r,148,48.6,1.39
+Deep Base,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,165,32.7,-4.0
+Deep Base,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,165,38.2,-0.13
+Deep Base,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,165,39.4,-2.22
+Deep Base,MA Touch+Pocket Pivot+Shakeout,stop_loss,43,34.9,-2.12
+Deep Base,MA Touch+Pocket Pivot+Shakeout,trail_2atr,43,39.5,-0.58
+Deep Base,MA Touch+Pocket Pivot+Shakeout,target_3r,43,37.2,-1.62
+Deep Base,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,188,36.7,-2.02
+Deep Base,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,188,41.5,0.57
+Deep Base,MA Touch+Pocket Pivot+Upside Reversal,target_3r,188,44.1,-0.76
+Deep Base,MA Touch+Pocket Pivot+Volume Dry-Up,stop_loss,55,43.6,-2.11
+Deep Base,MA Touch+Pocket Pivot+Volume Dry-Up,trail_2atr,55,38.2,0.16
+Deep Base,MA Touch+Pocket Pivot+Volume Dry-Up,target_3r,55,47.3,-0.49
+Deep Base,MA Touch+RS New High,stop_loss,177,39.0,-1.36
+Deep Base,MA Touch+RS New High,trail_2atr,177,45.2,0.83
+Deep Base,MA Touch+RS New High,target_3r,175,48.6,0.8
+Deep Base,MA Touch+RS New High+SMA50 Bounce,stop_loss,142,34.5,-3.76
+Deep Base,MA Touch+RS New High+SMA50 Bounce,trail_2atr,142,41.5,0.22
+Deep Base,MA Touch+RS New High+SMA50 Bounce,target_3r,142,44.4,-0.61
+Deep Base,MA Touch+RS New High+Shakeout,stop_loss,40,37.5,-1.06
+Deep Base,MA Touch+RS New High+Shakeout,trail_2atr,40,42.5,-0.18
+Deep Base,MA Touch+RS New High+Shakeout,target_3r,40,40.0,-0.56
+Deep Base,MA Touch+RS New High+Upside Reversal,stop_loss,174,39.1,-0.98
+Deep Base,MA Touch+RS New High+Upside Reversal,trail_2atr,174,44.8,0.93
+Deep Base,MA Touch+RS New High+Upside Reversal,target_3r,173,49.1,1.02
+Deep Base,MA Touch+RS New High+Volume Dry-Up,stop_loss,45,44.4,-1.2
+Deep Base,MA Touch+RS New High+Volume Dry-Up,trail_2atr,45,46.7,0.79
+Deep Base,MA Touch+RS New High+Volume Dry-Up,target_3r,45,48.9,0.76
+Deep Base,MA Touch+SMA50 Bounce,stop_loss,276,24.3,-7.47
+Deep Base,MA Touch+SMA50 Bounce,trail_2atr,276,27.9,-1.92
+Deep Base,MA Touch+SMA50 Bounce,target_3r,276,39.1,-4.36
+Deep Base,MA Touch+SMA50 Bounce+Shakeout,stop_loss,42,31.0,-4.97
+Deep Base,MA Touch+SMA50 Bounce+Shakeout,trail_2atr,42,40.5,-0.32
+Deep Base,MA Touch+SMA50 Bounce+Shakeout,target_3r,42,31.0,-4.33
+Deep Base,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,261,25.7,-6.84
+Deep Base,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,261,29.5,-1.5
+Deep Base,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,261,40.6,-3.52
+Deep Base,MA Touch+SMA50 Bounce+Volume Dry-Up,stop_loss,53,41.5,-4.42
+Deep Base,MA Touch+SMA50 Bounce+Volume Dry-Up,trail_2atr,53,37.7,-0.47
+Deep Base,MA Touch+SMA50 Bounce+Volume Dry-Up,target_3r,53,45.3,-3.02
+Deep Base,MA Touch+Shakeout,stop_loss,46,32.6,-3.13
+Deep Base,MA Touch+Shakeout,trail_2atr,46,37.0,-0.73
+Deep Base,MA Touch+Shakeout,target_3r,46,34.8,-2.42
+Deep Base,MA Touch+Shakeout+Upside Reversal,stop_loss,46,34.8,-2.89
+Deep Base,MA Touch+Shakeout+Upside Reversal,trail_2atr,46,39.1,-0.61
+Deep Base,MA Touch+Shakeout+Upside Reversal,target_3r,46,37.0,-2.18
+Deep Base,MA Touch+Shakeout+Volume Dry-Up,stop_loss,16,50.0,2.06
+Deep Base,MA Touch+Shakeout+Volume Dry-Up,trail_2atr,16,50.0,0.65
+Deep Base,MA Touch+Shakeout+Volume Dry-Up,target_3r,16,50.0,2.25
+Deep Base,MA Touch+Upside Reversal,stop_loss,316,30.1,-4.12
+Deep Base,MA Touch+Upside Reversal,trail_2atr,316,34.5,-0.62
+Deep Base,MA Touch+Upside Reversal,target_3r,315,46.7,-1.55
+Deep Base,MA Touch+Upside Reversal+Volume Dry-Up,stop_loss,59,44.1,-2.79
+Deep Base,MA Touch+Upside Reversal+Volume Dry-Up,trail_2atr,59,42.4,0.45
+Deep Base,MA Touch+Upside Reversal+Volume Dry-Up,target_3r,59,49.2,-0.46
+Deep Base,MA Touch+Volume Dry-Up,stop_loss,61,39.3,-3.92
+Deep Base,MA Touch+Volume Dry-Up,trail_2atr,61,37.7,-0.18
+Deep Base,MA Touch+Volume Dry-Up,target_3r,61,44.3,-2.0
+Deep Base,Pivot Breakout,stop_loss,244,17.2,-14.17
+Deep Base,Pivot Breakout,trail_2atr,244,15.6,-3.21
+Deep Base,Pivot Breakout,target_3r,241,22.4,-12.78
+Deep Base,Pivot Breakout+Pocket Pivot,stop_loss,115,31.3,-6.53
+Deep Base,Pivot Breakout+Pocket Pivot,trail_2atr,115,35.7,-1.07
+Deep Base,Pivot Breakout+Pocket Pivot,target_3r,106,32.1,-4.37
+Deep Base,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,96,44.8,-3.74
+Deep Base,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,96,34.4,-1.38
+Deep Base,Pivot Breakout+Pocket Pivot+RS New High,target_3r,87,47.1,-1.91
+Deep Base,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,80,41.2,-0.21
+Deep Base,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,80,43.8,1.33
+Deep Base,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,80,57.5,5.77
+Deep Base,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,16,50.0,0.66
+Deep Base,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,16,31.2,-2.06
+Deep Base,Pivot Breakout+Pocket Pivot+Shakeout,target_3r,16,56.2,1.33
+Deep Base,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,105,44.8,1.21
+Deep Base,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,105,44.8,0.7
+Deep Base,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,104,58.7,4.8
+Deep Base,Pivot Breakout+Pocket Pivot+Volume Dry-Up,stop_loss,31,38.7,-5.84
+Deep Base,Pivot Breakout+Pocket Pivot+Volume Dry-Up,trail_2atr,31,32.3,-1.21
+Deep Base,Pivot Breakout+Pocket Pivot+Volume Dry-Up,target_3r,30,40.0,-5.08
+Deep Base,Pivot Breakout+RS New High,stop_loss,115,42.6,-5.05
+Deep Base,Pivot Breakout+RS New High,trail_2atr,115,34.8,-1.17
+Deep Base,Pivot Breakout+RS New High,target_3r,105,46.7,-1.8
+Deep Base,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,72,41.7,-0.7
+Deep Base,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,72,48.6,1.74
+Deep Base,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,72,61.1,6.45
+Deep Base,Pivot Breakout+RS New High+Shakeout,stop_loss,13,69.2,3.57
+Deep Base,Pivot Breakout+RS New High+Shakeout,trail_2atr,13,30.8,-2.7
+Deep Base,Pivot Breakout+RS New High+Shakeout,target_3r,13,76.9,4.01
+Deep Base,Pivot Breakout+RS New High+Upside Reversal,stop_loss,106,47.2,1.95
+Deep Base,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,106,47.2,1.09
+Deep Base,Pivot Breakout+RS New High+Upside Reversal,target_3r,104,63.5,6.5
+Deep Base,Pivot Breakout+RS New High+Volume Dry-Up,stop_loss,24,50.0,-2.39
+Deep Base,Pivot Breakout+RS New High+Volume Dry-Up,trail_2atr,24,41.7,-1.48
+Deep Base,Pivot Breakout+RS New High+Volume Dry-Up,target_3r,23,52.2,-0.46
+Deep Base,Pivot Breakout+SMA50 Bounce,stop_loss,125,42.4,1.39
+Deep Base,Pivot Breakout+SMA50 Bounce,trail_2atr,125,46.4,1.7
+Deep Base,Pivot Breakout+SMA50 Bounce,target_3r,125,67.2,8.33
+Deep Base,Pivot Breakout+SMA50 Bounce+Shakeout,stop_loss,12,50.0,0.91
+Deep Base,Pivot Breakout+SMA50 Bounce+Shakeout,trail_2atr,12,33.3,-2.0
+Deep Base,Pivot Breakout+SMA50 Bounce+Shakeout,target_3r,12,58.3,2.82
+Deep Base,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,125,37.6,-0.96
+Deep Base,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,125,32.0,-0.29
+Deep Base,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,125,65.6,6.35
+Deep Base,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,stop_loss,26,38.5,-3.75
+Deep Base,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,trail_2atr,26,38.5,-0.9
+Deep Base,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,target_3r,26,50.0,0.27
+Deep Base,Pivot Breakout+Shakeout,stop_loss,16,43.8,-3.17
+Deep Base,Pivot Breakout+Shakeout,trail_2atr,16,50.0,0.47
+Deep Base,Pivot Breakout+Shakeout,target_3r,15,40.0,-3.54
+Deep Base,Pivot Breakout+Shakeout+Upside Reversal,stop_loss,16,56.2,3.04
+Deep Base,Pivot Breakout+Shakeout+Upside Reversal,trail_2atr,16,37.5,-0.63
+Deep Base,Pivot Breakout+Shakeout+Upside Reversal,target_3r,16,62.5,3.62
+Deep Base,Pivot Breakout+Shakeout+Volume Dry-Up,stop_loss,8,62.5,0.59
+Deep Base,Pivot Breakout+Shakeout+Volume Dry-Up,trail_2atr,8,37.5,-1.38
+Deep Base,Pivot Breakout+Shakeout+Volume Dry-Up,target_3r,8,62.5,0.59
+Deep Base,Pivot Breakout+Upside Reversal,stop_loss,183,39.3,0.74
+Deep Base,Pivot Breakout+Upside Reversal,trail_2atr,183,38.8,0.28
+Deep Base,Pivot Breakout+Upside Reversal,target_3r,183,62.8,5.54
+Deep Base,Pivot Breakout+Upside Reversal+Volume Dry-Up,stop_loss,33,42.4,-1.49
+Deep Base,Pivot Breakout+Upside Reversal+Volume Dry-Up,trail_2atr,33,51.5,0.26
+Deep Base,Pivot Breakout+Upside Reversal+Volume Dry-Up,target_3r,33,48.5,2.27
+Deep Base,Pivot Breakout+Volume Dry-Up,stop_loss,35,31.4,-10.53
+Deep Base,Pivot Breakout+Volume Dry-Up,trail_2atr,35,20.0,-2.52
+Deep Base,Pivot Breakout+Volume Dry-Up,target_3r,34,29.4,-11.05
+Deep Base,Pocket Pivot,stop_loss,200,19.5,-10.3
+Deep Base,Pocket Pivot,trail_2atr,200,32.5,-1.15
+Deep Base,Pocket Pivot,target_3r,191,19.9,-8.93
+Deep Base,Pocket Pivot+RS New High,stop_loss,158,32.3,-7.06
+Deep Base,Pocket Pivot+RS New High,trail_2atr,158,35.4,-1.09
+Deep Base,Pocket Pivot+RS New High,target_3r,149,32.9,-6.25
+Deep Base,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,125,34.4,-3.79
+Deep Base,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,125,46.4,0.89
+Deep Base,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,125,42.4,-0.71
+Deep Base,Pocket Pivot+RS New High+Shakeout,stop_loss,38,34.2,-4.8
+Deep Base,Pocket Pivot+RS New High+Shakeout,trail_2atr,38,26.3,-2.02
+Deep Base,Pocket Pivot+RS New High+Shakeout,target_3r,38,36.8,-4.65
+Deep Base,Pocket Pivot+RS New High+Upside Reversal,stop_loss,149,39.6,-1.69
+Deep Base,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,149,44.3,0.27
+Deep Base,Pocket Pivot+RS New High+Upside Reversal,target_3r,148,48.0,0.39
+Deep Base,Pocket Pivot+RS New High+Volume Dry-Up,stop_loss,42,35.7,-4.93
+Deep Base,Pocket Pivot+RS New High+Volume Dry-Up,trail_2atr,42,35.7,-1.19
+Deep Base,Pocket Pivot+RS New High+Volume Dry-Up,target_3r,41,34.1,-5.04
+Deep Base,Pocket Pivot+SMA50 Bounce,stop_loss,165,29.1,-5.06
+Deep Base,Pocket Pivot+SMA50 Bounce,trail_2atr,165,38.8,0.22
+Deep Base,Pocket Pivot+SMA50 Bounce,target_3r,165,37.0,-2.09
+Deep Base,Pocket Pivot+SMA50 Bounce+Shakeout,stop_loss,39,30.8,-5.23
+Deep Base,Pocket Pivot+SMA50 Bounce+Shakeout,trail_2atr,39,35.9,-1.07
+Deep Base,Pocket Pivot+SMA50 Bounce+Shakeout,target_3r,39,33.3,-4.32
+Deep Base,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,165,30.9,-4.7
+Deep Base,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,165,33.9,-0.46
+Deep Base,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,165,38.2,-2.1
+Deep Base,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,stop_loss,50,36.0,-4.85
+Deep Base,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,trail_2atr,50,36.0,-1.08
+Deep Base,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,target_3r,50,42.0,-2.73
+Deep Base,Pocket Pivot+Shakeout,stop_loss,43,23.3,-7.32
+Deep Base,Pocket Pivot+Shakeout,trail_2atr,43,23.3,-1.92
+Deep Base,Pocket Pivot+Shakeout,target_3r,43,25.6,-6.87
+Deep Base,Pocket Pivot+Shakeout+Upside Reversal,stop_loss,43,32.6,-4.23
+Deep Base,Pocket Pivot+Shakeout+Upside Reversal,trail_2atr,43,34.9,-1.04
+Deep Base,Pocket Pivot+Shakeout+Upside Reversal,target_3r,43,34.9,-3.79
+Deep Base,Pocket Pivot+Shakeout+Volume Dry-Up,stop_loss,16,37.5,-3.57
+Deep Base,Pocket Pivot+Shakeout+Volume Dry-Up,trail_2atr,16,25.0,-1.73
+Deep Base,Pocket Pivot+Shakeout+Volume Dry-Up,target_3r,16,37.5,-3.57
+Deep Base,Pocket Pivot+Upside Reversal,stop_loss,190,33.7,-3.63
+Deep Base,Pocket Pivot+Upside Reversal,trail_2atr,190,41.6,-0.05
+Deep Base,Pocket Pivot+Upside Reversal,target_3r,189,41.3,-1.66
+Deep Base,Pocket Pivot+Upside Reversal+Volume Dry-Up,stop_loss,55,41.8,-2.78
+Deep Base,Pocket Pivot+Upside Reversal+Volume Dry-Up,trail_2atr,55,40.0,-0.38
+Deep Base,Pocket Pivot+Upside Reversal+Volume Dry-Up,target_3r,55,45.5,-1.24
+Deep Base,Pocket Pivot+Volume Dry-Up,stop_loss,56,21.4,-9.31
+Deep Base,Pocket Pivot+Volume Dry-Up,trail_2atr,56,28.6,-1.64
+Deep Base,Pocket Pivot+Volume Dry-Up,target_3r,55,21.8,-8.8
+Deep Base,RS New High,stop_loss,186,31.7,-8.44
+Deep Base,RS New High,trail_2atr,186,31.7,-1.07
+Deep Base,RS New High,target_3r,176,34.1,-7.02
+Deep Base,RS New High+SMA50 Bounce,stop_loss,142,33.1,-4.41
+Deep Base,RS New High+SMA50 Bounce,trail_2atr,142,43.0,0.76
+Deep Base,RS New High+SMA50 Bounce,target_3r,142,43.0,-0.61
+Deep Base,RS New High+SMA50 Bounce+Shakeout,stop_loss,36,33.3,-5.43
+Deep Base,RS New High+SMA50 Bounce+Shakeout,trail_2atr,36,33.3,-0.93
+Deep Base,RS New High+SMA50 Bounce+Shakeout,target_3r,36,36.1,-4.43
+Deep Base,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,141,34.0,-3.89
+Deep Base,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,141,36.2,0.01
+Deep Base,RS New High+SMA50 Bounce+Upside Reversal,target_3r,141,44.0,-0.25
+Deep Base,RS New High+SMA50 Bounce+Volume Dry-Up,stop_loss,38,36.8,-5.02
+Deep Base,RS New High+SMA50 Bounce+Volume Dry-Up,trail_2atr,38,42.1,-0.86
+Deep Base,RS New High+SMA50 Bounce+Volume Dry-Up,target_3r,38,42.1,-3.4
+Deep Base,RS New High+Shakeout,stop_loss,40,32.5,-6.38
+Deep Base,RS New High+Shakeout,trail_2atr,40,22.5,-2.31
+Deep Base,RS New High+Shakeout,target_3r,40,35.0,-6.01
+Deep Base,RS New High+Shakeout+Upside Reversal,stop_loss,40,35.0,-3.2
+Deep Base,RS New High+Shakeout+Upside Reversal,trail_2atr,40,30.0,-1.37
+Deep Base,RS New High+Shakeout+Upside Reversal,target_3r,40,37.5,-2.65
+Deep Base,RS New High+Shakeout+Volume Dry-Up,stop_loss,14,50.0,-1.48
+Deep Base,RS New High+Shakeout+Volume Dry-Up,trail_2atr,14,21.4,-1.81
+Deep Base,RS New High+Shakeout+Volume Dry-Up,target_3r,14,50.0,-1.48
+Deep Base,RS New High+Upside Reversal,stop_loss,176,38.1,-2.26
+Deep Base,RS New High+Upside Reversal,trail_2atr,176,42.0,0.31
+Deep Base,RS New High+Upside Reversal,target_3r,174,47.7,0.44
+Deep Base,RS New High+Upside Reversal+Volume Dry-Up,stop_loss,44,43.2,-1.06
+Deep Base,RS New High+Upside Reversal+Volume Dry-Up,trail_2atr,44,43.2,-0.13
+Deep Base,RS New High+Upside Reversal+Volume Dry-Up,target_3r,44,47.7,1.22
+Deep Base,RS New High+Volume Dry-Up,stop_loss,46,32.6,-6.49
+Deep Base,RS New High+Volume Dry-Up,trail_2atr,46,34.8,-1.53
+Deep Base,RS New High+Volume Dry-Up,target_3r,45,33.3,-5.9
+Deep Base,SMA50 Bounce,stop_loss,279,26.5,-5.28
+Deep Base,SMA50 Bounce,trail_2atr,279,34.8,-1.04
+Deep Base,SMA50 Bounce,target_3r,279,41.2,-1.72
+Deep Base,SMA50 Bounce+Shakeout,stop_loss,42,33.3,-5.73
+Deep Base,SMA50 Bounce+Shakeout,trail_2atr,42,35.7,-1.04
+Deep Base,SMA50 Bounce+Shakeout,target_3r,42,35.7,-4.57
+Deep Base,SMA50 Bounce+Shakeout+Upside Reversal,stop_loss,42,26.2,-6.84
+Deep Base,SMA50 Bounce+Shakeout+Upside Reversal,trail_2atr,42,31.0,-1.23
+Deep Base,SMA50 Bounce+Shakeout+Upside Reversal,target_3r,42,26.2,-6.14
+Deep Base,SMA50 Bounce+Shakeout+Volume Dry-Up,stop_loss,15,40.0,-2.89
+Deep Base,SMA50 Bounce+Shakeout+Volume Dry-Up,trail_2atr,15,46.7,0.05
+Deep Base,SMA50 Bounce+Shakeout+Volume Dry-Up,target_3r,15,46.7,-1.37
+Deep Base,SMA50 Bounce+Upside Reversal,stop_loss,262,25.6,-6.66
+Deep Base,SMA50 Bounce+Upside Reversal,trail_2atr,262,26.3,-1.81
+Deep Base,SMA50 Bounce+Upside Reversal,target_3r,262,39.7,-3.21
+Deep Base,SMA50 Bounce+Upside Reversal+Volume Dry-Up,stop_loss,52,36.5,-4.78
+Deep Base,SMA50 Bounce+Upside Reversal+Volume Dry-Up,trail_2atr,52,30.8,-0.96
+Deep Base,SMA50 Bounce+Upside Reversal+Volume Dry-Up,target_3r,52,38.5,-3.14
+Deep Base,SMA50 Bounce+Volume Dry-Up,stop_loss,53,34.0,-6.2
+Deep Base,SMA50 Bounce+Volume Dry-Up,trail_2atr,53,34.0,-1.12
+Deep Base,SMA50 Bounce+Volume Dry-Up,target_3r,53,39.6,-4.32
+Deep Base,Shakeout,stop_loss,46,23.9,-10.68
+Deep Base,Shakeout,trail_2atr,46,30.4,-1.82
+Deep Base,Shakeout,target_3r,45,22.2,-10.58
+Deep Base,Shakeout+Upside Reversal,stop_loss,46,28.3,-5.44
+Deep Base,Shakeout+Upside Reversal,trail_2atr,46,32.6,-1.23
+Deep Base,Shakeout+Upside Reversal,target_3r,46,30.4,-4.76
+Deep Base,Shakeout+Upside Reversal+Volume Dry-Up,stop_loss,16,43.8,0.91
+Deep Base,Shakeout+Upside Reversal+Volume Dry-Up,trail_2atr,16,43.8,0.52
+Deep Base,Shakeout+Upside Reversal+Volume Dry-Up,target_3r,16,43.8,1.14
+Deep Base,Shakeout+Volume Dry-Up,stop_loss,16,31.2,-6.46
+Deep Base,Shakeout+Volume Dry-Up,trail_2atr,16,25.0,-1.5
+Deep Base,Shakeout+Volume Dry-Up,target_3r,16,31.2,-6.26
+Deep Base,Upside Reversal,stop_loss,326,30.1,-3.83
+Deep Base,Upside Reversal,trail_2atr,326,34.4,-1.1
+Deep Base,Upside Reversal,target_3r,325,45.8,-1.27
+Deep Base,Upside Reversal+Volume Dry-Up,stop_loss,59,39.0,-3.5
+Deep Base,Upside Reversal+Volume Dry-Up,trail_2atr,59,42.4,-0.31
+Deep Base,Upside Reversal+Volume Dry-Up,target_3r,59,42.4,-1.25
+Deep Base,Volume Dry-Up,stop_loss,63,17.5,-12.8
+Deep Base,Volume Dry-Up,trail_2atr,63,11.1,-3.45
+Deep Base,Volume Dry-Up,target_3r,61,14.8,-13.58
+VCP-ready,Composite Score,stop_loss,6283,19.8,-8.53
+VCP-ready,Composite Score,trail_2atr,6283,13.8,-2.62
+VCP-ready,Composite Score,target_3r,6217,21.5,-8.28
+VCP-ready,MA Touch,stop_loss,5765,32.2,-2.45
+VCP-ready,MA Touch,trail_2atr,5765,37.3,-0.11
+VCP-ready,MA Touch,target_3r,5762,57.5,1.03
+VCP-ready,MA Touch+Pivot Breakout,stop_loss,4165,35.5,-0.43
+VCP-ready,MA Touch+Pivot Breakout,trail_2atr,4165,39.7,0.33
+VCP-ready,MA Touch+Pivot Breakout,target_3r,4163,65.1,3.65
+VCP-ready,MA Touch+Pivot Breakout+Pocket Pivot,stop_loss,2549,37.5,-0.52
+VCP-ready,MA Touch+Pivot Breakout+Pocket Pivot,trail_2atr,2549,39.3,0.29
+VCP-ready,MA Touch+Pivot Breakout+Pocket Pivot,target_3r,2540,60.0,2.89
+VCP-ready,MA Touch+Pivot Breakout+RS New High,stop_loss,2705,37.7,0.04
+VCP-ready,MA Touch+Pivot Breakout+RS New High,trail_2atr,2705,40.3,0.49
+VCP-ready,MA Touch+Pivot Breakout+RS New High,target_3r,2691,63.5,3.63
+VCP-ready,MA Touch+Pivot Breakout+SMA50 Bounce,stop_loss,3419,32.2,-2.25
+VCP-ready,MA Touch+Pivot Breakout+SMA50 Bounce,trail_2atr,3419,34.2,-0.56
+VCP-ready,MA Touch+Pivot Breakout+SMA50 Bounce,target_3r,3419,61.7,2.69
+VCP-ready,MA Touch+Pivot Breakout+Shakeout,stop_loss,667,35.8,-1.74
+VCP-ready,MA Touch+Pivot Breakout+Shakeout,trail_2atr,667,32.4,-0.54
+VCP-ready,MA Touch+Pivot Breakout+Shakeout,target_3r,666,58.1,1.91
+VCP-ready,MA Touch+Pivot Breakout+Upside Reversal,stop_loss,4107,35.5,-0.45
+VCP-ready,MA Touch+Pivot Breakout+Upside Reversal,trail_2atr,4107,39.3,0.27
+VCP-ready,MA Touch+Pivot Breakout+Upside Reversal,target_3r,4105,65.4,3.75
+VCP-ready,MA Touch+Pivot Breakout+Volume Dry-Up,stop_loss,1051,40.4,-1.0
+VCP-ready,MA Touch+Pivot Breakout+Volume Dry-Up,trail_2atr,1051,37.9,-0.14
+VCP-ready,MA Touch+Pivot Breakout+Volume Dry-Up,target_3r,1050,55.6,1.27
+VCP-ready,MA Touch+Pocket Pivot,stop_loss,3836,34.2,-2.25
+VCP-ready,MA Touch+Pocket Pivot,trail_2atr,3836,37.7,-0.01
+VCP-ready,MA Touch+Pocket Pivot,target_3r,3827,54.0,0.74
+VCP-ready,MA Touch+Pocket Pivot+RS New High,stop_loss,3322,35.9,-1.3
+VCP-ready,MA Touch+Pocket Pivot+RS New High,trail_2atr,3322,39.4,0.26
+VCP-ready,MA Touch+Pocket Pivot+RS New High,target_3r,3309,56.7,1.62
+VCP-ready,MA Touch+Pocket Pivot+SMA50 Bounce,stop_loss,3464,32.0,-3.52
+VCP-ready,MA Touch+Pocket Pivot+SMA50 Bounce,trail_2atr,3464,34.4,-0.63
+VCP-ready,MA Touch+Pocket Pivot+SMA50 Bounce,target_3r,3463,51.2,-0.05
+VCP-ready,MA Touch+Pocket Pivot+Shakeout,stop_loss,1175,35.7,-2.07
+VCP-ready,MA Touch+Pocket Pivot+Shakeout,trail_2atr,1175,34.2,-0.43
+VCP-ready,MA Touch+Pocket Pivot+Shakeout,target_3r,1174,54.7,0.57
+VCP-ready,MA Touch+Pocket Pivot+Upside Reversal,stop_loss,3811,34.2,-2.26
+VCP-ready,MA Touch+Pocket Pivot+Upside Reversal,trail_2atr,3811,37.4,-0.07
+VCP-ready,MA Touch+Pocket Pivot+Upside Reversal,target_3r,3802,54.0,0.75
+VCP-ready,MA Touch+Pocket Pivot+Volume Dry-Up,stop_loss,1577,38.2,-1.61
+VCP-ready,MA Touch+Pocket Pivot+Volume Dry-Up,trail_2atr,1577,36.5,-0.25
+VCP-ready,MA Touch+Pocket Pivot+Volume Dry-Up,target_3r,1574,53.0,0.33
+VCP-ready,MA Touch+RS New High,stop_loss,3827,35.9,-1.16
+VCP-ready,MA Touch+RS New High,trail_2atr,3827,39.5,0.28
+VCP-ready,MA Touch+RS New High,target_3r,3813,58.4,1.98
+VCP-ready,MA Touch+RS New High+SMA50 Bounce,stop_loss,3371,33.2,-2.68
+VCP-ready,MA Touch+RS New High+SMA50 Bounce,trail_2atr,3371,35.6,-0.42
+VCP-ready,MA Touch+RS New High+SMA50 Bounce,target_3r,3370,55.4,1.07
+VCP-ready,MA Touch+RS New High+Shakeout,stop_loss,1105,36.8,-1.6
+VCP-ready,MA Touch+RS New High+Shakeout,trail_2atr,1105,35.1,-0.33
+VCP-ready,MA Touch+RS New High+Shakeout,target_3r,1103,56.5,1.16
+VCP-ready,MA Touch+RS New High+Upside Reversal,stop_loss,3807,35.7,-1.25
+VCP-ready,MA Touch+RS New High+Upside Reversal,trail_2atr,3807,39.2,0.23
+VCP-ready,MA Touch+RS New High+Upside Reversal,target_3r,3793,58.4,1.97
+VCP-ready,MA Touch+RS New High+Volume Dry-Up,stop_loss,1379,38.5,-1.37
+VCP-ready,MA Touch+RS New High+Volume Dry-Up,trail_2atr,1379,37.4,-0.06
+VCP-ready,MA Touch+RS New High+Volume Dry-Up,target_3r,1375,54.7,0.64
+VCP-ready,MA Touch+SMA50 Bounce,stop_loss,4954,29.0,-4.27
+VCP-ready,MA Touch+SMA50 Bounce,trail_2atr,4954,32.6,-0.86
+VCP-ready,MA Touch+SMA50 Bounce,target_3r,4954,53.2,-0.18
+VCP-ready,MA Touch+SMA50 Bounce+Shakeout,stop_loss,1185,35.0,-2.37
+VCP-ready,MA Touch+SMA50 Bounce+Shakeout,trail_2atr,1185,33.7,-0.47
+VCP-ready,MA Touch+SMA50 Bounce+Shakeout,target_3r,1185,53.6,0.29
+VCP-ready,MA Touch+SMA50 Bounce+Upside Reversal,stop_loss,4922,29.1,-4.26
+VCP-ready,MA Touch+SMA50 Bounce+Upside Reversal,trail_2atr,4922,32.5,-0.86
+VCP-ready,MA Touch+SMA50 Bounce+Upside Reversal,target_3r,4922,53.2,-0.16
+VCP-ready,MA Touch+SMA50 Bounce+Volume Dry-Up,stop_loss,1529,36.7,-2.4
+VCP-ready,MA Touch+SMA50 Bounce+Volume Dry-Up,trail_2atr,1529,34.9,-0.52
+VCP-ready,MA Touch+SMA50 Bounce+Volume Dry-Up,target_3r,1529,51.3,-0.13
+VCP-ready,MA Touch+Shakeout,stop_loss,1208,35.3,-2.25
+VCP-ready,MA Touch+Shakeout,trail_2atr,1208,33.8,-0.46
+VCP-ready,MA Touch+Shakeout,target_3r,1207,54.3,0.51
+VCP-ready,MA Touch+Shakeout+Upside Reversal,stop_loss,1205,35.4,-2.26
+VCP-ready,MA Touch+Shakeout+Upside Reversal,trail_2atr,1205,33.9,-0.46
+VCP-ready,MA Touch+Shakeout+Upside Reversal,target_3r,1204,54.5,0.51
+VCP-ready,MA Touch+Shakeout+Volume Dry-Up,stop_loss,656,37.3,-1.68
+VCP-ready,MA Touch+Shakeout+Volume Dry-Up,trail_2atr,656,33.1,-0.45
+VCP-ready,MA Touch+Shakeout+Volume Dry-Up,target_3r,655,55.3,0.88
+VCP-ready,MA Touch+Upside Reversal,stop_loss,5681,32.1,-2.56
+VCP-ready,MA Touch+Upside Reversal,trail_2atr,5681,36.7,-0.19
+VCP-ready,MA Touch+Upside Reversal,target_3r,5679,57.6,1.06
+VCP-ready,MA Touch+Upside Reversal+Volume Dry-Up,stop_loss,1609,37.8,-1.86
+VCP-ready,MA Touch+Upside Reversal+Volume Dry-Up,trail_2atr,1609,36.5,-0.27
+VCP-ready,MA Touch+Upside Reversal+Volume Dry-Up,target_3r,1608,52.9,0.2
+VCP-ready,MA Touch+Volume Dry-Up,stop_loss,1624,38.0,-1.75
+VCP-ready,MA Touch+Volume Dry-Up,trail_2atr,1624,36.9,-0.19
+VCP-ready,MA Touch+Volume Dry-Up,target_3r,1623,52.9,0.31
+VCP-ready,Pivot Breakout,stop_loss,4829,17.7,-8.83
+VCP-ready,Pivot Breakout,trail_2atr,4829,9.4,-2.84
+VCP-ready,Pivot Breakout,target_3r,4760,18.0,-9.0
+VCP-ready,Pivot Breakout+Pocket Pivot,stop_loss,2614,43.4,-0.61
+VCP-ready,Pivot Breakout+Pocket Pivot,trail_2atr,2614,31.0,-0.63
+VCP-ready,Pivot Breakout+Pocket Pivot,target_3r,2552,47.1,-0.04
+VCP-ready,Pivot Breakout+Pocket Pivot+RS New High,stop_loss,2288,49.3,1.26
+VCP-ready,Pivot Breakout+Pocket Pivot+RS New High,trail_2atr,2288,34.5,-0.18
+VCP-ready,Pivot Breakout+Pocket Pivot+RS New High,target_3r,2227,54.5,1.68
+VCP-ready,Pivot Breakout+Pocket Pivot+SMA50 Bounce,stop_loss,2230,40.8,-0.03
+VCP-ready,Pivot Breakout+Pocket Pivot+SMA50 Bounce,trail_2atr,2230,39.9,0.72
+VCP-ready,Pivot Breakout+Pocket Pivot+SMA50 Bounce,target_3r,2228,59.6,2.72
+VCP-ready,Pivot Breakout+Pocket Pivot+Shakeout,stop_loss,654,44.5,-0.72
+VCP-ready,Pivot Breakout+Pocket Pivot+Shakeout,trail_2atr,654,25.7,-1.15
+VCP-ready,Pivot Breakout+Pocket Pivot+Shakeout,target_3r,645,50.1,0.27
+VCP-ready,Pivot Breakout+Pocket Pivot+Upside Reversal,stop_loss,2541,42.9,1.2
+VCP-ready,Pivot Breakout+Pocket Pivot+Upside Reversal,trail_2atr,2541,39.4,0.58
+VCP-ready,Pivot Breakout+Pocket Pivot+Upside Reversal,target_3r,2533,61.7,3.56
+VCP-ready,Pivot Breakout+Pocket Pivot+Volume Dry-Up,stop_loss,1035,45.1,-1.24
+VCP-ready,Pivot Breakout+Pocket Pivot+Volume Dry-Up,trail_2atr,1035,34.0,-0.58
+VCP-ready,Pivot Breakout+Pocket Pivot+Volume Dry-Up,target_3r,1016,48.4,-0.36
+VCP-ready,Pivot Breakout+RS New High,stop_loss,2781,48.8,0.82
+VCP-ready,Pivot Breakout+RS New High,trail_2atr,2781,31.5,-0.58
+VCP-ready,Pivot Breakout+RS New High,target_3r,2709,52.7,1.07
+VCP-ready,Pivot Breakout+RS New High+SMA50 Bounce,stop_loss,2299,41.9,0.42
+VCP-ready,Pivot Breakout+RS New High+SMA50 Bounce,trail_2atr,2299,40.4,0.81
+VCP-ready,Pivot Breakout+RS New High+SMA50 Bounce,target_3r,2298,62.6,3.19
+VCP-ready,Pivot Breakout+RS New High+Shakeout,stop_loss,619,47.5,-0.46
+VCP-ready,Pivot Breakout+RS New High+Shakeout,trail_2atr,619,27.9,-1.02
+VCP-ready,Pivot Breakout+RS New High+Shakeout,target_3r,608,54.8,1.04
+VCP-ready,Pivot Breakout+RS New High+Upside Reversal,stop_loss,2702,44.6,1.84
+VCP-ready,Pivot Breakout+RS New High+Upside Reversal,trail_2atr,2702,40.0,0.7
+VCP-ready,Pivot Breakout+RS New High+Upside Reversal,target_3r,2690,64.8,4.14
+VCP-ready,Pivot Breakout+RS New High+Volume Dry-Up,stop_loss,863,46.2,-0.8
+VCP-ready,Pivot Breakout+RS New High+Volume Dry-Up,trail_2atr,863,32.8,-0.48
+VCP-ready,Pivot Breakout+RS New High+Volume Dry-Up,target_3r,844,50.6,0.03
+VCP-ready,Pivot Breakout+SMA50 Bounce,stop_loss,3429,42.2,0.96
+VCP-ready,Pivot Breakout+SMA50 Bounce,trail_2atr,3429,44.6,1.11
+VCP-ready,Pivot Breakout+SMA50 Bounce,target_3r,3429,66.8,4.01
+VCP-ready,Pivot Breakout+SMA50 Bounce+Shakeout,stop_loss,651,43.2,-0.24
+VCP-ready,Pivot Breakout+SMA50 Bounce+Shakeout,trail_2atr,651,44.1,0.62
+VCP-ready,Pivot Breakout+SMA50 Bounce+Shakeout,target_3r,650,60.0,2.23
+VCP-ready,Pivot Breakout+SMA50 Bounce+Upside Reversal,stop_loss,3413,37.8,-0.54
+VCP-ready,Pivot Breakout+SMA50 Bounce+Upside Reversal,trail_2atr,3413,37.5,0.12
+VCP-ready,Pivot Breakout+SMA50 Bounce+Upside Reversal,target_3r,3413,63.6,3.22
+VCP-ready,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,stop_loss,971,41.3,-1.23
+VCP-ready,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,trail_2atr,971,40.5,-0.0
+VCP-ready,Pivot Breakout+SMA50 Bounce+Volume Dry-Up,target_3r,971,54.9,1.31
+VCP-ready,Pivot Breakout+Shakeout,stop_loss,675,47.1,0.16
+VCP-ready,Pivot Breakout+Shakeout,trail_2atr,675,33.2,-0.29
+VCP-ready,Pivot Breakout+Shakeout,target_3r,665,52.0,0.87
+VCP-ready,Pivot Breakout+Shakeout+Upside Reversal,stop_loss,665,41.7,-1.04
+VCP-ready,Pivot Breakout+Shakeout+Upside Reversal,trail_2atr,665,34.3,-0.32
+VCP-ready,Pivot Breakout+Shakeout+Upside Reversal,target_3r,664,60.1,2.13
+VCP-ready,Pivot Breakout+Shakeout+Volume Dry-Up,stop_loss,357,41.5,-1.72
+VCP-ready,Pivot Breakout+Shakeout+Volume Dry-Up,trail_2atr,357,25.2,-0.97
+VCP-ready,Pivot Breakout+Shakeout+Volume Dry-Up,target_3r,354,46.0,-0.14
+VCP-ready,Pivot Breakout+Upside Reversal,stop_loss,4191,42.8,0.95
+VCP-ready,Pivot Breakout+Upside Reversal,trail_2atr,4191,40.5,0.51
+VCP-ready,Pivot Breakout+Upside Reversal,target_3r,4190,65.5,3.88
+VCP-ready,Pivot Breakout+Upside Reversal+Volume Dry-Up,stop_loss,1040,43.8,-0.43
+VCP-ready,Pivot Breakout+Upside Reversal+Volume Dry-Up,trail_2atr,1040,38.3,-0.06
+VCP-ready,Pivot Breakout+Upside Reversal+Volume Dry-Up,target_3r,1039,57.3,1.82
+VCP-ready,Pivot Breakout+Volume Dry-Up,stop_loss,1066,34.2,-3.36
+VCP-ready,Pivot Breakout+Volume Dry-Up,trail_2atr,1066,31.1,-0.87
+VCP-ready,Pivot Breakout+Volume Dry-Up,target_3r,1050,35.8,-2.51
+VCP-ready,Pocket Pivot,stop_loss,3901,39.7,-2.54
+VCP-ready,Pocket Pivot,trail_2atr,3901,32.1,-0.65
+VCP-ready,Pocket Pivot,target_3r,3836,43.2,-1.99
+VCP-ready,Pocket Pivot+RS New High,stop_loss,3381,45.4,-0.58
+VCP-ready,Pocket Pivot+RS New High,trail_2atr,3381,35.3,-0.21
+VCP-ready,Pocket Pivot+RS New High,target_3r,3317,50.2,-0.08
+VCP-ready,Pocket Pivot+RS New High+SMA50 Bounce,stop_loss,2980,37.8,-1.56
+VCP-ready,Pocket Pivot+RS New High+SMA50 Bounce,trail_2atr,2980,37.4,0.29
+VCP-ready,Pocket Pivot+RS New High+SMA50 Bounce,target_3r,2979,53.9,0.74
+VCP-ready,Pocket Pivot+RS New High+Shakeout,stop_loss,1093,43.5,-1.43
+VCP-ready,Pocket Pivot+RS New High+Shakeout,trail_2atr,1093,28.5,-0.96
+VCP-ready,Pocket Pivot+RS New High+Shakeout,target_3r,1083,50.3,-0.35
+VCP-ready,Pocket Pivot+RS New High+Upside Reversal,stop_loss,3318,40.4,-0.18
+VCP-ready,Pocket Pivot+RS New High+Upside Reversal,trail_2atr,3318,38.6,0.38
+VCP-ready,Pocket Pivot+RS New High+Upside Reversal,target_3r,3305,56.7,1.82
+VCP-ready,Pocket Pivot+RS New High+Volume Dry-Up,stop_loss,1379,44.2,-1.48
+VCP-ready,Pocket Pivot+RS New High+Volume Dry-Up,trail_2atr,1379,31.9,-0.6
+VCP-ready,Pocket Pivot+RS New High+Volume Dry-Up,target_3r,1360,49.2,-0.65
+VCP-ready,Pocket Pivot+SMA50 Bounce,stop_loss,3464,36.1,-2.3
+VCP-ready,Pocket Pivot+SMA50 Bounce,trail_2atr,3464,37.7,0.17
+VCP-ready,Pocket Pivot+SMA50 Bounce,target_3r,3462,52.1,0.11
+VCP-ready,Pocket Pivot+SMA50 Bounce+Shakeout,stop_loss,1154,39.3,-1.69
+VCP-ready,Pocket Pivot+SMA50 Bounce+Shakeout,trail_2atr,1154,36.7,-0.21
+VCP-ready,Pocket Pivot+SMA50 Bounce+Shakeout,target_3r,1154,53.6,0.22
+VCP-ready,Pocket Pivot+SMA50 Bounce+Upside Reversal,stop_loss,3456,34.8,-2.67
+VCP-ready,Pocket Pivot+SMA50 Bounce+Upside Reversal,trail_2atr,3456,35.5,-0.21
+VCP-ready,Pocket Pivot+SMA50 Bounce+Upside Reversal,target_3r,3454,51.9,0.14
+VCP-ready,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,stop_loss,1503,38.3,-2.08
+VCP-ready,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,trail_2atr,1503,36.2,-0.3
+VCP-ready,Pocket Pivot+SMA50 Bounce+Volume Dry-Up,target_3r,1502,50.9,-0.03
+VCP-ready,Pocket Pivot+Shakeout,stop_loss,1183,40.0,-2.23
+VCP-ready,Pocket Pivot+Shakeout,trail_2atr,1183,27.0,-1.11
+VCP-ready,Pocket Pivot+Shakeout,target_3r,1174,45.5,-1.32
+VCP-ready,Pocket Pivot+Shakeout+Upside Reversal,stop_loss,1175,39.2,-1.83
+VCP-ready,Pocket Pivot+Shakeout+Upside Reversal,trail_2atr,1175,33.2,-0.55
+VCP-ready,Pocket Pivot+Shakeout+Upside Reversal,target_3r,1174,54.5,0.44
+VCP-ready,Pocket Pivot+Shakeout+Volume Dry-Up,stop_loss,653,42.4,-1.73
+VCP-ready,Pocket Pivot+Shakeout+Volume Dry-Up,trail_2atr,653,26.6,-0.99
+VCP-ready,Pocket Pivot+Shakeout+Volume Dry-Up,target_3r,650,47.5,-0.66
+VCP-ready,Pocket Pivot+Upside Reversal,stop_loss,3819,38.5,-1.1
+VCP-ready,Pocket Pivot+Upside Reversal,trail_2atr,3819,37.3,0.14
+VCP-ready,Pocket Pivot+Upside Reversal,target_3r,3810,54.3,1.01
+VCP-ready,Pocket Pivot+Upside Reversal+Volume Dry-Up,stop_loss,1573,41.1,-1.33
+VCP-ready,Pocket Pivot+Upside Reversal+Volume Dry-Up,trail_2atr,1573,37.0,-0.33
+VCP-ready,Pocket Pivot+Upside Reversal+Volume Dry-Up,target_3r,1569,53.3,0.51
+VCP-ready,Pocket Pivot+Volume Dry-Up,stop_loss,1592,40.6,-2.39
+VCP-ready,Pocket Pivot+Volume Dry-Up,trail_2atr,1592,32.5,-0.77
+VCP-ready,Pocket Pivot+Volume Dry-Up,target_3r,1573,44.0,-1.69
+VCP-ready,RS New High,stop_loss,3903,47.3,-0.3
+VCP-ready,RS New High,trail_2atr,3903,33.1,-0.39
+VCP-ready,RS New High,target_3r,3826,50.9,0.01
+VCP-ready,RS New High+SMA50 Bounce,stop_loss,3371,38.4,-1.25
+VCP-ready,RS New High+SMA50 Bounce,trail_2atr,3371,38.6,0.36
+VCP-ready,RS New High+SMA50 Bounce,target_3r,3370,55.7,1.15
+VCP-ready,RS New High+SMA50 Bounce+Shakeout,stop_loss,1084,39.9,-1.34
+VCP-ready,RS New High+SMA50 Bounce+Shakeout,trail_2atr,1084,36.9,-0.19
+VCP-ready,RS New High+SMA50 Bounce+Shakeout,target_3r,1082,53.6,0.57
+VCP-ready,RS New High+SMA50 Bounce+Upside Reversal,stop_loss,3365,36.9,-1.66
+VCP-ready,RS New High+SMA50 Bounce+Upside Reversal,trail_2atr,3365,36.3,0.02
+VCP-ready,RS New High+SMA50 Bounce+Upside Reversal,target_3r,3364,55.9,1.2
+VCP-ready,RS New High+SMA50 Bounce+Volume Dry-Up,stop_loss,1304,38.7,-1.86
+VCP-ready,RS New High+SMA50 Bounce+Volume Dry-Up,trail_2atr,1304,35.8,-0.31
+VCP-ready,RS New High+SMA50 Bounce+Volume Dry-Up,target_3r,1304,51.9,0.13
+VCP-ready,RS New High+Shakeout,stop_loss,1113,42.7,-1.68
+VCP-ready,RS New High+Shakeout,trail_2atr,1113,28.0,-0.97
+VCP-ready,RS New High+Shakeout,target_3r,1102,48.8,-0.51
+VCP-ready,RS New High+Shakeout+Upside Reversal,stop_loss,1104,40.8,-1.39
+VCP-ready,RS New High+Shakeout+Upside Reversal,trail_2atr,1104,34.4,-0.48
+VCP-ready,RS New High+Shakeout+Upside Reversal,target_3r,1102,56.0,1.0
+VCP-ready,RS New High+Shakeout+Volume Dry-Up,stop_loss,617,41.5,-1.61
+VCP-ready,RS New High+Shakeout+Volume Dry-Up,trail_2atr,617,28.2,-0.93
+VCP-ready,RS New High+Shakeout+Volume Dry-Up,target_3r,614,47.4,-0.34
+VCP-ready,RS New High+Upside Reversal,stop_loss,3820,41.5,0.18
+VCP-ready,RS New High+Upside Reversal,trail_2atr,3820,38.9,0.4
+VCP-ready,RS New High+Upside Reversal,target_3r,3806,58.8,2.27
+VCP-ready,RS New High+Upside Reversal+Volume Dry-Up,stop_loss,1375,42.3,-0.97
+VCP-ready,RS New High+Upside Reversal+Volume Dry-Up,trail_2atr,1375,38.0,-0.13
+VCP-ready,RS New High+Upside Reversal+Volume Dry-Up,target_3r,1371,55.1,0.86
+VCP-ready,RS New High+Volume Dry-Up,stop_loss,1394,41.5,-1.97
+VCP-ready,RS New High+Volume Dry-Up,trail_2atr,1394,30.6,-0.67
+VCP-ready,RS New High+Volume Dry-Up,target_3r,1375,45.4,-1.3
+VCP-ready,SMA50 Bounce,stop_loss,4964,37.3,-1.49
+VCP-ready,SMA50 Bounce,trail_2atr,4964,41.1,0.45
+VCP-ready,SMA50 Bounce,target_3r,4964,57.6,1.14
+VCP-ready,SMA50 Bounce+Shakeout,stop_loss,1185,41.1,-1.19
+VCP-ready,SMA50 Bounce+Shakeout,trail_2atr,1185,42.1,0.32
+VCP-ready,SMA50 Bounce+Shakeout,target_3r,1184,55.2,0.71
+VCP-ready,SMA50 Bounce+Shakeout+Upside Reversal,stop_loss,1182,37.2,-2.13
+VCP-ready,SMA50 Bounce+Shakeout+Upside Reversal,trail_2atr,1182,34.9,-0.4
+VCP-ready,SMA50 Bounce+Shakeout+Upside Reversal,target_3r,1182,53.0,0.26
+VCP-ready,SMA50 Bounce+Shakeout+Volume Dry-Up,stop_loss,646,39.3,-1.22
+VCP-ready,SMA50 Bounce+Shakeout+Volume Dry-Up,trail_2atr,646,38.4,-0.08
+VCP-ready,SMA50 Bounce+Shakeout+Volume Dry-Up,target_3r,646,53.6,0.98
+VCP-ready,SMA50 Bounce+Upside Reversal,stop_loss,4932,33.4,-2.87
+VCP-ready,SMA50 Bounce+Upside Reversal,trail_2atr,4932,35.4,-0.33
+VCP-ready,SMA50 Bounce+Upside Reversal,target_3r,4932,54.7,0.34
+VCP-ready,SMA50 Bounce+Upside Reversal+Volume Dry-Up,stop_loss,1525,38.3,-2.15
+VCP-ready,SMA50 Bounce+Upside Reversal+Volume Dry-Up,trail_2atr,1525,36.4,-0.43
+VCP-ready,SMA50 Bounce+Upside Reversal+Volume Dry-Up,target_3r,1525,51.8,0.04
+VCP-ready,SMA50 Bounce+Volume Dry-Up,stop_loss,1529,38.5,-2.01
+VCP-ready,SMA50 Bounce+Volume Dry-Up,trail_2atr,1529,38.3,-0.19
+VCP-ready,SMA50 Bounce+Volume Dry-Up,target_3r,1529,50.9,0.03
+VCP-ready,Shakeout,stop_loss,1216,39.6,-2.02
+VCP-ready,Shakeout,trail_2atr,1216,31.1,-0.53
+VCP-ready,Shakeout,target_3r,1206,43.7,-1.37
+VCP-ready,Shakeout+Upside Reversal,stop_loss,1205,39.3,-1.88
+VCP-ready,Shakeout+Upside Reversal,trail_2atr,1205,33.6,-0.5
+VCP-ready,Shakeout+Upside Reversal,target_3r,1204,54.4,0.45
+VCP-ready,Shakeout+Upside Reversal+Volume Dry-Up,stop_loss,656,39.9,-1.23
+VCP-ready,Shakeout+Upside Reversal+Volume Dry-Up,trail_2atr,656,34.8,-0.46
+VCP-ready,Shakeout+Upside Reversal+Volume Dry-Up,target_3r,655,54.5,1.0
+VCP-ready,Shakeout+Volume Dry-Up,stop_loss,658,37.1,-2.38
+VCP-ready,Shakeout+Volume Dry-Up,trail_2atr,658,25.4,-0.96
+VCP-ready,Shakeout+Volume Dry-Up,target_3r,655,41.1,-1.29
+VCP-ready,Upside Reversal,stop_loss,5765,39.0,-0.65
+VCP-ready,Upside Reversal,trail_2atr,5765,38.7,0.16
+VCP-ready,Upside Reversal,target_3r,5764,59.5,1.83
+VCP-ready,Upside Reversal+Volume Dry-Up,stop_loss,1609,40.8,-1.44
+VCP-ready,Upside Reversal+Volume Dry-Up,trail_2atr,1609,37.1,-0.24
+VCP-ready,Upside Reversal+Volume Dry-Up,target_3r,1608,53.4,0.5
+VCP-ready,Volume Dry-Up,stop_loss,1639,27.0,-5.03
+VCP-ready,Volume Dry-Up,trail_2atr,1639,25.4,-1.14
+VCP-ready,Volume Dry-Up,target_3r,1623,28.2,-4.41

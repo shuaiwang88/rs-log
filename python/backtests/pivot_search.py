@@ -1,14 +1,18 @@
 """
-Joint parameter search targeting BROAD-match accuracy specifically (not exact-match or
-macro-F1). Broad match has a different optimum: e.g. converting a false-positive
-Cup+Handle call on a true Cup-Without-Handle base back into plain 'Cup' is a pure broad-
-match win (Cup is in Cup-Without-Handle's broad set) even though it may not move exact
-match at all. See BROAD_NAME_MAP in evaluate_breakaway_gap.py / fast_eval.py for exactly
-which confusions are "free" under this metric.
+Joint parameter search targeting PIVOT-EQUIVALENCE accuracy: Flat Base, Consolidation and
+Cup Without Handle share the same buy point (base top), so confusing them with each other
+costs nothing. Cup With Handle (handle high) and Double Bottom (middle peak) have a
+genuinely LOWER pivot - if a true Cup+Handle/Double Bottom gets labeled as one of the
+base-top three, the trader is told to wait for the wrong (too high) price. That direction
+dominates the current error: Cup+Handle recall is 19.6% (34/46 mislabeled as StdPivot) and
+Double Bottom recall is 28.6% (4/7 same issue), while the reverse direction (StdPivot
+mislabeled as CupH/DB) only affects 9 events. This search optimizes fast_eval's 'pivot'
+field (the overall pivot-equivalent match count) directly, which weighs fixing that
+recall gap far more than 'broad' does.
 
 Usage:
-    python3 python/broad_search.py --smoke
-    python3 python/broad_search.py --n 400
+    python3 python/pivot_search.py --smoke
+    python3 python/pivot_search.py --n 400
 """
 import argparse
 import json
@@ -18,10 +22,10 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "python"))
 
-from fast_eval import FastEval, N_EVENTS, BROAD_BASELINE   # noqa: E402
+from fast_eval import FastEval, N_EVENTS   # noqa: E402
 
 SPACE = {
     'cuph_inTop':      [0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.0],
@@ -43,9 +47,9 @@ SPACE = {
 }
 
 BASELINE_CFG = {
-    'cuph_inTop': 0.70, 'cuph_hdRatio': 0.55, 'cuph_bCountMin': 20,
-    'cuph_rDepGate': 12, 'cuph_hDepLo': 5.0, 'cuph_hDepMax': None,
-    'cuph_handleLen': None, 'cuph_volRatio': 1.0, 'cup_depLo_short': 12.0,
+    'cuph_inTop': 0.95, 'cuph_hdRatio': 0.55, 'cuph_bCountMin': 20,
+    'cuph_rDepGate': 12, 'cuph_hDepLo': 5.0, 'cuph_hDepMax': 15.0,
+    'cuph_handleLen': 15, 'cuph_volRatio': 1.0, 'cup_depLo_short': 8.0,
     'flat_rDep': 20.0, 'flat_rDep25': 15.0, 'db_cA_lo': 0.94, 'db_cE_lo': 0.75,
     'db_volRatio': 1.0, 'uptrend_bars': 130, 'uptrend_ratio': 1.20,
 }
@@ -66,12 +70,12 @@ def _score(cfg):
     global _FE
     try:
         r = _FE.run(_clean(cfg))
-        return {'cfg': cfg, 'broad': r['broad'], 'exact': r['exact'],
+        return {'cfg': cfg, 'pivot': r['pivot'], 'broad': r['broad'], 'exact': r['exact'],
                 'macro_f1_x1000': r['macro_f1_x1000'], 'focus_f1_x1000': r['focus_f1_x1000'],
                 'cuph_recall': r['cuph_recall'], 'cuph_prec': r['cuph_prec'],
                 'db_recall': r['db_recall'], 'err': None}
     except Exception as e:
-        return {'cfg': cfg, 'broad': -1, 'exact': -1, 'macro_f1_x1000': -1,
+        return {'cfg': cfg, 'pivot': -1, 'broad': -1, 'exact': -1, 'macro_f1_x1000': -1,
                 'focus_f1_x1000': -1, 'cuph_recall': 0.0, 'cuph_prec': 0.0,
                 'db_recall': 0.0, 'err': repr(e)}
 
@@ -145,18 +149,19 @@ def main():
             cfgs.append(c)
 
     workers = args.workers or None
-    print(f"broad-match search [{args.mode}]: {len(cfgs)} configs over {len(SPACE)} knobs")
-    print(f"baseline broad = {BROAD_BASELINE}/{N_EVENTS} ({BROAD_BASELINE/N_EVENTS*100:.1f}%)\n")
+    PIVOT_BASELINE = 105
+    print(f"pivot-equivalence search [{args.mode}]: {len(cfgs)} configs over {len(SPACE)} knobs")
+    print(f"baseline pivot = {PIVOT_BASELINE}/{N_EVENTS} ({PIVOT_BASELINE/N_EVENTS*100:.1f}%)\n")
 
-    out = ROOT / "python" / "broad_search_results.json"
+    out = ROOT / "python" / "backtests" / "pivot_search_results.json"
     t0 = time.time()
     results = []
     best_seen = -1
     with ProcessPoolExecutor(max_workers=workers, initializer=_init_worker) as ex:
         for i, r in enumerate(ex.map(_score, cfgs, chunksize=1), 1):
             results.append(r)
-            if r['broad'] > best_seen:
-                best_seen = r['broad']
+            if r['pivot'] > best_seen:
+                best_seen = r['pivot']
             if i % 20 == 0 or i == len(cfgs):
                 el = time.time() - t0
                 print(f"  {i:>4}/{len(cfgs)}  best so far {best_seen}/{N_EVENTS} "
@@ -166,17 +171,17 @@ def main():
     if errs:
         print(f"\n{len(errs)} config(s) errored, e.g. {errs[0]['err']}")
 
-    ok = sorted([r for r in results if r['broad'] >= 0], key=lambda x: (-x['broad'], -x['exact']))
-    print(f"\n{'='*90}\nTOP 15 CONFIGS BY BROAD MATCH\n{'='*90}")
+    ok = sorted([r for r in results if r['pivot'] >= 0], key=lambda x: (-x['pivot'], -x['broad']))
+    print(f"\n{'='*90}\nTOP 15 CONFIGS BY PIVOT-EQUIVALENCE\n{'='*90}")
     for r in ok[:15]:
-        d = r['broad'] - BROAD_BASELINE
+        d = r['pivot'] - PIVOT_BASELINE
         diff = {k: v for k, v in r['cfg'].items() if v != BASELINE_CFG.get(k)}
-        print(f"  broad={r['broad']:>3}/{N_EVENTS} ({r['broad']/N_EVENTS*100:>5.1f}%)  exact={r['exact']:>3}  "
+        print(f"  pivot={r['pivot']:>3}/{N_EVENTS} ({r['pivot']/N_EVENTS*100:>5.1f}%)  broad={r['broad']:>3}  exact={r['exact']:>3}  "
               f"CupH r/p {r['cuph_recall']*100:>4.0f}/{r['cuph_prec']*100:<4.0f} DB {r['db_recall']*100:>4.0f}  "
               f"delta {d:>+3}  {diff if diff else '= baseline'}")
 
     out.write_text(json.dumps(
-        [{'broad': r['broad'], 'exact': r['exact'], 'macro_f1_x1000': r['macro_f1_x1000'],
+        [{'pivot': r['pivot'], 'broad': r['broad'], 'exact': r['exact'], 'macro_f1_x1000': r['macro_f1_x1000'],
           'focus_f1_x1000': r['focus_f1_x1000'], 'cuph_recall': r['cuph_recall'],
           'cuph_prec': r['cuph_prec'], 'db_recall': r['db_recall'], 'cfg': r['cfg']}
          for r in ok], indent=2))

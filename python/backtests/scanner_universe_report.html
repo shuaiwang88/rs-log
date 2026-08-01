@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Full Backtest Report — All Ticker Cache</title>
+<style>
+:root {
+  --bg: #0f1117; --bg2: #1a1d27; --bg3: #232733;
+  --text: #e2e8f0; --text2: #94a3b8; --accent: #60a5fa;
+  --green: #22c55e; --yellow: #eab308; --red: #ef4444;
+  --border: #2d3143; --radius: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+}
+.container { max-width: 1500px; margin: 0 auto; padding: 20px; }
+
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 40px; margin-bottom: 30px; text-align: center;
+}
+.header h1 { font-size: 2.2em; font-weight: 700; margin-bottom: 5px;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .subtitle { color: var(--text2); font-size: 1.1em; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; text-align: center; transition: transform 0.15s, box-shadow 0.15s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(96,165,250,0.1); }
+.card-value { font-size: 1.6em; font-weight: 700; color: var(--accent); }
+.card-label { font-size: 0.85em; color: var(--text2); margin-top: 5px; }
+
+.section {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 30px; margin-bottom: 25px;
+}
+.section-title { font-size: 1.3em; font-weight: 700; margin-bottom: 5px; color: var(--accent); }
+.section-desc { font-size: 0.9em; color: var(--text2); margin-bottom: 18px; }
+
+.table-scroll { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+.data-table th {
+  background: var(--bg3); padding: 10px 12px; text-align: left; font-weight: 600;
+  color: var(--text2); font-size: 0.78em; text-transform: uppercase;
+  letter-spacing: 0.5px; white-space: nowrap; border-bottom: 2px solid var(--border);
+}
+.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table tbody tr:hover { background: rgba(96,165,250,0.04); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table .strategy-name { font-weight: 600; }
+
+.heatmap td { min-width: 100px; font-size: 0.85em; }
+.heatmap th { font-size: 0.7em; text-align: center; max-width: 100px; }
+
+.insight-box {
+  background: linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.08));
+  border: 1px solid rgba(96,165,250,0.2); border-radius: var(--radius);
+  padding: 20px 25px; margin-bottom: 25px;
+}
+.insight-box h3 { color: var(--accent); margin-bottom: 10px; }
+.insight-box ul { padding-left: 20px; color: var(--text2); }
+.insight-box li { margin-bottom: 6px; }
+
+.footer { text-align: center; padding: 30px; color: var(--text2); font-size: 0.85em; }
+
+@media (max-width: 768px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+  .header h1 { font-size: 1.5em; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>📊 Scanner Universe Backtest Report</h1>
+        <div class="subtitle">837 Strategy×Exit Combinations · 1,755 Tickers · Generated 2026-08-01 14:07:54</div>
+    </div>
+
+    <div class="insight-box">
+        <h3>🔍 Key Findings</h3>
+        <ul>
+            <li><strong>Best Win Rate:</strong> Pivot Breakout+SMA50 Bounce + Target 2:1 R:R = <strong>67.4%</strong> win rate with +3.51% avg return</li>
+            <li><strong>Best Sharpe:</strong> Pivot Breakout+SMA50 Bounce + Target 5:1 R:R = <strong>0.40</strong> Sharpe — most consistent risk-adjusted returns</li>
+            <li><strong>Highest Avg Return:</strong> MA Touch+Pivot Breakout+RS New High + Time 60 Bars = <strong>+6.83%</strong> per trade</li>
+            <li><strong>Most Liquid Strategy:</strong> Composite Score + Stop-Loss (Base Low) = 6,707 trades — most actionable</li>
+            <li><strong>Exit Rule Comparison:</strong> Target 2:1 R:R (53.2% avg win) vs Trail 3× ATR (34.4% avg win)</li>
+        </ul>
+    </div>
+    
+    <div class="cards">
+        <div class="card">
+            <div class="card-value">2,018,910</div>
+            <div class="card-label">Total Trades</div>
+        </div>
+        <div class="card">
+            <div class="card-value">93×9</div>
+            <div class="card-label">Strategy × Exit Combos</div>
+        </div>
+        <div class="card">
+            <div class="card-value" style="color:#84cc16">67.4%</div>
+            <div class="card-label">Best Win Rate (Pivot Breakout+SMA50 Bounce + Target 2:1 R:R)</div>
+        </div>
+        <div class="card">
+            <div class="card-value">46.6%</div>
+            <div class="card-label">Average Win Rate</div>
+        </div>
+        <div class="card">
+            <div class="card-value">0.40</div>
+            <div class="card-label">Best Sharpe (Pivot Breakout+SMA50 Bounce + Target 5:1 R:R)</div>
+        </div>
+        <div class="card">
+            <div class="card-value">0.99</div>
+            <div class="card-label">Avg Risk/Reward</div>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-title">🔥 Top 15 — By Win Rate</div>
+        <div class="section-desc">Highest win-rate strategy×exit combinations. Sorted by win percentage.</div>
+        
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Buy Strategy</th><th>Exit Rule</th><th>Trades</th><th>Win%</th><th>Avg Ret</th><th>Avg R:R</th><th>Sharpe</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>67.4%</strong></td>
+            <td class="num" style="color:#22c55e">+3.51%</td>
+            <td class="num">1.04</td>
+            <td class="num">0.35</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>66.8%</strong></td>
+            <td class="num" style="color:#22c55e">+4.16%</td>
+            <td class="num">1.26</td>
+            <td class="num">0.37</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>66.4%</strong></td>
+            <td class="num" style="color:#22c55e">+4.92%</td>
+            <td class="num">1.58</td>
+            <td class="num">0.40</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">4,291</td>
+            <td class="num" style="color:#84cc16"><strong>66.3%</strong></td>
+            <td class="num" style="color:#22c55e">+3.21%</td>
+            <td class="num">1.14</td>
+            <td class="num">0.30</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">4,361</td>
+            <td class="num" style="color:#84cc16"><strong>66.1%</strong></td>
+            <td class="num" style="color:#22c55e">+3.11%</td>
+            <td class="num">1.15</td>
+            <td class="num">0.28</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">Pivot Breakout+Upside Reversal</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">4,387</td>
+            <td class="num" style="color:#84cc16"><strong>66.0%</strong></td>
+            <td class="num" style="color:#22c55e">+3.29%</td>
+            <td class="num">1.05</td>
+            <td class="num">0.28</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Time 60 Bars</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>65.8%</strong></td>
+            <td class="num" style="color:#22c55e">+6.36%</td>
+            <td class="num">2.62</td>
+            <td class="num">0.25</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">2,805</td>
+            <td class="num" style="color:#84cc16"><strong>65.7%</strong></td>
+            <td class="num" style="color:#22c55e">+3.73%</td>
+            <td class="num">0.99</td>
+            <td class="num">0.32</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">4,291</td>
+            <td class="num" style="color:#84cc16"><strong>65.5%</strong></td>
+            <td class="num" style="color:#22c55e">+3.88%</td>
+            <td class="num">1.39</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">Pivot Breakout+Upside Reversal</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">4,387</td>
+            <td class="num" style="color:#84cc16"><strong>65.4%</strong></td>
+            <td class="num" style="color:#22c55e">+3.97%</td>
+            <td class="num">1.26</td>
+            <td class="num">0.30</td>
+        </tr>
+        <tr>
+            <td class="num">11</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">4,361</td>
+            <td class="num" style="color:#84cc16"><strong>65.2%</strong></td>
+            <td class="num" style="color:#22c55e">+3.76%</td>
+            <td class="num">1.40</td>
+            <td class="num">0.31</td>
+        </tr>
+        <tr>
+            <td class="num">12</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">4,291</td>
+            <td class="num" style="color:#84cc16"><strong>65.1%</strong></td>
+            <td class="num" style="color:#22c55e">+4.74%</td>
+            <td class="num">1.75</td>
+            <td class="num">0.34</td>
+        </tr>
+        <tr>
+            <td class="num">13</td>
+            <td class="strategy-name">Pivot Breakout+Upside Reversal</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">4,387</td>
+            <td class="num" style="color:#84cc16"><strong>65.0%</strong></td>
+            <td class="num" style="color:#22c55e">+4.77%</td>
+            <td class="num">1.54</td>
+            <td class="num">0.32</td>
+        </tr>
+        <tr>
+            <td class="num">14</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">4,361</td>
+            <td class="num" style="color:#84cc16"><strong>64.8%</strong></td>
+            <td class="num" style="color:#22c55e">+4.66%</td>
+            <td class="num">1.77</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">15</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">2,805</td>
+            <td class="num" style="color:#84cc16"><strong>64.8%</strong></td>
+            <td class="num" style="color:#22c55e">+4.24%</td>
+            <td class="num">1.16</td>
+            <td class="num">0.33</td>
+        </tr></tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">📈 Top 15 — By Sharpe Ratio</div>
+        <div class="section-desc">Best risk-adjusted returns. Higher Sharpe = more consistent profitability.</div>
+        
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Buy Strategy</th><th>Exit Rule</th><th>Trades</th><th>Win%</th><th>Avg Ret</th><th>Avg R:R</th><th>Sharpe</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>66.4%</strong></td>
+            <td class="num" style="color:#22c55e">+4.92%</td>
+            <td class="num">1.58</td>
+            <td class="num">0.40</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>66.8%</strong></td>
+            <td class="num" style="color:#22c55e">+4.16%</td>
+            <td class="num">1.26</td>
+            <td class="num">0.37</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">3,564</td>
+            <td class="num" style="color:#84cc16"><strong>67.4%</strong></td>
+            <td class="num" style="color:#22c55e">+3.51%</td>
+            <td class="num">1.04</td>
+            <td class="num">0.35</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">4,291</td>
+            <td class="num" style="color:#84cc16"><strong>65.1%</strong></td>
+            <td class="num" style="color:#22c55e">+4.74%</td>
+            <td class="num">1.75</td>
+            <td class="num">0.34</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">4,361</td>
+            <td class="num" style="color:#84cc16"><strong>64.8%</strong></td>
+            <td class="num" style="color:#22c55e">+4.66%</td>
+            <td class="num">1.77</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">4,291</td>
+            <td class="num" style="color:#84cc16"><strong>65.5%</strong></td>
+            <td class="num" style="color:#22c55e">+3.88%</td>
+            <td class="num">1.39</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">2,805</td>
+            <td class="num" style="color:#84cc16"><strong>64.8%</strong></td>
+            <td class="num" style="color:#22c55e">+4.24%</td>
+            <td class="num">1.16</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">2,805</td>
+            <td class="num" style="color:#84cc16"><strong>64.5%</strong></td>
+            <td class="num" style="color:#22c55e">+5.03%</td>
+            <td class="num">1.38</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce+Upside Reversal</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">3,548</td>
+            <td class="num" style="color:#84cc16"><strong>63.4%</strong></td>
+            <td class="num" style="color:#22c55e">+3.99%</td>
+            <td class="num">1.42</td>
+            <td class="num">0.33</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout+RS New High</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">2,806</td>
+            <td class="num" style="color:#84cc16"><strong>63.1%</strong></td>
+            <td class="num" style="color:#22c55e">+4.52%</td>
+            <td class="num">1.53</td>
+            <td class="num">0.32</td>
+        </tr>
+        <tr>
+            <td class="num">11</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td>
+            <td>Target 2:1 R:R</td>
+            <td class="num">2,805</td>
+            <td class="num" style="color:#84cc16"><strong>65.7%</strong></td>
+            <td class="num" style="color:#22c55e">+3.73%</td>
+            <td class="num">0.99</td>
+            <td class="num">0.32</td>
+        </tr>
+        <tr>
+            <td class="num">12</td>
+            <td class="strategy-name">Pivot Breakout+Upside Reversal</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">4,387</td>
+            <td class="num" style="color:#84cc16"><strong>65.0%</strong></td>
+            <td class="num" style="color:#22c55e">+4.77%</td>
+            <td class="num">1.54</td>
+            <td class="num">0.32</td>
+        </tr>
+        <tr>
+            <td class="num">13</td>
+            <td class="strategy-name">MA Touch+Pivot Breakout</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">4,361</td>
+            <td class="num" style="color:#84cc16"><strong>65.2%</strong></td>
+            <td class="num" style="color:#22c55e">+3.76%</td>
+            <td class="num">1.40</td>
+            <td class="num">0.31</td>
+        </tr>
+        <tr>
+            <td class="num">14</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+SMA50 Bounce</td>
+            <td>Target 5:1 R:R</td>
+            <td class="num">2,378</td>
+            <td class="num" style="color:#84cc16"><strong>62.2%</strong></td>
+            <td class="num" style="color:#22c55e">+3.98%</td>
+            <td class="num">1.34</td>
+            <td class="num">0.31</td>
+        </tr>
+        <tr>
+            <td class="num">15</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce+Upside Reversal</td>
+            <td>Target 3:1 R:R</td>
+            <td class="num">3,548</td>
+            <td class="num" style="color:#84cc16"><strong>63.7%</strong></td>
+            <td class="num" style="color:#22c55e">+3.34%</td>
+            <td class="num">1.16</td>
+            <td class="num">0.31</td>
+        </tr></tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🧩 Full Strategy × Exit Matrix</div>
+        <div class="section-desc">Every buy strategy tested against every exit rule. Cells show Win% and Avg Return.</div>
+        
+    <div class="table-scroll">
+        <table class="data-table heatmap">
+            <thead><tr><th>Strategy</th><th>Stop-Loss (Base Low)</th><th>Target 2:1 R:R</th><th>Target 3:1 R:R</th><th>Target 5:1 R:R</th><th>Time 20 Bars</th><th>Time 40 Bars</th><th>Time 60 Bars</th><th>Trail 2× ATR</th><th>Trail 3× ATR</th></tr></thead>
+            <tbody><tr><td class="strategy-name">Composite Score</td><td class="num" style="color:#ef4444"><strong>19.5%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.87%</span></td><td class="num" style="color:#ef4444"><strong>21.4%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.67%</span></td><td class="num" style="color:#ef4444"><strong>21.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.62%</span></td><td class="num" style="color:#ef4444"><strong>21.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.61%</span></td><td class="num" style="color:#ef4444"><strong>20.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.20%</span></td><td class="num" style="color:#ef4444"><strong>20.5%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.29%</span></td><td class="num" style="color:#ef4444"><strong>21.4%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.37%</span></td><td class="num" style="color:#ef4444"><strong>14.0%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.69%</span></td><td class="num" style="color:#ef4444"><strong>12.4%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.01%</span></td></tr><tr><td class="strategy-name">MA Touch</td><td class="num" style="color:#ef4444"><strong>32.0%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.61%</span></td><td class="num" style="color:#84cc16"><strong>57.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.36%</span></td><td class="num" style="color:#84cc16"><strong>56.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.84%</span></td><td class="num" style="color:#84cc16"><strong>56.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.49%</span></td><td class="num" style="color:#eab308"><strong>51.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.58%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.79%</span></td><td class="num" style="color:#84cc16"><strong>55.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.04%</span></td><td class="num" style="color:#ef4444"><strong>37.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.17%</span></td><td class="num" style="color:#ef4444"><strong>38.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.30%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout</td><td class="num" style="color:#ef4444"><strong>35.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.38%</span></td><td class="num" style="color:#84cc16"><strong>66.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.11%</span></td><td class="num" style="color:#84cc16"><strong>65.2%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.76%</span></td><td class="num" style="color:#84cc16"><strong>64.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.66%</span></td><td class="num" style="color:#84cc16"><strong>56.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.85%</span></td><td class="num" style="color:#84cc16"><strong>59.9%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.34%</span></td><td class="num" style="color:#84cc16"><strong>63.9%</strong><br><span style="font-size:0.75em;color:#22c55e">+6.73%</span></td><td class="num" style="color:#ef4444"><strong>39.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.36%</span></td><td class="num" style="color:#eab308"><strong>42.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.41%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout+Pocket Pivot</td><td class="num" style="color:#ef4444"><strong>37.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.45%</span></td><td class="num" style="color:#84cc16"><strong>60.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.51%</span></td><td class="num" style="color:#84cc16"><strong>59.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.98%</span></td><td class="num" style="color:#84cc16"><strong>59.5%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.62%</span></td><td class="num" style="color:#eab308"><strong>53.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.43%</span></td><td class="num" style="color:#84cc16"><strong>55.9%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.98%</span></td><td class="num" style="color:#84cc16"><strong>59.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+5.85%</span></td><td class="num" style="color:#ef4444"><strong>39.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.33%</span></td><td class="num" style="color:#eab308"><strong>40.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.07%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout+RS New High</td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.12%</span></td><td class="num" style="color:#84cc16"><strong>64.3%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.19%</span></td><td class="num" style="color:#84cc16"><strong>63.5%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.75%</span></td><td class="num" style="color:#84cc16"><strong>63.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.52%</span></td><td class="num" style="color:#84cc16"><strong>55.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.89%</span></td><td class="num" style="color:#84cc16"><strong>58.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.62%</span></td><td class="num" style="color:#84cc16"><strong>62.5%</strong><br><span style="font-size:0.75em;color:#22c55e">+6.83%</span></td><td class="num" style="color:#eab308"><strong>40.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.54%</span></td><td class="num" style="color:#eab308"><strong>42.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.64%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>32.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.22%</span></td><td class="num" style="color:#84cc16"><strong>62.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.35%</span></td><td class="num" style="color:#84cc16"><strong>61.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.82%</span></td><td class="num" style="color:#84cc16"><strong>61.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.41%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.34%</span></td><td class="num" style="color:#84cc16"><strong>55.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.25%</span></td><td class="num" style="color:#84cc16"><strong>61.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.67%</span></td><td class="num" style="color:#ef4444"><strong>34.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.55%</span></td><td class="num" style="color:#ef4444"><strong>34.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.38%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout+Shakeout</td><td class="num" style="color:#ef4444"><strong>36.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.61%</span></td><td class="num" style="color:#84cc16"><strong>58.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.51%</span></td><td class="num" style="color:#84cc16"><strong>58.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.00%</span></td><td class="num" style="color:#84cc16"><strong>58.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.40%</span></td><td class="num" style="color:#eab308"><strong>50.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.37%</span></td><td class="num" style="color:#eab308"><strong>53.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.45%</span></td><td class="num" style="color:#84cc16"><strong>57.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.02%</span></td><td class="num" style="color:#ef4444"><strong>32.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.58%</span></td><td class="num" style="color:#ef4444"><strong>33.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.38%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>35.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.36%</span></td><td class="num" style="color:#84cc16"><strong>66.3%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.21%</span></td><td class="num" style="color:#84cc16"><strong>65.5%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.88%</span></td><td class="num" style="color:#84cc16"><strong>65.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.74%</span></td><td class="num" style="color:#84cc16"><strong>55.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.81%</span></td><td class="num" style="color:#84cc16"><strong>60.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.32%</span></td><td class="num" style="color:#84cc16"><strong>64.3%</strong><br><span style="font-size:0.75em;color:#22c55e">+6.83%</span></td><td class="num" style="color:#ef4444"><strong>39.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.31%</span></td><td class="num" style="color:#eab308"><strong>41.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.43%</span></td></tr><tr><td class="strategy-name">MA Touch+Pivot Breakout+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>40.5%</strong><br><span style="font-size:0.75em;color:#eab308">-1.02%</span></td><td class="num" style="color:#84cc16"><strong>56.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.11%</span></td><td class="num" style="color:#84cc16"><strong>55.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.29%</span></td><td class="num" style="color:#84cc16"><strong>55.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.43%</span></td><td class="num" style="color:#eab308"><strong>51.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.39%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.42%</span></td><td class="num" style="color:#84cc16"><strong>55.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.29%</span></td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.12%</span></td><td class="num" style="color:#ef4444"><strong>37.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.36%</span></td></tr><tr><td class="strategy-name">MA Touch+Pocket Pivot</td><td class="num" style="color:#ef4444"><strong>34.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.27%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.39%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.69%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.12%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.63%</span></td><td class="num" style="color:#eab308"><strong>52.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.85%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.62%</span></td><td class="num" style="color:#ef4444"><strong>37.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.02%</span></td><td class="num" style="color:#ef4444"><strong>38.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.30%</span></td></tr><tr><td class="strategy-name">MA Touch+Pocket Pivot+RS New High</td><td class="num" style="color:#ef4444"><strong>36.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.28%</span></td><td class="num" style="color:#84cc16"><strong>56.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.28%</span></td><td class="num" style="color:#84cc16"><strong>56.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.62%</span></td><td class="num" style="color:#84cc16"><strong>56.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.11%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.08%</span></td><td class="num" style="color:#84cc16"><strong>55.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.72%</span></td><td class="num" style="color:#84cc16"><strong>55.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.77%</span></td><td class="num" style="color:#ef4444"><strong>39.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.29%</span></td><td class="num" style="color:#eab308"><strong>40.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.79%</span></td></tr><tr><td class="strategy-name">MA Touch+Pocket Pivot+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>32.1%</strong><br><span style="font-size:0.75em;color:#ef4444">-3.54%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.31%</span></td><td class="num" style="color:#eab308"><strong>50.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.14%</span></td><td class="num" style="color:#eab308"><strong>50.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.15%</span></td><td class="num" style="color:#eab308"><strong>47.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.44%</span></td><td class="num" style="color:#eab308"><strong>49.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.26%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.03%</span></td><td class="num" style="color:#ef4444"><strong>34.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.61%</span></td><td class="num" style="color:#ef4444"><strong>33.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.85%</span></td></tr><tr><td class="strategy-name">MA Touch+Pocket Pivot+Shakeout</td><td class="num" style="color:#ef4444"><strong>35.6%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.08%</span></td><td class="num" style="color:#eab308"><strong>54.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.23%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.51%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.73%</span></td><td class="num" style="color:#eab308"><strong>50.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.26%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.58%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.05%</span></td><td class="num" style="color:#ef4444"><strong>34.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.44%</span></td><td class="num" style="color:#ef4444"><strong>33.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.69%</span></td></tr><tr><td class="strategy-name">MA Touch+Pocket Pivot+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>34.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.27%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.39%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.68%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.10%</span></td><td class="num" style="color:#eab308"><strong>51.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.54%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.77%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.60%</span></td><td class="num" style="color:#ef4444"><strong>37.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.04%</span></td><td class="num" style="color:#ef4444"><strong>37.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.29%</span></td></tr><tr><td class="strategy-name">MA Touch+Pocket Pivot+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.4%</strong><br><span style="font-size:0.75em;color:#eab308">-1.62%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.14%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.31%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.49%</span></td><td class="num" style="color:#eab308"><strong>50.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.01%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.60%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.97%</span></td><td class="num" style="color:#ef4444"><strong>36.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.24%</span></td><td class="num" style="color:#ef4444"><strong>36.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.22%</span></td></tr><tr><td class="strategy-name">MA Touch+RS New High</td><td class="num" style="color:#ef4444"><strong>36.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.19%</span></td><td class="num" style="color:#84cc16"><strong>58.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.54%</span></td><td class="num" style="color:#84cc16"><strong>58.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.93%</span></td><td class="num" style="color:#84cc16"><strong>57.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.50%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.28%</span></td><td class="num" style="color:#84cc16"><strong>55.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.91%</span></td><td class="num" style="color:#84cc16"><strong>57.2%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.16%</span></td><td class="num" style="color:#ef4444"><strong>39.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.32%</span></td><td class="num" style="color:#eab308"><strong>40.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.97%</span></td></tr><tr><td class="strategy-name">MA Touch+RS New High+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>33.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.72%</span></td><td class="num" style="color:#84cc16"><strong>55.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.73%</span></td><td class="num" style="color:#84cc16"><strong>55.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.03%</span></td><td class="num" style="color:#eab308"><strong>54.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.41%</span></td><td class="num" style="color:#eab308"><strong>49.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.07%</span></td><td class="num" style="color:#eab308"><strong>52.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.08%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.29%</span></td><td class="num" style="color:#ef4444"><strong>35.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.39%</span></td><td class="num" style="color:#ef4444"><strong>35.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.49%</span></td></tr><tr><td class="strategy-name">MA Touch+RS New High+Shakeout</td><td class="num" style="color:#ef4444"><strong>36.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.59%</span></td><td class="num" style="color:#84cc16"><strong>56.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.77%</span></td><td class="num" style="color:#84cc16"><strong>55.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.12%</span></td><td class="num" style="color:#84cc16"><strong>55.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.38%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.59%</span></td><td class="num" style="color:#eab308"><strong>54.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.03%</span></td><td class="num" style="color:#84cc16"><strong>55.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.81%</span></td><td class="num" style="color:#ef4444"><strong>35.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.33%</span></td><td class="num" style="color:#ef4444"><strong>34.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.30%</span></td></tr><tr><td class="strategy-name">MA Touch+RS New High+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>35.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.26%</span></td><td class="num" style="color:#84cc16"><strong>58.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.55%</span></td><td class="num" style="color:#84cc16"><strong>58.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.93%</span></td><td class="num" style="color:#84cc16"><strong>57.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.48%</span></td><td class="num" style="color:#eab308"><strong>54.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.23%</span></td><td class="num" style="color:#84cc16"><strong>55.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.82%</span></td><td class="num" style="color:#84cc16"><strong>57.2%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.12%</span></td><td class="num" style="color:#ef4444"><strong>39.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.27%</span></td><td class="num" style="color:#eab308"><strong>40.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.95%</span></td></tr><tr><td class="strategy-name">MA Touch+RS New High+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.35%</span></td><td class="num" style="color:#eab308"><strong>54.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td><td class="num" style="color:#eab308"><strong>54.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.64%</span></td><td class="num" style="color:#eab308"><strong>54.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.85%</span></td><td class="num" style="color:#eab308"><strong>52.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.37%</span></td><td class="num" style="color:#eab308"><strong>53.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.95%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.54%</span></td><td class="num" style="color:#ef4444"><strong>37.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.03%</span></td><td class="num" style="color:#ef4444"><strong>38.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.34%</span></td></tr><tr><td class="strategy-name">MA Touch+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>28.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.43%</span></td><td class="num" style="color:#eab308"><strong>53.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.70%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.39%</span></td><td class="num" style="color:#eab308"><strong>52.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.01%</span></td><td class="num" style="color:#eab308"><strong>46.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.82%</span></td><td class="num" style="color:#eab308"><strong>49.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.23%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.88%</span></td><td class="num" style="color:#ef4444"><strong>32.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.92%</span></td><td class="num" style="color:#ef4444"><strong>31.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.23%</span></td></tr><tr><td class="strategy-name">MA Touch+SMA50 Bounce+Shakeout</td><td class="num" style="color:#ef4444"><strong>34.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.46%</span></td><td class="num" style="color:#eab308"><strong>53.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.13%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.15%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.34%</span></td><td class="num" style="color:#eab308"><strong>49.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.01%</span></td><td class="num" style="color:#eab308"><strong>51.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.03%</span></td><td class="num" style="color:#eab308"><strong>52.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.63%</span></td><td class="num" style="color:#ef4444"><strong>33.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.47%</span></td><td class="num" style="color:#ef4444"><strong>32.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.91%</span></td></tr><tr><td class="strategy-name">MA Touch+SMA50 Bounce+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>28.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.39%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.62%</span></td><td class="num" style="color:#eab308"><strong>52.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.31%</span></td><td class="num" style="color:#eab308"><strong>52.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.08%</span></td><td class="num" style="color:#eab308"><strong>46.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.78%</span></td><td class="num" style="color:#eab308"><strong>49.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.18%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.95%</span></td><td class="num" style="color:#ef4444"><strong>32.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.89%</span></td><td class="num" style="color:#ef4444"><strong>31.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.20%</span></td></tr><tr><td class="strategy-name">MA Touch+SMA50 Bounce+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>36.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.46%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.33%</span></td><td class="num" style="color:#eab308"><strong>51.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.22%</span></td><td class="num" style="color:#eab308"><strong>51.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.09%</span></td><td class="num" style="color:#eab308"><strong>48.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.52%</span></td><td class="num" style="color:#eab308"><strong>49.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.39%</span></td><td class="num" style="color:#eab308"><strong>50.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.01%</span></td><td class="num" style="color:#ef4444"><strong>35.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.52%</span></td><td class="num" style="color:#ef4444"><strong>33.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.93%</span></td></tr><tr><td class="strategy-name">MA Touch+Shakeout</td><td class="num" style="color:#ef4444"><strong>35.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.29%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.11%</span></td><td class="num" style="color:#eab308"><strong>53.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.42%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.66%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.20%</span></td><td class="num" style="color:#eab308"><strong>52.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td><td class="num" style="color:#eab308"><strong>53.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.05%</span></td><td class="num" style="color:#ef4444"><strong>33.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.48%</span></td><td class="num" style="color:#ef4444"><strong>33.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.60%</span></td></tr><tr><td class="strategy-name">MA Touch+Shakeout+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>35.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.28%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.12%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.43%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.67%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.20%</span></td><td class="num" style="color:#eab308"><strong>52.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.46%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.06%</span></td><td class="num" style="color:#ef4444"><strong>34.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.46%</span></td><td class="num" style="color:#ef4444"><strong>33.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.58%</span></td></tr><tr><td class="strategy-name">MA Touch+Shakeout+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>37.6%</strong><br><span style="font-size:0.75em;color:#eab308">-1.59%</span></td><td class="num" style="color:#84cc16"><strong>55.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.74%</span></td><td class="num" style="color:#84cc16"><strong>55.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.91%</span></td><td class="num" style="color:#84cc16"><strong>55.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.04%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.20%</span></td><td class="num" style="color:#eab308"><strong>53.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td><td class="num" style="color:#eab308"><strong>54.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.39%</span></td><td class="num" style="color:#ef4444"><strong>33.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.43%</span></td><td class="num" style="color:#ef4444"><strong>34.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td></tr><tr><td class="strategy-name">MA Touch+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>31.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.65%</span></td><td class="num" style="color:#84cc16"><strong>57.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td><td class="num" style="color:#84cc16"><strong>57.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.92%</span></td><td class="num" style="color:#84cc16"><strong>56.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.54%</span></td><td class="num" style="color:#eab308"><strong>51.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.54%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.75%</span></td><td class="num" style="color:#84cc16"><strong>56.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.08%</span></td><td class="num" style="color:#ef4444"><strong>36.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#ef4444"><strong>38.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.28%</span></td></tr><tr><td class="strategy-name">MA Touch+Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.89%</span></td><td class="num" style="color:#eab308"><strong>53.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.03%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.18%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.32%</span></td><td class="num" style="color:#eab308"><strong>50.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.03%</span></td><td class="num" style="color:#eab308"><strong>51.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.43%</span></td><td class="num" style="color:#eab308"><strong>52.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.90%</span></td><td class="num" style="color:#ef4444"><strong>36.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.24%</span></td><td class="num" style="color:#ef4444"><strong>36.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.09%</span></td></tr><tr><td class="strategy-name">MA Touch+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.82%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.05%</span></td><td class="num" style="color:#eab308"><strong>52.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.23%</span></td><td class="num" style="color:#eab308"><strong>52.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.34%</span></td><td class="num" style="color:#eab308"><strong>50.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.04%</span></td><td class="num" style="color:#eab308"><strong>51.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.53%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.89%</span></td><td class="num" style="color:#ef4444"><strong>36.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.19%</span></td><td class="num" style="color:#ef4444"><strong>36.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.07%</span></td></tr><tr><td class="strategy-name">Pivot Breakout</td><td class="num" style="color:#ef4444"><strong>17.7%</strong><br><span style="font-size:0.75em;color:#ef4444">-9.08%</span></td><td class="num" style="color:#ef4444"><strong>18.4%</strong><br><span style="font-size:0.75em;color:#ef4444">-9.25%</span></td><td class="num" style="color:#ef4444"><strong>18.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-9.20%</span></td><td class="num" style="color:#ef4444"><strong>18.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-9.18%</span></td><td class="num" style="color:#ef4444"><strong>16.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-10.14%</span></td><td class="num" style="color:#ef4444"><strong>16.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-9.42%</span></td><td class="num" style="color:#ef4444"><strong>18.5%</strong><br><span style="font-size:0.75em;color:#ef4444">-8.86%</span></td><td class="num" style="color:#ef4444"><strong>9.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.85%</span></td><td class="num" style="color:#ef4444"><strong>9.5%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.03%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Pocket Pivot</td><td class="num" style="color:#eab308"><strong>42.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.86%</span></td><td class="num" style="color:#eab308"><strong>46.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.56%</span></td><td class="num" style="color:#eab308"><strong>46.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#eab308"><strong>46.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.15%</span></td><td class="num" style="color:#eab308"><strong>44.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.25%</span></td><td class="num" style="color:#eab308"><strong>47.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.14%</span></td><td class="num" style="color:#eab308"><strong>46.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.14%</span></td><td class="num" style="color:#ef4444"><strong>31.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.64%</span></td><td class="num" style="color:#ef4444"><strong>31.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.81%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Pocket Pivot+RS New High</td><td class="num" style="color:#eab308"><strong>49.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.06%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.22%</span></td><td class="num" style="color:#eab308"><strong>54.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.55%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.11%</span></td><td class="num" style="color:#eab308"><strong>50.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.12%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.54%</span></td><td class="num" style="color:#eab308"><strong>54.3%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.23%</span></td><td class="num" style="color:#ef4444"><strong>34.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#ef4444"><strong>35.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.22%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Pocket Pivot+SMA50 Bounce</td><td class="num" style="color:#eab308"><strong>40.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.04%</span></td><td class="num" style="color:#84cc16"><strong>60.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.39%</span></td><td class="num" style="color:#84cc16"><strong>59.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.82%</span></td><td class="num" style="color:#84cc16"><strong>59.3%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.38%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.26%</span></td><td class="num" style="color:#84cc16"><strong>56.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.36%</span></td><td class="num" style="color:#84cc16"><strong>59.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.69%</span></td><td class="num" style="color:#eab308"><strong>40.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.75%</span></td><td class="num" style="color:#ef4444"><strong>39.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.28%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Pocket Pivot+Shakeout</td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.59%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.12%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.32%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.59%</span></td><td class="num" style="color:#eab308"><strong>42.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.70%</span></td><td class="num" style="color:#eab308"><strong>50.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.31%</span></td><td class="num" style="color:#eab308"><strong>50.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.78%</span></td><td class="num" style="color:#ef4444"><strong>25.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.14%</span></td><td class="num" style="color:#ef4444"><strong>25.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.47%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Pocket Pivot+Upside Reversal</td><td class="num" style="color:#eab308"><strong>42.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.16%</span></td><td class="num" style="color:#84cc16"><strong>62.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.16%</span></td><td class="num" style="color:#84cc16"><strong>61.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.62%</span></td><td class="num" style="color:#84cc16"><strong>61.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.35%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.89%</span></td><td class="num" style="color:#84cc16"><strong>57.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.14%</span></td><td class="num" style="color:#84cc16"><strong>60.9%</strong><br><span style="font-size:0.75em;color:#22c55e">+5.90%</span></td><td class="num" style="color:#ef4444"><strong>39.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.60%</span></td><td class="num" style="color:#eab308"><strong>40.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.42%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Pocket Pivot+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>44.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.37%</span></td><td class="num" style="color:#eab308"><strong>48.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.61%</span></td><td class="num" style="color:#eab308"><strong>48.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.50%</span></td><td class="num" style="color:#eab308"><strong>48.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.37%</span></td><td class="num" style="color:#eab308"><strong>48.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.17%</span></td><td class="num" style="color:#eab308"><strong>49.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.38%</span></td><td class="num" style="color:#eab308"><strong>48.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.04%</span></td><td class="num" style="color:#ef4444"><strong>33.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.60%</span></td><td class="num" style="color:#ef4444"><strong>33.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.01%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+RS New High</td><td class="num" style="color:#eab308"><strong>48.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.60%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.67%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.99%</span></td><td class="num" style="color:#eab308"><strong>52.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.46%</span></td><td class="num" style="color:#eab308"><strong>47.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.41%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.66%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.59%</span></td><td class="num" style="color:#ef4444"><strong>31.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.59%</span></td><td class="num" style="color:#ef4444"><strong>33.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.31%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+RS New High+SMA50 Bounce</td><td class="num" style="color:#eab308"><strong>41.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.38%</span></td><td class="num" style="color:#84cc16"><strong>63.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.74%</span></td><td class="num" style="color:#84cc16"><strong>62.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.32%</span></td><td class="num" style="color:#84cc16"><strong>62.2%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.98%</span></td><td class="num" style="color:#84cc16"><strong>55.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.56%</span></td><td class="num" style="color:#84cc16"><strong>57.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.67%</span></td><td class="num" style="color:#84cc16"><strong>61.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+5.19%</span></td><td class="num" style="color:#eab308"><strong>40.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.84%</span></td><td class="num" style="color:#ef4444"><strong>39.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.43%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+RS New High+Shakeout</td><td class="num" style="color:#eab308"><strong>48.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td><td class="num" style="color:#84cc16"><strong>55.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.91%</span></td><td class="num" style="color:#84cc16"><strong>55.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.13%</span></td><td class="num" style="color:#84cc16"><strong>55.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.45%</span></td><td class="num" style="color:#eab308"><strong>46.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.20%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.05%</span></td><td class="num" style="color:#84cc16"><strong>55.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.63%</span></td><td class="num" style="color:#ef4444"><strong>27.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.08%</span></td><td class="num" style="color:#ef4444"><strong>28.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.95%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td><td class="num" style="color:#eab308"><strong>44.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.80%</span></td><td class="num" style="color:#84cc16"><strong>65.7%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.73%</span></td><td class="num" style="color:#84cc16"><strong>64.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.24%</span></td><td class="num" style="color:#84cc16"><strong>64.5%</strong><br><span style="font-size:0.75em;color:#22c55e">+5.03%</span></td><td class="num" style="color:#84cc16"><strong>55.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.21%</span></td><td class="num" style="color:#84cc16"><strong>59.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.56%</span></td><td class="num" style="color:#84cc16"><strong>64.1%</strong><br><span style="font-size:0.75em;color:#22c55e">+6.78%</span></td><td class="num" style="color:#eab308"><strong>40.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.72%</span></td><td class="num" style="color:#eab308"><strong>42.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.86%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+RS New High+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>46.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.85%</span></td><td class="num" style="color:#eab308"><strong>50.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.03%</span></td><td class="num" style="color:#eab308"><strong>50.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.01%</span></td><td class="num" style="color:#eab308"><strong>50.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.35%</span></td><td class="num" style="color:#eab308"><strong>48.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.10%</span></td><td class="num" style="color:#eab308"><strong>51.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.82%</span></td><td class="num" style="color:#eab308"><strong>50.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.76%</span></td><td class="num" style="color:#ef4444"><strong>33.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.51%</span></td><td class="num" style="color:#ef4444"><strong>33.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.23%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+SMA50 Bounce</td><td class="num" style="color:#eab308"><strong>42.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.97%</span></td><td class="num" style="color:#84cc16"><strong>67.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.51%</span></td><td class="num" style="color:#84cc16"><strong>66.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.16%</span></td><td class="num" style="color:#84cc16"><strong>66.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.92%</span></td><td class="num" style="color:#84cc16"><strong>59.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.43%</span></td><td class="num" style="color:#84cc16"><strong>62.6%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.62%</span></td><td class="num" style="color:#84cc16"><strong>65.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+6.36%</span></td><td class="num" style="color:#eab308"><strong>44.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.14%</span></td><td class="num" style="color:#eab308"><strong>45.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.23%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+SMA50 Bounce+Shakeout</td><td class="num" style="color:#eab308"><strong>43.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.20%</span></td><td class="num" style="color:#84cc16"><strong>60.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.89%</span></td><td class="num" style="color:#84cc16"><strong>59.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.25%</span></td><td class="num" style="color:#84cc16"><strong>59.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.65%</span></td><td class="num" style="color:#84cc16"><strong>59.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.68%</span></td><td class="num" style="color:#84cc16"><strong>57.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.30%</span></td><td class="num" style="color:#84cc16"><strong>59.7%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.11%</span></td><td class="num" style="color:#eab308"><strong>43.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.62%</span></td><td class="num" style="color:#eab308"><strong>42.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.76%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+SMA50 Bounce+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>37.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.57%</span></td><td class="num" style="color:#84cc16"><strong>64.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.84%</span></td><td class="num" style="color:#84cc16"><strong>63.7%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.34%</span></td><td class="num" style="color:#84cc16"><strong>63.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.99%</span></td><td class="num" style="color:#eab308"><strong>52.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.80%</span></td><td class="num" style="color:#84cc16"><strong>58.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.97%</span></td><td class="num" style="color:#84cc16"><strong>63.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+5.22%</span></td><td class="num" style="color:#ef4444"><strong>37.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.10%</span></td><td class="num" style="color:#ef4444"><strong>37.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.53%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+SMA50 Bounce+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>41.2%</strong><br><span style="font-size:0.75em;color:#eab308">-1.29%</span></td><td class="num" style="color:#84cc16"><strong>55.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.06%</span></td><td class="num" style="color:#eab308"><strong>54.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.28%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.50%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.37%</span></td><td class="num" style="color:#eab308"><strong>54.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.28%</span></td><td class="num" style="color:#eab308"><strong>54.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.64%</span></td><td class="num" style="color:#eab308"><strong>40.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.03%</span></td><td class="num" style="color:#ef4444"><strong>36.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.53%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Shakeout</td><td class="num" style="color:#eab308"><strong>47.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.17%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.50%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.83%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.19%</span></td><td class="num" style="color:#eab308"><strong>50.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.72%</span></td><td class="num" style="color:#84cc16"><strong>55.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.78%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.57%</span></td><td class="num" style="color:#ef4444"><strong>33.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.24%</span></td><td class="num" style="color:#ef4444"><strong>37.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.04%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Shakeout+Upside Reversal</td><td class="num" style="color:#eab308"><strong>41.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.96%</span></td><td class="num" style="color:#84cc16"><strong>60.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.83%</span></td><td class="num" style="color:#84cc16"><strong>60.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.18%</span></td><td class="num" style="color:#84cc16"><strong>60.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.61%</span></td><td class="num" style="color:#eab308"><strong>52.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.74%</span></td><td class="num" style="color:#84cc16"><strong>55.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.63%</span></td><td class="num" style="color:#84cc16"><strong>59.7%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.08%</span></td><td class="num" style="color:#ef4444"><strong>34.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td><td class="num" style="color:#ef4444"><strong>36.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.07%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Shakeout+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>41.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.67%</span></td><td class="num" style="color:#eab308"><strong>46.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.31%</span></td><td class="num" style="color:#eab308"><strong>46.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.13%</span></td><td class="num" style="color:#eab308"><strong>46.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.13%</span></td><td class="num" style="color:#eab308"><strong>43.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.78%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.29%</span></td><td class="num" style="color:#eab308"><strong>46.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.33%</span></td><td class="num" style="color:#ef4444"><strong>25.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.98%</span></td><td class="num" style="color:#ef4444"><strong>27.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.98%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Upside Reversal</td><td class="num" style="color:#eab308"><strong>42.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.91%</span></td><td class="num" style="color:#84cc16"><strong>66.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.29%</span></td><td class="num" style="color:#84cc16"><strong>65.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.97%</span></td><td class="num" style="color:#84cc16"><strong>65.0%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.77%</span></td><td class="num" style="color:#84cc16"><strong>55.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.56%</span></td><td class="num" style="color:#84cc16"><strong>59.5%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.88%</span></td><td class="num" style="color:#84cc16"><strong>64.4%</strong><br><span style="font-size:0.75em;color:#22c55e">+6.27%</span></td><td class="num" style="color:#eab308"><strong>40.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.50%</span></td><td class="num" style="color:#eab308"><strong>42.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.53%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>43.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.45%</span></td><td class="num" style="color:#84cc16"><strong>57.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.40%</span></td><td class="num" style="color:#84cc16"><strong>57.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.84%</span></td><td class="num" style="color:#84cc16"><strong>56.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.06%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.53%</span></td><td class="num" style="color:#eab308"><strong>54.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.73%</span></td><td class="num" style="color:#84cc16"><strong>56.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.64%</span></td><td class="num" style="color:#ef4444"><strong>38.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.05%</span></td><td class="num" style="color:#ef4444"><strong>37.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.19%</span></td></tr><tr><td class="strategy-name">Pivot Breakout+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>34.1%</strong><br><span style="font-size:0.75em;color:#ef4444">-3.59%</span></td><td class="num" style="color:#ef4444"><strong>35.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.86%</span></td><td class="num" style="color:#ef4444"><strong>35.6%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.77%</span></td><td class="num" style="color:#ef4444"><strong>35.5%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.76%</span></td><td class="num" style="color:#eab308"><strong>43.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.75%</span></td><td class="num" style="color:#eab308"><strong>42.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.94%</span></td><td class="num" style="color:#ef4444"><strong>36.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.30%</span></td><td class="num" style="color:#ef4444"><strong>30.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.93%</span></td><td class="num" style="color:#ef4444"><strong>28.4%</strong><br><span style="font-size:0.75em;color:#eab308">-1.25%</span></td></tr><tr><td class="strategy-name">Pocket Pivot</td><td class="num" style="color:#ef4444"><strong>38.7%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.92%</span></td><td class="num" style="color:#eab308"><strong>42.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.55%</span></td><td class="num" style="color:#eab308"><strong>42.0%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.31%</span></td><td class="num" style="color:#eab308"><strong>41.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.08%</span></td><td class="num" style="color:#eab308"><strong>44.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.66%</span></td><td class="num" style="color:#eab308"><strong>42.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.81%</span></td><td class="num" style="color:#eab308"><strong>42.3%</strong><br><span style="font-size:0.75em;color:#eab308">-1.33%</span></td><td class="num" style="color:#ef4444"><strong>32.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.66%</span></td><td class="num" style="color:#ef4444"><strong>29.5%</strong><br><span style="font-size:0.75em;color:#eab308">-1.15%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+RS New High</td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.87%</span></td><td class="num" style="color:#eab308"><strong>49.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.58%</span></td><td class="num" style="color:#eab308"><strong>49.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td><td class="num" style="color:#eab308"><strong>49.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.04%</span></td><td class="num" style="color:#eab308"><strong>49.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.37%</span></td><td class="num" style="color:#eab308"><strong>48.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.86%</span></td><td class="num" style="color:#eab308"><strong>49.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.86%</span></td><td class="num" style="color:#ef4444"><strong>35.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.23%</span></td><td class="num" style="color:#ef4444"><strong>33.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.23%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+RS New High+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>37.6%</strong><br><span style="font-size:0.75em;color:#eab308">-1.66%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.34%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.70%</span></td><td class="num" style="color:#eab308"><strong>53.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.13%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.46%</span></td><td class="num" style="color:#eab308"><strong>51.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.54%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.02%</span></td><td class="num" style="color:#ef4444"><strong>37.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.32%</span></td><td class="num" style="color:#ef4444"><strong>36.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+RS New High+Shakeout</td><td class="num" style="color:#eab308"><strong>43.3%</strong><br><span style="font-size:0.75em;color:#eab308">-1.51%</span></td><td class="num" style="color:#eab308"><strong>50.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.57%</span></td><td class="num" style="color:#eab308"><strong>49.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.48%</span></td><td class="num" style="color:#eab308"><strong>49.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.35%</span></td><td class="num" style="color:#eab308"><strong>45.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.54%</span></td><td class="num" style="color:#eab308"><strong>47.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.28%</span></td><td class="num" style="color:#eab308"><strong>49.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.26%</span></td><td class="num" style="color:#ef4444"><strong>28.3%</strong><br><span style="font-size:0.75em;color:#eab308">-1.01%</span></td><td class="num" style="color:#ef4444"><strong>26.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.42%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+RS New High+Upside Reversal</td><td class="num" style="color:#eab308"><strong>40.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.27%</span></td><td class="num" style="color:#84cc16"><strong>57.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.40%</span></td><td class="num" style="color:#84cc16"><strong>56.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.77%</span></td><td class="num" style="color:#84cc16"><strong>56.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.31%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.21%</span></td><td class="num" style="color:#eab308"><strong>53.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.55%</span></td><td class="num" style="color:#84cc16"><strong>55.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.50%</span></td><td class="num" style="color:#ef4444"><strong>38.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.38%</span></td><td class="num" style="color:#ef4444"><strong>39.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.90%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+RS New High+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>43.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.59%</span></td><td class="num" style="color:#eab308"><strong>48.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.82%</span></td><td class="num" style="color:#eab308"><strong>48.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.79%</span></td><td class="num" style="color:#eab308"><strong>48.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.62%</span></td><td class="num" style="color:#eab308"><strong>47.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.53%</span></td><td class="num" style="color:#eab308"><strong>47.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#eab308"><strong>48.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.39%</span></td><td class="num" style="color:#ef4444"><strong>32.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.62%</span></td><td class="num" style="color:#ef4444"><strong>30.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.95%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>35.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.43%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.30%</span></td><td class="num" style="color:#eab308"><strong>51.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.02%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.39%</span></td><td class="num" style="color:#eab308"><strong>50.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.15%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.94%</span></td><td class="num" style="color:#eab308"><strong>51.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.25%</span></td><td class="num" style="color:#ef4444"><strong>37.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.18%</span></td><td class="num" style="color:#ef4444"><strong>36.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.23%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+SMA50 Bounce+Shakeout</td><td class="num" style="color:#ef4444"><strong>39.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.78%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.09%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.08%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.31%</span></td><td class="num" style="color:#eab308"><strong>51.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.16%</span></td><td class="num" style="color:#eab308"><strong>51.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.51%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.61%</span></td><td class="num" style="color:#ef4444"><strong>36.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#ef4444"><strong>35.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.39%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+SMA50 Bounce+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>34.6%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.77%</span></td><td class="num" style="color:#eab308"><strong>51.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.19%</span></td><td class="num" style="color:#eab308"><strong>51.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.05%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.33%</span></td><td class="num" style="color:#eab308"><strong>47.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td><td class="num" style="color:#eab308"><strong>49.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.50%</span></td><td class="num" style="color:#eab308"><strong>51.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.18%</span></td><td class="num" style="color:#ef4444"><strong>35.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.23%</span></td><td class="num" style="color:#ef4444"><strong>33.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.41%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+SMA50 Bounce+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.17%</span></td><td class="num" style="color:#eab308"><strong>51.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.27%</span></td><td class="num" style="color:#eab308"><strong>50.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.13%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.04%</span></td><td class="num" style="color:#eab308"><strong>48.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.45%</span></td><td class="num" style="color:#eab308"><strong>49.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.15%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.17%</span></td><td class="num" style="color:#ef4444"><strong>36.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.33%</span></td><td class="num" style="color:#ef4444"><strong>33.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.89%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+Shakeout</td><td class="num" style="color:#ef4444"><strong>39.5%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.35%</span></td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.61%</span></td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.51%</span></td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.36%</span></td><td class="num" style="color:#eab308"><strong>41.5%</strong><br><span style="font-size:0.75em;color:#eab308">-1.13%</span></td><td class="num" style="color:#eab308"><strong>43.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.05%</span></td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.23%</span></td><td class="num" style="color:#ef4444"><strong>26.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.12%</span></td><td class="num" style="color:#ef4444"><strong>24.5%</strong><br><span style="font-size:0.75em;color:#eab308">-1.72%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+Shakeout+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>38.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.93%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.11%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.30%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.54%</span></td><td class="num" style="color:#eab308"><strong>49.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.02%</span></td><td class="num" style="color:#eab308"><strong>50.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.44%</span></td><td class="num" style="color:#eab308"><strong>53.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.76%</span></td><td class="num" style="color:#ef4444"><strong>33.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.57%</span></td><td class="num" style="color:#ef4444"><strong>32.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.79%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+Shakeout+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>42.3%</strong><br><span style="font-size:0.75em;color:#eab308">-1.77%</span></td><td class="num" style="color:#eab308"><strong>47.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.76%</span></td><td class="num" style="color:#eab308"><strong>47.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.73%</span></td><td class="num" style="color:#eab308"><strong>47.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.72%</span></td><td class="num" style="color:#eab308"><strong>44.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.88%</span></td><td class="num" style="color:#eab308"><strong>45.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.79%</span></td><td class="num" style="color:#eab308"><strong>47.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.69%</span></td><td class="num" style="color:#ef4444"><strong>26.6%</strong><br><span style="font-size:0.75em;color:#eab308">-1.01%</span></td><td class="num" style="color:#ef4444"><strong>25.6%</strong><br><span style="font-size:0.75em;color:#eab308">-1.67%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>38.3%</strong><br><span style="font-size:0.75em;color:#eab308">-1.25%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.55%</span></td><td class="num" style="color:#eab308"><strong>53.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.90%</span></td><td class="num" style="color:#eab308"><strong>53.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.41%</span></td><td class="num" style="color:#eab308"><strong>50.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.75%</span></td><td class="num" style="color:#eab308"><strong>51.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.71%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.44%</span></td><td class="num" style="color:#ef4444"><strong>37.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.14%</span></td><td class="num" style="color:#ef4444"><strong>37.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.43%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>41.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.37%</span></td><td class="num" style="color:#eab308"><strong>53.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.14%</span></td><td class="num" style="color:#eab308"><strong>53.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td><td class="num" style="color:#eab308"><strong>53.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.69%</span></td><td class="num" style="color:#eab308"><strong>49.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.16%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.72%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.94%</span></td><td class="num" style="color:#ef4444"><strong>37.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.33%</span></td><td class="num" style="color:#ef4444"><strong>34.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.48%</span></td></tr><tr><td class="strategy-name">Pocket Pivot+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>39.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.63%</span></td><td class="num" style="color:#eab308"><strong>43.4%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.00%</span></td><td class="num" style="color:#eab308"><strong>43.2%</strong><br><span style="font-size:0.75em;color:#eab308">-1.93%</span></td><td class="num" style="color:#eab308"><strong>43.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.86%</span></td><td class="num" style="color:#eab308"><strong>45.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.77%</span></td><td class="num" style="color:#eab308"><strong>43.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.92%</span></td><td class="num" style="color:#eab308"><strong>43.5%</strong><br><span style="font-size:0.75em;color:#eab308">-1.55%</span></td><td class="num" style="color:#ef4444"><strong>32.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.80%</span></td><td class="num" style="color:#ef4444"><strong>29.2%</strong><br><span style="font-size:0.75em;color:#eab308">-1.45%</span></td></tr><tr><td class="strategy-name">RS New High</td><td class="num" style="color:#eab308"><strong>46.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.66%</span></td><td class="num" style="color:#eab308"><strong>50.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.51%</span></td><td class="num" style="color:#eab308"><strong>50.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.28%</span></td><td class="num" style="color:#eab308"><strong>50.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.04%</span></td><td class="num" style="color:#eab308"><strong>48.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.35%</span></td><td class="num" style="color:#eab308"><strong>49.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.72%</span></td><td class="num" style="color:#eab308"><strong>50.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.95%</span></td><td class="num" style="color:#ef4444"><strong>33.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.41%</span></td><td class="num" style="color:#ef4444"><strong>33.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.30%</span></td></tr><tr><td class="strategy-name">RS New High+SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.39%</span></td><td class="num" style="color:#84cc16"><strong>55.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.65%</span></td><td class="num" style="color:#84cc16"><strong>55.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.10%</span></td><td class="num" style="color:#84cc16"><strong>55.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.58%</span></td><td class="num" style="color:#eab308"><strong>52.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.70%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.78%</span></td><td class="num" style="color:#eab308"><strong>54.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.43%</span></td><td class="num" style="color:#ef4444"><strong>38.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.38%</span></td><td class="num" style="color:#ef4444"><strong>37.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.62%</span></td></tr><tr><td class="strategy-name">RS New High+SMA50 Bounce+Shakeout</td><td class="num" style="color:#ef4444"><strong>39.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.49%</span></td><td class="num" style="color:#eab308"><strong>53.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.18%</span></td><td class="num" style="color:#eab308"><strong>53.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.42%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.62%</span></td><td class="num" style="color:#eab308"><strong>53.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.54%</span></td><td class="num" style="color:#eab308"><strong>53.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.77%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.87%</span></td><td class="num" style="color:#ef4444"><strong>36.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.22%</span></td><td class="num" style="color:#ef4444"><strong>36.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.32%</span></td></tr><tr><td class="strategy-name">RS New High+SMA50 Bounce+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>36.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.76%</span></td><td class="num" style="color:#84cc16"><strong>56.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.82%</span></td><td class="num" style="color:#84cc16"><strong>55.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.17%</span></td><td class="num" style="color:#84cc16"><strong>55.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.56%</span></td><td class="num" style="color:#eab308"><strong>49.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.21%</span></td><td class="num" style="color:#eab308"><strong>52.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.37%</span></td><td class="num" style="color:#84cc16"><strong>55.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.42%</span></td><td class="num" style="color:#ef4444"><strong>36.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.02%</span></td><td class="num" style="color:#ef4444"><strong>36.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.09%</span></td></tr><tr><td class="strategy-name">RS New High+SMA50 Bounce+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.6%</strong><br><span style="font-size:0.75em;color:#eab308">-1.96%</span></td><td class="num" style="color:#eab308"><strong>52.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.12%</span></td><td class="num" style="color:#eab308"><strong>51.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.02%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.21%</span></td><td class="num" style="color:#eab308"><strong>49.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#eab308"><strong>50.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.13%</span></td><td class="num" style="color:#eab308"><strong>51.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.35%</span></td><td class="num" style="color:#ef4444"><strong>35.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.33%</span></td><td class="num" style="color:#ef4444"><strong>34.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.78%</span></td></tr><tr><td class="strategy-name">RS New High+Shakeout</td><td class="num" style="color:#eab308"><strong>42.4%</strong><br><span style="font-size:0.75em;color:#eab308">-1.81%</span></td><td class="num" style="color:#eab308"><strong>48.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.81%</span></td><td class="num" style="color:#eab308"><strong>48.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.68%</span></td><td class="num" style="color:#eab308"><strong>48.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.51%</span></td><td class="num" style="color:#eab308"><strong>44.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.57%</span></td><td class="num" style="color:#eab308"><strong>47.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td><td class="num" style="color:#eab308"><strong>48.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.38%</span></td><td class="num" style="color:#ef4444"><strong>27.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.03%</span></td><td class="num" style="color:#ef4444"><strong>27.6%</strong><br><span style="font-size:0.75em;color:#eab308">-1.29%</span></td></tr><tr><td class="strategy-name">RS New High+Shakeout+Upside Reversal</td><td class="num" style="color:#eab308"><strong>40.5%</strong><br><span style="font-size:0.75em;color:#eab308">-1.47%</span></td><td class="num" style="color:#84cc16"><strong>55.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.63%</span></td><td class="num" style="color:#84cc16"><strong>55.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.88%</span></td><td class="num" style="color:#84cc16"><strong>55.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.19%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.36%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.84%</span></td><td class="num" style="color:#84cc16"><strong>55.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.45%</span></td><td class="num" style="color:#ef4444"><strong>34.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.51%</span></td><td class="num" style="color:#ef4444"><strong>34.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.45%</span></td></tr><tr><td class="strategy-name">RS New High+Shakeout+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>41.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.61%</span></td><td class="num" style="color:#eab308"><strong>47.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.37%</span></td><td class="num" style="color:#eab308"><strong>47.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.36%</span></td><td class="num" style="color:#eab308"><strong>47.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.34%</span></td><td class="num" style="color:#eab308"><strong>44.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.62%</span></td><td class="num" style="color:#eab308"><strong>49.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.25%</span></td><td class="num" style="color:#eab308"><strong>47.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.07%</span></td><td class="num" style="color:#ef4444"><strong>28.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.95%</span></td><td class="num" style="color:#ef4444"><strong>28.2%</strong><br><span style="font-size:0.75em;color:#eab308">-1.18%</span></td></tr><tr><td class="strategy-name">RS New High+Upside Reversal</td><td class="num" style="color:#eab308"><strong>41.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.05%</span></td><td class="num" style="color:#84cc16"><strong>59.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.78%</span></td><td class="num" style="color:#84cc16"><strong>58.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.20%</span></td><td class="num" style="color:#84cc16"><strong>58.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.79%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.39%</span></td><td class="num" style="color:#eab308"><strong>54.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.74%</span></td><td class="num" style="color:#84cc16"><strong>57.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+4.01%</span></td><td class="num" style="color:#ef4444"><strong>39.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.41%</span></td><td class="num" style="color:#eab308"><strong>40.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.07%</span></td></tr><tr><td class="strategy-name">RS New High+Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>42.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.97%</span></td><td class="num" style="color:#84cc16"><strong>55.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.53%</span></td><td class="num" style="color:#eab308"><strong>54.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.87%</span></td><td class="num" style="color:#eab308"><strong>54.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.08%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.22%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.97%</span></td><td class="num" style="color:#eab308"><strong>54.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.52%</span></td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.13%</span></td><td class="num" style="color:#ef4444"><strong>36.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.08%</span></td></tr><tr><td class="strategy-name">RS New High+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>41.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.12%</span></td><td class="num" style="color:#eab308"><strong>45.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.48%</span></td><td class="num" style="color:#eab308"><strong>44.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.46%</span></td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.26%</span></td><td class="num" style="color:#eab308"><strong>46.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.54%</span></td><td class="num" style="color:#eab308"><strong>46.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.48%</span></td><td class="num" style="color:#eab308"><strong>45.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.96%</span></td><td class="num" style="color:#ef4444"><strong>30.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.70%</span></td><td class="num" style="color:#ef4444"><strong>29.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.89%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce</td><td class="num" style="color:#ef4444"><strong>36.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.69%</span></td><td class="num" style="color:#84cc16"><strong>57.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.49%</span></td><td class="num" style="color:#84cc16"><strong>56.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.98%</span></td><td class="num" style="color:#84cc16"><strong>56.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.51%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.98%</span></td><td class="num" style="color:#eab308"><strong>54.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.78%</span></td><td class="num" style="color:#84cc16"><strong>55.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.51%</span></td><td class="num" style="color:#eab308"><strong>40.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.38%</span></td><td class="num" style="color:#eab308"><strong>40.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.78%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce+Shakeout</td><td class="num" style="color:#eab308"><strong>40.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.33%</span></td><td class="num" style="color:#eab308"><strong>54.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.28%</span></td><td class="num" style="color:#eab308"><strong>54.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.54%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.79%</span></td><td class="num" style="color:#84cc16"><strong>55.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.71%</span></td><td class="num" style="color:#eab308"><strong>54.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.87%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.08%</span></td><td class="num" style="color:#eab308"><strong>41.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.30%</span></td><td class="num" style="color:#ef4444"><strong>39.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.20%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce+Shakeout+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>36.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.30%</span></td><td class="num" style="color:#eab308"><strong>52.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.16%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.05%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.22%</span></td><td class="num" style="color:#eab308"><strong>48.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.18%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.03%</span></td><td class="num" style="color:#eab308"><strong>52.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.49%</span></td><td class="num" style="color:#ef4444"><strong>34.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.43%</span></td><td class="num" style="color:#ef4444"><strong>33.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.82%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce+Shakeout+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>39.3%</strong><br><span style="font-size:0.75em;color:#eab308">-1.26%</span></td><td class="num" style="color:#eab308"><strong>53.9%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.69%</span></td><td class="num" style="color:#eab308"><strong>53.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.92%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.06%</span></td><td class="num" style="color:#eab308"><strong>53.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.30%</span></td><td class="num" style="color:#84cc16"><strong>55.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.90%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.20%</span></td><td class="num" style="color:#ef4444"><strong>38.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.08%</span></td><td class="num" style="color:#ef4444"><strong>36.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.45%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>33.0%</strong><br><span style="font-size:0.75em;color:#ef4444">-3.06%</span></td><td class="num" style="color:#eab308"><strong>54.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.19%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.17%</span></td><td class="num" style="color:#eab308"><strong>53.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.62%</span></td><td class="num" style="color:#eab308"><strong>47.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.37%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.45%</span></td><td class="num" style="color:#eab308"><strong>53.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.47%</span></td><td class="num" style="color:#ef4444"><strong>34.9%</strong><br><span style="font-size:0.75em;color:#eab308">-0.41%</span></td><td class="num" style="color:#ef4444"><strong>34.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.50%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce+Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.24%</span></td><td class="num" style="color:#eab308"><strong>51.7%</strong><br><span style="font-size:0.75em;color:#eab308">-0.27%</span></td><td class="num" style="color:#eab308"><strong>51.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.07%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.05%</span></td><td class="num" style="color:#eab308"><strong>47.6%</strong><br><span style="font-size:0.75em;color:#eab308">-0.60%</span></td><td class="num" style="color:#eab308"><strong>50.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.19%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.19%</span></td><td class="num" style="color:#ef4444"><strong>36.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.44%</span></td><td class="num" style="color:#ef4444"><strong>33.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.03%</span></td></tr><tr><td class="strategy-name">SMA50 Bounce+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>38.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.16%</span></td><td class="num" style="color:#eab308"><strong>51.2%</strong><br><span style="font-size:0.75em;color:#eab308">-0.29%</span></td><td class="num" style="color:#eab308"><strong>50.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.12%</span></td><td class="num" style="color:#eab308"><strong>50.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.04%</span></td><td class="num" style="color:#eab308"><strong>50.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.21%</span></td><td class="num" style="color:#eab308"><strong>51.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.29%</span></td><td class="num" style="color:#eab308"><strong>50.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.19%</span></td><td class="num" style="color:#ef4444"><strong>38.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.22%</span></td><td class="num" style="color:#ef4444"><strong>35.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.72%</span></td></tr><tr><td class="strategy-name">Shakeout</td><td class="num" style="color:#ef4444"><strong>39.1%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.28%</span></td><td class="num" style="color:#eab308"><strong>43.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.85%</span></td><td class="num" style="color:#eab308"><strong>43.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.67%</span></td><td class="num" style="color:#eab308"><strong>43.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.42%</span></td><td class="num" style="color:#eab308"><strong>45.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.59%</span></td><td class="num" style="color:#eab308"><strong>44.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.68%</span></td><td class="num" style="color:#eab308"><strong>43.1%</strong><br><span style="font-size:0.75em;color:#eab308">-1.19%</span></td><td class="num" style="color:#ef4444"><strong>31.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.55%</span></td><td class="num" style="color:#ef4444"><strong>32.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.89%</span></td></tr><tr><td class="strategy-name">Shakeout+Upside Reversal</td><td class="num" style="color:#ef4444"><strong>38.8%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.02%</span></td><td class="num" style="color:#eab308"><strong>53.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.06%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.27%</span></td><td class="num" style="color:#eab308"><strong>53.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.52%</span></td><td class="num" style="color:#eab308"><strong>49.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.02%</span></td><td class="num" style="color:#eab308"><strong>50.6%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.34%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.81%</span></td><td class="num" style="color:#ef4444"><strong>33.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.53%</span></td><td class="num" style="color:#ef4444"><strong>33.1%</strong><br><span style="font-size:0.75em;color:#eab308">-0.58%</span></td></tr><tr><td class="strategy-name">Shakeout+Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>40.0%</strong><br><span style="font-size:0.75em;color:#eab308">-1.18%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.72%</span></td><td class="num" style="color:#eab308"><strong>54.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.00%</span></td><td class="num" style="color:#eab308"><strong>54.1%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.19%</span></td><td class="num" style="color:#eab308"><strong>49.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.06%</span></td><td class="num" style="color:#eab308"><strong>52.2%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.57%</span></td><td class="num" style="color:#eab308"><strong>54.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.45%</span></td><td class="num" style="color:#ef4444"><strong>35.0%</strong><br><span style="font-size:0.75em;color:#eab308">-0.43%</span></td><td class="num" style="color:#ef4444"><strong>31.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.49%</span></td></tr><tr><td class="strategy-name">Shakeout+Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>36.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.48%</span></td><td class="num" style="color:#eab308"><strong>40.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.52%</span></td><td class="num" style="color:#eab308"><strong>40.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.41%</span></td><td class="num" style="color:#eab308"><strong>40.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.42%</span></td><td class="num" style="color:#eab308"><strong>42.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.99%</span></td><td class="num" style="color:#eab308"><strong>43.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.82%</span></td><td class="num" style="color:#eab308"><strong>40.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.17%</span></td><td class="num" style="color:#ef4444"><strong>25.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.97%</span></td><td class="num" style="color:#ef4444"><strong>26.9%</strong><br><span style="font-size:0.75em;color:#eab308">-1.39%</span></td></tr><tr><td class="strategy-name">Upside Reversal</td><td class="num" style="color:#ef4444"><strong>38.4%</strong><br><span style="font-size:0.75em;color:#eab308">-0.84%</span></td><td class="num" style="color:#84cc16"><strong>59.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.14%</span></td><td class="num" style="color:#84cc16"><strong>58.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+1.67%</span></td><td class="num" style="color:#84cc16"><strong>58.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.34%</span></td><td class="num" style="color:#eab308"><strong>52.7%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.98%</span></td><td class="num" style="color:#eab308"><strong>54.4%</strong><br><span style="font-size:0.75em;color:#84cc16">+2.13%</span></td><td class="num" style="color:#84cc16"><strong>57.8%</strong><br><span style="font-size:0.75em;color:#22c55e">+3.49%</span></td><td class="num" style="color:#ef4444"><strong>38.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.10%</span></td><td class="num" style="color:#ef4444"><strong>39.5%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.66%</span></td></tr><tr><td class="strategy-name">Upside Reversal+Volume Dry-Up</td><td class="num" style="color:#eab308"><strong>40.7%</strong><br><span style="font-size:0.75em;color:#eab308">-1.51%</span></td><td class="num" style="color:#eab308"><strong>53.3%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.11%</span></td><td class="num" style="color:#eab308"><strong>53.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.43%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.61%</span></td><td class="num" style="color:#eab308"><strong>49.5%</strong><br><span style="font-size:0.75em;color:#eab308">-0.11%</span></td><td class="num" style="color:#eab308"><strong>51.0%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.57%</span></td><td class="num" style="color:#eab308"><strong>52.8%</strong><br><span style="font-size:0.75em;color:#84cc16">+0.99%</span></td><td class="num" style="color:#ef4444"><strong>37.3%</strong><br><span style="font-size:0.75em;color:#eab308">-0.24%</span></td><td class="num" style="color:#ef4444"><strong>34.8%</strong><br><span style="font-size:0.75em;color:#eab308">-0.33%</span></td></tr><tr><td class="strategy-name">Volume Dry-Up</td><td class="num" style="color:#ef4444"><strong>26.6%</strong><br><span style="font-size:0.75em;color:#ef4444">-5.32%</span></td><td class="num" style="color:#ef4444"><strong>27.9%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.87%</span></td><td class="num" style="color:#ef4444"><strong>27.6%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.75%</span></td><td class="num" style="color:#ef4444"><strong>27.6%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.74%</span></td><td class="num" style="color:#ef4444"><strong>34.7%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.25%</span></td><td class="num" style="color:#ef4444"><strong>32.3%</strong><br><span style="font-size:0.75em;color:#ef4444">-2.97%</span></td><td class="num" style="color:#ef4444"><strong>28.2%</strong><br><span style="font-size:0.75em;color:#ef4444">-4.45%</span></td><td class="num" style="color:#ef4444"><strong>24.8%</strong><br><span style="font-size:0.75em;color:#eab308">-1.22%</span></td><td class="num" style="color:#ef4444"><strong>21.4%</strong><br><span style="font-size:0.75em;color:#eab308">-1.96%</span></td></tr></tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🎯 Buy Strategy Summary</div>
+        <div class="section-desc">Average performance by buy strategy (across all 9 exit rules).</div>
+        
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Buy Strategy</th><th>Total Trades</th><th>Avg Win%</th><th>Avg Ret</th><th>Avg R:R</th><th>Avg Sharpe</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">Composite Score</td>
+            <td class="num">60,144</td>
+            <td class="num" style="color:#ef4444">19.2%</td>
+            <td class="num" style="color:#ef4444">-7.37%</td>
+            <td class="num">0.53</td>
+            <td class="num">-0.44</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch</td>
+            <td class="num">55,140</td>
+            <td class="num" style="color:#eab308">48.9%</td>
+            <td class="num" style="color:#84cc16">+0.62%</td>
+            <td class="num">2.29</td>
+            <td class="num">0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout</td>
+            <td class="num">39,267</td>
+            <td class="num" style="color:#eab308">54.8%</td>
+            <td class="num" style="color:#84cc16">+2.87%</td>
+            <td class="num">2.79</td>
+            <td class="num">0.19</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Pocket Pivot</td>
+            <td class="num">23,973</td>
+            <td class="num" style="color:#eab308">51.7%</td>
+            <td class="num" style="color:#84cc16">+2.37%</td>
+            <td class="num">2.12</td>
+            <td class="num">0.15</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout+RS New High</td>
+            <td class="num">25,350</td>
+            <td class="num" style="color:#eab308">54.3%</td>
+            <td class="num" style="color:#22c55e">+3.01%</td>
+            <td class="num">2.23</td>
+            <td class="num">0.19</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout+SMA50 Bounce</td>
+            <td class="num">31,977</td>
+            <td class="num" style="color:#eab308">50.4%</td>
+            <td class="num" style="color:#84cc16">+1.41%</td>
+            <td class="num">1.57</td>
+            <td class="num">0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Shakeout</td>
+            <td class="num">6,162</td>
+            <td class="num" style="color:#eab308">48.6%</td>
+            <td class="num" style="color:#84cc16">+0.91%</td>
+            <td class="num">1.17</td>
+            <td class="num">0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Upside Reversal</td>
+            <td class="num">38,637</td>
+            <td class="num" style="color:#eab308">54.9%</td>
+            <td class="num" style="color:#84cc16">+2.91%</td>
+            <td class="num">2.54</td>
+            <td class="num">0.20</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pivot Breakout+Volume Dry-Up</td>
+            <td class="num">9,771</td>
+            <td class="num" style="color:#eab308">49.1%</td>
+            <td class="num" style="color:#84cc16">+0.79%</td>
+            <td class="num">1.07</td>
+            <td class="num">0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pocket Pivot</td>
+            <td class="num">36,339</td>
+            <td class="num" style="color:#eab308">47.5%</td>
+            <td class="num" style="color:#84cc16">+0.59%</td>
+            <td class="num">1.64</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pocket Pivot+RS New High</td>
+            <td class="num">31,305</td>
+            <td class="num" style="color:#eab308">50.0%</td>
+            <td class="num" style="color:#84cc16">+1.38%</td>
+            <td class="num">1.78</td>
+            <td class="num">0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pocket Pivot+SMA50 Bounce</td>
+            <td class="num">32,757</td>
+            <td class="num" style="color:#eab308">44.4%</td>
+            <td class="num" style="color:#eab308">-0.49%</td>
+            <td class="num">0.94</td>
+            <td class="num">-0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pocket Pivot+Shakeout</td>
+            <td class="num">10,977</td>
+            <td class="num" style="color:#eab308">47.0%</td>
+            <td class="num" style="color:#84cc16">+0.02%</td>
+            <td class="num">0.94</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pocket Pivot+Upside Reversal</td>
+            <td class="num">36,090</td>
+            <td class="num" style="color:#eab308">47.4%</td>
+            <td class="num" style="color:#84cc16">+0.56%</td>
+            <td class="num">1.63</td>
+            <td class="num">0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Pocket Pivot+Volume Dry-Up</td>
+            <td class="num">14,697</td>
+            <td class="num" style="color:#eab308">47.2%</td>
+            <td class="num" style="color:#84cc16">+0.05%</td>
+            <td class="num">0.89</td>
+            <td class="num">0.00</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+RS New High</td>
+            <td class="num">36,105</td>
+            <td class="num" style="color:#eab308">50.9%</td>
+            <td class="num" style="color:#84cc16">+1.60%</td>
+            <td class="num">1.79</td>
+            <td class="num">0.11</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+RS New High+SMA50 Bounce</td>
+            <td class="num">31,704</td>
+            <td class="num" style="color:#eab308">47.3%</td>
+            <td class="num" style="color:#84cc16">+0.33%</td>
+            <td class="num">1.04</td>
+            <td class="num">0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+RS New High+Shakeout</td>
+            <td class="num">10,317</td>
+            <td class="num" style="color:#eab308">48.6%</td>
+            <td class="num" style="color:#84cc16">+0.50%</td>
+            <td class="num">0.98</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+RS New High+Upside Reversal</td>
+            <td class="num">35,901</td>
+            <td class="num" style="color:#eab308">50.8%</td>
+            <td class="num" style="color:#84cc16">+1.57%</td>
+            <td class="num">1.77</td>
+            <td class="num">0.11</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+RS New High+Volume Dry-Up</td>
+            <td class="num">12,822</td>
+            <td class="num" style="color:#eab308">48.8%</td>
+            <td class="num" style="color:#84cc16">+0.42%</td>
+            <td class="num">0.98</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+SMA50 Bounce</td>
+            <td class="num">47,178</td>
+            <td class="num" style="color:#eab308">44.2%</td>
+            <td class="num" style="color:#eab308">-0.87%</td>
+            <td class="num">1.26</td>
+            <td class="num">-0.10</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+SMA50 Bounce+Shakeout</td>
+            <td class="num">11,061</td>
+            <td class="num" style="color:#eab308">45.9%</td>
+            <td class="num" style="color:#eab308">-0.31%</td>
+            <td class="num">0.89</td>
+            <td class="num">-0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+SMA50 Bounce+Upside Reversal</td>
+            <td class="num">46,755</td>
+            <td class="num" style="color:#eab308">44.4%</td>
+            <td class="num" style="color:#eab308">-0.82%</td>
+            <td class="num">1.25</td>
+            <td class="num">-0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+SMA50 Bounce+Volume Dry-Up</td>
+            <td class="num">14,256</td>
+            <td class="num" style="color:#eab308">45.4%</td>
+            <td class="num" style="color:#eab308">-0.61%</td>
+            <td class="num">0.71</td>
+            <td class="num">-0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Shakeout</td>
+            <td class="num">11,301</td>
+            <td class="num" style="color:#eab308">46.5%</td>
+            <td class="num" style="color:#eab308">-0.05%</td>
+            <td class="num">0.94</td>
+            <td class="num">-0.02</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Shakeout+Upside Reversal</td>
+            <td class="num">11,274</td>
+            <td class="num" style="color:#eab308">46.6%</td>
+            <td class="num" style="color:#eab308">-0.04%</td>
+            <td class="num">0.94</td>
+            <td class="num">-0.02</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Shakeout+Volume Dry-Up</td>
+            <td class="num">6,045</td>
+            <td class="num" style="color:#eab308">47.9%</td>
+            <td class="num" style="color:#84cc16">+0.26%</td>
+            <td class="num">0.77</td>
+            <td class="num">0.02</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Upside Reversal</td>
+            <td class="num">54,108</td>
+            <td class="num" style="color:#eab308">48.9%</td>
+            <td class="num" style="color:#84cc16">+0.63%</td>
+            <td class="num">2.03</td>
+            <td class="num">0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Upside Reversal+Volume Dry-Up</td>
+            <td class="num">15,027</td>
+            <td class="num" style="color:#eab308">47.1%</td>
+            <td class="num" style="color:#eab308">-0.04%</td>
+            <td class="num">0.91</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch+Volume Dry-Up</td>
+            <td class="num">15,180</td>
+            <td class="num" style="color:#eab308">47.1%</td>
+            <td class="num" style="color:#84cc16">+0.00%</td>
+            <td class="num">0.91</td>
+            <td class="num">-0.00</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout</td>
+            <td class="num">45,663</td>
+            <td class="num" style="color:#ef4444">16.0%</td>
+            <td class="num" style="color:#ef4444">-8.00%</td>
+            <td class="num">0.56</td>
+            <td class="num">-0.44</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot</td>
+            <td class="num">24,468</td>
+            <td class="num" style="color:#eab308">42.6%</td>
+            <td class="num" style="color:#eab308">-0.04%</td>
+            <td class="num">0.53</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+RS New High</td>
+            <td class="num">21,348</td>
+            <td class="num" style="color:#eab308">48.8%</td>
+            <td class="num" style="color:#84cc16">+1.43%</td>
+            <td class="num">0.62</td>
+            <td class="num">0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+SMA50 Bounce</td>
+            <td class="num">20,865</td>
+            <td class="num" style="color:#eab308">51.9%</td>
+            <td class="num" style="color:#84cc16">+2.21%</td>
+            <td class="num">1.17</td>
+            <td class="num">0.14</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+Shakeout</td>
+            <td class="num">6,033</td>
+            <td class="num" style="color:#eab308">43.2%</td>
+            <td class="num" style="color:#eab308">-0.20%</td>
+            <td class="num">0.64</td>
+            <td class="num">-0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+Upside Reversal</td>
+            <td class="num">23,895</td>
+            <td class="num" style="color:#eab308">53.3%</td>
+            <td class="num" style="color:#84cc16">+2.92%</td>
+            <td class="num">1.17</td>
+            <td class="num">0.16</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+Volume Dry-Up</td>
+            <td class="num">9,543</td>
+            <td class="num" style="color:#eab308">44.8%</td>
+            <td class="num" style="color:#eab308">-0.47%</td>
+            <td class="num">0.42</td>
+            <td class="num">-0.06</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+RS New High</td>
+            <td class="num">25,929</td>
+            <td class="num" style="color:#eab308">46.9%</td>
+            <td class="num" style="color:#84cc16">+0.83%</td>
+            <td class="num">0.57</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+RS New High+SMA50 Bounce</td>
+            <td class="num">21,408</td>
+            <td class="num" style="color:#eab308">53.9%</td>
+            <td class="num" style="color:#84cc16">+2.57%</td>
+            <td class="num">1.32</td>
+            <td class="num">0.16</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+RS New High+Shakeout</td>
+            <td class="num">5,685</td>
+            <td class="num" style="color:#eab308">47.3%</td>
+            <td class="num" style="color:#84cc16">+0.40%</td>
+            <td class="num">0.67</td>
+            <td class="num">0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+RS New High+Upside Reversal</td>
+            <td class="num">25,329</td>
+            <td class="num" style="color:#84cc16">55.7%</td>
+            <td class="num" style="color:#22c55e">+3.44%</td>
+            <td class="num">1.27</td>
+            <td class="num">0.18</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+RS New High+Volume Dry-Up</td>
+            <td class="num">7,932</td>
+            <td class="num" style="color:#eab308">46.2%</td>
+            <td class="num" style="color:#84cc16">+0.05%</td>
+            <td class="num">0.49</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td class="num">32,076</td>
+            <td class="num" style="color:#84cc16">57.9%</td>
+            <td class="num" style="color:#22c55e">+3.37%</td>
+            <td class="num">1.67</td>
+            <td class="num">0.23</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce+Shakeout</td>
+            <td class="num">5,982</td>
+            <td class="num" style="color:#eab308">54.0%</td>
+            <td class="num" style="color:#84cc16">+1.67%</td>
+            <td class="num">1.23</td>
+            <td class="num">0.16</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce+Upside Reversal</td>
+            <td class="num">31,932</td>
+            <td class="num" style="color:#eab308">53.0%</td>
+            <td class="num" style="color:#84cc16">+2.14%</td>
+            <td class="num">1.37</td>
+            <td class="num">0.15</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce+Volume Dry-Up</td>
+            <td class="num">8,982</td>
+            <td class="num" style="color:#eab308">49.4%</td>
+            <td class="num" style="color:#84cc16">+0.59%</td>
+            <td class="num">0.85</td>
+            <td class="num">0.06</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Shakeout</td>
+            <td class="num">6,216</td>
+            <td class="num" style="color:#eab308">48.0%</td>
+            <td class="num" style="color:#84cc16">+0.72%</td>
+            <td class="num">0.75</td>
+            <td class="num">0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Shakeout+Upside Reversal</td>
+            <td class="num">6,144</td>
+            <td class="num" style="color:#eab308">51.1%</td>
+            <td class="num" style="color:#84cc16">+1.19%</td>
+            <td class="num">1.06</td>
+            <td class="num">0.10</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Shakeout+Volume Dry-Up</td>
+            <td class="num">3,276</td>
+            <td class="num" style="color:#eab308">41.5%</td>
+            <td class="num" style="color:#eab308">-0.48%</td>
+            <td class="num">0.42</td>
+            <td class="num">-0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Upside Reversal</td>
+            <td class="num">39,489</td>
+            <td class="num" style="color:#84cc16">55.7%</td>
+            <td class="num" style="color:#84cc16">+2.96%</td>
+            <td class="num">1.54</td>
+            <td class="num">0.17</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Upside Reversal+Volume Dry-Up</td>
+            <td class="num">9,663</td>
+            <td class="num" style="color:#eab308">50.5%</td>
+            <td class="num" style="color:#84cc16">+1.10%</td>
+            <td class="num">0.90</td>
+            <td class="num">0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pivot Breakout+Volume Dry-Up</td>
+            <td class="num">9,867</td>
+            <td class="num" style="color:#ef4444">35.8%</td>
+            <td class="num" style="color:#ef4444">-2.02%</td>
+            <td class="num">0.40</td>
+            <td class="num">-0.18</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot</td>
+            <td class="num">36,825</td>
+            <td class="num" style="color:#ef4444">39.5%</td>
+            <td class="num" style="color:#eab308">-1.61%</td>
+            <td class="num">0.48</td>
+            <td class="num">-0.10</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+RS New High</td>
+            <td class="num">31,752</td>
+            <td class="num" style="color:#eab308">45.5%</td>
+            <td class="num" style="color:#eab308">-0.01%</td>
+            <td class="num">0.55</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+RS New High+SMA50 Bounce</td>
+            <td class="num">28,023</td>
+            <td class="num" style="color:#eab308">47.6%</td>
+            <td class="num" style="color:#84cc16">+0.59%</td>
+            <td class="num">1.00</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+RS New High+Shakeout</td>
+            <td class="num">10,179</td>
+            <td class="num" style="color:#eab308">43.5%</td>
+            <td class="num" style="color:#eab308">-0.71%</td>
+            <td class="num">0.53</td>
+            <td class="num">-0.10</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+RS New High+Upside Reversal</td>
+            <td class="num">31,269</td>
+            <td class="num" style="color:#eab308">50.0%</td>
+            <td class="num" style="color:#84cc16">+1.53%</td>
+            <td class="num">1.03</td>
+            <td class="num">0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+RS New High+Volume Dry-Up</td>
+            <td class="num">12,747</td>
+            <td class="num" style="color:#eab308">44.0%</td>
+            <td class="num" style="color:#eab308">-0.72%</td>
+            <td class="num">0.43</td>
+            <td class="num">-0.09</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+SMA50 Bounce</td>
+            <td class="num">32,754</td>
+            <td class="num" style="color:#eab308">46.2%</td>
+            <td class="num" style="color:#84cc16">+0.05%</td>
+            <td class="num">0.96</td>
+            <td class="num">0.00</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+SMA50 Bounce+Shakeout</td>
+            <td class="num">10,755</td>
+            <td class="num" style="color:#eab308">47.3%</td>
+            <td class="num" style="color:#eab308">-0.09%</td>
+            <td class="num">0.87</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+SMA50 Bounce+Upside Reversal</td>
+            <td class="num">32,682</td>
+            <td class="num" style="color:#eab308">45.1%</td>
+            <td class="num" style="color:#eab308">-0.21%</td>
+            <td class="num">0.89</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+SMA50 Bounce+Volume Dry-Up</td>
+            <td class="num">13,992</td>
+            <td class="num" style="color:#eab308">45.4%</td>
+            <td class="num" style="color:#eab308">-0.43%</td>
+            <td class="num">0.64</td>
+            <td class="num">-0.06</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+Shakeout</td>
+            <td class="num">11,037</td>
+            <td class="num" style="color:#ef4444">39.5%</td>
+            <td class="num" style="color:#eab308">-1.45%</td>
+            <td class="num">0.50</td>
+            <td class="num">-0.17</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+Shakeout+Upside Reversal</td>
+            <td class="num">10,977</td>
+            <td class="num" style="color:#eab308">46.6%</td>
+            <td class="num" style="color:#eab308">-0.12%</td>
+            <td class="num">0.82</td>
+            <td class="num">-0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+Shakeout+Volume Dry-Up</td>
+            <td class="num">6,012</td>
+            <td class="num" style="color:#eab308">41.5%</td>
+            <td class="num" style="color:#eab308">-1.00%</td>
+            <td class="num">0.34</td>
+            <td class="num">-0.18</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+Upside Reversal</td>
+            <td class="num">36,177</td>
+            <td class="num" style="color:#eab308">47.8%</td>
+            <td class="num" style="color:#84cc16">+0.79%</td>
+            <td class="num">0.98</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+Upside Reversal+Volume Dry-Up</td>
+            <td class="num">14,658</td>
+            <td class="num" style="color:#eab308">47.2%</td>
+            <td class="num" style="color:#84cc16">+0.07%</td>
+            <td class="num">0.69</td>
+            <td class="num">-0.00</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot+Volume Dry-Up</td>
+            <td class="num">14,790</td>
+            <td class="num" style="color:#eab308">40.5%</td>
+            <td class="num" style="color:#eab308">-1.55%</td>
+            <td class="num">0.38</td>
+            <td class="num">-0.18</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High</td>
+            <td class="num">36,669</td>
+            <td class="num" style="color:#eab308">45.8%</td>
+            <td class="num" style="color:#eab308">-0.01%</td>
+            <td class="num">0.53</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+SMA50 Bounce</td>
+            <td class="num">31,704</td>
+            <td class="num" style="color:#eab308">49.0%</td>
+            <td class="num" style="color:#84cc16">+0.87%</td>
+            <td class="num">1.09</td>
+            <td class="num">0.06</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+SMA50 Bounce+Shakeout</td>
+            <td class="num">10,092</td>
+            <td class="num" style="color:#eab308">47.9%</td>
+            <td class="num" style="color:#84cc16">+0.15%</td>
+            <td class="num">0.89</td>
+            <td class="num">0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+SMA50 Bounce+Upside Reversal</td>
+            <td class="num">31,641</td>
+            <td class="num" style="color:#eab308">48.2%</td>
+            <td class="num" style="color:#84cc16">+0.66%</td>
+            <td class="num">1.00</td>
+            <td class="num">0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+SMA50 Bounce+Volume Dry-Up</td>
+            <td class="num">12,096</td>
+            <td class="num" style="color:#eab308">46.2%</td>
+            <td class="num" style="color:#eab308">-0.30%</td>
+            <td class="num">0.68</td>
+            <td class="num">-0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+Shakeout</td>
+            <td class="num">10,374</td>
+            <td class="num" style="color:#eab308">42.6%</td>
+            <td class="num" style="color:#eab308">-0.82%</td>
+            <td class="num">0.53</td>
+            <td class="num">-0.11</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+Shakeout+Upside Reversal</td>
+            <td class="num">10,308</td>
+            <td class="num" style="color:#eab308">48.3%</td>
+            <td class="num" style="color:#84cc16">+0.32%</td>
+            <td class="num">0.86</td>
+            <td class="num">0.02</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+Shakeout+Volume Dry-Up</td>
+            <td class="num">5,670</td>
+            <td class="num" style="color:#eab308">42.5%</td>
+            <td class="num" style="color:#eab308">-0.64%</td>
+            <td class="num">0.40</td>
+            <td class="num">-0.10</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+Upside Reversal</td>
+            <td class="num">36,033</td>
+            <td class="num" style="color:#eab308">51.3%</td>
+            <td class="num" style="color:#84cc16">+1.83%</td>
+            <td class="num">1.09</td>
+            <td class="num">0.10</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+Upside Reversal+Volume Dry-Up</td>
+            <td class="num">12,777</td>
+            <td class="num" style="color:#eab308">48.9%</td>
+            <td class="num" style="color:#84cc16">+0.46%</td>
+            <td class="num">0.74</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High+Volume Dry-Up</td>
+            <td class="num">12,918</td>
+            <td class="num" style="color:#eab308">41.5%</td>
+            <td class="num" style="color:#eab308">-1.10%</td>
+            <td class="num">0.43</td>
+            <td class="num">-0.12</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce</td>
+            <td class="num">47,295</td>
+            <td class="num" style="color:#eab308">50.4%</td>
+            <td class="num" style="color:#84cc16">+0.86%</td>
+            <td class="num">1.36</td>
+            <td class="num">0.06</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce+Shakeout</td>
+            <td class="num">11,058</td>
+            <td class="num" style="color:#eab308">50.0%</td>
+            <td class="num" style="color:#84cc16">+0.38%</td>
+            <td class="num">0.96</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce+Shakeout+Upside Reversal</td>
+            <td class="num">11,034</td>
+            <td class="num" style="color:#eab308">46.0%</td>
+            <td class="num" style="color:#eab308">-0.34%</td>
+            <td class="num">0.87</td>
+            <td class="num">-0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce+Shakeout+Volume Dry-Up</td>
+            <td class="num">5,949</td>
+            <td class="num" style="color:#eab308">48.6%</td>
+            <td class="num" style="color:#84cc16">+0.36%</td>
+            <td class="num">0.75</td>
+            <td class="num">0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce+Upside Reversal</td>
+            <td class="num">46,854</td>
+            <td class="num" style="color:#eab308">46.3%</td>
+            <td class="num" style="color:#eab308">-0.20%</td>
+            <td class="num">1.14</td>
+            <td class="num">-0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce+Upside Reversal+Volume Dry-Up</td>
+            <td class="num">14,211</td>
+            <td class="num" style="color:#eab308">45.7%</td>
+            <td class="num" style="color:#eab308">-0.51%</td>
+            <td class="num">0.74</td>
+            <td class="num">-0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce+Volume Dry-Up</td>
+            <td class="num">14,256</td>
+            <td class="num" style="color:#eab308">46.3%</td>
+            <td class="num" style="color:#eab308">-0.36%</td>
+            <td class="num">0.76</td>
+            <td class="num">-0.04</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Shakeout</td>
+            <td class="num">11,355</td>
+            <td class="num" style="color:#eab308">40.6%</td>
+            <td class="num" style="color:#eab308">-1.24%</td>
+            <td class="num">0.57</td>
+            <td class="num">-0.11</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Shakeout+Upside Reversal</td>
+            <td class="num">11,274</td>
+            <td class="num" style="color:#eab308">46.6%</td>
+            <td class="num" style="color:#eab308">-0.12%</td>
+            <td class="num">0.85</td>
+            <td class="num">-0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Shakeout+Upside Reversal+Volume Dry-Up</td>
+            <td class="num">6,045</td>
+            <td class="num" style="color:#eab308">47.1%</td>
+            <td class="num" style="color:#84cc16">+0.32%</td>
+            <td class="num">0.69</td>
+            <td class="num">0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Shakeout+Volume Dry-Up</td>
+            <td class="num">6,057</td>
+            <td class="num" style="color:#ef4444">37.5%</td>
+            <td class="num" style="color:#eab308">-1.35%</td>
+            <td class="num">0.37</td>
+            <td class="num">-0.18</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Upside Reversal</td>
+            <td class="num">54,957</td>
+            <td class="num" style="color:#eab308">50.9%</td>
+            <td class="num" style="color:#84cc16">+1.30%</td>
+            <td class="num">1.41</td>
+            <td class="num">0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Upside Reversal+Volume Dry-Up</td>
+            <td class="num">15,027</td>
+            <td class="num" style="color:#eab308">47.2%</td>
+            <td class="num" style="color:#84cc16">+0.06%</td>
+            <td class="num">0.77</td>
+            <td class="num">-0.00</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Volume Dry-Up</td>
+            <td class="num">15,282</td>
+            <td class="num" style="color:#ef4444">27.9%</td>
+            <td class="num" style="color:#ef4444">-3.61%</td>
+            <td class="num">0.37</td>
+            <td class="num">-0.34</td>
+        </tr></tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🚪 Exit Rule Effectiveness</div>
+        <div class="section-desc">Average performance by exit rule (across all 10 buy strategies).</div>
+        
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Exit Rule</th><th>Total Trades</th><th>Avg Win%</th><th>Avg Ret</th><th>Avg R:R</th><th>Avg Sharpe</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">Stop-Loss (Base Low)</td>
+            <td class="num">224,680</td>
+            <td class="num" style="color:#ef4444">38.5%</td>
+            <td class="num" style="color:#eab308">-1.65%</td>
+            <td class="num">1.07</td>
+            <td class="num">-0.13</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Target 2:1 R:R</td>
+            <td class="num">223,610</td>
+            <td class="num" style="color:#eab308">53.2%</td>
+            <td class="num" style="color:#84cc16">+0.23%</td>
+            <td class="num">0.73</td>
+            <td class="num">0.03</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Target 3:1 R:R</td>
+            <td class="num">223,610</td>
+            <td class="num" style="color:#eab308">52.8%</td>
+            <td class="num" style="color:#84cc16">+0.52%</td>
+            <td class="num">0.83</td>
+            <td class="num">0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Target 5:1 R:R</td>
+            <td class="num">223,610</td>
+            <td class="num" style="color:#eab308">52.6%</td>
+            <td class="num" style="color:#84cc16">+0.86%</td>
+            <td class="num">0.96</td>
+            <td class="num">0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Time 20 Bars</td>
+            <td class="num">224,680</td>
+            <td class="num" style="color:#eab308">49.3%</td>
+            <td class="num" style="color:#84cc16">+0.08%</td>
+            <td class="num">0.95</td>
+            <td class="num">0.01</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Time 40 Bars</td>
+            <td class="num">224,680</td>
+            <td class="num" style="color:#eab308">51.2%</td>
+            <td class="num" style="color:#84cc16">+0.93%</td>
+            <td class="num">1.29</td>
+            <td class="num">0.05</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Time 60 Bars</td>
+            <td class="num">224,680</td>
+            <td class="num" style="color:#eab308">52.5%</td>
+            <td class="num" style="color:#84cc16">+1.58%</td>
+            <td class="num">1.52</td>
+            <td class="num">0.07</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Trail 2× ATR</td>
+            <td class="num">224,680</td>
+            <td class="num" style="color:#ef4444">34.8%</td>
+            <td class="num" style="color:#eab308">-0.30%</td>
+            <td class="num">0.62</td>
+            <td class="num">-0.08</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Trail 3× ATR</td>
+            <td class="num">224,680</td>
+            <td class="num" style="color:#ef4444">34.4%</td>
+            <td class="num" style="color:#eab308">-0.26%</td>
+            <td class="num">0.93</td>
+            <td class="num">-0.05</td>
+        </tr></tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">💡 How to Read This Report</div>
+        <div class="section-desc">
+            <strong>Win Rate:</strong> % of trades that closed with positive return (position-sized).<br>
+            <strong>Avg Ret:</strong> Average return per trade, scaled by position size (0.25x–1.0x based on base quality).<br>
+            <strong>R:R Ratio:</strong> Average risk/reward — higher is better.<br>
+            <strong>Sharpe:</strong> Return / StdDev — measures consistency. Above 0.3 is strong for daily-frequency signals.<br>
+            <strong>Filters applied:</strong> Price > $12, 50-day avg volume > 500K, minimum 100 bars of history.
+        </div>
+    </div>
+    
+<div class="footer">
+  <p>Generated 2026-08-01 14:07:54 | Full Backtest — 2,018,910 combined trades</p>
+</div>
+</div>
+</body>
+</html>
