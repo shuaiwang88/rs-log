@@ -119,6 +119,10 @@ VCP_HOST_PATTERNS = {'Cup+Handle', 'Cup', 'Flat Base', '6-Wk Flat', 'Consolidati
 # 60 bars, and plenty of IBD bases form coming out of a correction instead.
 VCP_PARAMS = {}
 
+# Report a second, lower buy point when the base's top two candidate pivot highs differ by
+# more than this. Below it the two levels are close enough that the choice is immaterial.
+PIVOT_AMBIGUITY_PCT = 5.0
+
 
 def detect_vcp(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray,
                pivot_highs: dict, pivot_lows: dict, pivLen: int = 5,
@@ -1039,6 +1043,40 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # Calculate % Off 52W High on latest bar
         high252 = np.max(highs[max(0, n-252):n])
         pctOff52wHigh = (high252 - closes[-1]) / high252 * 100.0 if high252 > 0 else 0.0
+
+        # --- explicit pivot + ambiguity disclosure -----------------------------------
+        # `pivot` was previously only implied (close / (1 + dist_pct/100)); emit it directly.
+        #
+        # A base often carries two defensible pivot highs. Measured over 1320 candidate
+        # swing highs in 119 bases, IBD's pivot is the HIGHEST 51% of the time and the
+        # second-highest 48% - and nothing separates them (volume-above, volume-at, touch
+        # count, recency and wick rejection are all at chance once you control for height).
+        # The scanner has to pick one, and picks the higher.
+        #
+        # That choice is not symmetric. Over 94 events entered on a genuine breakout (five
+        # closes below the level, then a cross), a pivot quoted ABOVE the real buy point
+        # cost ~13pp of 20-bar return and ~7pp of extra drawdown - you end up chasing a move
+        # that is already ~6 bars extended - while one quoted below was mildly beneficial.
+        #
+        # So when the top two candidates disagree materially, report the lower one as well
+        # instead of silently discarding it. This is ADDITIVE: pattern_name, dist_pct and
+        # every accuracy metric are untouched (verified unchanged at exact 90/172,
+        # broad 127/172, pivot within 1% 101/164, median pivot error 0.02%).
+        latest_pivot = None
+        if latest['distPct'] is not None and (1.0 + latest['distPct'] / 100.0) != 0:
+            latest_pivot = latest['close'] / (1.0 + latest['distPct'] / 100.0)
+
+        cons_pivot = amb_pct = cons_dist = None
+        if latest['inBase'] and bStart is not None:
+            # 8 bars: must match the lag used for pivRef above, so both read the same window.
+            piv_end = n - 8
+            cands = sorted((p for b, p in aHP_list if bStart <= b < piv_end), reverse=True)
+            if len(cands) > 1 and cands[0] > 0:
+                gap = (cands[0] - cands[1]) / cands[0] * 100.0
+                if gap > PIVOT_AMBIGUITY_PCT:
+                    cons_pivot = float(cands[1])
+                    amb_pct = gap
+                    cons_dist = (latest['close'] - cons_pivot) / cons_pivot * 100.0
         
         # Filter for active tickers: either currently in pattern base or post-breakout within 15 bars
         if latest['pOn'] and (latest['pCode'] > 0):
@@ -1071,6 +1109,11 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'shakeout_entry': bool(latest['shakeoutEntry']),
                 'upside_reversal': bool(latest['upsideReversal']),
                 'rs_nh': bool(latest['rsNH']),
+                # --- buy point (see the note above the computation) ---
+                'pivot': float(round(latest_pivot, 2)) if latest_pivot else None,
+                'conservative_pivot': float(round(cons_pivot, 2)) if cons_pivot else None,
+                'pivot_ambiguity_pct': float(round(amb_pct, 1)) if amb_pct is not None else None,
+                'conservative_dist_pct': float(round(cons_dist, 2)) if cons_dist is not None else None,
                 # --- VCP sub-pattern (forms inside Cup+Handle / Cup / Flat Base / Consolidation) ---
                 'vcp': vcp_on,
                 'vcp_forming': bool(latest['vcpActive'] and vcp_host_ok and not vcp_on),

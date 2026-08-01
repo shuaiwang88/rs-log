@@ -49,8 +49,8 @@ N_EVENTS = 172
 STD_TRUTH = {'Flat Base', 'Consolidation', 'Cup Without Handle'}
 STD_DET = {'Flat Base', '6-Wk Flat', 'Consolidation', 'Cup', 'Base'}
 FOCUS_MAP = {'Double Bottom': 'Dbl Bottom', 'Cup With Handle': 'Cup+Handle'}
-PIVOT_BASELINE_EXACT = 127
-BROAD_BASELINE = 127
+PIVOT_BASELINE_EXACT = 126
+BROAD_BASELINE = 126
 
 
 def bucket_truth(t):
@@ -188,6 +188,325 @@ def _apply_ratchet_cap(src, cap):
                           f"and (origBTop is None or highs[i] <= origBTop * {cap}):", 1)
 
 
+def _apply_independent(src):
+    """Judge each pattern on its own merits, dropping the mutual-exclusion guards.
+
+    isCup requires `not isCupH`, isFlatBase requires `not isCupH`, isDB requires
+    `not isFlatBase and not isCupH`, and isConsolidation requires none of the others. So the
+    detectors can never disagree - the taxonomy is enforced by construction rather than
+    measured. That makes the "two valid readings" Webster describes unrepresentable.
+    """
+    reps = [
+        ("            isCup = False\n            if isBase and bTop and bLow and not isCupH:",
+         "            isCup = False\n            if isBase and bTop and bLow:"),
+        ("            isFlatBase = isBase and (rDepPct <= 20.0) and (20 <= bCount <= 130) and not isCupH and not isLikelyConsolidation",
+         "            isFlatBase = isBase and (rDepPct <= 20.0) and (20 <= bCount <= 130) and not isLikelyConsolidation"),
+        ("            if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0)",
+         "            if isBase and not isLikelyConsolidation and (bDepPct is not None and 15.0 <= bDepPct <= 40.0)"),
+        ("                (bCount > 200 and not isCup and not isCupH) or",
+         "                (bCount > 200) or"),
+        ("                (bDepPct is not None and 5.0 <= bDepPct <= 35.0 and not isCup and not isCupH and not isFlatBase and not isDB and not isAscendingBase)",
+         "                (bDepPct is not None and 5.0 <= bDepPct <= 35.0)"),
+    ]
+    for a, b in reps:
+        if a not in src:
+            raise RuntimeError(f"independent anchor missing: {a[:60]}")
+        src = src.replace(a, b, 1)
+    return _apply_multilabel(src)
+
+
+def _apply_multilabel(src):
+    """Expose every pattern flag that is simultaneously true, not just the priority winner.
+
+    Webster is explicit that a base can carry more than one valid reading - "we could both
+    look at the same chart and see it differently, and Bill would agree we were both right"
+    - and lists layering them as a later phase. The measured ambiguity backs this: IBD's own
+    Depth+Length recover their own labels only 43.6% of the time. The scanner already
+    computes isCup / isCupH / isDB / isFlatBase / isConsolidation every bar and then discards
+    all but the highest-priority one.
+    """
+    anchor = "                'isCupH': isCupH,"
+    if anchor not in src:
+        raise RuntimeError("multilabel anchor not found")
+    return src.replace(anchor, anchor + ("\n                'isCup': isCup,"
+                                         "\n                'isConsol': isConsolidation,"), 1)
+
+
+def _apply_db_close_match(src, tol_lo, tol_hi, undercut_on_close):
+    """Match the two bottoms on CLOSES rather than wicks.
+
+    The Patternsmart double-bottom detector exposes a "use High Low" switch - i.e. whether
+    the two bottoms are compared on wicks or on open/close. Our scanner matches pivot LOWS,
+    which are the noisiest points on the bar: a single intraday spike moves the comparison.
+    Closes are where the market actually settled.
+    """
+    a = "                            cA = (sL <= fL * 1.04) and (sL >= fL * 0.94)"
+    if a not in src:
+        raise RuntimeError("db_close_match cA anchor not found")
+    src = src.replace(a, f"                            cA = (closes[sLt] <= closes[fLt] * {tol_hi}) and (closes[sLt] >= closes[fLt] * {tol_lo})", 1)
+    if undercut_on_close:
+        b = "                            second_leg_undercut = sL < fL"
+        if b not in src:
+            raise RuntimeError("db_close_match undercut anchor not found")
+        src = src.replace(b, "                            second_leg_undercut = closes[sLt] < closes[fLt]", 1)
+    return src
+
+
+def _apply_db_priority(src):
+    """Let a fully-qualified Double Bottom outrank Flat Base.
+
+    DBX satisfies every Double Bottom condition - both lows, the middle peak, the undercut,
+    the timing and the volume asymmetry - and is still reported as a Flat Base, because the
+    DB block is guarded by `not isFlatBase` AND Flat Base sits above it in the priority
+    chain. A W that qualifies is more specific than a flat range and prices off a different
+    level (the middle peak), so it should win.
+    """
+    g = "if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation"
+    if g not in src:
+        raise RuntimeError("db_priority guard anchor not found")
+    src = src.replace(g, "if isBase and not isCupH and not isLikelyConsolidation", 1)
+    for a, b in [
+        ("            if isAscendingBase: currPName, currPCode = 'Ascending Base', 8\n"
+         "            elif is6WkFlat: currPName, currPCode = '6-Wk Flat', 7\n"
+         "            elif isFlatBase: currPName, currPCode = 'Flat Base', 2\n"
+         "            elif isDB: currPName, currPCode = 'Dbl Bottom', 5",
+         "            if isAscendingBase: currPName, currPCode = 'Ascending Base', 8\n"
+         "            elif isDB: currPName, currPCode = 'Dbl Bottom', 5\n"
+         "            elif is6WkFlat: currPName, currPCode = '6-Wk Flat', 7\n"
+         "            elif isFlatBase: currPName, currPCode = 'Flat Base', 2"),
+        ("                elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True\n"
+         "                elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True\n"
+         "                elif isDB: pName, pCode, pOn = 'Dbl Bottom', 5, True",
+         "                elif isDB: pName, pCode, pOn = 'Dbl Bottom', 5, True\n"
+         "                elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True\n"
+         "                elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True")]:
+        if a not in src:
+            raise RuntimeError("db_priority chain anchor not found")
+        src = src.replace(a, b, 1)
+    return src
+
+
+def _apply_asc_tight(src, lo, hi, pbmin, pbmax):
+    """Enable Ascending Base with IBD's actual definition: 9-16 weeks, three pullbacks.
+
+    The scanner's block never constrained the pattern's LENGTH, so it fired on any three
+    stair-steps inside a 90-bar window - 22 times across 177 events, catching 3 of 5 real
+    ones and costing 14 broad matches. IBD is specific: 9 to 16 weeks (45-80 daily bars).
+    """
+    a = "            if False and isBase and not isCupH and not isLikelyConsolidation"
+    if a not in src:
+        raise RuntimeError("asc_tight anchor not found")
+    src = src.replace(a, "            if isBase and not isCupH and not isLikelyConsolidation", 1)
+    b = "                    if t_spaced and hh and hl and pb_ok:"
+    if b not in src:
+        raise RuntimeError("asc_tight gate anchor not found")
+    new = ("                    _span = recent_hps[2][0] - recent_hps[0][0]\n"
+           f"                    _lenOk = {lo} <= bCount <= {hi}\n"
+           f"                    _pbOk2 = all({pbmin} <= _p <= {pbmax} for _p in [pb1, pb2, pb3])\n"
+           "                    if t_spaced and hh and hl and pb_ok and _lenOk and _pbOk2:")
+    return src.replace(b, new, 1)
+
+
+def _apply_enable_asc(src):
+    """Re-enable Ascending Base detection (disabled early as 'stealing bars' from Cup/CupH).
+
+    That verdict predates the handle-window trim, the drift gate and the base-pivot rewrite,
+    so it is worth re-testing against the current scanner rather than inherited.
+    """
+    a = "            if False and isBase and not isCupH and not isLikelyConsolidation"
+    if a not in src:
+        raise RuntimeError("enable_asc anchor not found")
+    src = src.replace(a, "            if isBase and not isCupH and not isLikelyConsolidation", 1)
+    b = "            isAscendingBase = False\n"
+    return src.replace(b, "            isAscendingBase = False\n", 1)
+
+
+def _apply_label_promote(src, k, targets):
+    """Promote a SPECIFIC pattern seen in the last k bars over a generic current label.
+
+    The correct label sits somewhere in [event-20, +5] for 141 of 172 events but only 126 at
+    event+5. Majority voting fails because a base is generically labelled while immature, so
+    the vote is dominated by the pre-formation phase. Specificity is the better tie-break: a
+    Cup+Handle that was recognised days ago does not stop being one because the handle
+    window has since swallowed the breakout thrust.
+    """
+    anchor = "        latest = history_state[-1]"
+    if anchor not in src:
+        raise RuntimeError("label_promote anchor not found")
+    code = (f"\n        _T = {targets!r}\n"
+            f"        _w = [st for st in history_state[-{k}:] if st['pOn']]\n"
+            "        if latest['pOn'] and latest['pName'] not in _T:\n"
+            "            for _t in _T:\n"
+            "                _m = [st for st in _w if st['pName'] == _t]\n"
+            "                if _m:\n"
+            "                    latest['pName'] = _t\n"
+            "                    latest['pCode'] = _m[-1]['pCode']\n"
+            "                    break\n")
+    return src.replace(anchor, anchor + code, 1)
+
+
+def _apply_label_lag(src, lag):
+    """Read the pattern label from `lag` bars back, where the base is complete but not yet
+    distorted by the breakout thrust.
+
+    IBD's Event Date is the day the pattern FINISHES, so the structure is fully formed a few
+    bars earlier. On the breakout bar itself a trailing window spans the thrust and reads as
+    a handle - 9 of 15 lost labels flip into Cup+Handle exactly there. Sampling slightly
+    earlier should recover them. The pivot is left on the current bar; only the label moves.
+    """
+    anchor = "        latest = history_state[-1]"
+    if anchor not in src:
+        raise RuntimeError("label_lag anchor not found")
+    code = (f"\n        if len(history_state) > {lag}:\n"
+            f"            _lb = history_state[-1 - {lag}]\n"
+            "            if _lb['pOn'] and _lb['pName'] != 'None' and latest['pOn']:\n"
+            "                latest['pName'] = _lb['pName']\n"
+            "                latest['pCode'] = _lb['pCode']\n")
+    return src.replace(anchor, anchor + code, 1)
+
+
+def _apply_label_stability(src, mode, k):
+    """Report the label the base HELD, not the one on the final bar.
+
+    The ground truth's Event Date is the breakout - the day the pattern finishes, not the
+    day it forms. The correct label is present somewhere in [event-20, event+5] for 141 of
+    172 events but only 126 at event+5, and 9 of the 15 losses are bases that flip INTO
+    Cup+Handle on the breakout itself (a trailing window spanning the thrust reads as a
+    handle). The instantaneous label is least reliable exactly where the evaluation samples.
+
+    mode 'vote' : most frequent label over the last k bars the pattern was on
+    mode 'first': the first label that held for k consecutive bars in this base
+    """
+    anchor = "        latest = history_state[-1]"
+    if anchor not in src:
+        raise RuntimeError("label_stability anchor not found")
+    if mode == 'vote':
+        code = (
+            "\n        _h = [st for st in history_state[-%d:] if st['pOn'] and st['pName'] != 'None']\n" % k +
+            "        if _h and latest['pOn']:\n"
+            "            from collections import Counter as _C\n"
+            "            _cnt = _C(st['pName'] for st in _h)\n"
+            "            _mx = max(_cnt.values())\n"
+            "            _ties = [nm for nm, c in _cnt.items() if c == _mx]\n"
+            "            _best = latest['pName'] if latest['pName'] in _ties else _ties[0]\n"
+            "            if _best != latest['pName']:\n"
+            "                _s = next(st for st in reversed(_h) if st['pName'] == _best)\n"
+            "                latest['pName'] = _best\n"
+            "                latest['pCode'] = _s['pCode']\n")
+    else:
+        code = (
+            "\n        _run = 0; _prev = None; _lock = None\n"
+            "        for st in history_state:\n"
+            "            if not st['pOn'] or st['pName'] == 'None':\n"
+            "                _run = 0; _prev = None; continue\n"
+            "            _run = _run + 1 if st['pName'] == _prev else 1\n"
+            "            _prev = st['pName']\n"
+            f"            if _lock is None and _run >= {k}:\n"
+            "                _lock = (st['pName'], st['pCode'])\n"
+            "        if _lock and latest['pOn'] and _lock[0] != latest['pName']:\n"
+            "            latest['pName'], latest['pCode'] = _lock\n")
+    return src.replace(anchor, anchor + code, 1)
+
+
+def _apply_second_field(src, gap):
+    """ADD conservative_pivot as an extra output. pivRef is untouched, so no metric moves."""
+    anchor = "                'rs_nh': bool(latest['rsNH']),"
+    if anchor not in src:
+        raise RuntimeError("second_field anchor not found")
+    return src.replace(anchor, anchor + "\n                'conservative_pivot': None,\n                'pivot_ambiguity_pct': None,", 1)
+
+
+def _apply_pivot_conservative(src, gap):
+    """Lean the pivot DOWN when the top two candidate highs disagree.
+
+    Forward-return test over 94 events with a genuine breakout entry (5 closes below the
+    level, then a cross), comparing our pivot against IBD's:
+        pivot too LOW  (>3%)  n=11   +6.88pp return,  drawdown -11.4%,  1 bar earlier
+        accurate              n=71   +0.30pp
+        pivot too HIGH (>3%)  n=12  -12.89pp return,  drawdown -17.6%,  6 bars LATE
+    The loss is strongly asymmetric - quoting above the real buy point means chasing an
+    extended move, quoting below means entering slightly early at a better price. Symmetric
+    price error is therefore the wrong objective.
+
+    The IBD pivot is the highest swing high 51% of the time and the second-highest 48%, and
+    nothing separates them. So when those two are more than `gap`% apart - i.e. the coin
+    flip is expensive - take the LOWER one; otherwise keep the max.
+    """
+    anchor = "                    _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop"
+    if anchor not in src:
+        raise RuntimeError("pivot_conservative anchor not found")
+    new = ("                    _c = sorted([pp for (bb, pp) in aHP_list\n"
+           "                                 if bStart is not None and bStart <= bb < _e], reverse=True)\n"
+           "                    _rawmax = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop\n"
+           "                    if len(_c) > 1 and _c[0] > 0 and (_c[0] - _c[1]) / _c[0] * 100.0 > "
+           f"{gap}:\n"
+           "                        _bp = float(_c[1])\n"
+           "                    else:\n"
+           "                        _bp = _rawmax")
+    return src.replace(anchor, new, 1)
+
+
+def _apply_pivot_blend(src, mode):
+    """Estimate the base pivot from the top swing highs instead of taking the maximum.
+
+    Measured over 1320 candidate swing highs in 119 bases, the IBD pivot is the highest
+    swing high 51% of the time and the SECOND highest 48% - a near coin-flip. Conditional on
+    rank 1-3, no feature separates them: volume-above AUC 0.408, volume-at 0.477, touches
+    0.427, recency 0.494, upper-wick rejection 0.479 - all chance. The volume signal that
+    looked strong unconditionally (AUC 0.871) was purely a proxy for height.
+
+    If the choice is irreducible, a blend beats a rule: it minimises expected error rather
+    than being exactly right half the time and badly wrong the other half.
+    """
+    anchor = "                    _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop"
+    if anchor not in src:
+        raise RuntimeError("pivot_blend anchor not found")
+    pick = {
+        'max':     "float(max(_c))",
+        'rank2':   "float(sorted(_c, reverse=True)[1]) if len(_c) > 1 else float(max(_c))",
+        'mean2':   "float(np.mean(sorted(_c, reverse=True)[:2]))",
+        'mean3':   "float(np.mean(sorted(_c, reverse=True)[:3]))",
+        'median3': "float(np.median(sorted(_c, reverse=True)[:3]))",
+        'wmean2':  "float(0.6 * sorted(_c, reverse=True)[0] + 0.4 * sorted(_c, reverse=True)[1]) if len(_c) > 1 else float(max(_c))",
+    }[mode]
+    new = ("                    _c = [pp for (bb, pp) in aHP_list\n"
+           "                          if bStart is not None and bStart <= bb < _e]\n"
+           "                    if _c:\n"
+           f"                        _bp = {pick}\n"
+           "                    else:\n"
+           "                        _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop")
+    return src.replace(anchor, new, 1)
+
+
+def _apply_handle_candidate(src, lo, hi, pick):
+    """Find the handle high as a SWING HIGH matching the ground-truth signature.
+
+    Reverse-engineered from IBD's own Pivot Price + handle depth (n=41): the handle high
+    sits at p25 0.920 / median 0.950 / p75 0.965 of the base high, and forms after the cup's
+    low. The scanner instead takes the max of a trailing 15-bar window, which is a different
+    object - it can land anywhere and is why gating it by that ratio fails.
+
+    This replaces the window max with a candidate search over confirmed swing highs in the
+    band, taking either the most recent or the highest.
+    """
+    anchor = "                H12 = np.max(highs[w12_start:end_h_idx + 1]) if end_h_idx >= w12_start else highs[i]"
+    if anchor not in src:
+        raise RuntimeError("handle_candidate anchor not found")
+    new = ("                _bh_e = i + 1 - 8\n"
+           "                _bh = float(np.max(highs[bStart:_bh_e])) if (bStart is not None and _bh_e > bStart) else bTop\n"
+           "                _loOff = int(np.argmin(lows[bStart:i + 1])) if (bStart is not None and i > bStart) else 0\n"
+           "                _cands = [(bb, pp) for (bb, pp) in aHP_list\n"
+           "                          if bStart is not None and bStart + _loOff < bb <= end_h_idx\n"
+           f"                          and _bh and {lo} <= pp / _bh <= {hi}]\n"
+           "                if _cands:\n"
+           + ("                    H12 = float(_cands[0][1])\n" if pick == 'recent'
+              else "                    H12 = float(max(pp for _, pp in _cands))\n") +
+           "                    w12_start = min(bb for bb, _ in _cands)\n"
+           "                else:\n"
+           "                    H12 = np.max(highs[w12_start:end_h_idx + 1]) if end_h_idx >= w12_start else highs[i]")
+    return src.replace(anchor, new, 1)
+
+
 def _apply_handle_vs_basehigh(src, lo, hi):
     """Gate the handle high against the CORRECTED base high, not the ratcheted bTop.
 
@@ -233,6 +552,16 @@ def _apply_bo_pivot_fix(src, lag=8):
            "                    if bStart is not None and _be > bStart:\n"
            "                        boPivot = float(np.max(highs[bStart:_be]))")
     return src.replace(anchor, new, 1)
+
+
+def _apply_old_pivot(src):
+    """Restore the pre-session pivot (ratcheted bTop x 0.975) for exact A/B comparison."""
+    a = ("                    _e = i + 1 - 8\n"
+         "                    _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop\n"
+         "                    pivRef = _bp if _bp else bTop")
+    if a not in src:
+        raise RuntimeError("old_pivot anchor not found")
+    return src.replace(a, "                    pivRef = bTop * 0.975 if bTop else bTop", 1)
 
 
 def _apply_base_pivot_swing(src, adj):
@@ -631,6 +960,40 @@ class FastEval:
             out[f"{row['Symbol']}::{idx}"] = d.strftime('%Y-%m-%d')
         return out
 
+    def formed_window(self, overrides=None, back=20, fwd=5, label=None):
+        """Credit the pattern if it is identified anywhere in [event-back, event+fwd].
+
+        IBD's Event Date is the BREAKOUT - the day the base finishes, not the day it forms.
+        A scanner that names the pattern while it is still forming is behaving correctly,
+        and on a live scan that is the only time the call is actionable. Scoring solely at
+        event+5 also samples at the least stable moment: 9 of 15 lost labels flip into
+        Cup+Handle on the breakout bar, when the trailing window spans the thrust.
+        """
+        scan = self._load_scanner(overrides)
+        n = ex = br = 0
+        for key, sym, btype in self._events:
+            n += 1
+            ed = self._truth_dates.get(key)
+            if not ed:
+                continue
+            try:
+                res = scan(sym, key)
+            except Exception:
+                res = None
+            if not res or not res.get('history'):
+                continue
+            h = res['history']
+            ie = next((k for k, st in enumerate(h) if st['date'] == ed), None)
+            if ie is None:
+                ie = max((k for k, st in enumerate(h) if st['date'] <= ed), default=None)
+            if ie is None:
+                continue
+            names = {h[k]['pName'] for k in range(max(0, ie - back), min(len(h), ie + fwd + 1))
+                     if h[k]['pOn']}
+            ex += bool(names & EXACT_NAME_MAP.get(btype, set()))
+            br += bool(names & BROAD_NAME_MAP.get(btype, set()))
+        return {'label': label or f'window -{back}..+{fwd}', 'n': n, 'exact': ex, 'broad': br}
+
     def lead_time(self, overrides=None, lead=0, band=15.0, label=None):
         """Score the PIVOT as it stood `lead` bars BEFORE IBD's breakout date.
 
@@ -751,10 +1114,31 @@ class FastEval:
                 if pd.notna(row.get('Pivot Price'))}
 
     # ---------------------------------------------------------------- loading
+    def _cache_is_fresh(self):
+        """True when the window cache is newer than every ticker parquet feeding it."""
+        try:
+            cache_mtime = CACHE_PATH.stat().st_mtime
+            newest = max((p.stat().st_mtime for p in (ROOT / "ticker_cache").glob("*_1d.parquet")),
+                         default=0)
+            csv = ROOT / "IBD" / "Breakaway Gap.csv"
+            if csv.exists():
+                newest = max(newest, csv.stat().st_mtime)
+            if newest > cache_mtime:
+                if self.verbose:
+                    print("[fast_eval] ticker data is newer than the window cache - rebuilding")
+                return False
+            return True
+        except Exception:
+            return False
+
     def _load_events(self):
         # Slicing 177 windows means opening 177 parquets, some with decades of history.
         # Under a process pool every worker would repeat that, so cache the sliced result.
-        if CACHE_PATH.exists():
+        # The cache must not outlive the data it was sliced from. update_ticker_cache.py
+        # rewrites the parquets in place, and a stale pickle silently scores every run
+        # against old bars - which once produced a two-hour-old baseline that disagreed with
+        # evaluate_breakaway_gap.py by a full event. Compare mtimes and rebuild if older.
+        if CACHE_PATH.exists() and self._cache_is_fresh():
             try:
                 with open(CACHE_PATH, 'rb') as f:
                     blob = pickle.load(f)
@@ -938,6 +1322,15 @@ class FastEval:
         'pivref_adj':      (r"pivRef = _bp(?: \* [0-9.]+)? if _bp else bTop",
                             "pivRef = _bp * {v} if _bp else bTop"),
         'pivref_lag':      (r"_e = i \+ 1 - \d+", "_e = i + 1 - {v}"),
+        'pivLen':          (r"pivLen = \d+", "pivLen = {v}"),
+        'pivLag':          (r"pivLag = \d+", "pivLag = {v}"),
+        'bdF':             (r"bdF = [0-9.]+", "bdF = {v}"),
+        'bLenB':           (r"bLenB = \d+", "bLenB = {v}"),
+        'L103_bars':       (r"w103_start = max\(0, i - \d+ \+ 1\)", "w103_start = max(0, i - {v} + 1)"),
+        'H65_bars':        (r"w65_start = max\(0, shift_idx - \d+ \+ 1\)", "w65_start = max(0, shift_idx - {v} + 1)"),
+        'newbase_npiv':    (r"if len\(aHP_list\) >= \d+ and i >= pivLag", "if len(aHP_list) >= {v} and i >= pivLag"),
+        'cupMid_frac':     (r"cupMid = bLow \+ \(bTop - bLow\) \* [0-9.]+", "cupMid = bLow + (bTop - bLow) * {v}"),
+        'postbo_win':      (r"barsSBO is not None and barsSBO <= \d+", "barsSBO is not None and barsSBO <= {v}"),
         'uptrend_bars':    (r"w103_start = max\(0, i - \d+ \+ 1\)",
                             "w103_start = max(0, i - {v} + 1)"),
         'uptrend_ratio':   (r"lUp = \(L103 \* [0-9.]+ <= piv_h\)",
@@ -953,8 +1346,22 @@ class FastEval:
         uphalf = overrides.pop('handle_uphalf', None)
         uphalf_floor = overrides.pop('handle_uphalf_floor', None)
         bo_orig = overrides.pop('bo_on_orig', False)
+        indep = overrides.pop('independent', False)
+        multi = overrides.pop('multilabel', False)
+        dbclose = overrides.pop('db_close_match', None)
+        dbprio = overrides.pop('db_priority', False)
+        atight = overrides.pop('asc_tight', None)
+        easc = overrides.pop('enable_asc', False)
+        lprom = overrides.pop('label_promote', None)
+        llag = overrides.pop('label_lag', None)
+        lstab = overrides.pop('label_stability', None)
+        secfld = overrides.pop('second_field', None)
+        cons = overrides.pop('pivot_conservative', None)
+        blend = overrides.pop('pivot_blend', None)
+        hcand = overrides.pop('handle_candidate', None)
         hvb = overrides.pop('handle_vs_basehigh', None)
         bofix = overrides.pop('bo_pivot_fix', None)
+        oldpiv = overrides.pop('old_pivot', False)
         bpswing = overrides.pop('base_pivot_swing', None)
         bpmax = overrides.pop('base_pivot_max', None)
         bplag = overrides.pop('base_pivot_lag', 0)
@@ -979,10 +1386,38 @@ class FastEval:
         cf_pos_hi = overrides.pop('cf_pos_hi', 0.75)
         cf_rec = overrides.pop('cf_rec', 0.60)
         src = self._src
+        if indep:
+            src = _apply_independent(src)
+        if multi:
+            src = _apply_multilabel(src)
+        if dbclose is not None:
+            src = _apply_db_close_match(src, *dbclose)
+        if dbprio:
+            src = _apply_db_priority(src)
+        if atight is not None:
+            src = _apply_asc_tight(src, *atight)
+        if easc:
+            src = _apply_enable_asc(src)
+        if lprom is not None:
+            src = _apply_label_promote(src, lprom[0], lprom[1])
+        if llag is not None:
+            src = _apply_label_lag(src, llag)
+        if lstab is not None:
+            src = _apply_label_stability(src, lstab[0], lstab[1])
+        if secfld is not None:
+            src = _apply_second_field(src, secfld)
+        if cons is not None:
+            src = _apply_pivot_conservative(src, cons)
+        if blend is not None:
+            src = _apply_pivot_blend(src, blend)
+        if hcand is not None:
+            src = _apply_handle_candidate(src, hcand[0], hcand[1], hcand[2])
         if hvb is not None:
             src = _apply_handle_vs_basehigh(src, hvb[0], hvb[1])
         if bofix is not None:
             src = _apply_bo_pivot_fix(src, bofix)
+        if oldpiv:
+            src = _apply_old_pivot(src)
         if bpswing is not None:
             src = _apply_base_pivot_swing(src, bpswing)
         if bpmax is not None:
