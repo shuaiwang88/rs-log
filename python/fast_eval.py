@@ -188,6 +188,27 @@ def _apply_ratchet_cap(src, cap):
                           f"and (origBTop is None or highs[i] <= origBTop * {cap}):", 1)
 
 
+def _apply_handle_vs_basehigh(src, lo, hi):
+    """Gate the handle high against the CORRECTED base high, not the ratcheted bTop.
+
+    Reverse-engineered from the ground truth's own Pivot Price + handle depth columns
+    (n=41 of 46 Cup With Handle events), the handle high sits at:
+        min 0.635  p25 0.920  median 0.950  p75 0.965  max 0.997   of the base high
+    Only 1 of 41 handles forms AT the cup high - a handle is a swing high a few percent
+    BELOW it. The scanner's only bound is `H12 < bTop * 1.02`, and because bTop runs ~5%
+    under the true base high that bound has been landing near 0.967 by accident, with no
+    lower bound at all.
+    """
+    anchor = "                if inTop and depOk_h and volOk_h and slopeOk_h and H12 < bTop * 1.02:"
+    if anchor not in src:
+        raise RuntimeError("handle_vs_basehigh anchor not found")
+    pre = ("                _bh_e = i + 1 - 8\n"
+           "                _bh = float(np.max(highs[bStart:_bh_e])) if (bStart is not None and _bh_e > bStart) else bTop\n"
+           f"                hiOk = bool(_bh and {lo} <= H12 / _bh <= {hi})\n")
+    new = "                if inTop and depOk_h and volOk_h and slopeOk_h and hiOk:"
+    return src.replace(anchor, pre + new, 1)
+
+
 def _apply_bo_pivot_fix(src, lag=8):
     """Latch the post-breakout pivot off the base high too, not the stale ratcheted bTop.
 
@@ -932,6 +953,7 @@ class FastEval:
         uphalf = overrides.pop('handle_uphalf', None)
         uphalf_floor = overrides.pop('handle_uphalf_floor', None)
         bo_orig = overrides.pop('bo_on_orig', False)
+        hvb = overrides.pop('handle_vs_basehigh', None)
         bofix = overrides.pop('bo_pivot_fix', None)
         bpswing = overrides.pop('base_pivot_swing', None)
         bpmax = overrides.pop('base_pivot_max', None)
@@ -957,6 +979,8 @@ class FastEval:
         cf_pos_hi = overrides.pop('cf_pos_hi', 0.75)
         cf_rec = overrides.pop('cf_rec', 0.60)
         src = self._src
+        if hvb is not None:
+            src = _apply_handle_vs_basehigh(src, hvb[0], hvb[1])
         if bofix is not None:
             src = _apply_bo_pivot_fix(src, bofix)
         if bpswing is not None:
