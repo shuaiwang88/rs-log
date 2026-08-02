@@ -25,8 +25,16 @@ sys.path.insert(0, str(ROOT / "python"))
 from fast_eval import FastEval  # noqa: E402
 
 
-def load(sym, asof, pad=6):
-    """Frame trimmed to `asof` (+pad bars, matching how fast_eval builds event windows)."""
+def load(sym, asof, pad=1):
+    """Frame trimmed to `asof`, plus `pad` bars.
+
+    pad=1 (ending ON `asof`) is what a live scan sees and is the ONLY honest setting for
+    checking a hand-supplied progression. fast_eval builds its benchmark windows with pad=6
+    so breakout-window metrics have bars to measure into; borrowing that here leaks the
+    future - locate_handle counts `min_age` back from the last bar, so five extra bars slide
+    the handle search forward and it picks a different swing high. That artifact made LASR
+    @2024-08-30 read 13.16 (9.5% off) when the real as-of answer is 12.02, exact.
+    """
     fp = ROOT / "ticker_cache" / f"{sym}_1d.parquet"
     if not fp.exists():
         raise SystemExit(f"no parquet for {sym}")
@@ -57,7 +65,7 @@ def show(res, asof):
         print("  scanner returned None")
         return
     st = (res.get('history') or [None])[-1]
-    print(f"  primary : {res.get('patternName')!r:22} pivot {res.get('pivot')}")
+    print(f"  primary : {res.get('pattern_name')!r:22} pivot {res.get('pivot')}")
     if st:
         print(f"  state   : pName={st.get('pName')!r} bCount={st.get('bCount')} "
               f"bTop={st.get('bTop')} bLow={st.get('bLow')}")
@@ -86,7 +94,7 @@ def trace(sym, lo, hi, overrides=None):
             print(f"{d:<12}ERR {exc}")
             continue
         st = (res.get('history') or [None])[-1] if res else None
-        name = (res.get('patternName') if res else None) or '-'
+        name = (res.get('pattern_name') if res else None) or '-'
         piv = res.get('pivot') if res else None
         bc = st.get('bCount') if st else None
         bt = st.get('bTop') if st else None

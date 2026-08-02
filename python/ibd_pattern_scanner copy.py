@@ -286,8 +286,8 @@ def detect_vcp(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray,
 
 
 def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
-                           bLenB=325, max_bases=4, min_bars=20, dedupe_pct=1.5,
-                           seed_lookback=40):
+                           bLenB=325, max_bases=6, min_bars=20, dedupe_pct=0.5,
+                           seed_lookback=25, seed_tol=0.03):
     """Track several candidate bases at once and return those still alive on the last bar.
 
     The scanner carries exactly ONE base, so when a tighter structure forms inside or after
@@ -320,10 +320,23 @@ def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
         # ONE base he draws; the alternatives MarketSmith also shows sit below it. Measured
         # against the supplied progressions, 65 bars misses FTNT's true left high entirely
         # and 40 recovers PBI, FTNT, GIII and CLMT - all four base pivots.
+        #
+        # `seed_tol` then lets a left top sit slightly BELOW the window max, because
+        # MarketSmith takes such tops: LASR's 7/17/2024 left high (13.16) is under 5/20's
+        # 13.44, and its base is nonetheless a textbook Cup+Handle (depth 25.5% vs IBD's
+        # 26, handle 5.7% vs 6, handle pivot 8/21 = 12.02 exactly).
+        # Tuned jointly with dedupe_pct and max_bases over the 172 events. Primary label and
+        # layered broad are both unchanged (90/126 and 152); the buy point improves - within
+        # 1% 132 -> 139, within 2% 144 -> 146 - and seven events move to the truth pivot
+        # EXACTLY (URGN 8.07%->0, ELTX 7.49%->0, CALY 6.94%->0, SBCF 5.93%->0, PESI, GOLF,
+        # DHI). Landing to the cent on seven bases is what finding the right frame looks
+        # like; a threshold that merely drifted would not. Cost: readings per event 1.9 ->
+        # 2.2. The tighter dedupe (1.5 -> 0.5) is what keeps DLO's 14.49 from being folded
+        # into a neighbouring base once more candidates exist.
         if conf >= 0 and conf in pivot_highs:
             ph = highs[conf]
             w0 = max(0, conf - seed_lookback)
-            if conf > w0 and ph >= np.max(highs[w0:conf]):
+            if conf > w0 and ph >= np.max(highs[w0:conf]) * (1.0 - seed_tol):
                 if not any(abs(ph - b['top']) / max(b['top'], 1e-9) * 100.0 <= dedupe_pct
                            for b in live):
                     live.append({'start': conf, 'top': float(ph),
