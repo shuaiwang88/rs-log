@@ -34,7 +34,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from trend_following_backtest import parabolic_sar
+from trend_following_backtest import parabolic_sar, ema
 
 warnings.filterwarnings("ignore")
 
@@ -53,14 +53,20 @@ BUY_STRATEGIES = [
     "Pivot Breakout", "Upside Reversal", "Shakeout", "Volume Dry-Up",
     "MA Touch", "Pocket Pivot", "RS New High", "SMA50 Bounce",
 ]
-# First 9 are fixed-horizon (forced closed within 60 bars of entry). The last 5 are
-# trend-following-style exits ported from trend_following_backtest.py's stop/trail
-# library, run with NO time cap so a genuine breakout can ride a trend instead of being
-# force-closed at bar 60 — see apply_exit_rules().
+# First 9 are fixed-horizon (forced closed within 60 bars of entry). Everything after is
+# uncapped so a genuine breakout can ride a trend instead of being force-closed at bar 60
+# — see apply_exit_rules(). Next 5 are trend-following-style exits ported from
+# trend_following_backtest.py's stop/trail library. Last 9 are IBD sell-discipline rules
+# (hard %-stop alone, combined %-stop + %-profit-take, RS-line deterioration from
+# pine/drw_relative_strength_all.pine, batch-sell-in-thirds at key moving averages with
+# add-back).
 EXIT_RULES = ["stop_loss", "trail_2atr", "trail_3atr", "time_20", "time_40",
               "time_60", "target_2r", "target_3r", "target_5r",
               "chandelier_uncapped", "parabolic_sar", "breakeven_trail",
-              "tighten_after_30", "scale_out_369"]
+              "tighten_after_30", "scale_out_369",
+              "stop_6pct", "stop_8pct",
+              "ibd_stop6_tp15", "ibd_stop6_tp20", "ibd_stop8_tp15", "ibd_stop8_tp20",
+              "rs_quicksand_exit", "rs_breakdown_exit", "scale_ma_1_3"]
 
 # Pattern groups used for slicing the summary
 PATTERN_GROUPS = {
@@ -120,11 +126,19 @@ def find_pivots(highs, lows, left=5, right=5):
 # Trade simulation
 # ══════════════════════════════════════════════════════════════════════════════
 
-def apply_exit_rules(highs, lows, closes, signal_bar, entry_price, base_low, atr, sar=None):
+def apply_exit_rules(highs, lows, closes, signal_bar, entry_price, base_low, atr, sar=None,
+                      rs_line=None, rs_ema21=None, rs_ema34=None, rs_ema50=None,
+                      price_ema21=None, price_sma50=None, price_sma200=None):
     """Apply every exit rule from a signal bar; return exit results keyed by rule.
 
     sar: optional precomputed Wilder parabolic-SAR array (see parabolic_sar()), used by
     the 'parabolic_sar' exit. Computed once per ticker by the caller, not per trade.
+
+    rs_line/rs_ema21/rs_ema34/rs_ema50: RS line (close/SPY close) and its Quick/QuickSand/
+    Grateful Dead EMAs (pine/drw_relative_strength_all.pine), used by the 'rs_quicksand_exit'
+    and 'rs_breakdown_exit' rules.
+
+    price_ema21/price_sma50/price_sma200: price moving averages used by 'scale_ma_1_3'.
     """
     n = len(closes)
     results = {}
@@ -264,6 +278,97 @@ def apply_exit_rules(highs, lows, closes, signal_bar, entry_price, base_low, atr
             realized += remaining * (closes[last_bar] - entry_price) / entry_price * 100.0
         results["scale_out_369"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": realized}
 
+    # ── IBD hard stop-loss: sell no matter what if the stock falls 6% / 8% below entry ──
+    for pct, key in ((0.06, "stop_6pct"), (0.08, "stop_8pct")):
+        stop_px = entry_price * (1 - pct)
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        for bar in range(signal_bar + 1, n):
+            if lows[bar] <= stop_px:
+                exit_bar, exit_price = bar, stop_px
+                break
+        ret = (exit_price - entry_price) / entry_price * 100.0
+        results[key] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # ── IBD classic sell discipline: cut losses at 6%/8%, take profit at 15%/20% —
+    # whichever hits first. A profit target with no attached stop and no time cap would
+    # just be "wait indefinitely for +N%", which inflates win rate in a backtest (nothing
+    # ever gets marked a loser except tickers that ran out of data) without being a real
+    # tradeable rule — pairing it with the stop is both what IBD's rule actually is and
+    # what avoids that artifact. On a bar where both thresholds are crossed, the stop wins
+    # (conservative — we don't know the intrabar sequence).
+    for stop_pct, tp_pct, key in ((0.06, 0.15, "ibd_stop6_tp15"), (0.06, 0.20, "ibd_stop6_tp20"),
+                                   (0.08, 0.15, "ibd_stop8_tp15"), (0.08, 0.20, "ibd_stop8_tp20")):
+        stop_px = entry_price * (1 - stop_pct)
+        target_px = entry_price * (1 + tp_pct)
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        for bar in range(signal_bar + 1, n):
+            if lows[bar] <= stop_px:
+                exit_bar, exit_price = bar, stop_px
+                break
+            if highs[bar] >= target_px:
+                exit_bar, exit_price = bar, target_px
+                break
+        ret = (exit_price - entry_price) / entry_price * 100.0
+        results[key] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # ── RS line deterioration (pine/drw_relative_strength_all.pine Quick/QuickSand/
+    # Grateful Dead EMAs of the RS line) ──
+    if rs_line is not None and rs_ema34 is not None:
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        for bar in range(max(signal_bar + 1, 1), n):
+            if rs_line[bar - 1] >= rs_ema34[bar - 1] and rs_line[bar] < rs_ema34[bar]:
+                exit_bar, exit_price = bar, closes[bar]
+                break
+        ret = (exit_price - entry_price) / entry_price * 100.0
+        results["rs_quicksand_exit"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    if rs_line is not None and rs_ema21 is not None and rs_ema34 is not None and rs_ema50 is not None:
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        for bar in range(signal_bar + 1, n):
+            if rs_line[bar] < rs_ema21[bar] and rs_line[bar] < rs_ema34[bar] and rs_line[bar] < rs_ema50[bar]:
+                exit_bar, exit_price = bar, closes[bar]
+                break
+        ret = (exit_price - entry_price) / entry_price * 100.0
+        results["rs_breakdown_exit"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # ── Batch sell in thirds as price breaks its own EMA21 / SMA50 / SMA200 (tightest to
+    # loosest), with one add-back per level if the average is reclaimed before the position
+    # is fully closed. Blended return weighted by 1/3 per lot, normalized against the
+    # original entry_price (same convention as scale_out_369). ──
+    if price_ema21 is not None and price_sma50 is not None and price_sma200 is not None:
+        levels = [price_ema21, price_sma50, price_sma200]
+        lot_active = [True, True, True]
+        lot_sold_once = [False, False, False]
+        lot_bought_back = [False, False, False]
+        lot_basis = [entry_price, entry_price, entry_price]
+        lot_frac = 1.0 / 3.0
+        realized = 0.0
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        fully_closed = False
+        for bar in range(signal_bar + 1, n):
+            for lvl in range(3):
+                ma = levels[lvl]
+                if bar >= len(ma) or np.isnan(ma[bar]):
+                    continue
+                if lot_active[lvl] and closes[bar] < ma[bar]:
+                    realized += lot_frac * (closes[bar] - lot_basis[lvl]) / entry_price * 100.0
+                    lot_active[lvl] = False
+                    lot_sold_once[lvl] = True
+                elif (not lot_active[lvl] and lot_sold_once[lvl] and not lot_bought_back[lvl]
+                      and closes[bar] > ma[bar]):
+                    lot_active[lvl] = True
+                    lot_basis[lvl] = closes[bar]
+                    lot_bought_back[lvl] = True
+            if not any(lot_active):
+                exit_bar, exit_price = bar, closes[bar]
+                fully_closed = True
+                break
+        if not fully_closed:
+            for lvl in range(3):
+                if lot_active[lvl]:
+                    realized += lot_frac * (closes[last_bar] - lot_basis[lvl]) / entry_price * 100.0
+        results["scale_ma_1_3"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": realized}
+
     return results
 
 
@@ -325,8 +430,22 @@ def process_ticker(args):
         atr14 = calculate_atr(highs, lows, closes, 14)
         sar = parabolic_sar(highs, lows)
         sma50 = sma50_series(closes)
+        sma200 = pd.Series(closes).rolling(200, min_periods=50).mean().values
         ema10 = pd.Series(closes).ewm(span=10, adjust=False).mean().values
         ema20 = pd.Series(closes).ewm(span=20, adjust=False).mean().values
+        ema21_px = ema(closes, 21)
+
+        # RS line (close / SPY close) and its Quick(21)/QuickSand(34)/Grateful Dead(50)
+        # EMAs — same lengths as pine/drw_relative_strength_all.pine's daily-timeframe
+        # quickLen/quickSandLen/gdLen (lines 156-158).
+        rs_line = rs_ema21 = rs_ema34 = rs_ema50 = None
+        if _SPY_CLOSE is not None:
+            spy_aligned = _SPY_CLOSE.reindex(df.index[-n:]).ffill().bfill().values
+            if not np.any(np.isnan(spy_aligned)) and np.all(spy_aligned > 0):
+                rs_line = closes / spy_aligned
+                rs_ema21 = ema(rs_line, 21)
+                rs_ema34 = ema(rs_line, 34)
+                rs_ema50 = ema(rs_line, 50)
 
         # ── Segment history into base runs ──
         bases = []  # dicts with start/end/pattern/pivot/bLow/boBar etc.
@@ -452,7 +571,9 @@ def process_ticker(args):
                 signals["Composite Score"] = real_sigs[best]
 
             for strategy, (sig_bar, entry_price) in signals.items():
-                exit_results = apply_exit_rules(highs, lows, closes, sig_bar, entry_price, bLow, atr14, sar)
+                exit_results = apply_exit_rules(highs, lows, closes, sig_bar, entry_price, bLow, atr14, sar,
+                                                 rs_line, rs_ema21, rs_ema34, rs_ema50,
+                                                 ema21_px, sma50, sma200)
                 for exit_rule, ex in exit_results.items():
                     ret_raw = ex["ret"]
                     ret = ret_raw * ps
@@ -478,7 +599,9 @@ def process_ticker(args):
                 prices = [signals[s][1] for s in combo]
                 ei = bars.index(min(bars))
                 combo_name = "+".join(combo)
-                exit_results = apply_exit_rules(highs, lows, closes, bars[ei], prices[ei], bLow, atr14, sar)
+                exit_results = apply_exit_rules(highs, lows, closes, bars[ei], prices[ei], bLow, atr14, sar,
+                                                 rs_line, rs_ema21, rs_ema34, rs_ema50,
+                                                 ema21_px, sma50, sma200)
                 for exit_rule, ex in exit_results.items():
                     ret_raw = ex["ret"]
                     ret = ret_raw * ps
@@ -505,17 +628,19 @@ def process_ticker(args):
 _scan = None
 _MIN_PRICE = DEFAULT_MIN_PRICE
 _MIN_VOL = DEFAULT_MIN_VOL_50
+_SPY_CLOSE = None  # Series, Date-indexed; used to build the RS line (close / SPY close)
 
 
-def _init_worker(min_price, min_vol):
+def _init_worker(min_price, min_vol, spy_close):
     """Each worker loads its own copy of the patched scanner. scan_single_ticker is
     created via exec() at runtime, so it has no importable __module__/__qualname__ and
     cannot be pickled through ProcessPoolExecutor's initargs (fails under the 'spawn'
     start method, e.g. on macOS) — loading it locally in the worker avoids that."""
-    global _scan, _MIN_PRICE, _MIN_VOL
+    global _scan, _MIN_PRICE, _MIN_VOL, _SPY_CLOSE
     _scan, _ = load_patched_scanner()
     _MIN_PRICE = min_price
     _MIN_VOL = min_vol
+    _SPY_CLOSE = spy_close
 
 
 def run_universe_backtest(args):
@@ -524,6 +649,16 @@ def run_universe_backtest(args):
     _MIN_VOL = args.min_vol
 
     t0 = time.time()
+
+    # SPY close series for the RS line (close / SPY close), same source/alignment pattern
+    # as full_backtest.py's scan_ticker_for_bases(df, spy_close_series).
+    spy_close = None
+    spy_path = TICKER_CACHE_DIR / "SPY_1d.parquet"
+    if spy_path.exists():
+        try:
+            spy_close = pd.read_parquet(spy_path)["Close"]
+        except Exception:
+            spy_close = None
 
     files = sorted(glob.glob(str(TICKER_CACHE_DIR / "*_1d.parquet")))
     tasks = []
@@ -542,7 +677,7 @@ def run_universe_backtest(args):
     all_trades = []
     workers = args.workers if args.workers > 0 else None
     with ProcessPoolExecutor(max_workers=workers, initializer=_init_worker,
-                             initargs=(args.min_price, args.min_vol)) as ex:
+                             initargs=(args.min_price, args.min_vol, spy_close)) as ex:
         futs = {ex.submit(process_ticker, task): task[0] for task in tasks}
         done = 0
         for fut in as_completed(futs):
@@ -602,7 +737,8 @@ def run_universe_backtest(args):
             if len(sdf) < 5:
                 continue
             for exit_r in ("stop_loss", "trail_2atr", "target_3r",
-                           "chandelier_uncapped", "parabolic_sar", "scale_out_369"):
+                           "chandelier_uncapped", "parabolic_sar", "scale_out_369",
+                           "stop_8pct", "ibd_stop8_tp20", "rs_quicksand_exit", "scale_ma_1_3"):
                 es = sdf[sdf["exit_rule"] == exit_r]
                 if len(es) < 3:
                     continue
