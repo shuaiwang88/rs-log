@@ -1344,8 +1344,17 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 _nm, _pv = 'Cup+Handle', _hh
             if not _nm or not _pv:
                 continue
-            if any(abs(p['pivot'] - _pv) / max(_pv, 1e-9) * 100.0 <= PIVOT_SAME_PCT
-                   for p in patterns):
+            # Same-pivot collapse as above, but FOLD the name in rather than dropping it.
+            # This branch used to `continue`, which silently threw away a reading that had
+            # already been computed: a Cup+Handle whose handle high sits within 1% of the
+            # base top would vanish entirely (CLMT, SOLV both locate a valid handle and then
+            # lose the label here). Recording it changes no pivot and adds no detection - it
+            # only stops us discarding a name we already know.
+            _dup = next((p for p in patterns
+                         if abs(p['pivot'] - _pv) / max(_pv, 1e-9) * 100.0 <= PIVOT_SAME_PCT), None)
+            if _dup is not None:
+                if _nm != _dup['name'] and _nm not in _dup['also_reads_as']:
+                    _dup['also_reads_as'].append(_nm)
                 continue
             patterns.append({
                 'name': _nm,

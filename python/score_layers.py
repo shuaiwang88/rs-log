@@ -12,6 +12,15 @@ Metrics:
     layered exact/broad     ANY reading matches (this is the number the user reads)
     pivot within N%         best reading's buy point vs the ground truth Pivot Price
     recovered               events with no primary pattern that a reading rescues
+    precision/recall        per pattern name, over the reading set
+
+Precision matters because every other metric here is ONE-SIDED. `layered broad` counts an
+event as correct if ANY reading matches, so emitting more readings can only raise it - a
+detector that named every pattern on every base would score 100%. The same is true of the
+pivot bands, which take the best reading. Optimising those alone silently rewards
+over-claiming, and it hid a real problem: Cup+Handle is claimed on 85 of 172 events when
+only 46 are truly Cup With Handle (precision 36.5%, recall 67.4%). Any change that adds
+handle detections has to be read against this column, not just the broad count.
 
 Usage:
     python3 python/score_layers.py                  # baseline
@@ -50,6 +59,11 @@ def score(fe, patch=None, label=''):
     errs = []
     recovered = []
     no_read = []
+    # name -> [true positives, false positives, false negatives] over the reading set
+    pr = {}
+    TRUTH_OF = {'Cup+Handle': 'Cup With Handle', 'Dbl Bottom': 'Double Bottom',
+                'Cup': 'Cup Without Handle', 'Flat Base': 'Flat Base',
+                'Consolidation': 'Consolidation'}
     for key, sym, btype in fe._events:
         try:
             res = scan(sym, key)
@@ -77,6 +91,13 @@ def score(fe, patch=None, label=''):
         if not prim_on and not pats:
             no_read.append((sym, btype))
 
+        for nm, tname in TRUTH_OF.items():
+            d = pr.setdefault(nm, [0, 0, 0])
+            claim, is_true = nm in names, (btype == tname)
+            d[0] += claim and is_true
+            d[1] += claim and not is_true
+            d[2] += (not claim) and is_true
+
         truth = fe._truth_pivots.get(key)
         if truth and res:
             cands = [p['pivot'] for p in pats]
@@ -96,7 +117,7 @@ def score(fe, patch=None, label=''):
         'l_exact': l_exact, 'l_broad': l_broad,
         'within': within, 'have_truth': have_truth,
         'median_err': float(np.median(errs)) if errs else None,
-        'recovered': recovered, 'no_read': no_read,
+        'recovered': recovered, 'no_read': no_read, 'pr': pr,
     }
 
 
@@ -110,6 +131,14 @@ def show(r):
     w = r['within']
     print(f"  best-reading pivot vs truth (n={h}): "
           f"<=1% {w[1]}  <=2% {w[2]}  <=3% {w[3]}  <=5% {w[5]}   median {r['median_err']:.2f}%")
+    print(f"  {'reading':<14}{'claimed':>8}{'truth':>7}{'TP':>5}{'FP':>5}{'FN':>5}"
+          f"{'prec':>8}{'recall':>8}{'F1':>7}")
+    for nm, (tp, fp, fn) in sorted(r['pr'].items(), key=lambda kv: -kv[1][1]):
+        p = tp / (tp + fp) if tp + fp else 0.0
+        rc = tp / (tp + fn) if tp + fn else 0.0
+        f1 = 200 * p * rc / (p + rc) if p + rc else 0.0
+        print(f"  {nm:<14}{tp + fp:>8}{tp + fn:>7}{tp:>5}{fp:>5}{fn:>5}"
+              f"{p * 100:>7.1f}%{rc * 100:>7.1f}%{f1:>7.1f}")
     if r['recovered']:
         print(f"  recovered by a reading (no primary pattern): {len(r['recovered'])}")
         for s, bt, det, ps in r['recovered']:
