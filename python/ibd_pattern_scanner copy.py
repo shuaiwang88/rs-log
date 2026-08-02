@@ -1378,6 +1378,49 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             latest_pivot = patterns[0]['pivot']
             latest_dist = patterns[0]['dist_pct']
 
+        # --- quote the base top, not a sub-structure level -----------------------------
+        # Cup+Handle and Double Bottom price off a level INSIDE the base (handle high,
+        # middle peak); Cup / Flat Base / Consolidation price off the base top. Cup+Handle
+        # is claimed on 85 of 172 events when only 46 are truly one - precision 36.5% - so
+        # two times in three the handle is invented, and an invented handle quotes a buy
+        # point BELOW the level price actually has to clear. That is the costly direction:
+        # a buy point too low reports a breakout that has not happened and takes the entry
+        # into overhead supply, where one too high only misses or delays the trade.
+        #
+        # So when the reported level is a sub-structure quote and a base-top reading is on
+        # offer, report the base top instead. Measured over all 171 events at four lead
+        # times (within 1% / quoted low by >3%):
+        #
+        #                   T-0        T-5       T-10       T-20
+        #   before      93 / 29    95 / 28    96 / 27    85 / 34
+        #   after       97 / 18   100 / 17    98 / 18    95 / 19
+        #
+        # Better on both axes at every lead time, and the dangerous quotes fall by ~35%
+        # throughout. It is not free: on events whose truth really IS Cup With Handle it
+        # costs 12 hits at T-0, 4 at T-10, 1 at T-20 - when a handle is real and well
+        # located the handle high is the buy point and the base top is a few percent late.
+        # The trade is deliberate, and the decay of that cost with lead time says most of
+        # the current handle advantage exists only on breakout day.
+        #
+        # A narrower version was tried and REJECTED: override only when the base top sits
+        # more than 12-25% above the handle quote, on the theory that a real handle is a
+        # shallow drift just under its base top (IBD caps handle depth near 15%) so a large
+        # gap means the two describe different bases. The geometry is sound and the rule
+        # still loses - +5 hits against +21 for the blanket version - because the good
+        # corrections are not all large-gap. The gap distribution had only been read off the
+        # failures, never off the successes.
+        #
+        # Labels are untouched: this moves `pivot`/`dist_pct` only, never pattern_name or
+        # pattern_code, so every label metric is identical by construction.
+        BASE_TOP_READINGS = ('Cup', 'Flat Base', 'Consolidation')
+        _prim_basetop = (latest['pOn'] and latest['pCode'] > 0
+                         and latest['pName'] in BASE_TOP_READINGS)
+        if not _prim_basetop:
+            _bt = next((p for p in patterns if p['name'] in BASE_TOP_READINGS), None)
+            if _bt is not None:
+                latest_pivot = _bt['pivot']
+                latest_dist = _bt['dist_pct']
+
         cons_pivot = amb_pct = cons_dist = None
         if latest['inBase'] and bStart is not None:
             # 8 bars: must match the lag used for pivRef above, so both read the same window.

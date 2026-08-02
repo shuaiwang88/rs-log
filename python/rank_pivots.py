@@ -131,6 +131,66 @@ def r_median(cs, e):
     ps = sorted(cs, key=lambda c: c['pivot'])
     return ps[len(ps) // 2]
 
+# --- base-top preference -------------------------------------------------------------
+# Cup+Handle and Double Bottom price off a level INSIDE the base (handle high, middle peak);
+# Cup / Flat Base / Consolidation price off the base top. Cup+Handle is claimed on 85 of 172
+# events when only 46 are true, so every spurious handle drags the quoted buy point below the
+# level price actually has to clear - which is the dangerous direction. The signed-error dump
+# shows the correct base-top reading sitting unused in the candidate list on CLFD (Cup@46.76
+# vs quoted 33.66), APOG (Flat Base@49.99 vs 37.43), SKM (Cup@23.80 vs 20.55), ORA and GOLF.
+BASETOP = {'Cup', 'Flat Base', 'Consolidation'}
+
+def r_basetop_first(cs, e):
+    """Prefer a base-top reading; fall back to the sub-structure ones only if there is none."""
+    bt = [c for c in cs if c['name'] in BASETOP]
+    return min(bt, key=lambda c: c['order']) if bt else min(cs, key=lambda c: c['order'])
+
+def r_basetop_highest(cs, e):
+    bt = [c for c in cs if c['name'] in BASETOP]
+    return max(bt or cs, key=lambda c: c['pivot'])
+
+def r_least_specific(cs, e):
+    """Inverse of r_specific: the widest structure wins, ties by lower pivot."""
+    return min(cs, key=lambda c: (-SPECIFICITY.get(c['name'], -1), c['pivot']))
+
+def r_head_or_basetop(cs, e):
+    """Keep the shipping pivot unless it is a sub-structure level and a base top is on offer.
+
+    The narrowest possible change: only the events where a handle/middle-peak quote is
+    overriding an available base top move at all.
+    """
+    if e['prim_on'] and e['prim_name'] in BASETOP:
+        return None
+    bt = [c for c in cs if c['name'] in BASETOP]
+    return min(bt, key=lambda c: c['order']) if bt else None
+
+
+def _mk_samebase(max_gap):
+    """Override only when the base top is far ABOVE the sub-structure quote.
+
+    The blanket override costs 12 true Cup+Handle hits at T-0, because when the handle is
+    real and well located the handle high IS the buy point and the base top is several
+    percent late. Splitting the two cases needs no fitted threshold, only IBD's own geometry:
+    a handle is a shallow drift just under the base top - depth typically 8-12%, and IBD
+    rejects one deeper than about 15%. So a base-top candidate sitting WITHIN ~15% of the
+    handle quote is the same base, and the handle is plausible. One sitting 30-40% higher is
+    not the same base at all - the "handle" was located on a small recent structure while the
+    real frame is the much larger base, which is precisely the over-claim that produces
+    dangerously low buy points (CLFD +39%, APOG +33%, SKM +16%).
+
+    Same-base cases are LEFT ALONE; only the different-base ones are corrected.
+    """
+    def f(cs, e):
+        if e['prim_on'] and e['prim_name'] in BASETOP:
+            return None
+        cur = e['head']
+        if not cur:
+            return None
+        bt = [c for c in cs if c['name'] in BASETOP and
+              (c['pivot'] - cur) / cur * 100.0 > max_gap]
+        return max(bt, key=lambda c: c['pivot']) if bt else None
+    return f
+
 
 RULES = [
     ('current (shipping)', r_current),
@@ -143,10 +203,22 @@ RULES = [
     ('primary else lowest', r_primary_else_lowest),
     ('newest base', r_newest_base),
     ('median pivot', r_median),
+    ('base-top first', r_basetop_first),
+    ('base-top highest', r_basetop_highest),
+    ('least specific', r_least_specific),
+    ('head, base-top override', r_head_or_basetop),
+    ('same-base gap >12%', _mk_samebase(12)),
+    ('same-base gap >15%', _mk_samebase(15)),
+    ('same-base gap >20%', _mk_samebase(20)),
+    ('same-base gap >25%', _mk_samebase(25)),
 ]
 
 
 def apply_rule(fn, events):
+    """Return SIGNED errors. The sign carries the risk: a buy point quoted below the truth
+    says price has cleared a level it has not, so the scanner calls a breakout into overhead
+    supply. Quoted high, the trade is merely missed. Judging these rules on |error| alone
+    would rate those two outcomes the same."""
     errs, picks = [], []
     for e in events:
         cs = e['reads']
@@ -157,7 +229,7 @@ def apply_rule(fn, events):
             v = c['pivot'] if c else e['head']
         if not v:
             continue
-        errs.append(abs(v - e['truth']) / e['truth'] * 100.0)
+        errs.append((v - e['truth']) / e['truth'] * 100.0)
         picks.append((e, v))
     return np.array(errs), picks
 
@@ -198,27 +270,27 @@ def main():
     print("within-1% counts; T-0 is breakout day (close leaks the answer), "
           "T-20 is where the number is actually used\n")
 
-    heads = f"  {'rule':<24}" + "".join(f"{f'T-{b}':>7}" for b in sorted(blob))
-    print(heads + f"{'  T-20 median':>14}")
-    base = {}
+    ks = sorted(blob)
+    print(f"  {'':<24}{'--- within 1% ---':^28}   {'-- quoted LOW by >3% --':^28}")
+    print(f"  {'rule':<24}" + "".join(f"{f'T-{b}':>7}" for b in ks)
+          + "   " + "".join(f"{f'T-{b}':>7}" for b in ks))
+    base, baselow = {}, {}
     for name, fn in RULES:
-        cells, med20 = [], None
-        for b in sorted(blob):
+        hits, lows = [], []
+        for b in ks:
             errs, _ = apply_rule(fn, blob[b])
-            n1 = int((errs <= 1).sum()) if len(errs) else 0
-            cells.append(n1)
-            if name.startswith('current'):
-                base[b] = n1
-            if b == max(blob):
-                med20 = np.median(errs) if len(errs) else float('nan')
-        line = f"  {name:<24}" + "".join(f"{c:>7}" for c in cells)
+            hits.append(int((np.abs(errs) <= 1).sum()) if len(errs) else 0)
+            lows.append(int((errs < -3).sum()) if len(errs) else 0)
+        if name.startswith('current'):
+            base, baselow = dict(zip(ks, hits)), dict(zip(ks, lows))
+        line = (f"  {name:<24}" + "".join(f"{c:>7}" for c in hits)
+                + "   " + "".join(f"{c:>7}" for c in lows))
         if not name.startswith('current'):
-            d = [cells[i] - base[b] for i, b in enumerate(sorted(blob))]
-            line += f"{med20:>9.2f}%   " + " ".join(f"{x:+d}" for x in d)
-        else:
-            line += f"{med20:>9.2f}%"
+            dh = sum(hits) - sum(base.values())
+            dl = sum(lows) - sum(baselow.values())
+            line += f"   hits {dh:+d}  danger {dl:+d}"
         print(line)
-    orow = [int((oracle(blob[b]) <= 1).sum()) for b in sorted(blob)]
+    orow = [int((np.abs(oracle(blob[b])) <= 1).sum()) for b in ks]
     print(f"  {'ORACLE (best possible)':<24}" + "".join(f"{c:>7}" for c in orow))
 
     if a.show:
@@ -244,34 +316,45 @@ if __name__ == '__main__':
 
 
 # ---------------------------------------------------------------- measured results
-# Scored across all 171 events at four lead times, within-1% counts (2026-08-02):
+# Within-1% counts over 171 events at four lead times, scored BEFORE the base-top override
+# was adopted, so `current` here is the old shipping rule (2026-08-02):
 #
-#   rule                        T-0    T-5   T-10   T-20
-#   current (shipping)           93     95     96     85
-#   highest pivot                87     89     88     83
-#   primary else lowest          80     86     91     82
-#   median pivot                 81     79     76     79
-#   newest base                  85     84     78     69
-#   lowest above close          100     74     63     62
-#   nearest to close            107     55     50     51
-#   lowest pivot                 58     47     47     47
-#   most specific                59     51     43     40
+#   rule                        T-0    T-5   T-10   T-20     quoted low by >3% (T-0/T-20)
+#   current (old)                93     95     96     85          29 / 34
+#   head, base-top override      97    100     98     95          18 / 19   <- ADOPTED
+#   base-top first               97    101     98     91          18 / 24
+#   highest pivot                87     89     88     83          14 / 12
+#   primary else lowest          80     86     91     82          49 / 41
+#   median pivot                 81     79     76     79          24 / 23
+#   newest base                  85     84     78     69          46 / 60
+#   lowest above close          100     74     63     62          22 / 73
+#   nearest to close            107     55     50     51          27 / 92
+#   lowest pivot                 58     47     47     47          88 / 96
+#   most specific                59     51     43     40          79 / 88
 #   ORACLE                      140    135    123    118
 #
-# NEGATIVE, and the useful kind. Two things this settles:
+# Three things this settles.
 #
-# 1. RE-RANKING IS A DEAD END. The shipping choice already beats all nine alternatives at
-#    every lead time. The 27-point oracle gap is real but no simple structural rule reaches
-#    it - the information that would separate the right candidate from the wrong one is not
-#    in {pivot, name, order}. Closing it needs a better LOCATOR, not a better chooser.
+# 1. THE ADOPTED RULE. Preferring a base-top reading over a sub-structure quote wins on both
+#    axes at every lead time and is now in the scanner, so `current` reproduces its row and
+#    `head, base-top override` scores +0. Rationale and costs are documented at the change
+#    site in the scanner.
 #
-# 2. "nearest to close" IS LEAKAGE, and it is the trap this table exists to catch. It gains
+# 2. PURE RE-RANKING IS OTHERWISE A DEAD END. Every remaining rule loses. The oracle gap that
+#    survives the override (98 vs 123 at T-10) is real but is not reachable from
+#    {pivot, name, order} - closing it needs a better LOCATOR, not a better chooser.
+#
+# 3. "nearest to close" IS LEAKAGE, and it is the trap this table exists to catch. It gains
 #    +14 on breakout day and loses 40-46 everywhere else, because the benchmark's event date
 #    is the breakout: on that bar the close sits just above the buy point by construction, so
-#    the rule is reading the label off the evaluation date. Scored only at T-0 it looks like
-#    the best idea of the session. Any future pivot rule must clear T-10/T-20 before it is
-#    believed.
+#    the rule is reading the answer off the evaluation date. Scored only at T-0 it looks like
+#    the best idea of the session. Any future pivot rule must clear T-10/T-20 to be believed.
 #
-# Also worth keeping: the shipping pivot does NOT decay going back in time (93 -> 96 at
-# T-10), so the reported buy point is stable through the base rather than something that
-# only snaps into place at the breakout. That is the property the user's workflow needs.
+# Also worth keeping: the reported pivot does NOT decay going back in time (97 at T-0, 98 at
+# T-10), so it is usable while a base is still forming rather than snapping into place only
+# at the breakout. That is the property the user's workflow needs.
+#
+# OPEN, not adopted: re-running the same-base gap rules ON TOP of the override still shows
+# ~15% fewer dangerous quotes for +1 hit (danger 18/17/18/19 -> 16/16/15/15 at gap >12%).
+# Small, and it stacks a second override on the first, so the mechanism is muddy. Worth a
+# look only if the dangerous-low count becomes the binding constraint.
