@@ -38,7 +38,14 @@ EXCLUDED_TRUTH_TYPES = {'Ascending Base'}
 # --target copy: labels unchanged at 90/172 exact and 127 broad (the change is
 # reporting-only), while the buy price improves at every band - within 1% 44 -> 101,
 # within 3% 101 -> 121, median error 2.50% -> 0.02%, mean 5.38% -> 4.01%.
-BASELINE_EXACT = 90
+#
+# 90 -> 88 when the HTF gates were taken verbatim from pine/drw_pattern.pine, which is the
+# source of truth for the charts these results are read against. The port had drifted (pole
+# 300 vs 85, flag 1-50 bars vs 6-20, depth 28 vs 25, pole span 60 vs 40). Pine's flag gates
+# alone are a strict improvement (pivot within 1% 96 -> 97, buy points quoted low 20 -> 19);
+# the 85% pole is what costs the two events, because isHTF feeds inBase and activeBTop and
+# so more flags rewire breakout tracking. Accepted deliberately - see the note at the gates.
+BASELINE_EXACT = 88
 N_EVENTS = 172
 
 # --- pivot-equivalence scoring -------------------------------------------------------

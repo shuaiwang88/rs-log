@@ -356,8 +356,8 @@ def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
     return [b for b in live if b['count'] >= min_bars]
 
 
-def detect_htf_context(highs, lows, min_pole_gain=80.0, max_pole_bars=60,
-                       min_flag_bars=10, max_flag_bars=50, max_flag_depth=25.0):
+def detect_htf_context(highs, lows, min_pole_gain=85.0, max_pole_bars=40,
+                       min_flag_bars=6, max_flag_bars=50, max_flag_depth=25.0):
     """Is the CURRENT structure the flag portion of a High Tight Flag? Annotation only.
 
     Separate from the `isHTF` state machine on purpose. That one demands a 300% pole, which
@@ -1073,30 +1073,32 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 boPatternName = 'None'
 
             # --- HTF Detection (drw_pattern_scanner.pine state machine engine) ---
-            # Stays at 300 despite being far above IBD's 100-120%. Lowering it was tried
-            # and REVERTED: `isHTF` feeds `inBase` and `activeBTop`, so extra flags rewire
-            # breakout tracking and re-seed the base machine onto the wrong structure. At 80
-            # DELL's base frame became bTop 221.50 / 106 bars instead of the correct 469.47 /
-            # 43 bars, and its Double Bottom vanished - the exact opposite of letting patterns
-            # form inside the flag. Measured over the 172 events:
+            # HTF gates, taken verbatim from pine/drw_pattern.pine, which is the source of
+            # truth for what the user sees on their own charts. The Python port had drifted
+            # badly from it - pole 300 vs 85, flag length 1-50 bars vs 6-20, depth 28 vs 25,
+            # pole span 60 vs 40 - so the scanner and the indicator disagreed about what an
+            # HTF even is, and the scanner's version fired on 11 of 172 events.
             #
-            #   i_htfPole    300    100     80
-            #   primary ex    90     79     82
-            #   primary br   126    123    122
-            #   layered br   154    152    151
-            #   pivot <=1%    96     88     88
-            #   quoted low    20     26     29
-            #   HTF events    11     59     77
+            # Measured over the 172 events, separating the two halves of the drift:
             #
-            # The flag is instead detected independently by detect_htf_context() at an 80%
-            # pole and reported as a reading plus `htf_context`, which costs nothing because
-            # nothing downstream branches on it.
-            i_htfPole = 300.0
-            i_htfPB = 60
+            #   config                 p_ex  p_br  l_ex  l_br  piv<=1%  low>3%  HTFev
+            #   drifted (was)            90   126   142   154       96      20      11
+            #   PINE flag gates only     90   126   142   154       97      19       4
+            #   PINE pole only (85)      82   123   142   151       89      29      73
+            #   PINE all (adopted)       88   126   141   153       93      23      51
+            #
+            # The flag gates alone are a strict improvement. The 85% pole is what costs - it
+            # feeds `inBase` and `activeBTop`, so more flags rewire breakout tracking - but
+            # the tight flag length absorbs most of that damage (88 exact against 82 with the
+            # pole loosened on its own). Net cost of matching Pine: 2 primary-exact, 3 pivot
+            # hits, 3 more buy points quoted low. Accepted deliberately: agreeing with the
+            # chart the user actually trades from is worth more than two benchmark events.
+            i_htfPole = 85.0
+            i_htfPB = 40
             i_htfPBMin = 5
-            i_htfRet = 28.0
-            i_htfFMin = 1
-            i_htfFMax = 50
+            i_htfRet = 25.0
+            i_htfFMin = 6
+            i_htfFMax = 20
             i_bsoMax = 15
 
             prev_htf_flag_baseHigh = htf_flag_baseHigh
