@@ -205,3 +205,14 @@ SingletonCookie
 SingletonSocket
 DevToolsActivePort
 Default/
+python/backtests/watchlist_history/
+python/backtests/watchlist_history.log
+
+# Backtest outputs & cache
+python/backtests/full_backtest_results.csv
+python/backtests/scanner_universe_trades.csv
+python/backtests/*_results.csv
+python/backtests/*_trades.csv
+python/backtests/*.pkl
+*.pkl
+

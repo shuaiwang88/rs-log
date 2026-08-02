@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest Report — Buy Point Strategies</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #1a1d27;
+  --bg3: #232733;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --accent: #60a5fa;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --border: #2d3143;
+  --radius: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+.header h1 { font-size: 2.2em; font-weight: 700; margin-bottom: 5px; background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .subtitle { color: var(--text2); font-size: 1.1em; }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(96,165,250,0.1); }
+.card-value { font-size: 1.6em; font-weight: 700; color: var(--accent); }
+.card-label { font-size: 0.85em; color: var(--text2); margin-top: 5px; }
+
+/* Section */
+.section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 30px;
+  margin-bottom: 25px;
+}
+.section-title { font-size: 1.3em; font-weight: 700; margin-bottom: 5px; color: var(--accent); }
+.section-subtitle { font-size: 0.95em; color: var(--text2); margin-bottom: 15px; margin-top: 20px; }
+.section-desc { font-size: 0.9em; color: var(--text2); margin-bottom: 18px; }
+
+/* Tables */
+.table-scroll { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+.data-table th {
+  background: var(--bg3);
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text2);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--border);
+  position: sticky; top: 0;
+}
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table tbody tr:hover { background: rgba(96,165,250,0.04); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table .strategy-name { font-weight: 600; }
+.data-table tr.aggregate { background: rgba(96,165,250,0.06); font-weight: 700; }
+.data-table tr.regime-bull { border-left: 3px solid var(--green); }
+.data-table tr.regime-bear { border-left: 3px solid var(--red); }
+.data-table tr.regime-sideways { border-left: 3px solid var(--yellow); }
+.data-table tr.note-row { font-size: 0.8em; color: var(--yellow); background: rgba(234,179,8,0.05); }
+
+/* Badge */
+.badge { padding: 2px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600; text-transform: uppercase; }
+.badge-bull { background: rgba(34,197,94,0.15); color: var(--green); }
+.badge-bear { background: rgba(239,68,68,0.15); color: var(--red); }
+.badge-sideways { background: rgba(234,179,8,0.15); color: var(--yellow); }
+
+/* Bar chart */
+.bar-chart { margin-top: 15px; }
+.bar-row { display: flex; align-items: center; margin-bottom: 6px; gap: 10px; }
+.bar-label { width: 150px; text-align: right; font-size: 0.82em; color: var(--text2); flex-shrink: 0; }
+.bar-track { flex: 1; background: var(--bg3); border-radius: 4px; height: 22px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; min-width: 2px; }
+.bar-val { width: 55px; font-size: 0.85em; font-weight: 700; text-align: left; flex-shrink: 0; }
+
+/* Key insight box */
+.insight-box {
+  background: linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.08));
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: var(--radius);
+  padding: 20px 25px;
+  margin-bottom: 25px;
+}
+.insight-box h3 { color: var(--accent); margin-bottom: 10px; }
+.insight-box ul { padding-left: 20px; color: var(--text2); }
+.insight-box li { margin-bottom: 6px; }
+
+/* Footer */
+.footer { text-align: center; padding: 30px; color: var(--text2); font-size: 0.85em; }
+.footer a { color: var(--accent); text-decoration: none; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+  .header h1 { font-size: 1.5em; }
+  .section { padding: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+        <div class="header">
+            <h1>📈 Buy Point Strategy Backtest Report</h1>
+            <div class="subtitle">7,562 Trades · 798 Events · 10 Strategies · Generated 2026-08-01 00:37:37</div>
+        </div>
+        <div class="insight-box">
+            <h3>🔍 Key Findings</h3>
+            <ul>
+                <li><strong>Top Strategy:</strong> Shakeout leads with highest 20-day win rate and lowest drawdown</li>
+                <li><strong>Bear Markets Outperform:</strong> Strategies perform surprisingly better in bear regimes — SMA50 Bounce and Shakeout hit ~70% win rates</li>
+                <li><strong>RS Declining Edge:</strong> SMA50 Bounce and Shakeout double their win rates when RS is declining (contrarian effect)</li>
+                <li><strong>Single > Multiple:</strong> Single-signal strategies outperform pairs, and pairs beat triples — stacking filters eliminates good trades</li>
+                <li><strong>Avoid Sideways:</strong> All strategies struggle in sideways markets (aggregate 4.2% win rate)</li>
+            </ul>
+        </div>
+    <div class="cards">
+        <div class="card">
+            <div class="card-value">7,562</div>
+            <div class="card-label">Total Trades</div>
+        </div>
+        <div class="card">
+            <div class="card-value">798</div>
+            <div class="card-label">Events Analyzed</div>
+        </div>
+        <div class="card">
+            <div class="card-value" style="color:#22c55e">Shakeout</div>
+            <div class="card-label">Best Strategy (46.8% Win 20d)</div>
+        </div>
+        <div class="card">
+            <div class="card-value">25.5%</div>
+            <div class="card-label">Avg Single-Strategy Win 20d</div>
+        </div>
+        <div class="card">
+            <div class="card-value" style="color:#ef4444">20.4%</div>
+            <div class="card-label">Bull Market Win 20d</div>
+        </div>
+        <div class="card">
+            <div class="card-value" style="color:#eab308">30.1%</div>
+            <div class="card-label">Bear Market Win 20d</div>
+        </div>
+    </div>
+        <div class="section">
+            <div class="section-title">🏆 Strategy Comparison</div>
+            <div class="section-desc">All 10 strategies ranked by 20-day win rate. Returns are position-sized (quality × market-cap weighted).</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr>
+                <th>Strategy</th><th>Trades</th>
+                <th>Win 5d</th><th>Win 10d</th><th>Win 20d</th><th>Win 60d</th>
+                <th>Avg 10d</th><th>Avg 20d</th><th>Avg 60d</th>
+                <th>Max Gain</th><th>Max DD</th><th>W/L</th>
+            </tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">Pivot Breakout</td>
+            <td class="num">152</td>
+            <td class="num" style="color:#eab308">28.9%</td>
+            <td class="num" style="color:#eab308">27.6%</td>
+            <td class="num" style="color:#eab308"><strong>31.6%</strong></td>
+            <td class="num" style="color:#eab308">31.6%</td>
+            <td class="num" style="color:#eab308">-1.44%</td>
+            <td class="num" style="color:#ef4444">-2.48%</td>
+            <td class="num" style="color:#ef4444">-3.26%</td>
+            <td class="num" style="color:#22c55e">+6.73%</td>
+            <td class="num" style="color:#ef4444">-8.19%</td>
+            <td class="num">0.82</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Upside Reversal</td>
+            <td class="num">156</td>
+            <td class="num" style="color:#eab308">31.4%</td>
+            <td class="num" style="color:#eab308">25.6%</td>
+            <td class="num" style="color:#ef4444"><strong>19.2%</strong></td>
+            <td class="num" style="color:#ef4444">16.7%</td>
+            <td class="num" style="color:#ef4444">-2.18%</td>
+            <td class="num" style="color:#ef4444">-4.07%</td>
+            <td class="num" style="color:#ef4444">-5.51%</td>
+            <td class="num" style="color:#22c55e">+5.51%</td>
+            <td class="num" style="color:#ef4444">-8.72%</td>
+            <td class="num">0.63</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Shakeout</td>
+            <td class="num">62</td>
+            <td class="num" style="color:#22c55e">43.5%</td>
+            <td class="num" style="color:#22c55e">46.8%</td>
+            <td class="num" style="color:#22c55e"><strong>46.8%</strong></td>
+            <td class="num" style="color:#eab308">37.1%</td>
+            <td class="num" style="color:#eab308">-0.53%</td>
+            <td class="num" style="color:#eab308">-0.77%</td>
+            <td class="num" style="color:#eab308">-0.33%</td>
+            <td class="num" style="color:#22c55e">+7.42%</td>
+            <td class="num" style="color:#ef4444">-5.18%</td>
+            <td class="num">1.43</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Volume Dry-Up</td>
+            <td class="num">53</td>
+            <td class="num" style="color:#ef4444">20.8%</td>
+            <td class="num" style="color:#ef4444">24.5%</td>
+            <td class="num" style="color:#ef4444"><strong>20.8%</strong></td>
+            <td class="num" style="color:#eab308">26.4%</td>
+            <td class="num" style="color:#ef4444">-2.42%</td>
+            <td class="num" style="color:#ef4444">-4.16%</td>
+            <td class="num" style="color:#ef4444">-5.14%</td>
+            <td class="num" style="color:#22c55e">+2.10%</td>
+            <td class="num" style="color:#ef4444">-7.25%</td>
+            <td class="num">0.29</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch</td>
+            <td class="num">158</td>
+            <td class="num" style="color:#ef4444">19.0%</td>
+            <td class="num" style="color:#ef4444">13.9%</td>
+            <td class="num" style="color:#ef4444"><strong>9.5%</strong></td>
+            <td class="num" style="color:#ef4444">5.1%</td>
+            <td class="num" style="color:#ef4444">-3.71%</td>
+            <td class="num" style="color:#ef4444">-6.17%</td>
+            <td class="num" style="color:#ef4444">-8.57%</td>
+            <td class="num" style="color:#22c55e">+2.47%</td>
+            <td class="num" style="color:#ef4444">-9.73%</td>
+            <td class="num">0.25</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot</td>
+            <td class="num">140</td>
+            <td class="num" style="color:#22c55e">41.4%</td>
+            <td class="num" style="color:#eab308">36.4%</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num" style="color:#22c55e">41.4%</td>
+            <td class="num" style="color:#eab308">-0.63%</td>
+            <td class="num" style="color:#eab308">-1.34%</td>
+            <td class="num" style="color:#eab308">-0.95%</td>
+            <td class="num" style="color:#22c55e">+7.68%</td>
+            <td class="num" style="color:#ef4444">-6.91%</td>
+            <td class="num">1.11</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High</td>
+            <td class="num">84</td>
+            <td class="num" style="color:#eab308">34.5%</td>
+            <td class="num" style="color:#eab308">35.7%</td>
+            <td class="num" style="color:#eab308"><strong>35.7%</strong></td>
+            <td class="num" style="color:#22c55e">42.9%</td>
+            <td class="num" style="color:#eab308">-1.36%</td>
+            <td class="num" style="color:#ef4444">-2.90%</td>
+            <td class="num" style="color:#ef4444">-2.20%</td>
+            <td class="num" style="color:#22c55e">+7.13%</td>
+            <td class="num" style="color:#ef4444">-8.02%</td>
+            <td class="num">0.89</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce</td>
+            <td class="num">152</td>
+            <td class="num" style="color:#22c55e">42.8%</td>
+            <td class="num" style="color:#eab308">32.2%</td>
+            <td class="num" style="color:#eab308"><strong>34.9%</strong></td>
+            <td class="num" style="color:#eab308">29.6%</td>
+            <td class="num" style="color:#eab308">-1.09%</td>
+            <td class="num" style="color:#eab308">-1.55%</td>
+            <td class="num" style="color:#ef4444">-2.29%</td>
+            <td class="num" style="color:#22c55e">+7.82%</td>
+            <td class="num" style="color:#ef4444">-6.91%</td>
+            <td class="num">1.13</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Composite Score</td>
+            <td class="num">160</td>
+            <td class="num" style="color:#eab308">28.7%</td>
+            <td class="num" style="color:#eab308">26.9%</td>
+            <td class="num" style="color:#eab308"><strong>30.6%</strong></td>
+            <td class="num" style="color:#eab308">33.8%</td>
+            <td class="num" style="color:#eab308">-1.57%</td>
+            <td class="num" style="color:#ef4444">-2.59%</td>
+            <td class="num" style="color:#ef4444">-3.06%</td>
+            <td class="num" style="color:#22c55e">+6.75%</td>
+            <td class="num" style="color:#ef4444">-8.21%</td>
+            <td class="num">0.82</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Any Signal</td>
+            <td class="num">160</td>
+            <td class="num" style="color:#ef4444">20.0%</td>
+            <td class="num" style="color:#ef4444">15.0%</td>
+            <td class="num" style="color:#ef4444"><strong>7.5%</strong></td>
+            <td class="num" style="color:#ef4444">5.0%</td>
+            <td class="num" style="color:#ef4444">-3.72%</td>
+            <td class="num" style="color:#ef4444">-6.49%</td>
+            <td class="num" style="color:#ef4444">-9.04%</td>
+            <td class="num" style="color:#22c55e">+2.54%</td>
+            <td class="num" style="color:#ef4444">-10.21%</td>
+            <td class="num">0.25</td>
+        </tr></tbody>
+        </table>
+    </div>
+    <div class="section-subtitle">Win Rate (20-day) by Strategy</div>
+    <div class="bar-chart">
+            <div class="bar-row">
+                <span class="bar-label">Pivot Breakout</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:31.57894736842105%;background:#eab308"></div>
+                </div>
+                <span class="bar-val" style="color:#eab308">31.6%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Upside Reversal</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:19.230769230769234%;background:#ef4444"></div>
+                </div>
+                <span class="bar-val" style="color:#ef4444">19.2%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Shakeout</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:46.774193548387096%;background:#22c55e"></div>
+                </div>
+                <span class="bar-val" style="color:#22c55e">46.8%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Volume Dry-Up</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:20.754716981132077%;background:#ef4444"></div>
+                </div>
+                <span class="bar-val" style="color:#ef4444">20.8%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">MA Touch</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:9.49367088607595%;background:#ef4444"></div>
+                </div>
+                <span class="bar-val" style="color:#ef4444">9.5%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Pocket Pivot</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:35.0%;background:#eab308"></div>
+                </div>
+                <span class="bar-val" style="color:#eab308">35.0%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">RS New High</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:35.714285714285715%;background:#eab308"></div>
+                </div>
+                <span class="bar-val" style="color:#eab308">35.7%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">SMA50 Bounce</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:34.868421052631575%;background:#eab308"></div>
+                </div>
+                <span class="bar-val" style="color:#eab308">34.9%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Composite Score</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:30.625000000000004%;background:#eab308"></div>
+                </div>
+                <span class="bar-val" style="color:#eab308">30.6%</span>
+            </div>
+            <div class="bar-row">
+                <span class="bar-label">Any Signal</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width:7.5%;background:#ef4444"></div>
+                </div>
+                <span class="bar-val" style="color:#ef4444">7.5%</span>
+            </div></div>
+        </div>
+        <div class="section">
+            <div class="section-title">🌡️ Side-by-Side Regime Comparison</div>
+            <div class="section-desc">How strategies perform in Bull vs Bear vs Sideways markets. Aggregate rows highlighted.</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr>
+                <th>Strategy</th><th>Regime</th><th>Trades</th><th>Win 20d</th><th>Avg 20d</th><th>W/L</th>
+            </tr></thead>
+            <tbody>
+            <tr class="regime-bull">
+                <td class="strategy-name">Pivot Breakout</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">120</td>
+                <td class="num" style="color:#eab308">34.2%</td>
+                <td class="num" style="color:#eab308">-1.83%</td>
+                <td class="num">0.98</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">Upside Reversal</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">102</td>
+                <td class="num" style="color:#ef4444">24.5%</td>
+                <td class="num" style="color:#ef4444">-3.18%</td>
+                <td class="num">0.80</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">Shakeout</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">31</td>
+                <td class="num" style="color:#22c55e">54.8%</td>
+                <td class="num" style="color:#eab308">-0.65%</td>
+                <td class="num">1.59</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">Volume Dry-Up</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">39</td>
+                <td class="num" style="color:#eab308">28.2%</td>
+                <td class="num" style="color:#ef4444">-3.71%</td>
+                <td class="num">0.35</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">MA Touch</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">96</td>
+                <td class="num" style="color:#ef4444">13.5%</td>
+                <td class="num" style="color:#ef4444">-6.03%</td>
+                <td class="num">0.28</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">Pocket Pivot</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">101</td>
+                <td class="num" style="color:#22c55e">41.6%</td>
+                <td class="num" style="color:#eab308">-0.47%</td>
+                <td class="num">1.43</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">RS New High</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">49</td>
+                <td class="num" style="color:#22c55e">42.9%</td>
+                <td class="num" style="color:#ef4444">-2.29%</td>
+                <td class="num">1.05</td>
+            </tr>
+            <tr class="regime-bull">
+                <td class="strategy-name">SMA50 Bounce</td>
+                <td><span class="badge badge-bull">Bull</span></td>
+                <td class="num">103</td>
+                <td class="num" style="color:#22c55e">40.8%</td>
+                <td class="num" style="color:#eab308">-0.03%</td>
+                <td class="num">1.46</td>
+            </tr>
+        <tr class="aggregate regime-bull">
+            <td><strong>[ALL BULL]</strong></td>
+            <td><span class="badge badge-bull">Bull</span></td>
+            <td class="num"><strong>4574</strong></td>
+            <td class="num" style="color:#ef4444"><strong>20.4%</strong></td>
+            <td class="num" style="color:#ef4444"><strong>-4.32%</strong></td>
+            <td class="num"><strong>0.49</strong></td>
+        </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">Upside Reversal</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">7</td>
+                <td class="num" style="color:#eab308">28.6%</td>
+                <td class="num" style="color:#ef4444">-2.82%</td>
+                <td class="num">1.20</td>
+            </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">Shakeout</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">16</td>
+                <td class="num" style="color:#22c55e">68.8%</td>
+                <td class="num" style="color:#22c55e">+0.87%</td>
+                <td class="num">2.21</td>
+            </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">Volume Dry-Up</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">3</td>
+                <td class="num" style="color:#ef4444">0.0%</td>
+                <td class="num" style="color:#ef4444">-4.49%</td>
+                <td class="num">0.06</td>
+            </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">MA Touch</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">9</td>
+                <td class="num" style="color:#ef4444">11.1%</td>
+                <td class="num" style="color:#ef4444">-3.48%</td>
+                <td class="num">0.76</td>
+            </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">Pocket Pivot</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">7</td>
+                <td class="num" style="color:#ef4444">14.3%</td>
+                <td class="num" style="color:#ef4444">-2.91%</td>
+                <td class="num">0.50</td>
+            </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">RS New High</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">6</td>
+                <td class="num" style="color:#22c55e">66.7%</td>
+                <td class="num" style="color:#22c55e">+0.36%</td>
+                <td class="num">2.27</td>
+            </tr>
+            <tr class="regime-bear">
+                <td class="strategy-name">SMA50 Bounce</td>
+                <td><span class="badge badge-bear">Bear</span></td>
+                <td class="num">7</td>
+                <td class="num" style="color:#22c55e">71.4%</td>
+                <td class="num" style="color:#eab308">-0.07%</td>
+                <td class="num">3.04</td>
+            </tr>
+        <tr class="aggregate regime-bear">
+            <td><strong>[ALL BEAR]</strong></td>
+            <td><span class="badge badge-bear">Bear</span></td>
+            <td class="num"><strong>386</strong></td>
+            <td class="num" style="color:#eab308"><strong>30.1%</strong></td>
+            <td class="num" style="color:#ef4444"><strong>-2.38%</strong></td>
+            <td class="num"><strong>0.88</strong></td>
+        </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">Pivot Breakout</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">22</td>
+                <td class="num" style="color:#ef4444">22.7%</td>
+                <td class="num" style="color:#ef4444">-5.55%</td>
+                <td class="num">0.22</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">Upside Reversal</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">37</td>
+                <td class="num" style="color:#ef4444">8.1%</td>
+                <td class="num" style="color:#ef4444">-6.67%</td>
+                <td class="num">0.23</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">Shakeout</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">9</td>
+                <td class="num" style="color:#ef4444">11.1%</td>
+                <td class="num" style="color:#ef4444">-3.33%</td>
+                <td class="num">0.58</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">Volume Dry-Up</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">7</td>
+                <td class="num" style="color:#ef4444">0.0%</td>
+                <td class="num" style="color:#ef4444">-6.09%</td>
+                <td class="num">0.15</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">MA Touch</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">41</td>
+                <td class="num" style="color:#ef4444">0.0%</td>
+                <td class="num" style="color:#ef4444">-7.40%</td>
+                <td class="num">0.17</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">Pocket Pivot</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">23</td>
+                <td class="num" style="color:#eab308">26.1%</td>
+                <td class="num" style="color:#ef4444">-3.93%</td>
+                <td class="num">0.44</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">RS New High</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">24</td>
+                <td class="num" style="color:#ef4444">16.7%</td>
+                <td class="num" style="color:#ef4444">-5.33%</td>
+                <td class="num">0.47</td>
+            </tr>
+            <tr class="regime-sideways">
+                <td class="strategy-name">SMA50 Bounce</td>
+                <td><span class="badge badge-sideways">Sideways</span></td>
+                <td class="num">33</td>
+                <td class="num" style="color:#ef4444">15.2%</td>
+                <td class="num" style="color:#ef4444">-6.10%</td>
+                <td class="num">0.37</td>
+            </tr>
+        <tr class="aggregate regime-sideways">
+            <td><strong>[ALL SIDEWAYS]</strong></td>
+            <td><span class="badge badge-sideways">Sideways</span></td>
+            <td class="num"><strong>1893</strong></td>
+            <td class="num" style="color:#ef4444"><strong>4.2%</strong></td>
+            <td class="num" style="color:#ef4444"><strong>-7.12%</strong></td>
+            <td class="num"><strong>0.17</strong></td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">📊 RS Trend at Entry</div>
+            <div class="section-desc">Strategies broken down by whether RS was improving or declining when the signal fired. A positive delta means declining RS outperforms — a contrarian edge.</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Strategy</th><th>RS Trend</th><th>Trades</th><th>Win 20d</th><th>Avg 20d</th></tr></thead>
+            <tbody><tr><td class='strategy-name'>Pivot Breakout</td><td>RS Improving</td><td class='num'>119</td><td class='num' style='color:#eab308'>31.9%</td><td class='num' style='color:#ef4444'>-2.07%</td></tr><tr><td class='strategy-name'>Pivot Breakout</td><td>RS Declining</td><td class='num'>33</td><td class='num' style='color:#eab308'>30.3%</td><td class='num' style='color:#ef4444'>-3.98%</td></tr><tr><td class='strategy-name'>Upside Reversal</td><td>RS Improving</td><td class='num'>125</td><td class='num' style='color:#ef4444'>16.0%</td><td class='num' style='color:#ef4444'>-5.10%</td></tr><tr><td class='strategy-name'>Upside Reversal</td><td>RS Declining</td><td class='num'>31</td><td class='num' style='color:#eab308'>32.3%</td><td class='num' style='color:#22c55e'>+0.09%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 16pp ★ contrarian edge</td></tr><tr><td class='strategy-name'>Shakeout</td><td>RS Improving</td><td class='num'>31</td><td class='num' style='color:#eab308'>38.7%</td><td class='num' style='color:#eab308'>-1.78%</td></tr><tr><td class='strategy-name'>Shakeout</td><td>RS Declining</td><td class='num'>31</td><td class='num' style='color:#22c55e'>54.8%</td><td class='num' style='color:#22c55e'>+0.25%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 16pp ★ contrarian edge</td></tr><tr><td class='strategy-name'>Volume Dry-Up</td><td>RS Improving</td><td class='num'>43</td><td class='num' style='color:#ef4444'>18.6%</td><td class='num' style='color:#ef4444'>-4.37%</td></tr><tr><td class='strategy-name'>Volume Dry-Up</td><td>RS Declining</td><td class='num'>10</td><td class='num' style='color:#eab308'>30.0%</td><td class='num' style='color:#ef4444'>-3.27%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 11pp ★ contrarian edge</td></tr><tr><td class='strategy-name'>MA Touch</td><td>RS Improving</td><td class='num'>136</td><td class='num' style='color:#ef4444'>8.1%</td><td class='num' style='color:#ef4444'>-6.22%</td></tr><tr><td class='strategy-name'>MA Touch</td><td>RS Declining</td><td class='num'>22</td><td class='num' style='color:#ef4444'>18.2%</td><td class='num' style='color:#ef4444'>-5.89%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 10pp ★ contrarian edge</td></tr><tr><td class='strategy-name'>Pocket Pivot</td><td>RS Improving</td><td class='num'>90</td><td class='num' style='color:#eab308'>32.2%</td><td class='num' style='color:#eab308'>-1.74%</td></tr><tr><td class='strategy-name'>Pocket Pivot</td><td>RS Declining</td><td class='num'>50</td><td class='num' style='color:#22c55e'>40.0%</td><td class='num' style='color:#eab308'>-0.61%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 8pp</td></tr><tr><td class='strategy-name'>RS New High</td><td>RS Improving</td><td class='num'>74</td><td class='num' style='color:#eab308'>33.8%</td><td class='num' style='color:#ef4444'>-2.97%</td></tr><tr><td class='strategy-name'>RS New High</td><td>RS Declining</td><td class='num'>10</td><td class='num' style='color:#22c55e'>50.0%</td><td class='num' style='color:#ef4444'>-2.38%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 16pp ★ contrarian edge</td></tr><tr><td class='strategy-name'>SMA50 Bounce</td><td>RS Improving</td><td class='num'>85</td><td class='num' style='color:#ef4444'>22.4%</td><td class='num' style='color:#ef4444'>-4.32%</td></tr><tr><td class='strategy-name'>SMA50 Bounce</td><td>RS Declining</td><td class='num'>67</td><td class='num' style='color:#22c55e'>50.7%</td><td class='num' style='color:#22c55e'>+1.96%</td></tr><tr class='note-row'><td colspan='5'>→ RS Declining beats Improving by 28pp ★ contrarian edge</td></tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">🔗 Signal Confirmation Effect</div>
+            <div class="section-desc">Win rates as more signals confirm the same base. More signals = fewer but potentially higher-quality trades.</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Signals</th><th>Trades</th><th>Win 5d</th><th>Win 10d</th><th>Win 20d</th><th>Win 60d</th><th>Avg 20d</th><th>Max DD</th><th>W/L</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">1 (Single)</td>
+            <td class="num">1277</td>
+            <td class="num" style="color:#eab308">30.6%</td>
+            <td class="num" style="color:#eab308">26.9%</td>
+            <td class="num" style="color:#eab308"><strong>25.5%</strong></td>
+            <td class="num" style="color:#eab308">25.1%</td>
+            <td class="num" style="color:#ef4444">-3.43%</td>
+            <td class="num" style="color:#ef4444">-8.21%</td>
+            <td class="num">0.69</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">2 (Pair)</td>
+            <td class="num">2515</td>
+            <td class="num" style="color:#eab308">27.5%</td>
+            <td class="num" style="color:#ef4444">22.9%</td>
+            <td class="num" style="color:#ef4444"><strong>17.1%</strong></td>
+            <td class="num" style="color:#ef4444">13.4%</td>
+            <td class="num" style="color:#ef4444">-4.75%</td>
+            <td class="num" style="color:#ef4444">-8.93%</td>
+            <td class="num">0.43</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">3+ (Triple)</td>
+            <td class="num">3770</td>
+            <td class="num" style="color:#ef4444">24.4%</td>
+            <td class="num" style="color:#ef4444">19.7%</td>
+            <td class="num" style="color:#ef4444"><strong>11.5%</strong></td>
+            <td class="num" style="color:#ef4444">6.9%</td>
+            <td class="num" style="color:#ef4444">-5.51%</td>
+            <td class="num" style="color:#ef4444">-9.44%</td>
+            <td class="num">0.28</td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">🤝 Top Strategy Pairs</div>
+            <div class="section-desc">Best 2-strategy combinations ranked by 20-day win rate (min 5 trades).</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Pairs</th><th>Trades</th><th>Win 20d</th><th>Avg 20d</th><th>W/L</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">Shakeout+Volume Dry-Up</td>
+            <td class="num">28</td>
+            <td class="num" style="color:#eab308">32.1%</td>
+            <td class="num" style="color:#ef4444">-2.05%</td>
+            <td class="num">0.78</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">Pocket Pivot+RS New High</td>
+            <td class="num">79</td>
+            <td class="num" style="color:#eab308">30.4%</td>
+            <td class="num" style="color:#ef4444">-2.96%</td>
+            <td class="num">0.77</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">RS New High+Shakeout</td>
+            <td class="num">33</td>
+            <td class="num" style="color:#eab308">30.3%</td>
+            <td class="num" style="color:#ef4444">-2.07%</td>
+            <td class="num">0.89</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">Pocket Pivot+SMA50 Bounce</td>
+            <td class="num">136</td>
+            <td class="num" style="color:#eab308">27.2%</td>
+            <td class="num" style="color:#ef4444">-3.31%</td>
+            <td class="num">0.69</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">Pivot Breakout+RS New High</td>
+            <td class="num">80</td>
+            <td class="num" style="color:#eab308">26.2%</td>
+            <td class="num" style="color:#ef4444">-4.29%</td>
+            <td class="num">0.56</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">Pocket Pivot+Shakeout</td>
+            <td class="num">59</td>
+            <td class="num" style="color:#eab308">25.4%</td>
+            <td class="num" style="color:#ef4444">-3.06%</td>
+            <td class="num">0.76</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">RS New High+SMA50 Bounce</td>
+            <td class="num">80</td>
+            <td class="num" style="color:#eab308">25.0%</td>
+            <td class="num" style="color:#ef4444">-4.44%</td>
+            <td class="num">0.46</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">Pivot Breakout+SMA50 Bounce</td>
+            <td class="num">145</td>
+            <td class="num" style="color:#ef4444">24.8%</td>
+            <td class="num" style="color:#ef4444">-3.54%</td>
+            <td class="num">0.68</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">SMA50 Bounce+Shakeout</td>
+            <td class="num">61</td>
+            <td class="num" style="color:#ef4444">24.6%</td>
+            <td class="num" style="color:#ef4444">-3.52%</td>
+            <td class="num">0.61</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot</td>
+            <td class="num">135</td>
+            <td class="num" style="color:#ef4444">23.0%</td>
+            <td class="num" style="color:#ef4444">-3.73%</td>
+            <td class="num">0.59</td>
+        </tr>
+        <tr>
+            <td class="num">11</td>
+            <td class="strategy-name">Pivot Breakout+Shakeout</td>
+            <td class="num">61</td>
+            <td class="num" style="color:#ef4444">23.0%</td>
+            <td class="num" style="color:#ef4444">-4.38%</td>
+            <td class="num">0.52</td>
+        </tr>
+        <tr>
+            <td class="num">12</td>
+            <td class="strategy-name">RS New High+Volume Dry-Up</td>
+            <td class="num">29</td>
+            <td class="num" style="color:#ef4444">20.7%</td>
+            <td class="num" style="color:#ef4444">-4.09%</td>
+            <td class="num">0.28</td>
+        </tr>
+        <tr>
+            <td class="num">13</td>
+            <td class="strategy-name">SMA50 Bounce+Upside Reversal</td>
+            <td class="num">151</td>
+            <td class="num" style="color:#ef4444">20.5%</td>
+            <td class="num" style="color:#ef4444">-4.01%</td>
+            <td class="num">0.63</td>
+        </tr>
+        <tr>
+            <td class="num">14</td>
+            <td class="strategy-name">SMA50 Bounce+Volume Dry-Up</td>
+            <td class="num">53</td>
+            <td class="num" style="color:#ef4444">18.9%</td>
+            <td class="num" style="color:#ef4444">-3.71%</td>
+            <td class="num">0.44</td>
+        </tr>
+        <tr>
+            <td class="num">15</td>
+            <td class="strategy-name">Pocket Pivot+Upside Reversal</td>
+            <td class="num">140</td>
+            <td class="num" style="color:#ef4444">17.9%</td>
+            <td class="num" style="color:#ef4444">-4.62%</td>
+            <td class="num">0.50</td>
+        </tr></tbody>
+        </table>
+    </div>
+            <div class="section-subtitle">Top Triples</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Triples</th><th>Trades</th><th>Win 20d</th><th>Avg 20d</th><th>W/L</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">RS New High+Shakeout+Volume Dry-Up</td>
+            <td class="num">18</td>
+            <td class="num" style="color:#eab308">27.8%</td>
+            <td class="num" style="color:#ef4444">-2.89%</td>
+            <td class="num">0.55</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">Pocket Pivot+Shakeout+Volume Dry-Up</td>
+            <td class="num">27</td>
+            <td class="num" style="color:#eab308">25.9%</td>
+            <td class="num" style="color:#ef4444">-2.51%</td>
+            <td class="num">0.75</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">Pocket Pivot+RS New High+Volume Dry-Up</td>
+            <td class="num">29</td>
+            <td class="num" style="color:#ef4444">24.1%</td>
+            <td class="num" style="color:#ef4444">-3.62%</td>
+            <td class="num">0.35</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">Pocket Pivot+RS New High+SMA50 Bounce</td>
+            <td class="num">76</td>
+            <td class="num" style="color:#ef4444">23.7%</td>
+            <td class="num" style="color:#ef4444">-4.16%</td>
+            <td class="num">0.48</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+RS New High</td>
+            <td class="num">76</td>
+            <td class="num" style="color:#ef4444">22.4%</td>
+            <td class="num" style="color:#ef4444">-4.28%</td>
+            <td class="num">0.50</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">Pocket Pivot+RS New High+Shakeout</td>
+            <td class="num">33</td>
+            <td class="num" style="color:#ef4444">21.2%</td>
+            <td class="num" style="color:#ef4444">-3.33%</td>
+            <td class="num">0.65</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">Pocket Pivot+SMA50 Bounce+Shakeout</td>
+            <td class="num">58</td>
+            <td class="num" style="color:#ef4444">20.7%</td>
+            <td class="num" style="color:#ef4444">-4.05%</td>
+            <td class="num">0.48</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">Pivot Breakout+Pocket Pivot+SMA50 Bounce</td>
+            <td class="num">132</td>
+            <td class="num" style="color:#ef4444">19.7%</td>
+            <td class="num" style="color:#ef4444">-4.87%</td>
+            <td class="num">0.40</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+SMA50 Bounce</td>
+            <td class="num">77</td>
+            <td class="num" style="color:#ef4444">18.2%</td>
+            <td class="num" style="color:#ef4444">-5.49%</td>
+            <td class="num">0.34</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">Pivot Breakout+RS New High+Shakeout</td>
+            <td class="num">33</td>
+            <td class="num" style="color:#ef4444">18.2%</td>
+            <td class="num" style="color:#ef4444">-4.35%</td>
+            <td class="num">0.52</td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">⭐ Composite Buy Score Effectiveness</div>
+            <div class="section-desc">Trades bucketed by composite score range. The composite score weights all active signals plus base quality.</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Score Range</th><th>Trades</th><th>Win 20d</th><th>Avg 20d</th><th>Max Gain</th><th>Max DD</th></tr></thead>
+            <tbody>
+        <tr>
+            <td>80-100 (Excellent)</td>
+            <td class="num">6509</td>
+            <td class="num" style="color:#ef4444">14.8%</td>
+            <td class="num" style="color:#ef4444">-4.96%</td>
+            <td class="num" style="color:#22c55e">+3.04%</td>
+            <td class="num" style="color:#ef4444">-9.16%</td>
+        </tr>
+        <tr>
+            <td>60-79 (Good)</td>
+            <td class="num">1024</td>
+            <td class="num" style="color:#ef4444">21.6%</td>
+            <td class="num" style="color:#ef4444">-4.70%</td>
+            <td class="num" style="color:#22c55e">+6.66%</td>
+            <td class="num" style="color:#ef4444">-8.55%</td>
+        </tr>
+        <tr>
+            <td>40-59 (Average)</td>
+            <td class="num">23</td>
+            <td class="num" style="color:#ef4444">8.7%</td>
+            <td class="num" style="color:#ef4444">-5.57%</td>
+            <td class="num" style="color:#22c55e">+2.53%</td>
+            <td class="num" style="color:#ef4444">-6.10%</td>
+        </tr>
+        <tr>
+            <td>0-39 (Poor)</td>
+            <td class="num">6</td>
+            <td class="num" style="color:#22c55e">50.0%</td>
+            <td class="num" style="color:#22c55e">+16.46%</td>
+            <td class="num" style="color:#22c55e">+27.70%</td>
+            <td class="num" style="color:#ef4444">+0.00%</td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">🛑 Stop-Loss Analysis</div>
+            <div class="section-desc">Stop-loss is set at the base low. Lower stop rate = fewer premature exits.</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Strategy</th><th>Trades</th><th>Stopped Out</th><th>Avg Bars to Stop</th><th>Win 20d</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">Pivot Breakout</td>
+            <td class="num">152</td>
+            <td class="num" style="color:#eab308">58/152 (38.2%)</td>
+            <td class="num">24.4</td>
+            <td class="num" style="color:#eab308">31.6%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Upside Reversal</td>
+            <td class="num">156</td>
+            <td class="num" style="color:#ef4444">105/156 (67.3%)</td>
+            <td class="num">26.1</td>
+            <td class="num" style="color:#ef4444">19.2%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Shakeout</td>
+            <td class="num">62</td>
+            <td class="num" style="color:#eab308">27/62 (43.5%)</td>
+            <td class="num">23.7</td>
+            <td class="num" style="color:#22c55e">46.8%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Volume Dry-Up</td>
+            <td class="num">53</td>
+            <td class="num" style="color:#ef4444">27/53 (50.9%)</td>
+            <td class="num">21.7</td>
+            <td class="num" style="color:#ef4444">20.8%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">MA Touch</td>
+            <td class="num">158</td>
+            <td class="num" style="color:#ef4444">125/158 (79.1%)</td>
+            <td class="num">24.5</td>
+            <td class="num" style="color:#ef4444">9.5%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Pocket Pivot</td>
+            <td class="num">140</td>
+            <td class="num" style="color:#eab308">51/140 (36.4%)</td>
+            <td class="num">25.7</td>
+            <td class="num" style="color:#eab308">35.0%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RS New High</td>
+            <td class="num">84</td>
+            <td class="num" style="color:#eab308">27/84 (32.1%)</td>
+            <td class="num">27.0</td>
+            <td class="num" style="color:#eab308">35.7%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">SMA50 Bounce</td>
+            <td class="num">152</td>
+            <td class="num" style="color:#ef4444">87/152 (57.2%)</td>
+            <td class="num">21.9</td>
+            <td class="num" style="color:#eab308">34.9%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Composite Score</td>
+            <td class="num">160</td>
+            <td class="num" style="color:#eab308">59/160 (36.9%)</td>
+            <td class="num">24.1</td>
+            <td class="num" style="color:#eab308">30.6%</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">Any Signal</td>
+            <td class="num">160</td>
+            <td class="num" style="color:#ef4444">125/160 (78.1%)</td>
+            <td class="num">24.7</td>
+            <td class="num" style="color:#ef4444">7.5%</td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">⚖️ Position Sizing Distribution</div>
+            <div class="section-desc">Quality-based position sizing: Excellent (1.0x) down to Poor (0.25x).</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Size</th><th>Label</th><th>Trades</th><th>Win 20d</th><th>Avg 20d</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="num"><strong>0.50x</strong></td>
+            <td class="strategy-name">Half</td>
+            <td class="num">959</td>
+            <td class="num" style="color:#ef4444">11.1%</td>
+            <td class="num" style="color:#ef4444">-3.99%</td>
+        </tr>
+        <tr>
+            <td class="num"><strong>0.75x</strong></td>
+            <td class="strategy-name">3/4</td>
+            <td class="num">6544</td>
+            <td class="num" style="color:#ef4444">16.4%</td>
+            <td class="num" style="color:#ef4444">-5.00%</td>
+        </tr>
+        <tr>
+            <td class="num"><strong>1.00x</strong></td>
+            <td class="strategy-name">Full</td>
+            <td class="num">59</td>
+            <td class="num" style="color:#ef4444">13.6%</td>
+            <td class="num" style="color:#ef4444">-9.08%</td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+        <div class="section">
+            <div class="section-title">🚀 Best Trades (by 20-day return)</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Ticker</th><th>Pattern</th><th>Strategy</th><th>Entry</th><th>Ret 20d</th><th>Max Gain</th><th>Quality</th><th>Regime</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">RLYB</td>
+            <td>Flat Base</td>
+            <td>SMA50 Bounce</td>
+            <td class="num">2026-05-01</td>
+            <td class="num" style="color:#22c55e">+44.59%</td>
+            <td class="num" style="color:#22c55e">+48.80%</td>
+            <td class="num">79</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RLYB</td>
+            <td>Flat Base</td>
+            <td>Pivot Breakout+SMA50 Bounce</td>
+            <td class="num">2026-05-01</td>
+            <td class="num" style="color:#22c55e">+44.59%</td>
+            <td class="num" style="color:#22c55e">+48.80%</td>
+            <td class="num">79</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">AUPH</td>
+            <td>Cup With Handle</td>
+            <td>Pivot Breakout</td>
+            <td class="num">2025-12-29</td>
+            <td class="num" style="color:#22c55e">+32.93%</td>
+            <td class="num" style="color:#22c55e">+42.84%</td>
+            <td class="num">67</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">AUPH</td>
+            <td>Cup With Handle</td>
+            <td>Any Signal</td>
+            <td class="num">2025-12-29</td>
+            <td class="num" style="color:#22c55e">+32.93%</td>
+            <td class="num" style="color:#22c55e">+42.84%</td>
+            <td class="num">67</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">AUPH</td>
+            <td>Cup With Handle</td>
+            <td>Composite Score</td>
+            <td class="num">2025-12-29</td>
+            <td class="num" style="color:#22c55e">+32.93%</td>
+            <td class="num" style="color:#22c55e">+42.84%</td>
+            <td class="num">67</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">QTTB</td>
+            <td>Consolidation</td>
+            <td>Upside Reversal</td>
+            <td class="num">2026-05-26</td>
+            <td class="num" style="color:#22c55e">+32.29%</td>
+            <td class="num" style="color:#22c55e">+130.75%</td>
+            <td class="num">76</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">QTTB</td>
+            <td>Consolidation</td>
+            <td>SMA50 Bounce</td>
+            <td class="num">2026-05-26</td>
+            <td class="num" style="color:#22c55e">+32.29%</td>
+            <td class="num" style="color:#22c55e">+130.75%</td>
+            <td class="num">76</td>
+            <td>strong_bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">QTTB</td>
+            <td>Consolidation</td>
+            <td>Pivot Breakout+SMA50 Bounce</td>
+            <td class="num">2026-05-26</td>
+            <td class="num" style="color:#22c55e">+32.29%</td>
+            <td class="num" style="color:#22c55e">+130.75%</td>
+            <td class="num">76</td>
+            <td>strong_bull</td>
+        </tr></tbody>
+        </table>
+    </div>
+            <div class="section-subtitle">Worst Trades</div>
+            
+    <div class="table-scroll">
+        <table class="data-table">
+            <thead><tr><th>Ticker</th><th>Pattern</th><th>Strategy</th><th>Entry</th><th>Ret 20d</th><th>Max Gain</th><th>Quality</th><th>Regime</th></tr></thead>
+            <tbody>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>Shakeout</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>Any Signal</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>MA Touch+Shakeout</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>Pivot Breakout+Shakeout</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>Pocket Pivot+Shakeout</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>RS New High+Shakeout</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>SMA50 Bounce+Shakeout</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr>
+        <tr>
+            <td class="strategy-name">RDW</td>
+            <td>Cup Without Handle</td>
+            <td>Shakeout+Upside Reversal</td>
+            <td class="num">2026-01-23</td>
+            <td class="num" style="color:#ef4444">-19.77%</td>
+            <td class="num" style="color:#22c55e">+9.12%</td>
+            <td class="num">62</td>
+            <td>bull</td>
+        </tr></tbody>
+        </table>
+    </div>
+        </div>
+<div class="footer">
+  <p>Generated 2026-08-01 00:37:37 | Backtest of 7,562 trades across 798 events</p>
+</div>
+</div>
+</body>
+</html>

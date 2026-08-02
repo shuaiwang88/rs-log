@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trend-Following Strategy Rankings — Full Universe</title>
+<style>
+:root {
+  --bg: #0f1117; --bg2: #1a1d27; --bg3: #232733;
+  --text: #e2e8f0; --text2: #94a3b8; --accent: #60a5fa;
+  --green: #22c55e; --yellow: #eab308; --red: #ef4444;
+  --border: #2d3143; --radius: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.6;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+.header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 40px; margin-bottom: 30px; text-align: center;
+}
+.header h1 { font-size: 2.2em; font-weight: 700; margin-bottom: 5px;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header .subtitle { color: var(--text2); font-size: 1.1em; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; text-align: center; transition: transform 0.15s, box-shadow 0.15s;
+}
+.card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(96,165,250,0.1); }
+.card-value { font-size: 1.6em; font-weight: 700; color: var(--accent); }
+.card-label { font-size: 0.85em; color: var(--text2); margin-top: 5px; }
+
+.section {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 30px; margin-bottom: 25px;
+}
+.section-title { font-size: 1.3em; font-weight: 700; margin-bottom: 5px; color: var(--accent); }
+.section-desc { font-size: 0.9em; color: var(--text2); margin-bottom: 18px; }
+
+.table-scroll { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.data-table th {
+  background: var(--bg3); padding: 10px 12px; text-align: left; font-weight: 600;
+  color: var(--text2); font-size: 0.75em; text-transform: uppercase;
+  letter-spacing: 0.5px; white-space: nowrap; border-bottom: 2px solid var(--border);
+}
+.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table tbody tr:hover { background: rgba(96,165,250,0.04); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table .strategy-name { font-weight: 600; }
+
+.insight-box {
+  background: linear-gradient(135deg, rgba(96,165,250,0.08), rgba(167,139,250,0.08));
+  border: 1px solid rgba(96,165,250,0.2); border-radius: var(--radius);
+  padding: 20px 25px; margin-bottom: 25px;
+}
+.insight-box h3 { color: var(--accent); margin-bottom: 10px; }
+.insight-box ul { padding-left: 20px; color: var(--text2); }
+.insight-box li { margin-bottom: 6px; }
+
+.warning-box {
+  background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(234,179,8,0.08));
+  border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius);
+  padding: 20px 25px; margin-bottom: 25px;
+}
+.warning-box h3 { color: #f87171; margin-bottom: 10px; }
+.warning-box ul { padding-left: 20px; color: var(--text2); }
+.warning-box li { margin-bottom: 6px; }
+
+.footer { text-align: center; padding: 30px; color: var(--text2); font-size: 0.85em; }
+
+@media (max-width: 768px) {
+  .cards { grid-template-columns: repeat(2, 1fr); }
+  .header h1 { font-size: 1.5em; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>🐢 Trend-Following Strategy Rankings</h1>
+        <div class="subtitle">48 Turtle/Seykota Strategies · 1,819 Tickers · Full Universe · Generated 2026-08-01 14:26:21</div>
+    </div>
+
+    <div class="insight-box">
+        <h3>🔍 Key Findings</h3>
+        <ul>
+            <li><strong>Best Success Rate:</strong> alt35_fractional_time = 47.7% of tickers profitable (867 tickers) with -1.3% median return</li>
+            <li><strong>Best Median Return:</strong> alt35_fractional_time = -1.3% median across all tickers — most consistent strategy</li>
+            <li><strong>Best Profit Factor:</strong> alt2_ema_crossover = 24.64 PF — highest reward vs risk</li>
+            <li><strong>Best Balanced:</strong> alt35_fractional_time = 47.7% success, -1.3% median, 54.5% max DD — best all-around</li>
+            <li><strong>4 strategies flagged as buggy</strong> — parabolic SAR / pure ATR / ATR channel variants that leave positions open indefinitely. These are excluded from rankings below.</li>
+        </ul>
+    </div>
+    
+    <div class="warning-box">
+        <h3>⚠️ Buggy Strategies Excluded</h3>
+        <ul><li><strong>alt22_parabolic_sar</strong>: +10637% avg ret, 99.9% success — likely exit logic allows positions to compound indefinitely</li><li><strong>alt6_pure_atr_stop</strong>: +1987% avg ret, 58.9% success — likely exit logic allows positions to compound indefinitely</li><li><strong>alt3_atr_channel</strong>: -5496% avg ret, 43.3% success — likely exit logic allows positions to compound indefinitely</li><li><strong>alt23_keltner_channel</strong>: -5937329785590591528804286464% avg ret, 39.5% success — likely exit logic allows positions to compound indefinitely</li></ul>
+    </div>
+    
+    <div class="cards">
+        <div class="card">
+            <div class="card-value">1,819</div>
+            <div class="card-label">Tickers in Universe</div>
+        </div>
+        <div class="card">
+            <div class="card-value">44</div>
+            <div class="card-label">Strategies Tested</div>
+        </div>
+        <div class="card">
+            <div class="card-value" style="color:#84cc16">47.7%</div>
+            <div class="card-label">Best Success Rate (alt35_fractional_time)</div>
+        </div>
+        <div class="card">
+            <div class="card-value">37.1%</div>
+            <div class="card-label">Avg Success Rate</div>
+        </div>
+        <div class="card">
+            <div class="card-value">23.7%</div>
+            <div class="card-label">Avg Win Rate (per-trade)</div>
+        </div>
+        <div class="card">
+            <div class="card-value" style="color:#eab308">-1.3%</div>
+            <div class="card-label">Best Median Return (alt35_fractional_time)</div>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-title">🏆 Ranked by Success Rate (% of tickers profitable)</div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead><tr>
+                    <th>#</th><th>Strategy</th><th>Success%</th><th>Profitable</th>
+                    <th>Median Ret</th><th>Avg Ret</th><th>Win Rate</th>
+                    <th>Profit Factor</th><th>Max DD</th><th>Avg Trades</th>
+                </tr></thead>
+                <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">alt35_fractional_time</td>
+            <td class="num" style="color:#84cc16"><strong>47.7%</strong></td>
+            <td class="num">867</td>
+            <td class="num" style="color:#eab308">-1.3%</td>
+            <td class="num" style="color:#22c55e">+39.0%</td>
+            <td class="num">25.1%</td>
+            <td class="num">2.78</td>
+            <td class="num">54.5%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">alt5_close_confirmed</td>
+            <td class="num" style="color:#84cc16"><strong>46.5%</strong></td>
+            <td class="num">845</td>
+            <td class="num" style="color:#eab308">-1.5%</td>
+            <td class="num" style="color:#22c55e">+23.7%</td>
+            <td class="num">23.2%</td>
+            <td class="num">4.50</td>
+            <td class="num">31.7%</td>
+            <td class="num">83.4</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">alt32_momentum_time</td>
+            <td class="num" style="color:#84cc16"><strong>43.6%</strong></td>
+            <td class="num">793</td>
+            <td class="num" style="color:#eab308">-4.3%</td>
+            <td class="num" style="color:#22c55e">+44.0%</td>
+            <td class="num">21.6%</td>
+            <td class="num">2.23</td>
+            <td class="num">64.2%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">alt15_single_position</td>
+            <td class="num" style="color:#84cc16"><strong>43.6%</strong></td>
+            <td class="num">793</td>
+            <td class="num" style="color:#eab308">-7.2%</td>
+            <td class="num" style="color:#22c55e">+76.0%</td>
+            <td class="num">33.9%</td>
+            <td class="num">4.90</td>
+            <td class="num">56.4%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">alt25_time_profit_lock</td>
+            <td class="num" style="color:#84cc16"><strong>43.5%</strong></td>
+            <td class="num">792</td>
+            <td class="num" style="color:#eab308">-4.3%</td>
+            <td class="num" style="color:#22c55e">+44.0%</td>
+            <td class="num">21.6%</td>
+            <td class="num">2.23</td>
+            <td class="num">64.2%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">alt4_weekly_donchian</td>
+            <td class="num" style="color:#84cc16"><strong>42.9%</strong></td>
+            <td class="num">780</td>
+            <td class="num" style="color:#eab308">-6.5%</td>
+            <td class="num" style="color:#22c55e">+29.7%</td>
+            <td class="num">18.7%</td>
+            <td class="num">7.88</td>
+            <td class="num">50.8%</td>
+            <td class="num">52.5</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">alt40_ultimate</td>
+            <td class="num" style="color:#84cc16"><strong>42.7%</strong></td>
+            <td class="num">777</td>
+            <td class="num" style="color:#eab308">-4.0%</td>
+            <td class="num" style="color:#84cc16">+9.6%</td>
+            <td class="num">24.1%</td>
+            <td class="num">2.69</td>
+            <td class="num">56.1%</td>
+            <td class="num">137.0</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">alt14_pullback_pyramid</td>
+            <td class="num" style="color:#84cc16"><strong>42.1%</strong></td>
+            <td class="num">765</td>
+            <td class="num" style="color:#eab308">-3.8%</td>
+            <td class="num" style="color:#84cc16">+5.3%</td>
+            <td class="num">23.2%</td>
+            <td class="num">3.34</td>
+            <td class="num">35.3%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">alt26_fractional_pyramid</td>
+            <td class="num" style="color:#84cc16"><strong>42.0%</strong></td>
+            <td class="num">764</td>
+            <td class="num" style="color:#eab308">-4.0%</td>
+            <td class="num" style="color:#22c55e">+28.1%</td>
+            <td class="num">33.0%</td>
+            <td class="num">9.83</td>
+            <td class="num">28.1%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">alt46_sector_adaptive_params</td>
+            <td class="num" style="color:#84cc16"><strong>41.1%</strong></td>
+            <td class="num">748</td>
+            <td class="num" style="color:#eab308">-4.4%</td>
+            <td class="num" style="color:#84cc16">+8.4%</td>
+            <td class="num">26.7%</td>
+            <td class="num">3.79</td>
+            <td class="num">44.3%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">11</td>
+            <td class="strategy-name">alt41_sector_adaptive</td>
+            <td class="num" style="color:#84cc16"><strong>40.6%</strong></td>
+            <td class="num">738</td>
+            <td class="num" style="color:#eab308">-4.2%</td>
+            <td class="num" style="color:#84cc16">+3.4%</td>
+            <td class="num">30.1%</td>
+            <td class="num">4.87</td>
+            <td class="num">41.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">12</td>
+            <td class="strategy-name">alt34_fractional_momentum</td>
+            <td class="num" style="color:#84cc16"><strong>40.2%</strong></td>
+            <td class="num">731</td>
+            <td class="num" style="color:#eab308">-5.2%</td>
+            <td class="num" style="color:#84cc16">+7.2%</td>
+            <td class="num">24.8%</td>
+            <td class="num">3.27</td>
+            <td class="num">56.7%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">13</td>
+            <td class="strategy-name">alt11_tapered_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>39.9%</strong></td>
+            <td class="num">726</td>
+            <td class="num" style="color:#eab308">-5.5%</td>
+            <td class="num" style="color:#84cc16">+7.0%</td>
+            <td class="num">24.4%</td>
+            <td class="num">3.26</td>
+            <td class="num">57.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">14</td>
+            <td class="strategy-name">alt47_momentum_scaled_sizing</td>
+            <td class="num" style="color:#eab308"><strong>39.7%</strong></td>
+            <td class="num">723</td>
+            <td class="num" style="color:#eab308">-3.8%</td>
+            <td class="num" style="color:#84cc16">+4.9%</td>
+            <td class="num">25.5%</td>
+            <td class="num">3.80</td>
+            <td class="num">39.0%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">15</td>
+            <td class="strategy-name">alt13_volatility_gated</td>
+            <td class="num" style="color:#eab308"><strong>39.3%</strong></td>
+            <td class="num">714</td>
+            <td class="num" style="color:#eab308">-5.8%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">25.3%</td>
+            <td class="num">3.23</td>
+            <td class="num">39.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">16</td>
+            <td class="strategy-name">alt37_breakeven_time</td>
+            <td class="num" style="color:#eab308"><strong>38.4%</strong></td>
+            <td class="num">699</td>
+            <td class="num" style="color:#eab308">-8.6%</td>
+            <td class="num" style="color:#84cc16">+11.0%</td>
+            <td class="num">20.7%</td>
+            <td class="num">2.11</td>
+            <td class="num">65.8%</td>
+            <td class="num">137.0</td>
+        </tr>
+        <tr>
+            <td class="num">17</td>
+            <td class="strategy-name">alt2_ema_crossover</td>
+            <td class="num" style="color:#eab308"><strong>38.3%</strong></td>
+            <td class="num">696</td>
+            <td class="num" style="color:#eab308">-3.6%</td>
+            <td class="num" style="color:#22c55e">+353.1%</td>
+            <td class="num">24.4%</td>
+            <td class="num">24.64</td>
+            <td class="num">27.0%</td>
+            <td class="num">34.1</td>
+        </tr>
+        <tr>
+            <td class="num">18</td>
+            <td class="strategy-name">alt44_adx_pyramiding</td>
+            <td class="num" style="color:#eab308"><strong>36.9%</strong></td>
+            <td class="num">671</td>
+            <td class="num" style="color:#eab308">-4.9%</td>
+            <td class="num" style="color:#eab308">-4.5%</td>
+            <td class="num">26.9%</td>
+            <td class="num">8.12</td>
+            <td class="num">39.8%</td>
+            <td class="num">78.3</td>
+        </tr>
+        <tr>
+            <td class="num">19</td>
+            <td class="strategy-name">alt31_fractional_breakeven</td>
+            <td class="num" style="color:#eab308"><strong>36.8%</strong></td>
+            <td class="num">669</td>
+            <td class="num" style="color:#eab308">-6.5%</td>
+            <td class="num" style="color:#84cc16">+19.3%</td>
+            <td class="num">31.9%</td>
+            <td class="num">9.79</td>
+            <td class="num">29.3%</td>
+            <td class="num">122.7</td>
+        </tr>
+        <tr>
+            <td class="num">20</td>
+            <td class="strategy-name">alt19_intrabar_execution</td>
+            <td class="num" style="color:#eab308"><strong>36.7%</strong></td>
+            <td class="num">667</td>
+            <td class="num" style="color:#ef4444">-11.4%</td>
+            <td class="num" style="color:#84cc16">+1.9%</td>
+            <td class="num">21.1%</td>
+            <td class="num">3.23</td>
+            <td class="num">76.0%</td>
+            <td class="num">161.6</td>
+        </tr>
+        <tr>
+            <td class="num">21</td>
+            <td class="strategy-name">alt20_asymmetric_ls</td>
+            <td class="num" style="color:#eab308"><strong>36.6%</strong></td>
+            <td class="num">665</td>
+            <td class="num" style="color:#eab308">-9.4%</td>
+            <td class="num" style="color:#22c55e">+42.9%</td>
+            <td class="num">20.6%</td>
+            <td class="num">2.31</td>
+            <td class="num">68.9%</td>
+            <td class="num">161.6</td>
+        </tr>
+        <tr>
+            <td class="num">22</td>
+            <td class="strategy-name">alt10_profit_targets</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#22c55e">+25.9%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">23</td>
+            <td class="strategy-name">alt39_adaptive_targets</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#22c55e">+25.9%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">24</td>
+            <td class="strategy-name">alt45_dual_momentum</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.4%</td>
+            <td class="num" style="color:#22c55e">+25.7%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">25</td>
+            <td class="strategy-name">alt7_chandelier_trail</td>
+            <td class="num" style="color:#eab308"><strong>36.1%</strong></td>
+            <td class="num">657</td>
+            <td class="num" style="color:#ef4444">-10.6%</td>
+            <td class="num" style="color:#22c55e">+110.2%</td>
+            <td class="num">22.9%</td>
+            <td class="num">5.92</td>
+            <td class="num">41.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">26</td>
+            <td class="strategy-name">alt38_triple_combo</td>
+            <td class="num" style="color:#eab308"><strong>35.2%</strong></td>
+            <td class="num">641</td>
+            <td class="num" style="color:#eab308">-8.1%</td>
+            <td class="num" style="color:#ef4444">-14.0%</td>
+            <td class="num">23.8%</td>
+            <td class="num">2.66</td>
+            <td class="num">60.4%</td>
+            <td class="num">133.2</td>
+        </tr>
+        <tr>
+            <td class="num">27</td>
+            <td class="strategy-name">alt43_volatility_adaptive</td>
+            <td class="num" style="color:#eab308"><strong>35.2%</strong></td>
+            <td class="num">641</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#84cc16">+1.6%</td>
+            <td class="num">24.4%</td>
+            <td class="num">3.24</td>
+            <td class="num">53.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">28</td>
+            <td class="strategy-name">alt30_momentum_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-11.9%</td>
+            <td class="num" style="color:#84cc16">+3.2%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">29</td>
+            <td class="strategy-name">Baseline</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">30</td>
+            <td class="strategy-name">alt8_adaptive_exit</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">31</td>
+            <td class="strategy-name">alt18_regime_risk</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">32</td>
+            <td class="strategy-name">alt24_vol_adjusted_targets</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#eab308">-8.5%</td>
+            <td class="num" style="color:#84cc16">+0.0%</td>
+            <td class="num">24.8%</td>
+            <td class="num">2.65</td>
+            <td class="num">50.5%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">33</td>
+            <td class="strategy-name">alt9_time_exit</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#ef4444">-11.3%</td>
+            <td class="num" style="color:#84cc16">+14.3%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.63</td>
+            <td class="num">66.3%</td>
+            <td class="num">133.9</td>
+        </tr>
+        <tr>
+            <td class="num">34</td>
+            <td class="strategy-name">alt42_momentum_gated_time</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#ef4444">-11.3%</td>
+            <td class="num" style="color:#84cc16">+14.3%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.63</td>
+            <td class="num">66.3%</td>
+            <td class="num">133.9</td>
+        </tr>
+        <tr>
+            <td class="num">35</td>
+            <td class="strategy-name">alt17_dual_timeframe</td>
+            <td class="num" style="color:#eab308"><strong>34.5%</strong></td>
+            <td class="num">627</td>
+            <td class="num" style="color:#ef4444">-11.8%</td>
+            <td class="num" style="color:#eab308">-1.0%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.0%</td>
+            <td class="num">130.1</td>
+        </tr>
+        <tr>
+            <td class="num">36</td>
+            <td class="strategy-name">alt1_fast_breakout</td>
+            <td class="num" style="color:#eab308"><strong>34.2%</strong></td>
+            <td class="num">623</td>
+            <td class="num" style="color:#ef4444">-17.7%</td>
+            <td class="num" style="color:#84cc16">+8.2%</td>
+            <td class="num">21.0%</td>
+            <td class="num">1.63</td>
+            <td class="num">85.9%</td>
+            <td class="num">219.1</td>
+        </tr>
+        <tr>
+            <td class="num">37</td>
+            <td class="strategy-name">alt28_adx_filter</td>
+            <td class="num" style="color:#eab308"><strong>32.9%</strong></td>
+            <td class="num">599</td>
+            <td class="num" style="color:#eab308">-8.2%</td>
+            <td class="num" style="color:#22c55e">+24.3%</td>
+            <td class="num">27.1%</td>
+            <td class="num">9.21</td>
+            <td class="num">34.7%</td>
+            <td class="num">75.3</td>
+        </tr>
+        <tr>
+            <td class="num">38</td>
+            <td class="strategy-name">alt16_anti_chop</td>
+            <td class="num" style="color:#eab308"><strong>32.5%</strong></td>
+            <td class="num">592</td>
+            <td class="num" style="color:#ef4444">-10.9%</td>
+            <td class="num" style="color:#ef4444">-13.3%</td>
+            <td class="num">20.0%</td>
+            <td class="num">8.08</td>
+            <td class="num">57.5%</td>
+            <td class="num">70.1</td>
+        </tr>
+        <tr>
+            <td class="num">39</td>
+            <td class="strategy-name">alt12_accelerated_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>32.5%</strong></td>
+            <td class="num">591</td>
+            <td class="num" style="color:#ef4444">-13.8%</td>
+            <td class="num" style="color:#eab308">-6.6%</td>
+            <td class="num">18.8%</td>
+            <td class="num">2.63</td>
+            <td class="num">70.7%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">40</td>
+            <td class="strategy-name">alt29_multi_stage_scaling</td>
+            <td class="num" style="color:#eab308"><strong>32.3%</strong></td>
+            <td class="num">588</td>
+            <td class="num" style="color:#eab308">-9.6%</td>
+            <td class="num" style="color:#ef4444">-15.0%</td>
+            <td class="num">22.2%</td>
+            <td class="num">3.20</td>
+            <td class="num">49.5%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">41</td>
+            <td class="strategy-name">alt21_breakeven_lock</td>
+            <td class="num" style="color:#eab308"><strong>32.3%</strong></td>
+            <td class="num">588</td>
+            <td class="num" style="color:#ef4444">-14.1%</td>
+            <td class="num" style="color:#22c55e">+82.5%</td>
+            <td class="num">22.1%</td>
+            <td class="num">5.87</td>
+            <td class="num">42.7%</td>
+            <td class="num">122.7</td>
+        </tr>
+        <tr>
+            <td class="num">42</td>
+            <td class="strategy-name">alt27_asymmetric_rr</td>
+            <td class="num" style="color:#eab308"><strong>32.2%</strong></td>
+            <td class="num">586</td>
+            <td class="num" style="color:#ef4444">-15.8%</td>
+            <td class="num" style="color:#84cc16">+8.0%</td>
+            <td class="num">20.9%</td>
+            <td class="num">2.59</td>
+            <td class="num">59.1%</td>
+            <td class="num">139.8</td>
+        </tr>
+        <tr>
+            <td class="num">43</td>
+            <td class="strategy-name">alt36_breakeven_momentum</td>
+            <td class="num" style="color:#eab308"><strong>31.0%</strong></td>
+            <td class="num">564</td>
+            <td class="num" style="color:#ef4444">-15.3%</td>
+            <td class="num" style="color:#ef4444">-18.8%</td>
+            <td class="num">20.2%</td>
+            <td class="num">2.07</td>
+            <td class="num">70.8%</td>
+            <td class="num">133.2</td>
+        </tr>
+        <tr>
+            <td class="num">44</td>
+            <td class="strategy-name">alt33_progressive_breakeven</td>
+            <td class="num" style="color:#ef4444"><strong>15.4%</strong></td>
+            <td class="num">281</td>
+            <td class="num" style="color:#ef4444">-34.1%</td>
+            <td class="num" style="color:#ef4444">-80.5%</td>
+            <td class="num">14.9%</td>
+            <td class="num">1.80</td>
+            <td class="num">71.4%</td>
+            <td class="num">149.6</td>
+        </tr></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-title">📊 Ranked by Median Return (most consistent per-ticker outcome)</div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead><tr>
+                    <th>#</th><th>Strategy</th><th>Success%</th><th>Profitable</th>
+                    <th>Median Ret</th><th>Avg Ret</th><th>Win Rate</th>
+                    <th>Profit Factor</th><th>Max DD</th><th>Avg Trades</th>
+                </tr></thead>
+                <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">alt35_fractional_time</td>
+            <td class="num" style="color:#84cc16"><strong>47.7%</strong></td>
+            <td class="num">867</td>
+            <td class="num" style="color:#eab308">-1.3%</td>
+            <td class="num" style="color:#22c55e">+39.0%</td>
+            <td class="num">25.1%</td>
+            <td class="num">2.78</td>
+            <td class="num">54.5%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">alt5_close_confirmed</td>
+            <td class="num" style="color:#84cc16"><strong>46.5%</strong></td>
+            <td class="num">845</td>
+            <td class="num" style="color:#eab308">-1.5%</td>
+            <td class="num" style="color:#22c55e">+23.7%</td>
+            <td class="num">23.2%</td>
+            <td class="num">4.50</td>
+            <td class="num">31.7%</td>
+            <td class="num">83.4</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">alt2_ema_crossover</td>
+            <td class="num" style="color:#eab308"><strong>38.3%</strong></td>
+            <td class="num">696</td>
+            <td class="num" style="color:#eab308">-3.6%</td>
+            <td class="num" style="color:#22c55e">+353.1%</td>
+            <td class="num">24.4%</td>
+            <td class="num">24.64</td>
+            <td class="num">27.0%</td>
+            <td class="num">34.1</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">alt14_pullback_pyramid</td>
+            <td class="num" style="color:#84cc16"><strong>42.1%</strong></td>
+            <td class="num">765</td>
+            <td class="num" style="color:#eab308">-3.8%</td>
+            <td class="num" style="color:#84cc16">+5.3%</td>
+            <td class="num">23.2%</td>
+            <td class="num">3.34</td>
+            <td class="num">35.3%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">alt47_momentum_scaled_sizing</td>
+            <td class="num" style="color:#eab308"><strong>39.7%</strong></td>
+            <td class="num">723</td>
+            <td class="num" style="color:#eab308">-3.8%</td>
+            <td class="num" style="color:#84cc16">+4.9%</td>
+            <td class="num">25.5%</td>
+            <td class="num">3.80</td>
+            <td class="num">39.0%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">alt26_fractional_pyramid</td>
+            <td class="num" style="color:#84cc16"><strong>42.0%</strong></td>
+            <td class="num">764</td>
+            <td class="num" style="color:#eab308">-4.0%</td>
+            <td class="num" style="color:#22c55e">+28.1%</td>
+            <td class="num">33.0%</td>
+            <td class="num">9.83</td>
+            <td class="num">28.1%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">alt40_ultimate</td>
+            <td class="num" style="color:#84cc16"><strong>42.7%</strong></td>
+            <td class="num">777</td>
+            <td class="num" style="color:#eab308">-4.0%</td>
+            <td class="num" style="color:#84cc16">+9.6%</td>
+            <td class="num">24.1%</td>
+            <td class="num">2.69</td>
+            <td class="num">56.1%</td>
+            <td class="num">137.0</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">alt41_sector_adaptive</td>
+            <td class="num" style="color:#84cc16"><strong>40.6%</strong></td>
+            <td class="num">738</td>
+            <td class="num" style="color:#eab308">-4.2%</td>
+            <td class="num" style="color:#84cc16">+3.4%</td>
+            <td class="num">30.1%</td>
+            <td class="num">4.87</td>
+            <td class="num">41.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">alt25_time_profit_lock</td>
+            <td class="num" style="color:#84cc16"><strong>43.5%</strong></td>
+            <td class="num">792</td>
+            <td class="num" style="color:#eab308">-4.3%</td>
+            <td class="num" style="color:#22c55e">+44.0%</td>
+            <td class="num">21.6%</td>
+            <td class="num">2.23</td>
+            <td class="num">64.2%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">alt32_momentum_time</td>
+            <td class="num" style="color:#84cc16"><strong>43.6%</strong></td>
+            <td class="num">793</td>
+            <td class="num" style="color:#eab308">-4.3%</td>
+            <td class="num" style="color:#22c55e">+44.0%</td>
+            <td class="num">21.6%</td>
+            <td class="num">2.23</td>
+            <td class="num">64.2%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">11</td>
+            <td class="strategy-name">alt46_sector_adaptive_params</td>
+            <td class="num" style="color:#84cc16"><strong>41.1%</strong></td>
+            <td class="num">748</td>
+            <td class="num" style="color:#eab308">-4.4%</td>
+            <td class="num" style="color:#84cc16">+8.4%</td>
+            <td class="num">26.7%</td>
+            <td class="num">3.79</td>
+            <td class="num">44.3%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">12</td>
+            <td class="strategy-name">alt44_adx_pyramiding</td>
+            <td class="num" style="color:#eab308"><strong>36.9%</strong></td>
+            <td class="num">671</td>
+            <td class="num" style="color:#eab308">-4.9%</td>
+            <td class="num" style="color:#eab308">-4.5%</td>
+            <td class="num">26.9%</td>
+            <td class="num">8.12</td>
+            <td class="num">39.8%</td>
+            <td class="num">78.3</td>
+        </tr>
+        <tr>
+            <td class="num">13</td>
+            <td class="strategy-name">alt34_fractional_momentum</td>
+            <td class="num" style="color:#84cc16"><strong>40.2%</strong></td>
+            <td class="num">731</td>
+            <td class="num" style="color:#eab308">-5.2%</td>
+            <td class="num" style="color:#84cc16">+7.2%</td>
+            <td class="num">24.8%</td>
+            <td class="num">3.27</td>
+            <td class="num">56.7%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">14</td>
+            <td class="strategy-name">alt11_tapered_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>39.9%</strong></td>
+            <td class="num">726</td>
+            <td class="num" style="color:#eab308">-5.5%</td>
+            <td class="num" style="color:#84cc16">+7.0%</td>
+            <td class="num">24.4%</td>
+            <td class="num">3.26</td>
+            <td class="num">57.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">15</td>
+            <td class="strategy-name">alt13_volatility_gated</td>
+            <td class="num" style="color:#eab308"><strong>39.3%</strong></td>
+            <td class="num">714</td>
+            <td class="num" style="color:#eab308">-5.8%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">25.3%</td>
+            <td class="num">3.23</td>
+            <td class="num">39.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">16</td>
+            <td class="strategy-name">alt31_fractional_breakeven</td>
+            <td class="num" style="color:#eab308"><strong>36.8%</strong></td>
+            <td class="num">669</td>
+            <td class="num" style="color:#eab308">-6.5%</td>
+            <td class="num" style="color:#84cc16">+19.3%</td>
+            <td class="num">31.9%</td>
+            <td class="num">9.79</td>
+            <td class="num">29.3%</td>
+            <td class="num">122.7</td>
+        </tr>
+        <tr>
+            <td class="num">17</td>
+            <td class="strategy-name">alt4_weekly_donchian</td>
+            <td class="num" style="color:#84cc16"><strong>42.9%</strong></td>
+            <td class="num">780</td>
+            <td class="num" style="color:#eab308">-6.5%</td>
+            <td class="num" style="color:#22c55e">+29.7%</td>
+            <td class="num">18.7%</td>
+            <td class="num">7.88</td>
+            <td class="num">50.8%</td>
+            <td class="num">52.5</td>
+        </tr>
+        <tr>
+            <td class="num">18</td>
+            <td class="strategy-name">alt15_single_position</td>
+            <td class="num" style="color:#84cc16"><strong>43.6%</strong></td>
+            <td class="num">793</td>
+            <td class="num" style="color:#eab308">-7.2%</td>
+            <td class="num" style="color:#22c55e">+76.0%</td>
+            <td class="num">33.9%</td>
+            <td class="num">4.90</td>
+            <td class="num">56.4%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">19</td>
+            <td class="strategy-name">alt38_triple_combo</td>
+            <td class="num" style="color:#eab308"><strong>35.2%</strong></td>
+            <td class="num">641</td>
+            <td class="num" style="color:#eab308">-8.1%</td>
+            <td class="num" style="color:#ef4444">-14.0%</td>
+            <td class="num">23.8%</td>
+            <td class="num">2.66</td>
+            <td class="num">60.4%</td>
+            <td class="num">133.2</td>
+        </tr>
+        <tr>
+            <td class="num">20</td>
+            <td class="strategy-name">alt28_adx_filter</td>
+            <td class="num" style="color:#eab308"><strong>32.9%</strong></td>
+            <td class="num">599</td>
+            <td class="num" style="color:#eab308">-8.2%</td>
+            <td class="num" style="color:#22c55e">+24.3%</td>
+            <td class="num">27.1%</td>
+            <td class="num">9.21</td>
+            <td class="num">34.7%</td>
+            <td class="num">75.3</td>
+        </tr>
+        <tr>
+            <td class="num">21</td>
+            <td class="strategy-name">alt24_vol_adjusted_targets</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#eab308">-8.5%</td>
+            <td class="num" style="color:#84cc16">+0.0%</td>
+            <td class="num">24.8%</td>
+            <td class="num">2.65</td>
+            <td class="num">50.5%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">22</td>
+            <td class="strategy-name">alt37_breakeven_time</td>
+            <td class="num" style="color:#eab308"><strong>38.4%</strong></td>
+            <td class="num">699</td>
+            <td class="num" style="color:#eab308">-8.6%</td>
+            <td class="num" style="color:#84cc16">+11.0%</td>
+            <td class="num">20.7%</td>
+            <td class="num">2.11</td>
+            <td class="num">65.8%</td>
+            <td class="num">137.0</td>
+        </tr>
+        <tr>
+            <td class="num">23</td>
+            <td class="strategy-name">alt43_volatility_adaptive</td>
+            <td class="num" style="color:#eab308"><strong>35.2%</strong></td>
+            <td class="num">641</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#84cc16">+1.6%</td>
+            <td class="num">24.4%</td>
+            <td class="num">3.24</td>
+            <td class="num">53.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">24</td>
+            <td class="strategy-name">alt10_profit_targets</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#22c55e">+25.9%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">25</td>
+            <td class="strategy-name">alt39_adaptive_targets</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#22c55e">+25.9%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">26</td>
+            <td class="strategy-name">alt20_asymmetric_ls</td>
+            <td class="num" style="color:#eab308"><strong>36.6%</strong></td>
+            <td class="num">665</td>
+            <td class="num" style="color:#eab308">-9.4%</td>
+            <td class="num" style="color:#22c55e">+42.9%</td>
+            <td class="num">20.6%</td>
+            <td class="num">2.31</td>
+            <td class="num">68.9%</td>
+            <td class="num">161.6</td>
+        </tr>
+        <tr>
+            <td class="num">27</td>
+            <td class="strategy-name">alt45_dual_momentum</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.4%</td>
+            <td class="num" style="color:#22c55e">+25.7%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">28</td>
+            <td class="strategy-name">alt29_multi_stage_scaling</td>
+            <td class="num" style="color:#eab308"><strong>32.3%</strong></td>
+            <td class="num">588</td>
+            <td class="num" style="color:#eab308">-9.6%</td>
+            <td class="num" style="color:#ef4444">-15.0%</td>
+            <td class="num">22.2%</td>
+            <td class="num">3.20</td>
+            <td class="num">49.5%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">29</td>
+            <td class="strategy-name">alt7_chandelier_trail</td>
+            <td class="num" style="color:#eab308"><strong>36.1%</strong></td>
+            <td class="num">657</td>
+            <td class="num" style="color:#ef4444">-10.6%</td>
+            <td class="num" style="color:#22c55e">+110.2%</td>
+            <td class="num">22.9%</td>
+            <td class="num">5.92</td>
+            <td class="num">41.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">30</td>
+            <td class="strategy-name">alt16_anti_chop</td>
+            <td class="num" style="color:#eab308"><strong>32.5%</strong></td>
+            <td class="num">592</td>
+            <td class="num" style="color:#ef4444">-10.9%</td>
+            <td class="num" style="color:#ef4444">-13.3%</td>
+            <td class="num">20.0%</td>
+            <td class="num">8.08</td>
+            <td class="num">57.5%</td>
+            <td class="num">70.1</td>
+        </tr>
+        <tr>
+            <td class="num">31</td>
+            <td class="strategy-name">alt9_time_exit</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#ef4444">-11.3%</td>
+            <td class="num" style="color:#84cc16">+14.3%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.63</td>
+            <td class="num">66.3%</td>
+            <td class="num">133.9</td>
+        </tr>
+        <tr>
+            <td class="num">32</td>
+            <td class="strategy-name">alt42_momentum_gated_time</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#ef4444">-11.3%</td>
+            <td class="num" style="color:#84cc16">+14.3%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.63</td>
+            <td class="num">66.3%</td>
+            <td class="num">133.9</td>
+        </tr>
+        <tr>
+            <td class="num">33</td>
+            <td class="strategy-name">alt19_intrabar_execution</td>
+            <td class="num" style="color:#eab308"><strong>36.7%</strong></td>
+            <td class="num">667</td>
+            <td class="num" style="color:#ef4444">-11.4%</td>
+            <td class="num" style="color:#84cc16">+1.9%</td>
+            <td class="num">21.1%</td>
+            <td class="num">3.23</td>
+            <td class="num">76.0%</td>
+            <td class="num">161.6</td>
+        </tr>
+        <tr>
+            <td class="num">34</td>
+            <td class="strategy-name">alt17_dual_timeframe</td>
+            <td class="num" style="color:#eab308"><strong>34.5%</strong></td>
+            <td class="num">627</td>
+            <td class="num" style="color:#ef4444">-11.8%</td>
+            <td class="num" style="color:#eab308">-1.0%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.0%</td>
+            <td class="num">130.1</td>
+        </tr>
+        <tr>
+            <td class="num">35</td>
+            <td class="strategy-name">alt30_momentum_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-11.9%</td>
+            <td class="num" style="color:#84cc16">+3.2%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">36</td>
+            <td class="strategy-name">Baseline</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">37</td>
+            <td class="strategy-name">alt8_adaptive_exit</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">38</td>
+            <td class="strategy-name">alt18_regime_risk</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">39</td>
+            <td class="strategy-name">alt12_accelerated_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>32.5%</strong></td>
+            <td class="num">591</td>
+            <td class="num" style="color:#ef4444">-13.8%</td>
+            <td class="num" style="color:#eab308">-6.6%</td>
+            <td class="num">18.8%</td>
+            <td class="num">2.63</td>
+            <td class="num">70.7%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">40</td>
+            <td class="strategy-name">alt21_breakeven_lock</td>
+            <td class="num" style="color:#eab308"><strong>32.3%</strong></td>
+            <td class="num">588</td>
+            <td class="num" style="color:#ef4444">-14.1%</td>
+            <td class="num" style="color:#22c55e">+82.5%</td>
+            <td class="num">22.1%</td>
+            <td class="num">5.87</td>
+            <td class="num">42.7%</td>
+            <td class="num">122.7</td>
+        </tr>
+        <tr>
+            <td class="num">41</td>
+            <td class="strategy-name">alt36_breakeven_momentum</td>
+            <td class="num" style="color:#eab308"><strong>31.0%</strong></td>
+            <td class="num">564</td>
+            <td class="num" style="color:#ef4444">-15.3%</td>
+            <td class="num" style="color:#ef4444">-18.8%</td>
+            <td class="num">20.2%</td>
+            <td class="num">2.07</td>
+            <td class="num">70.8%</td>
+            <td class="num">133.2</td>
+        </tr>
+        <tr>
+            <td class="num">42</td>
+            <td class="strategy-name">alt27_asymmetric_rr</td>
+            <td class="num" style="color:#eab308"><strong>32.2%</strong></td>
+            <td class="num">586</td>
+            <td class="num" style="color:#ef4444">-15.8%</td>
+            <td class="num" style="color:#84cc16">+8.0%</td>
+            <td class="num">20.9%</td>
+            <td class="num">2.59</td>
+            <td class="num">59.1%</td>
+            <td class="num">139.8</td>
+        </tr>
+        <tr>
+            <td class="num">43</td>
+            <td class="strategy-name">alt1_fast_breakout</td>
+            <td class="num" style="color:#eab308"><strong>34.2%</strong></td>
+            <td class="num">623</td>
+            <td class="num" style="color:#ef4444">-17.7%</td>
+            <td class="num" style="color:#84cc16">+8.2%</td>
+            <td class="num">21.0%</td>
+            <td class="num">1.63</td>
+            <td class="num">85.9%</td>
+            <td class="num">219.1</td>
+        </tr>
+        <tr>
+            <td class="num">44</td>
+            <td class="strategy-name">alt33_progressive_breakeven</td>
+            <td class="num" style="color:#ef4444"><strong>15.4%</strong></td>
+            <td class="num">281</td>
+            <td class="num" style="color:#ef4444">-34.1%</td>
+            <td class="num" style="color:#ef4444">-80.5%</td>
+            <td class="num">14.9%</td>
+            <td class="num">1.80</td>
+            <td class="num">71.4%</td>
+            <td class="num">149.6</td>
+        </tr></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-title">⚖️ Ranked by Profit Factor (gross win / gross loss)</div>
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead><tr>
+                    <th>#</th><th>Strategy</th><th>Success%</th><th>Profitable</th>
+                    <th>Median Ret</th><th>Avg Ret</th><th>Win Rate</th>
+                    <th>Profit Factor</th><th>Max DD</th><th>Avg Trades</th>
+                </tr></thead>
+                <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td class="strategy-name">alt2_ema_crossover</td>
+            <td class="num" style="color:#eab308"><strong>38.3%</strong></td>
+            <td class="num">696</td>
+            <td class="num" style="color:#eab308">-3.6%</td>
+            <td class="num" style="color:#22c55e">+353.1%</td>
+            <td class="num">24.4%</td>
+            <td class="num">24.64</td>
+            <td class="num">27.0%</td>
+            <td class="num">34.1</td>
+        </tr>
+        <tr>
+            <td class="num">2</td>
+            <td class="strategy-name">alt26_fractional_pyramid</td>
+            <td class="num" style="color:#84cc16"><strong>42.0%</strong></td>
+            <td class="num">764</td>
+            <td class="num" style="color:#eab308">-4.0%</td>
+            <td class="num" style="color:#22c55e">+28.1%</td>
+            <td class="num">33.0%</td>
+            <td class="num">9.83</td>
+            <td class="num">28.1%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">3</td>
+            <td class="strategy-name">alt31_fractional_breakeven</td>
+            <td class="num" style="color:#eab308"><strong>36.8%</strong></td>
+            <td class="num">669</td>
+            <td class="num" style="color:#eab308">-6.5%</td>
+            <td class="num" style="color:#84cc16">+19.3%</td>
+            <td class="num">31.9%</td>
+            <td class="num">9.79</td>
+            <td class="num">29.3%</td>
+            <td class="num">122.7</td>
+        </tr>
+        <tr>
+            <td class="num">4</td>
+            <td class="strategy-name">alt28_adx_filter</td>
+            <td class="num" style="color:#eab308"><strong>32.9%</strong></td>
+            <td class="num">599</td>
+            <td class="num" style="color:#eab308">-8.2%</td>
+            <td class="num" style="color:#22c55e">+24.3%</td>
+            <td class="num">27.1%</td>
+            <td class="num">9.21</td>
+            <td class="num">34.7%</td>
+            <td class="num">75.3</td>
+        </tr>
+        <tr>
+            <td class="num">5</td>
+            <td class="strategy-name">alt44_adx_pyramiding</td>
+            <td class="num" style="color:#eab308"><strong>36.9%</strong></td>
+            <td class="num">671</td>
+            <td class="num" style="color:#eab308">-4.9%</td>
+            <td class="num" style="color:#eab308">-4.5%</td>
+            <td class="num">26.9%</td>
+            <td class="num">8.12</td>
+            <td class="num">39.8%</td>
+            <td class="num">78.3</td>
+        </tr>
+        <tr>
+            <td class="num">6</td>
+            <td class="strategy-name">alt16_anti_chop</td>
+            <td class="num" style="color:#eab308"><strong>32.5%</strong></td>
+            <td class="num">592</td>
+            <td class="num" style="color:#ef4444">-10.9%</td>
+            <td class="num" style="color:#ef4444">-13.3%</td>
+            <td class="num">20.0%</td>
+            <td class="num">8.08</td>
+            <td class="num">57.5%</td>
+            <td class="num">70.1</td>
+        </tr>
+        <tr>
+            <td class="num">7</td>
+            <td class="strategy-name">alt4_weekly_donchian</td>
+            <td class="num" style="color:#84cc16"><strong>42.9%</strong></td>
+            <td class="num">780</td>
+            <td class="num" style="color:#eab308">-6.5%</td>
+            <td class="num" style="color:#22c55e">+29.7%</td>
+            <td class="num">18.7%</td>
+            <td class="num">7.88</td>
+            <td class="num">50.8%</td>
+            <td class="num">52.5</td>
+        </tr>
+        <tr>
+            <td class="num">8</td>
+            <td class="strategy-name">alt10_profit_targets</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#22c55e">+25.9%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">9</td>
+            <td class="strategy-name">alt39_adaptive_targets</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#22c55e">+25.9%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">10</td>
+            <td class="strategy-name">alt45_dual_momentum</td>
+            <td class="num" style="color:#eab308"><strong>36.5%</strong></td>
+            <td class="num">664</td>
+            <td class="num" style="color:#eab308">-9.4%</td>
+            <td class="num" style="color:#22c55e">+25.7%</td>
+            <td class="num">28.1%</td>
+            <td class="num">7.57</td>
+            <td class="num">36.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">11</td>
+            <td class="strategy-name">alt7_chandelier_trail</td>
+            <td class="num" style="color:#eab308"><strong>36.1%</strong></td>
+            <td class="num">657</td>
+            <td class="num" style="color:#ef4444">-10.6%</td>
+            <td class="num" style="color:#22c55e">+110.2%</td>
+            <td class="num">22.9%</td>
+            <td class="num">5.92</td>
+            <td class="num">41.5%</td>
+            <td class="num">121.4</td>
+        </tr>
+        <tr>
+            <td class="num">12</td>
+            <td class="strategy-name">alt21_breakeven_lock</td>
+            <td class="num" style="color:#eab308"><strong>32.3%</strong></td>
+            <td class="num">588</td>
+            <td class="num" style="color:#ef4444">-14.1%</td>
+            <td class="num" style="color:#22c55e">+82.5%</td>
+            <td class="num">22.1%</td>
+            <td class="num">5.87</td>
+            <td class="num">42.7%</td>
+            <td class="num">122.7</td>
+        </tr>
+        <tr>
+            <td class="num">13</td>
+            <td class="strategy-name">alt15_single_position</td>
+            <td class="num" style="color:#84cc16"><strong>43.6%</strong></td>
+            <td class="num">793</td>
+            <td class="num" style="color:#eab308">-7.2%</td>
+            <td class="num" style="color:#22c55e">+76.0%</td>
+            <td class="num">33.9%</td>
+            <td class="num">4.90</td>
+            <td class="num">56.4%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">14</td>
+            <td class="strategy-name">alt41_sector_adaptive</td>
+            <td class="num" style="color:#84cc16"><strong>40.6%</strong></td>
+            <td class="num">738</td>
+            <td class="num" style="color:#eab308">-4.2%</td>
+            <td class="num" style="color:#84cc16">+3.4%</td>
+            <td class="num">30.1%</td>
+            <td class="num">4.87</td>
+            <td class="num">41.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">15</td>
+            <td class="strategy-name">alt5_close_confirmed</td>
+            <td class="num" style="color:#84cc16"><strong>46.5%</strong></td>
+            <td class="num">845</td>
+            <td class="num" style="color:#eab308">-1.5%</td>
+            <td class="num" style="color:#22c55e">+23.7%</td>
+            <td class="num">23.2%</td>
+            <td class="num">4.50</td>
+            <td class="num">31.7%</td>
+            <td class="num">83.4</td>
+        </tr>
+        <tr>
+            <td class="num">16</td>
+            <td class="strategy-name">alt47_momentum_scaled_sizing</td>
+            <td class="num" style="color:#eab308"><strong>39.7%</strong></td>
+            <td class="num">723</td>
+            <td class="num" style="color:#eab308">-3.8%</td>
+            <td class="num" style="color:#84cc16">+4.9%</td>
+            <td class="num">25.5%</td>
+            <td class="num">3.80</td>
+            <td class="num">39.0%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">17</td>
+            <td class="strategy-name">alt46_sector_adaptive_params</td>
+            <td class="num" style="color:#84cc16"><strong>41.1%</strong></td>
+            <td class="num">748</td>
+            <td class="num" style="color:#eab308">-4.4%</td>
+            <td class="num" style="color:#84cc16">+8.4%</td>
+            <td class="num">26.7%</td>
+            <td class="num">3.79</td>
+            <td class="num">44.3%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">18</td>
+            <td class="strategy-name">alt14_pullback_pyramid</td>
+            <td class="num" style="color:#84cc16"><strong>42.1%</strong></td>
+            <td class="num">765</td>
+            <td class="num" style="color:#eab308">-3.8%</td>
+            <td class="num" style="color:#84cc16">+5.3%</td>
+            <td class="num">23.2%</td>
+            <td class="num">3.34</td>
+            <td class="num">35.3%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">19</td>
+            <td class="strategy-name">alt34_fractional_momentum</td>
+            <td class="num" style="color:#84cc16"><strong>40.2%</strong></td>
+            <td class="num">731</td>
+            <td class="num" style="color:#eab308">-5.2%</td>
+            <td class="num" style="color:#84cc16">+7.2%</td>
+            <td class="num">24.8%</td>
+            <td class="num">3.27</td>
+            <td class="num">56.7%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">20</td>
+            <td class="strategy-name">alt11_tapered_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>39.9%</strong></td>
+            <td class="num">726</td>
+            <td class="num" style="color:#eab308">-5.5%</td>
+            <td class="num" style="color:#84cc16">+7.0%</td>
+            <td class="num">24.4%</td>
+            <td class="num">3.26</td>
+            <td class="num">57.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">21</td>
+            <td class="strategy-name">alt43_volatility_adaptive</td>
+            <td class="num" style="color:#eab308"><strong>35.2%</strong></td>
+            <td class="num">641</td>
+            <td class="num" style="color:#eab308">-9.3%</td>
+            <td class="num" style="color:#84cc16">+1.6%</td>
+            <td class="num">24.4%</td>
+            <td class="num">3.24</td>
+            <td class="num">53.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">22</td>
+            <td class="strategy-name">alt13_volatility_gated</td>
+            <td class="num" style="color:#eab308"><strong>39.3%</strong></td>
+            <td class="num">714</td>
+            <td class="num" style="color:#eab308">-5.8%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">25.3%</td>
+            <td class="num">3.23</td>
+            <td class="num">39.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">23</td>
+            <td class="strategy-name">alt19_intrabar_execution</td>
+            <td class="num" style="color:#eab308"><strong>36.7%</strong></td>
+            <td class="num">667</td>
+            <td class="num" style="color:#ef4444">-11.4%</td>
+            <td class="num" style="color:#84cc16">+1.9%</td>
+            <td class="num">21.1%</td>
+            <td class="num">3.23</td>
+            <td class="num">76.0%</td>
+            <td class="num">161.6</td>
+        </tr>
+        <tr>
+            <td class="num">24</td>
+            <td class="strategy-name">alt29_multi_stage_scaling</td>
+            <td class="num" style="color:#eab308"><strong>32.3%</strong></td>
+            <td class="num">588</td>
+            <td class="num" style="color:#eab308">-9.6%</td>
+            <td class="num" style="color:#ef4444">-15.0%</td>
+            <td class="num">22.2%</td>
+            <td class="num">3.20</td>
+            <td class="num">49.5%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">25</td>
+            <td class="strategy-name">alt35_fractional_time</td>
+            <td class="num" style="color:#84cc16"><strong>47.7%</strong></td>
+            <td class="num">867</td>
+            <td class="num" style="color:#eab308">-1.3%</td>
+            <td class="num" style="color:#22c55e">+39.0%</td>
+            <td class="num">25.1%</td>
+            <td class="num">2.78</td>
+            <td class="num">54.5%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">26</td>
+            <td class="strategy-name">alt40_ultimate</td>
+            <td class="num" style="color:#84cc16"><strong>42.7%</strong></td>
+            <td class="num">777</td>
+            <td class="num" style="color:#eab308">-4.0%</td>
+            <td class="num" style="color:#84cc16">+9.6%</td>
+            <td class="num">24.1%</td>
+            <td class="num">2.69</td>
+            <td class="num">56.1%</td>
+            <td class="num">137.0</td>
+        </tr>
+        <tr>
+            <td class="num">27</td>
+            <td class="strategy-name">alt17_dual_timeframe</td>
+            <td class="num" style="color:#eab308"><strong>34.5%</strong></td>
+            <td class="num">627</td>
+            <td class="num" style="color:#ef4444">-11.8%</td>
+            <td class="num" style="color:#eab308">-1.0%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.0%</td>
+            <td class="num">130.1</td>
+        </tr>
+        <tr>
+            <td class="num">28</td>
+            <td class="strategy-name">alt30_momentum_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-11.9%</td>
+            <td class="num" style="color:#84cc16">+3.2%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">29</td>
+            <td class="strategy-name">Baseline</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">30</td>
+            <td class="strategy-name">alt8_adaptive_exit</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">31</td>
+            <td class="strategy-name">alt18_regime_risk</td>
+            <td class="num" style="color:#eab308"><strong>35.1%</strong></td>
+            <td class="num">638</td>
+            <td class="num" style="color:#ef4444">-12.0%</td>
+            <td class="num" style="color:#84cc16">+3.1%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.68</td>
+            <td class="num">67.2%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">32</td>
+            <td class="strategy-name">alt38_triple_combo</td>
+            <td class="num" style="color:#eab308"><strong>35.2%</strong></td>
+            <td class="num">641</td>
+            <td class="num" style="color:#eab308">-8.1%</td>
+            <td class="num" style="color:#ef4444">-14.0%</td>
+            <td class="num">23.8%</td>
+            <td class="num">2.66</td>
+            <td class="num">60.4%</td>
+            <td class="num">133.2</td>
+        </tr>
+        <tr>
+            <td class="num">33</td>
+            <td class="strategy-name">alt24_vol_adjusted_targets</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#eab308">-8.5%</td>
+            <td class="num" style="color:#84cc16">+0.0%</td>
+            <td class="num">24.8%</td>
+            <td class="num">2.65</td>
+            <td class="num">50.5%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">34</td>
+            <td class="strategy-name">alt9_time_exit</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#ef4444">-11.3%</td>
+            <td class="num" style="color:#84cc16">+14.3%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.63</td>
+            <td class="num">66.3%</td>
+            <td class="num">133.9</td>
+        </tr>
+        <tr>
+            <td class="num">35</td>
+            <td class="strategy-name">alt42_momentum_gated_time</td>
+            <td class="num" style="color:#eab308"><strong>35.0%</strong></td>
+            <td class="num">636</td>
+            <td class="num" style="color:#ef4444">-11.3%</td>
+            <td class="num" style="color:#84cc16">+14.3%</td>
+            <td class="num">21.0%</td>
+            <td class="num">2.63</td>
+            <td class="num">66.3%</td>
+            <td class="num">133.9</td>
+        </tr>
+        <tr>
+            <td class="num">36</td>
+            <td class="strategy-name">alt12_accelerated_pyramid</td>
+            <td class="num" style="color:#eab308"><strong>32.5%</strong></td>
+            <td class="num">591</td>
+            <td class="num" style="color:#ef4444">-13.8%</td>
+            <td class="num" style="color:#eab308">-6.6%</td>
+            <td class="num">18.8%</td>
+            <td class="num">2.63</td>
+            <td class="num">70.7%</td>
+            <td class="num">131.4</td>
+        </tr>
+        <tr>
+            <td class="num">37</td>
+            <td class="strategy-name">alt27_asymmetric_rr</td>
+            <td class="num" style="color:#eab308"><strong>32.2%</strong></td>
+            <td class="num">586</td>
+            <td class="num" style="color:#ef4444">-15.8%</td>
+            <td class="num" style="color:#84cc16">+8.0%</td>
+            <td class="num">20.9%</td>
+            <td class="num">2.59</td>
+            <td class="num">59.1%</td>
+            <td class="num">139.8</td>
+        </tr>
+        <tr>
+            <td class="num">38</td>
+            <td class="strategy-name">alt20_asymmetric_ls</td>
+            <td class="num" style="color:#eab308"><strong>36.6%</strong></td>
+            <td class="num">665</td>
+            <td class="num" style="color:#eab308">-9.4%</td>
+            <td class="num" style="color:#22c55e">+42.9%</td>
+            <td class="num">20.6%</td>
+            <td class="num">2.31</td>
+            <td class="num">68.9%</td>
+            <td class="num">161.6</td>
+        </tr>
+        <tr>
+            <td class="num">39</td>
+            <td class="strategy-name">alt25_time_profit_lock</td>
+            <td class="num" style="color:#84cc16"><strong>43.5%</strong></td>
+            <td class="num">792</td>
+            <td class="num" style="color:#eab308">-4.3%</td>
+            <td class="num" style="color:#22c55e">+44.0%</td>
+            <td class="num">21.6%</td>
+            <td class="num">2.23</td>
+            <td class="num">64.2%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">40</td>
+            <td class="strategy-name">alt32_momentum_time</td>
+            <td class="num" style="color:#84cc16"><strong>43.6%</strong></td>
+            <td class="num">793</td>
+            <td class="num" style="color:#eab308">-4.3%</td>
+            <td class="num" style="color:#22c55e">+44.0%</td>
+            <td class="num">21.6%</td>
+            <td class="num">2.23</td>
+            <td class="num">64.2%</td>
+            <td class="num">135.3</td>
+        </tr>
+        <tr>
+            <td class="num">41</td>
+            <td class="strategy-name">alt37_breakeven_time</td>
+            <td class="num" style="color:#eab308"><strong>38.4%</strong></td>
+            <td class="num">699</td>
+            <td class="num" style="color:#eab308">-8.6%</td>
+            <td class="num" style="color:#84cc16">+11.0%</td>
+            <td class="num">20.7%</td>
+            <td class="num">2.11</td>
+            <td class="num">65.8%</td>
+            <td class="num">137.0</td>
+        </tr>
+        <tr>
+            <td class="num">42</td>
+            <td class="strategy-name">alt36_breakeven_momentum</td>
+            <td class="num" style="color:#eab308"><strong>31.0%</strong></td>
+            <td class="num">564</td>
+            <td class="num" style="color:#ef4444">-15.3%</td>
+            <td class="num" style="color:#ef4444">-18.8%</td>
+            <td class="num">20.2%</td>
+            <td class="num">2.07</td>
+            <td class="num">70.8%</td>
+            <td class="num">133.2</td>
+        </tr>
+        <tr>
+            <td class="num">43</td>
+            <td class="strategy-name">alt33_progressive_breakeven</td>
+            <td class="num" style="color:#ef4444"><strong>15.4%</strong></td>
+            <td class="num">281</td>
+            <td class="num" style="color:#ef4444">-34.1%</td>
+            <td class="num" style="color:#ef4444">-80.5%</td>
+            <td class="num">14.9%</td>
+            <td class="num">1.80</td>
+            <td class="num">71.4%</td>
+            <td class="num">149.6</td>
+        </tr>
+        <tr>
+            <td class="num">44</td>
+            <td class="strategy-name">alt1_fast_breakout</td>
+            <td class="num" style="color:#eab308"><strong>34.2%</strong></td>
+            <td class="num">623</td>
+            <td class="num" style="color:#ef4444">-17.7%</td>
+            <td class="num" style="color:#84cc16">+8.2%</td>
+            <td class="num">21.0%</td>
+            <td class="num">1.63</td>
+            <td class="num">85.9%</td>
+            <td class="num">219.1</td>
+        </tr></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="section">
+        <div class="section-title">💡 How to Read This Report</div>
+        <div class="section-desc">
+            <strong>Success Rate:</strong> % of the 1,819 tickers where the strategy ended profitable (final equity > $100K). Core metric — high success = strategy works broadly.<br>
+            <strong>Median Return:</strong> Median total return across all tickers. Less distorted by outliers than average return. If median is negative but success rate is high, the strategy depends on a few home runs.<br>
+            <strong>Win Rate:</strong> Average per-trade win rate across tickers. Trend-following typically has low win rates (20-40%) but large winners.<br>
+            <strong>Profit Factor:</strong> Gross wins / gross losses. Above 2.0 is strong.<br>
+            <strong>Max Drawdown:</strong> Average maximum peak-to-trough decline per ticker. Higher = more volatile equity curve.<br>
+            <strong>Source:</strong> github.com/trustdan/trend-following-backtesting-strategies (Turtle/Seykota engine) — 48 strategy variants across Donchian, EMA, ATR channel, Keltner, with pyramiding, trailing stops, and profit targets.
+        </div>
+    </div>
+    
+<div class="footer">
+  <p>Generated 2026-08-01 14:26:21 | 44 strategies across 1,819 tickers</p>
+</div>
+</div>
+</body>
+</html>

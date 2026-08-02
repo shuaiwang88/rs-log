@@ -2197,16 +2197,18 @@ all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15 = st.tabs(
         ["📈 Overview", "📊 Time Series", "🎯 Top Performers", "🔬 Deep Analysis",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions", "🔬 Deep Analysis",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads"])
 
 tab_ibd_pattern = tab10 if has_historical else tab9
 tab_drc = tab11 if has_historical else tab10
+tab_backtests = tab14 if has_historical else tab13
+tab_scans = tab15 if has_historical else tab14
 tab_ms = tab12 if has_historical else tab11
 tab_ibd_live = tab13 if has_historical else tab12
 
@@ -2240,6 +2242,59 @@ with tab1:
                      title="Top 10 Sectors by Avg RS", labels={'x': 'Avg RS', 'y': 'Sector'},
                      color=avg_rs_by_sector.values, color_continuous_scale='Viridis')
         st.plotly_chart(fig, use_container_width=True)
+
+    # ── Notable Strategies & Actionable Tickers ──
+    st.divider()
+    st.subheader("🎯 Notable Strategies & Actionable Tickers")
+
+    # Load watchlist for actionable tickers
+    WL_CSV = Path(__file__).resolve().parent / "python" / "backtests" / "unified_watchlist.csv"
+    if WL_CSV.exists():
+        wl_action = pd.read_csv(WL_CSV)
+        golden = wl_action[(wl_action.get("combo_SMA50_Shakeout", pd.Series([False]*len(wl_action))) == True) & (wl_action["tf_flags_on"] >= 3)]
+
+        ac1, ac2 = st.columns([1, 2])
+
+        with ac1:
+            st.markdown("**🏆 Top Verified Strategies**")
+            top_strats = {
+                "SMA50 Bounce+Shakeout × 2:1": "77.3% win, +6.66%, Sharpe 0.56",
+                "PB+SMA50 Bounce × 5:1": "66.4% win, +4.92%, Sharpe 0.40",
+                "SMA50 Bounce+Shakeout × 3:1": "74.8% win, +7.47%, Sharpe 0.54",
+                "Shakeout+Upside Reversal × 2:1": "76.3% win, +5.86%, Sharpe 0.53",
+            }
+            for name, stats in top_strats.items():
+                st.markdown(f"- **{name}**: {stats}")
+
+            st.markdown("---")
+            st.markdown("**🔑 Quality Filter**")
+            st.markdown("depth ≤ 25% + len ≤ 150d → **86-100% win rate**")
+            st.markdown("*From both-phase deep dive analysis*")
+
+        with ac2:
+            st.markdown(f"**🔥 Actionable Golden-Tier Tickers** ({len(golden)} total)")
+            if len(golden) > 0:
+                top5 = golden.head(5)
+                for _, r in top5.iterrows():
+                    reasons = []
+                    reasons.append(f"{r['pattern']}, {r['depth']:.1f}% depth, {int(r['length'])}d")
+                    if r.get("combo_SMA50_Shakeout", False): reasons.append("SMA50+Shakeout firing")
+                    if r.get("combo_PB_SMA50", False): reasons.append("PB+SMA50 Bounce (both engines!)")
+                    if r.get("near_52w_high", False): reasons.append("near 52W high")
+                    if r.get("above_sma200", False): reasons.append("above SMA200")
+                    reason_str = " | ".join(reasons)
+                    st.markdown(f"- **{r['ticker']}** (comp {r['composite']:.1f}): {reason_str}")
+
+                if len(golden) > 5:
+                    st.caption(f"+ {len(golden)-5} more golden-tier tickers — see 🔍 Scans & Leads tab")
+            else:
+                st.info("No golden-tier tickers right now. Run unified_watchlist.py to refresh.")
+
+            st.markdown("---")
+            st.markdown("**💡 Strategy Insight**")
+            st.markdown("- Mid-base signals (SMA50+Shakeout) + Breakout signals (PB+SMA50) = **two-phase edge**")
+            st.markdown("- 42 golden-tier tickers today — dominated by Flat Base utilities/defensives")
+            st.markdown("- KO is the only ticker with **both engines firing** right now")
 
 # ---------- TAB 2: Time Series ----------
 if has_historical:
@@ -4951,6 +5006,273 @@ with tab_ibd_live:
                             st.warning("Comment text can't be empty.")
             else:
                 st.caption("No tickers with comments or transcript mentions yet.")
+
+# --- Backtests Tab ---
+with tab_backtests:
+    st.header("🧪 Strategy Backtests")
+    st.markdown("Run backtest scripts and view results directly from the dashboard.")
+
+    with st.expander("📖 How to Run Backtests", expanded=False):
+        st.markdown("""
+### Backtest Quick Start
+
+There are **3 backtest engines** available, each testing a different strategy class:
+
+| Script | What it tests | Time (7K tickers) |
+|---|---|---|
+| `scanner_universe_backtest.py` | All IBDB patterns + buy signal combos × 9 exit rules | ~5 min |
+| `full_backtest.py` | Every signal combination (2→N) across 13K+ bases | ~6 min |
+| `trend_following_backtest.py` | 48 Turtle/Seykota trend-following strategies | ~3 min |
+| `two_phase_backtest.py` | Phase 1 (SMA50+Shakeout) + Phase 2 (PB+SMA50 Bounce) | ~1 min |
+| `unified_watchlist.py` | Live scan — IBD+TF+Buy signals for current date | ~5 min |
+
+**Top verified strategies (by Sharpe):**
+
+| Strategy | Engine | Win% | Avg Ret | Sharpe |
+|---|---|---|---|---|
+| **SMA50 Bounce+Shakeout × target_2r** | full_backtest | 77.3% | +6.66% | 0.56 |
+| **PB+SMA50 Bounce × target_5r** | scanner_universe | 66.4% | +4.92% | 0.40 |
+| **SMA50 Bounce+Shakeout × target_3r** | full_backtest | 74.8% | +7.47% | 0.54 |
+
+**Two-phase strategy:** P1=SMA50+Shakeout (½ pos, 2:1) + P2=PB+SMA50 Bounce (full, 5:1) — combined **60.3% win, +3.28% avg**
+
+**Quality filter:** depth ≤ 25% AND length ≤ 150d boosts combined win rate to **86-100%**.
+
+**Daily automation:** Cron runs `unified_watchlist.py` at 5pm weekdays → diffs golden-tier changes → logs to `watchlist_history.log`.
+        """)
+
+    BACKTESTS_DIR = Path(__file__).resolve().parent / "python" / "backtests"
+
+    subtab_run, subtab_results, subtab_reports = st.tabs(["▶️ Run Backtest", "📊 View Summary", "📈 HTML Reports"])
+
+    with subtab_run:
+        st.subheader("Run a Backtest")
+        available_scripts = sorted([p.name for p in BACKTESTS_DIR.glob("*_backtest.py")])
+        if not available_scripts:
+            st.info("No backtest scripts found in python/backtests/.")
+        else:
+            script = st.selectbox("Select backtest script", available_scripts, key="bt_script")
+            max_tickers = st.number_input("Max tickers (0 = all)", 0, 10000, 100, 100, key="bt_max")
+            if st.button(f"🚀 Run {script}", type="primary", key="bt_run"):
+                cmd = ["python3", str(BACKTESTS_DIR / script)]
+                if max_tickers > 0:
+                    cmd.extend(["--max-tickers", str(max_tickers)])
+                with st.spinner(f"Running {script}... (may take several minutes)"):
+                    try:
+                        result = subprocess.run(cmd, capture_output=True, text=True, timeout=900, cwd=str(BACKTESTS_DIR.parent.parent))
+                        st.session_state.bt_output = result.stdout
+                        st.session_state.bt_error = result.stderr
+                        st.session_state.bt_script = script
+                    except subprocess.TimeoutExpired:
+                        st.error("Backtest timed out after 15 minutes.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+            if "bt_output" in st.session_state and st.session_state.get("bt_script") == script:
+                with st.expander("📋 Output", expanded=True):
+                    st.code(st.session_state.bt_output[-5000:] if st.session_state.bt_output else "(no output)")
+                if st.session_state.get("bt_error"):
+                    with st.expander("⚠️ Errors"):
+                        st.code(st.session_state.bt_error[-2000:])
+
+    with subtab_results:
+        st.subheader("Summary CSVs")
+        summary_files = sorted(BACKTESTS_DIR.glob("*_summary.csv")) + sorted(BACKTESTS_DIR.glob("*_results.csv"))
+        summary_files = [p for p in summary_files if p.exists()]
+        if not summary_files:
+            st.info("No summary or results CSVs found. Run a backtest first.")
+        else:
+            chosen = st.selectbox("Select CSV", [p.name for p in summary_files], key="bt_csv")
+            if chosen:
+                try:
+                    df = pd.read_csv(BACKTESTS_DIR / chosen)
+                    st.metric("Rows", f"{len(df):,}")
+                    st.dataframe(df.head(100), use_container_width=True)
+                    if len(df) > 100:
+                        st.caption(f"Showing 100 of {len(df):,} rows")
+                except Exception as e:
+                    st.error(f"Failed to load: {e}")
+
+    with subtab_reports:
+        st.subheader("HTML Reports")
+        report_files = sorted(BACKTESTS_DIR.glob("*_report.html"))
+        if not report_files:
+            st.info("No HTML reports found. Run a backtest with --report or generate one.")
+        else:
+            chosen_r = st.selectbox("Select report", [p.name for p in report_files], key="bt_html")
+            if chosen_r:
+                try:
+                    html_content = (BACKTESTS_DIR / chosen_r).read_text()
+                    st_html(html_content, height=800, scrolling=True)
+                except Exception as e:
+                    st.error(f"Failed to load: {e}")
+
+# --- Scans & Leads Tab ---
+with tab_scans:
+    st.header("🔍 Scans & Leads")
+    st.markdown("Potential leads, scan results, and backtest performance — all in one view.")
+
+    BACKTESTS_DIR_SL = Path(__file__).resolve().parent / "python" / "backtests"
+    WATCHLIST_CSV = BACKTESTS_DIR_SL / "unified_watchlist.csv"
+
+    lead_tab, scan_tab, perf_tab = st.tabs(["🎯 Potential Leads", "📊 All Scan Results", "📈 Performance"])
+
+    # ── Helper to load watchlist ──
+    @st.cache_data(ttl=3600)
+    def load_watchlist():
+        if WATCHLIST_CSV.exists():
+            return pd.read_csv(WATCHLIST_CSV)
+        return pd.DataFrame()
+
+    wl = load_watchlist()
+
+    with lead_tab:
+        st.subheader("🎯 Golden-Tier Potential Leads")
+        if wl.empty:
+            st.warning("No watchlist data. Run unified_watchlist.py first.")
+        else:
+            golden = wl[(wl["combo_SMA50_Shakeout"] == True) & (wl["tf_flags_on"] >= 3)].copy()
+            golden = golden.sort_values("composite", ascending=False)
+            quality_n = golden["quality_filter"].sum() if "quality_filter" in golden.columns else 0
+
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: st.metric("Golden Tier", len(golden))
+            with c2: st.metric("Quality Pass (≤25%, ≤150d)", quality_n)
+            with c3: st.metric("Both Engines", (golden.get("combo_PB_SMA50", pd.Series([False]*len(golden))) == True).sum())
+            with c4: st.metric("Avg Composite", f"{golden['composite'].mean():.1f}" if len(golden) > 0 else "-")
+
+            if len(golden) > 0:
+                show_cols = ["ticker", "pattern", "depth", "length", "dist_to_pivot",
+                             "composite", "combo_PB_SMA50", "tf_flags_on", "rsi"]
+                show_cols = [c for c in show_cols if c in golden.columns]
+                st.dataframe(
+                    golden[show_cols].style
+                    .background_gradient(subset=["composite"], cmap="RdYlGn")
+                    .format({"depth": "{:.1f}%", "dist_to_pivot": "{:.1f}%", "composite": "{:.1f}"}),
+                    use_container_width=True, height=400
+                )
+
+                # Per-ticker drill-down
+                st.subheader("🔬 Ticker Drill-Down")
+                ticker_list = sorted(golden["ticker"].unique())
+                chosen_ticker = st.selectbox("Select ticker for technical details", ticker_list, key="scan_ticker")
+                if chosen_ticker:
+                    row = golden[golden["ticker"] == chosen_ticker].iloc[0]
+                    dc1, dc2, dc3, dc4 = st.columns(4)
+                    with dc1:
+                        st.metric("Pattern", row.get("pattern", "-"))
+                        st.metric("Depth", f"{row['depth']:.1f}%")
+                    with dc2:
+                        st.metric("Length", f"{int(row['length'])}d")
+                        st.metric("Dist to Pivot", f"{row.get('dist_to_pivot', 0):+.1f}%")
+                    with dc3:
+                        tf_on = int(row.get("tf_flags_on", 0))
+                        st.metric("TF Flags", f"{tf_on}/4")
+                        st.metric("RSI", f"{row.get('rsi', '-'):.0f}" if pd.notna(row.get('rsi')) else "-")
+                    with dc4:
+                        st.metric("Composite", f"{row['composite']:.1f}")
+                        pb_flag = "✅" if row.get("combo_PB_SMA50", False) else "—"
+                        st.metric("PB+SMA50", pb_flag)
+
+                    # TF flags detail
+                    flags_detail = []
+                    for flag in ["above_sma200", "ema_bullish", "near_52w_high", "rsi_bullish"]:
+                        if flag in row.index and row[flag]:
+                            flags_detail.append(flag.replace("_", " ").title())
+                    st.caption(f"Active TF signals: {', '.join(flags_detail) if flags_detail else 'none'}")
+
+                    # Mid-base / Breakout combo detail
+                    combo_cols = [c for c in golden.columns if c.startswith("combo_") and c != "combo_count"]
+                    active_combos = [c.replace("combo_", "").replace("_", " ") for c in combo_cols if row.get(c, False)]
+                    if active_combos:
+                        st.caption(f"Active buy combos: {', '.join(active_combos)}")
+
+    with scan_tab:
+        st.subheader("📊 All Scan Results")
+        if wl.empty:
+            st.warning("No watchlist data. Run unified_watchlist.py first.")
+        else:
+            # Filters
+            fc1, fc2, fc3 = st.columns(3)
+            with fc1:
+                patterns = ["All"] + sorted(wl["pattern"].dropna().unique().tolist())
+                pat_filter = st.selectbox("Pattern", patterns, key="scan_pat")
+            with fc2:
+                min_depth = st.slider("Min Depth %", 0.0, 50.0, 8.0, 0.5, key="scan_dmin")
+            with fc3:
+                max_depth = st.slider("Max Depth %", 0.0, 50.0, 25.0, 0.5, key="scan_dmax")
+
+            fc4, fc5 = st.columns(2)
+            with fc4:
+                min_len = st.slider("Min Length (days)", 0, 400, 100, 10, key="scan_lmin")
+            with fc5:
+                max_len = st.slider("Max Length (days)", 0, 400, 200, 10, key="scan_lmax")
+
+            ticker_search = st.text_input("Ticker search", "", key="scan_tsearch")
+
+            filtered = wl.copy()
+            if pat_filter != "All":
+                filtered = filtered[filtered["pattern"] == pat_filter]
+            filtered = filtered[(filtered["depth"] >= min_depth) & (filtered["depth"] <= max_depth)]
+            filtered = filtered[(filtered["length"] >= min_len) & (filtered["length"] <= max_len)]
+            if ticker_search:
+                filtered = filtered[filtered["ticker"].str.upper().str.contains(ticker_search.upper())]
+
+            st.metric("Results", f"{len(filtered):,} tickers")
+
+            display_cols = ["ticker", "pattern", "depth", "length", "dist_to_pivot",
+                           "composite", "combo_SMA50_Shakeout", "tf_flags_on", "rsi"]
+            display_cols = [c for c in display_cols if c in filtered.columns]
+            st.dataframe(
+                filtered[display_cols].sort_values("composite", ascending=False)
+                .style.background_gradient(subset=["composite"], cmap="RdYlGn")
+                .format({"depth": "{:.1f}%", "dist_to_pivot": "{:.1f}%", "composite": "{:.1f}"}),
+                use_container_width=True, height=500
+            )
+
+            # Export
+            csv_export = filtered.to_csv(index=False)
+            st.download_button("📥 Download CSV", csv_export, "filtered_scans.csv", "text/csv")
+
+    with perf_tab:
+        st.subheader("📈 Backtest Performance Summary")
+        perf_files = (sorted(BACKTESTS_DIR_SL.glob("*_summary.csv"))
+                      + sorted(BACKTESTS_DIR_SL.glob("*_results.csv")))
+        if not perf_files:
+            st.info("No backtest summary or results CSVs found. Run a backtest first.")
+        else:
+            chosen_perf = st.selectbox("Select summary or results", [p.name for p in perf_files], key="scan_perf")
+            if chosen_perf:
+                try:
+                    pdf = pd.read_csv(BACKTESTS_DIR_SL / chosen_perf)
+                    st.metric("Rows", f"{len(pdf):,}")
+
+                    # Two-phase results: show phase-by-phase breakdown
+                    if "p1_ret" in pdf.columns and "p2_ret" in pdf.columns:
+                        st.markdown("**Two-Phase Stats**")
+                        col_a, col_b, col_c = st.columns(3)
+                        with col_a:
+                            p1 = pdf[pdf["p1_entry_bar"] >= 0]
+                            st.metric("P1 Events", f"{len(p1):,}", f"{(p1['p1_ret']>0).mean()*100:.0f}% win" if len(p1) else "-")
+                        with col_b:
+                            p2 = pdf[pdf["p2_entry_bar"] >= 0]
+                            st.metric("P2 Events", f"{len(p2):,}", f"{(p2['p2_ret']>0).mean()*100:.0f}% win" if len(p2) else "-")
+                        with col_c:
+                            both = pdf[pdf["both_fired"] == True]
+                            st.metric("Both Fired", f"{len(both):,}", f"{(both['combined_ret']>0).mean()*100:.0f}% win" if len(both) else "-")
+
+                    if "sharpe" in pdf.columns:
+                        pdf = pdf.sort_values("sharpe", ascending=False)
+                        sort_label = "Sharpe"
+                    elif "combined_ret" in pdf.columns:
+                        pdf = pdf.sort_values("combined_ret", ascending=False)
+                        sort_label = "combined return"
+                    else:
+                        sort_label = "file order"
+                    st.dataframe(pdf.head(40), use_container_width=True)
+                    if len(pdf) > 40:
+                        st.caption(f"Showing top 40 of {len(pdf):,} rows — sorted by {sort_label}")
+                except Exception as e:
+                    st.error(f"Failed to load: {e}")
 
 # Footer
 st.divider()

@@ -2,7 +2,7 @@
 import subprocess, re, sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SCANNER = ROOT / "python" / "ibd_pattern_scanner.py"
 BACKUP = ROOT / "python" / "ibd_pattern_scanner_sweep_backup.py"
 
@@ -20,7 +20,7 @@ def apply_patch(params):
 def run_eval():
     """Run evaluation and return key metrics."""
     r = subprocess.run(
-        [sys.executable, str(ROOT / "python" / "evaluate_breakaway_gap.py"), "--target", "prod"],
+        [sys.executable, str(ROOT / "python" / "backtests" / "evaluate_breakaway_gap.py"), "--target", "prod"],
         capture_output=True, text=True, timeout=300, cwd=str(ROOT)
     )
     m = {}

@@ -36,7 +36,7 @@ import pandas as pd
 import pickle
 
 # Root project directory
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 TICKER_CACHE_DIR = ROOT_DIR / "ticker_cache"
 OUTPUT_JSON_PATH = ROOT_DIR / "python" / "ibd_pattern_results.json"
 MODEL_PATH = ROOT_DIR / "python" / "pattern_model.pkl"
@@ -391,8 +391,6 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     isCup = True
 
             # 6. Cup With Handle (Wider handle params to catch more real handles)
-            if isCup and bTop and bLow:
-                print("{} i=".format(sym),i,"CUP bTop=",bTop,"bLow=",bLow,"bCount=",bCount,"bDepPct=",bDepPct,"isFlat=",isFlatBase,"isDB=",isDB)
             if isCup and bTop and bLow and cupMid and bCount >= 20:
                 handle_len = min(25, max(5, bCount // 4))
                 end_h_idx = max(1, i - 1)
@@ -403,14 +401,12 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 inTop = (L12 >= cupMid * 0.85)
                 depOk_h = (2.0 <= hDep <= 22.0)
                 if inTop and depOk_h and H12 < bTop * 1.02:
-                    print("{} i=".format(sym),i,"HDLE inTop=",inTop,"depOk=",depOk_h,"H12<=",H12<bTop*1.02,"hDep=",hDep,"L12=",L12,"cupMid=",cupMid,"H12=",H12)
-                    hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
-                    print("{} hdRatio=".format(sym), hdRatio)
-                    if hdRatio < 0.7:
-                    hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
-                    if hdRatio < 0.7:
-                        isCupH = True
-                        cupHandlePivot = H12
+                    isCupH = True
+                    cupHandlePivot = H12
+            if isCupH:
+                with open("/tmp/ifs_debug.txt","a") as f: f.write(f"i={i} bTop={bTop:.2f} H12={H12:.2f} bCount={bCount}
+")
+
             # 7. Consolidation: Long bases (> 130 daily bars) or general consolidation
             isConsolidation = isBase and (
                 (bCount > 130) or 
