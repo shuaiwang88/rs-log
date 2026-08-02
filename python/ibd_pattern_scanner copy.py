@@ -356,7 +356,7 @@ def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
     return [b for b in live if b['count'] >= min_bars]
 
 
-def detect_htf_context(highs, lows, min_pole_gain=100.0, max_pole_bars=60,
+def detect_htf_context(highs, lows, min_pole_gain=80.0, max_pole_bars=60,
                        min_flag_bars=10, max_flag_bars=50, max_flag_depth=25.0):
     """Is the CURRENT structure the flag portion of a High Tight Flag? Annotation only.
 
@@ -379,6 +379,13 @@ def detect_htf_context(highs, lows, min_pole_gain=100.0, max_pole_bars=60,
     The flag encloses whatever forms inside it - a cup, a double bottom - and that inner
     pattern is the tradable one with its own buy point. This only says which larger structure
     it is sitting in.
+
+    `min_pole_gain` is 80% by request, below IBD's nominal 100-120%. That is a deliberate
+    widening of a CONTEXT label, and it is safe here in a way it would not be on `isHTF`:
+    nothing downstream branches on it, so a loose flag annotates a chart without moving a buy
+    point or a breakout. It does mean the label is looser than IBD's - an 80% pole is a
+    strong move but not the "up 100%+ in weeks" that gives the real pattern its edge - so
+    read `pole_gain_pct` rather than trusting the flag itself.
     """
     n = len(highs)
     if n < min_flag_bars + 20:
