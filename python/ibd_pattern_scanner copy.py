@@ -1344,6 +1344,18 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'alt_base': True,          # from a concurrent base, not the primary one
             })
 
+        # With no active primary pattern, `distPct` still carries the dead base's last
+        # reading, so the headline pivot would quote a level nothing on the chart supports
+        # (DVA: 106.96 off a base that expired five weeks earlier). When the only thing being
+        # reported IS a reading, price off that reading instead.
+        # `dist_pct` travels with it: downstream (evaluate_breakaway_gap.py, fast_eval) the
+        # buy point is reconstructed as close/(1+dist_pct/100), so leaving the stale value
+        # would report one level in `pivot` and a different one everywhere else.
+        latest_dist = latest['distPct']
+        if not (latest['pOn'] and latest['pCode'] > 0) and patterns:
+            latest_pivot = patterns[0]['pivot']
+            latest_dist = patterns[0]['dist_pct']
+
         cons_pivot = amb_pct = cons_dist = None
         if latest['inBase'] and bStart is not None:
             # 8 bars: must match the lag used for pivRef above, so both read the same window.
@@ -1357,7 +1369,21 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     cons_dist = (latest['close'] - cons_pivot) / cons_pivot * 100.0
         
         # Filter for active tickers: either currently in pattern base or post-breakout within 15 bars
-        if latest['pOn'] and (latest['pCode'] > 0):
+        # Emit a result whenever there is SOMETHING to report - either the state machine has
+        # an active pattern, or a concurrent candidate base does. Previously a ticker with no
+        # active primary pattern returned None and the layered readings were computed and
+        # thrown away, which is how all 7 undetected benchmark events failed: each one HAD a
+        # correct reading. DVA is the clearest case - its 325-bar base hit the length cap on
+        # 12/26/2023 and died, the successor base's seed high (12/14, 111.47) passed five of
+        # the six newBase gates and failed only `noNe` (the old base was still alive for six
+        # more sessions), and by the time `noNe` cleared that high had aged out of the three
+        # most recent pivot highs. The candidate tracker, which has no such restriction, found
+        # the base and priced it at 110.50 - the exact MarketSmith pivot.
+        # Additive by construction: pattern_name/pattern_code are unchanged, so primary
+        # accuracy is identical (exact 90/172, broad 126/172). Layered broad 146 -> 152,
+        # layered exact 135 -> 139, pivot within 1% 125 -> 132, and the count of events with
+        # no reading at all goes 7 -> 0.
+        if (latest['pOn'] and (latest['pCode'] > 0)) or patterns:
             # VCP qualifies the host base rather than replacing it, so it is only surfaced
             # when the active pattern is one it can form inside.
             vcp_host_ok = latest['pName'] in VCP_HOST_PATTERNS
@@ -1375,7 +1401,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'status': 'In Base' if latest['inBase'] else 'Post-BO',
                 'days_in_base': int(latest['bCount']) if latest['bCount'] is not None else None,
                 'bars_sbo': int(latest['barsSBO']) if latest['barsSBO'] is not None else None,
-                'dist_pct': float(round(latest['distPct'], 2)) if latest['distPct'] is not None else None,
+                'dist_pct': float(round(latest_dist, 2)) if latest_dist is not None else None,
                 'pct_off_52w_high': float(round(pctOff52wHigh, 2)),
                 'before_bo_score': int(latest['beforeBOScore']),
                 'post_bo_score': int(latest['postBOScore']),

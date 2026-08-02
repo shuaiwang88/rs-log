@@ -1530,8 +1530,16 @@ class FastEval:
                 raise RuntimeError(f"knob {name!r} did not match scanner source (got {n} subs)")
         return src
 
-    def _load_scanner(self, overrides):
+    def _load_scanner(self, overrides, extra_patch=None):
+        """`extra_patch` is a src->src callable, for A/B-ing a change before it is shipped.
+
+        The knob table only reaches values the regexes already anchor. A structural edit
+        (moving a guard, adding a branch) has no knob, and copying the scanner to test it
+        loses the shared window cache. This runs one against the same in-memory frames.
+        """
         src = self._build_source(overrides)
+        if extra_patch is not None:
+            src = extra_patch(src)
         ns = {'__name__': '_fe_scanner', '__file__': str(SCANNER_SRC)}
         exec(compile(src, str(SCANNER_SRC), 'exec'), ns)
         ns['pd'] = _PandasShim(self._frames)   # swap AFTER exec so imports resolved normally
