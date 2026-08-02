@@ -448,7 +448,11 @@ def detect_htf_context(highs, lows, min_pole_gain=85.0, max_pole_bars=40,
     return {'flag_high': round(top, 2), 'flag_low': round(flag_low, 2),
             'flag_bars': int(flag_bars), 'flag_depth_pct': round(depth, 1),
             'pole_low': round(pole_low, 2), 'pole_gain_pct': round(gain, 1),
-            'pole_bars': int(t - j), 'flag_start_idx': int(t)}
+            'pole_bars': int(t - j), 'flag_start_idx': int(t),
+            # Bar the pole lifted off from. Exposed so callers can ask which structure was
+            # live there - the pole of an HTF routinely begins INSIDE another pattern, since
+            # a stock bases and then breaks out of that base into the advance.
+            'pole_low_idx': int(j)}
 
 
 def locate_handle(highs, lows, volumes, sma20_vol, start, top, low, end,
@@ -1472,8 +1476,9 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # Matched on PIVOT, not name: the whole point is a different buy point, and the
         # candidate often carries the same label as the primary (PBI reads Flat Base at both
         # 13.11 and 11.62). Keying on name silently dropped exactly the cases this is for.
-        for _cb in detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=pivLen,
-                                          bdF=bdF, bLenB=bLenB):
+        _cand_bases = detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=pivLen,
+                                             bdF=bdF, bLenB=bLenB)
+        for _cb in _cand_bases:
             _nm, _pv = classify_candidate_base(highs, lows, _cb['top'], _cb['low'],
                                                _cb['count'], n - 1)
             # A handle located inside THIS base's frame overrides the base-top reading:
@@ -1516,6 +1521,45 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # Enclosing High Tight Flag, if any. Annotation only - see detect_htf_context. The
         # inner pattern keeps its own buy point; this says which structure it formed inside.
         _htf_ctx = detect_htf_context(highs, lows)
+
+        # An HTF relates to other patterns in BOTH directions, and only one of them was
+        # handled before:
+        #
+        #   other pattern INSIDE the flag  - a cup or double bottom builds in the flag
+        #                                    portion and is the tradable structure, priced
+        #                                    off its own level (see the pivot note above).
+        #   pole OUT OF another pattern    - the advance lifts off from inside an earlier
+        #                                    base. This is the normal case, not an edge one:
+        #                                    a stock bases, breaks out, and that breakout IS
+        #                                    the start of the pole.
+        #
+        # The pole search never blocked the second case - it looks only at price, so it
+        # neither knows nor cares which pattern the pole low sits in - but nothing reported
+        # the relationship either. Name it: find the candidate base whose span contains the
+        # pole-low bar, preferring the tightest one, and record what the pole came out of.
+        if _htf_ctx:
+            # Read the state AT the pole-low bar, not the bases alive now. detect_candidate_bases
+            # returns only structures still live on the last bar, and any base that hosted the
+            # pole was invalidated the instant price ran ~100% above it (the closes > top*1.40
+            # rule), so looking there always answers None. history_state already records what
+            # the scanner saw on every bar, so ask it directly.
+            _pli = _htf_ctx.get('pole_low_idx')
+            _host = None
+            if _pli is not None:
+                _st_at = next((s for s in history_state if s['bar'] == _pli), None)
+                _nm_at = None
+                if _st_at and _st_at.get('pOn') and _st_at.get('pName') not in (None, 'None'):
+                    _nm_at = _st_at['pName']
+                elif _st_at and _st_at.get('inBase'):
+                    # In a base the label chain had no name for - still worth saying the pole
+                    # lifted out of a structure rather than out of nothing.
+                    _nm_at = 'Base'
+                if _nm_at:
+                    _f = lambda v: float(round(float(v), 2)) if v is not None else None
+                    _host = {'pattern': _nm_at, 'date': _st_at.get('date'),
+                             'top': _f(_st_at.get('bTop')), 'low': _f(_st_at.get('bLow')),
+                             'bars': int(_st_at['bCount']) if _st_at.get('bCount') else None}
+            _htf_ctx['pole_from'] = _host
 
         # Surface the flag AS A READING, alongside the inner patterns rather than instead of
         # them. It prices off the flag high, which is a different level from the inner
