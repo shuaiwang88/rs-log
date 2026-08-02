@@ -403,6 +403,38 @@ def detect_htf_context(highs, lows, min_pole_gain=80.0, max_pole_bars=60,
     depth = (top - flag_low) / top * 100.0
     if depth > max_flag_depth:
         return None
+    # Where the pole STARTS. A fixed lookback was wrong: the pole of a High Tight Flag
+    # routinely begins inside an earlier pattern - a stock bases, breaks out, and the
+    # breakout IS the start of the advance - so truncating at N bars measures from a higher
+    # low and understates the gain. In the local cache that truncation was biting hard, with
+    # TVTX, OKTA, PANW, CLYM, HUM, FTNT, ROMA and NWPX all reporting a pole of exactly 60
+    # bars, i.e. the cap rather than the structure.
+    #
+    # So walk back to the last bar that traded ABOVE the flag high instead. A High Tight Flag
+    # tops at a NEW high, so any earlier peak above it belongs to a previous structure and
+    # the advance being measured starts after it. That boundary is structural rather than a
+    # chosen number, and it lets the pole run back through whatever pattern it emerged from.
+    # `max_pole_bars` remains only as a backstop for a stock that has simply been making new
+    # highs for a year, where no such peak exists.
+    # Where the pole STARTS. This window is deliberately pattern-AGNOSTIC: it looks only at
+    # price, so it neither knows nor cares whether the pole low sits inside an earlier base.
+    # A pole that begins within another pattern - stock bases, breaks out, and the breakout
+    # is the start of the advance - is therefore already admitted, and always was.
+    #
+    # Extending the lookback so the pole could run further back through a prior pattern was
+    # tried and REVERTED. Two versions, both worse:
+    #   - walk back to the last peak above the flag high: a stock making new highs all year
+    #     has no such peak, so the walk hits the backstop and DELL became a 250-bar "pole" of
+    #     +341%, which is a year-long advance rather than a pole.
+    #   - stop where the advance was interrupted by a `max_pullback` drawdown: self-defeating,
+    #     because the running low descends as the walk proceeds and drags the threshold down
+    #     with it, so it never fires. DELL came out +325.9% over 90 bars and OKTA vanished.
+    # At 60 bars DELL reads +241.4% over 57 and NTAP +103.2% over 35, both textbook.
+    #
+    # What the cap DOES cost is honesty about long poles: names whose advance began earlier
+    # report exactly 60 bars (TVTX, OKTA, PANW, FTNT and others all pinned there), and their
+    # gain is understated because it is measured from a higher low. That understates, so it
+    # can only cause a miss, never a false flag - the safe direction for a context label.
     p0 = max(0, t - max_pole_bars)
     if t - p0 < 5:
         return None
