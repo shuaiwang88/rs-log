@@ -1041,6 +1041,24 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 boPatternName = 'None'
 
             # --- HTF Detection (drw_pattern_scanner.pine state machine engine) ---
+            # Stays at 300 despite being far above IBD's 100-120%. Lowering it was tried
+            # and REVERTED: `isHTF` feeds `inBase` and `activeBTop`, so extra flags rewire
+            # breakout tracking and re-seed the base machine onto the wrong structure. At 80
+            # DELL's base frame became bTop 221.50 / 106 bars instead of the correct 469.47 /
+            # 43 bars, and its Double Bottom vanished - the exact opposite of letting patterns
+            # form inside the flag. Measured over the 172 events:
+            #
+            #   i_htfPole    300    100     80
+            #   primary ex    90     79     82
+            #   primary br   126    123    122
+            #   layered br   154    152    151
+            #   pivot <=1%    96     88     88
+            #   quoted low    20     26     29
+            #   HTF events    11     59     77
+            #
+            # The flag is instead detected independently by detect_htf_context() at an 80%
+            # pole and reported as a reading plus `htf_context`, which costs nothing because
+            # nothing downstream branches on it.
             i_htfPole = 300.0
             i_htfPB = 60
             i_htfPBMin = 5
@@ -1464,6 +1482,34 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # Enclosing High Tight Flag, if any. Annotation only - see detect_htf_context. The
         # inner pattern keeps its own buy point; this says which structure it formed inside.
         _htf_ctx = detect_htf_context(highs, lows)
+
+        # Surface the flag AS A READING, alongside the inner patterns rather than instead of
+        # them. It prices off the flag high, which is a different level from the inner
+        # pattern's buy point, so it earns its own entry on the same terms as everything else
+        # here. Appended last because the flag encloses whatever formed inside it, and folded
+        # into `also_reads_as` when the two levels coincide - DELL's cup tops out at the flag
+        # high, so it reads "Cup, also HTF" rather than listing 469.47 twice.
+        #
+        # This comes from detect_htf_context, NOT from `isHTF`, which is why it can use an 80%
+        # pole without touching the state machine. See the i_htfPole note for what happened
+        # when the state machine was widened instead.
+        if _htf_ctx:
+            _hv = float(_htf_ctx['flag_high'])
+            _hdup = next((p for p in patterns
+                          if abs(p['pivot'] - _hv) / max(_hv, 1e-9) * 100.0 <= PIVOT_SAME_PCT), None)
+            if _hdup is not None:
+                if 'HTF' not in _hdup['also_reads_as']:
+                    _hdup['also_reads_as'].append('HTF')
+            else:
+                patterns.append({
+                    'name': 'HTF',
+                    'pivot': float(round(_hv, 2)),
+                    'dist_pct': float(round((latest['close'] - _hv) / _hv * 100.0, 2)),
+                    'bars_ago': 0,
+                    'last_seen': latest['date'],
+                    'also_reads_as': [],
+                    'htf_flag': True,
+                })
 
         latest_dist = latest['distPct']
         if not (latest['pOn'] and latest['pCode'] > 0) and patterns:
