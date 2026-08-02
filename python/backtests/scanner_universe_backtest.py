@@ -34,6 +34,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from trend_following_backtest import parabolic_sar
+
 warnings.filterwarnings("ignore")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -51,8 +53,14 @@ BUY_STRATEGIES = [
     "Pivot Breakout", "Upside Reversal", "Shakeout", "Volume Dry-Up",
     "MA Touch", "Pocket Pivot", "RS New High", "SMA50 Bounce",
 ]
+# First 9 are fixed-horizon (forced closed within 60 bars of entry). The last 5 are
+# trend-following-style exits ported from trend_following_backtest.py's stop/trail
+# library, run with NO time cap so a genuine breakout can ride a trend instead of being
+# force-closed at bar 60 — see apply_exit_rules().
 EXIT_RULES = ["stop_loss", "trail_2atr", "trail_3atr", "time_20", "time_40",
-              "time_60", "target_2r", "target_3r", "target_5r"]
+              "time_60", "target_2r", "target_3r", "target_5r",
+              "chandelier_uncapped", "parabolic_sar", "breakeven_trail",
+              "tighten_after_30", "scale_out_369"]
 
 # Pattern groups used for slicing the summary
 PATTERN_GROUPS = {
@@ -112,8 +120,12 @@ def find_pivots(highs, lows, left=5, right=5):
 # Trade simulation
 # ══════════════════════════════════════════════════════════════════════════════
 
-def apply_exit_rules(highs, lows, closes, signal_bar, entry_price, base_low, atr):
-    """Apply every exit rule from a signal bar; return exit results keyed by rule."""
+def apply_exit_rules(highs, lows, closes, signal_bar, entry_price, base_low, atr, sar=None):
+    """Apply every exit rule from a signal bar; return exit results keyed by rule.
+
+    sar: optional precomputed Wilder parabolic-SAR array (see parabolic_sar()), used by
+    the 'parabolic_sar' exit. Computed once per ticker by the caller, not per trade.
+    """
     n = len(closes)
     results = {}
 
@@ -163,6 +175,94 @@ def apply_exit_rules(highs, lows, closes, signal_bar, entry_price, base_low, atr
                 ret = (closes[min(signal_bar + 60, n - 1)] - entry_price) / entry_price * 100.0
                 results[key] = {"exit_bar": min(signal_bar + 60, n - 1),
                                 "exit_price": closes[min(signal_bar + 60, n - 1)], "ret": ret}
+
+    # ── Trend-following-style exits, ported from trend_following_backtest.py's stop
+    # library, run with NO time cap so a genuine breakout can ride a trend past bar 60. ──
+    last_bar = n - 1
+
+    # Chandelier trail: highest high since entry minus 3x ATR (same mechanic as
+    # trail_3atr above, just not force-closed at bar 60).
+    highest_since = entry_price
+    exit_bar, exit_price = last_bar, closes[last_bar]
+    for bar in range(signal_bar + 1, n):
+        highest_since = max(highest_since, highs[bar])
+        trail = highest_since - 3 * atr[bar] if bar < len(atr) else highest_since * 0.88
+        if lows[bar] <= trail:
+            exit_bar, exit_price = bar, trail
+            break
+    ret = (exit_price - entry_price) / entry_price * 100.0
+    results["chandelier_uncapped"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # Parabolic SAR trailing stop.
+    if sar is not None:
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        for bar in range(signal_bar + 1, n):
+            stop_px = sar[bar] if bar < len(sar) else -np.inf
+            if lows[bar] <= stop_px:
+                exit_bar, exit_price = bar, stop_px
+                break
+        ret = (exit_price - entry_price) / entry_price * 100.0
+        results["parabolic_sar"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # Breakeven lock at +2x ATR, then chandelier trail (stop never given back below entry
+    # once locked; held at base_low before that).
+    highest_since = entry_price
+    be_locked = False
+    exit_bar, exit_price = last_bar, closes[last_bar]
+    for bar in range(signal_bar + 1, n):
+        highest_since = max(highest_since, highs[bar])
+        a = atr[bar] if bar < len(atr) else 0.0
+        trail = highest_since - 3 * a
+        if not be_locked and closes[bar] >= entry_price + 2 * a:
+            be_locked = True
+        stop_px = max(trail, entry_price) if be_locked else max(trail, base_low)
+        if lows[bar] <= stop_px:
+            exit_bar, exit_price = bar, stop_px
+            break
+    ret = (exit_price - entry_price) / entry_price * 100.0
+    results["breakeven_trail"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # Base-low stop for the first 30 bars, then tighten to a 1.5x ATR trail.
+    highest_since = entry_price
+    exit_bar, exit_price = last_bar, closes[last_bar]
+    for bar in range(signal_bar + 1, n):
+        highest_since = max(highest_since, highs[bar])
+        a = atr[bar] if bar < len(atr) else 0.0
+        if bar - signal_bar < 30:
+            stop_px = base_low
+        else:
+            stop_px = max(base_low, highest_since - 1.5 * a)
+        if lows[bar] <= stop_px:
+            exit_bar, exit_price = bar, stop_px
+            break
+    ret = (exit_price - entry_price) / entry_price * 100.0
+    results["tighten_after_30"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": ret}
+
+    # Scale out 25% at each of 3R/6R/9R (R = entry - base_low); remainder trails via a
+    # 3x ATR chandelier. Reported return is the size-weighted blend across all fills.
+    if risk > 0:
+        target_prices = [entry_price + risk * m for m in (3, 6, 9)]
+        targets_hit = [False, False, False]
+        remaining = 1.0
+        realized = 0.0
+        highest_since = entry_price
+        exit_bar, exit_price = last_bar, closes[last_bar]
+        for bar in range(signal_bar + 1, n):
+            highest_since = max(highest_since, highs[bar])
+            trail = highest_since - 3 * atr[bar] if bar < len(atr) else highest_since * 0.88
+            for k, tp in enumerate(target_prices):
+                if not targets_hit[k] and highs[bar] >= tp:
+                    targets_hit[k] = True
+                    realized += 0.25 * (tp - entry_price) / entry_price * 100.0
+                    remaining -= 0.25
+            if remaining > 1e-9 and lows[bar] <= trail:
+                realized += remaining * (trail - entry_price) / entry_price * 100.0
+                exit_bar, exit_price = bar, trail
+                remaining = 0.0
+                break
+        if remaining > 1e-9:
+            realized += remaining * (closes[last_bar] - entry_price) / entry_price * 100.0
+        results["scale_out_369"] = {"exit_bar": exit_bar, "exit_price": exit_price, "ret": realized}
 
     return results
 
@@ -223,6 +323,7 @@ def process_ticker(args):
         opens = df["Open"].values[-n:]
         volumes = df["Volume"].values[-n:]
         atr14 = calculate_atr(highs, lows, closes, 14)
+        sar = parabolic_sar(highs, lows)
         sma50 = sma50_series(closes)
         ema10 = pd.Series(closes).ewm(span=10, adjust=False).mean().values
         ema20 = pd.Series(closes).ewm(span=20, adjust=False).mean().values
@@ -351,7 +452,7 @@ def process_ticker(args):
                 signals["Composite Score"] = real_sigs[best]
 
             for strategy, (sig_bar, entry_price) in signals.items():
-                exit_results = apply_exit_rules(highs, lows, closes, sig_bar, entry_price, bLow, atr14)
+                exit_results = apply_exit_rules(highs, lows, closes, sig_bar, entry_price, bLow, atr14, sar)
                 for exit_rule, ex in exit_results.items():
                     ret_raw = ex["ret"]
                     ret = ret_raw * ps
@@ -377,7 +478,7 @@ def process_ticker(args):
                 prices = [signals[s][1] for s in combo]
                 ei = bars.index(min(bars))
                 combo_name = "+".join(combo)
-                exit_results = apply_exit_rules(highs, lows, closes, bars[ei], prices[ei], bLow, atr14)
+                exit_results = apply_exit_rules(highs, lows, closes, bars[ei], prices[ei], bLow, atr14, sar)
                 for exit_rule, ex in exit_results.items():
                     ret_raw = ex["ret"]
                     ret = ret_raw * ps
@@ -406,9 +507,13 @@ _MIN_PRICE = DEFAULT_MIN_PRICE
 _MIN_VOL = DEFAULT_MIN_VOL_50
 
 
-def _init_worker(scan_fn, min_price, min_vol):
+def _init_worker(min_price, min_vol):
+    """Each worker loads its own copy of the patched scanner. scan_single_ticker is
+    created via exec() at runtime, so it has no importable __module__/__qualname__ and
+    cannot be pickled through ProcessPoolExecutor's initargs (fails under the 'spawn'
+    start method, e.g. on macOS) — loading it locally in the worker avoids that."""
     global _scan, _MIN_PRICE, _MIN_VOL
-    _scan = scan_fn
+    _scan, _ = load_patched_scanner()
     _MIN_PRICE = min_price
     _MIN_VOL = min_vol
 
@@ -419,7 +524,6 @@ def run_universe_backtest(args):
     _MIN_VOL = args.min_vol
 
     t0 = time.time()
-    scan_fn, _ = load_patched_scanner()
 
     files = sorted(glob.glob(str(TICKER_CACHE_DIR / "*_1d.parquet")))
     tasks = []
@@ -438,7 +542,7 @@ def run_universe_backtest(args):
     all_trades = []
     workers = args.workers if args.workers > 0 else None
     with ProcessPoolExecutor(max_workers=workers, initializer=_init_worker,
-                             initargs=(scan_fn, args.min_price, args.min_vol)) as ex:
+                             initargs=(args.min_price, args.min_vol)) as ex:
         futs = {ex.submit(process_ticker, task): task[0] for task in tasks}
         done = 0
         for fut in as_completed(futs):
@@ -497,7 +601,8 @@ def run_universe_backtest(args):
             sdf = pdf[pdf["strategy"] == buy_s]
             if len(sdf) < 5:
                 continue
-            for exit_r in ("stop_loss", "trail_2atr", "target_3r"):
+            for exit_r in ("stop_loss", "trail_2atr", "target_3r",
+                           "chandelier_uncapped", "parabolic_sar", "scale_out_369"):
                 es = sdf[sdf["exit_rule"] == exit_r]
                 if len(es) < 3:
                     continue

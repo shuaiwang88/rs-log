@@ -45,6 +45,11 @@ DEFAULT_MIN_PRICE = 12.0
 DEFAULT_MIN_VOL_50 = 500_000
 MIN_BARS = 100
 INITIAL_CAPITAL = 100_000.0
+# Minimum ATR (N) as a fraction of price for an entry to be sized at all. Below this,
+# per-share risk is too close to zero and position sizing (cash * risk% / per_share_risk)
+# blows up to an unrealistic share count on the first adverse tick (seen historically as
+# -inf / 1e27-scale returns on illiquid or stale-data tickers, e.g. alt23_keltner_channel).
+MIN_N_FRACTION = 0.001
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -147,8 +152,13 @@ def efficiency_ratio(c, n=20):
 # Core engine
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_strategy(o, h, l, c, v, dates, cfg, spy_above_200=None):
-    """Simulate one strategy on one ticker. Returns trade list + equity curve stats."""
+def run_strategy(o, h, l, c, v, dates, cfg, spy_above_200=None, pattern_gate=None):
+    """Simulate one strategy on one ticker. Returns trade list + equity curve stats.
+
+    pattern_gate: optional bool array aligned to bars, True where the ticker is inside a
+    real IBD base per the production scanner (see alt48_pattern_gated). When set, entries
+    are only allowed while the gate is True.
+    """
     n = len(c)
     N = atr_wilder(h, l, c, cfg.get("nLen", 20))
     entry_len = cfg.get("entryLen", 55)
@@ -243,7 +253,7 @@ def run_strategy(o, h, l, c, v, dates, cfg, spy_above_200=None):
 
         # ── Entries ──
         long_entry = short_entry = False
-        if not in_pos and regime_ok:
+        if not in_pos and regime_ok and cash > 0:
             vol_ok = True
             if cfg.get("minVol", 0) > 0:
                 vol_ok = v[max(0, i - 20):i + 1].mean() >= cfg.get("minVol", 0)
@@ -279,38 +289,45 @@ def run_strategy(o, h, l, c, v, dates, cfg, spy_above_200=None):
                     long_entry = long_entry and c[i] > don_hi_prev[i]
                     short_entry = short_entry and c[i] < don_lo_prev[i]
 
+            if pattern_gate is not None:
+                gate_ok = i < len(pattern_gate) and bool(pattern_gate[i])
+                long_entry = long_entry and gate_ok
+                short_entry = short_entry and gate_ok
+
         if long_entry and not in_pos:
             N_entry = N[i]
             if N_entry is None or N_entry <= 0 or np.isnan(N_entry):
                 N_entry = max(N[i - 1], 0.01)
-            sh = shares_for_unit(size_mult=half_size)
-            cost = sh * c[i]
-            cash -= cost
-            shares = sh
-            avg_cost = c[i]
-            units = 1
-            entry_price = c[i]
-            last_add = c[i]
-            be_locked = False
-            t_hits = [False] * 6
-            bars_in_pos = 0
-            open_trade = {"entry_eq": cash + shares * c[i], "dir": 1, "units": sh}
+            if N_entry >= c[i] * MIN_N_FRACTION:
+                sh = shares_for_unit(size_mult=half_size)
+                cost = sh * c[i]
+                cash -= cost
+                shares = sh
+                avg_cost = c[i]
+                units = 1
+                entry_price = c[i]
+                last_add = c[i]
+                be_locked = False
+                t_hits = [False] * 6
+                bars_in_pos = 0
+                open_trade = {"entry_eq": cash + shares * c[i], "dir": 1, "units": sh}
         elif short_entry and not in_pos and allow_short:
             N_entry = N[i]
             if N_entry is None or N_entry <= 0 or np.isnan(N_entry):
                 N_entry = max(N[i - 1], 0.01)
-            sh = shares_for_unit(size_mult=half_size)
-            cost = sh * c[i]
-            cash += cost
-            shares = -sh
-            avg_cost = c[i]
-            units = 1
-            entry_price = c[i]
-            last_add = c[i]
-            be_locked = False
-            t_hits = [False] * 6
-            bars_in_pos = 0
-            open_trade = {"entry_eq": cash + shares * c[i], "dir": -1, "units": sh}
+            if N_entry >= c[i] * MIN_N_FRACTION:
+                sh = shares_for_unit(size_mult=half_size)
+                cost = sh * c[i]
+                cash += cost
+                shares = -sh
+                avg_cost = c[i]
+                units = 1
+                entry_price = c[i]
+                last_add = c[i]
+                be_locked = False
+                t_hits = [False] * 6
+                bars_in_pos = 0
+                open_trade = {"entry_eq": cash + shares * c[i], "dir": -1, "units": sh}
 
         # ── Add-on pyramiding ──
         if in_pos and units < max_units and regime_ok:
@@ -524,7 +541,6 @@ STRATEGIES = {
     "alt5_close_confirmed": {**BASE, "closeConfirmed": True, "tide": True, "tideLen": 200},
     "alt6_pure_atr_stop": {**BASE, "exit": "pure_atr"},
     "alt7_chandelier_trail": {**BASE, "exit": "chandelier", "trailLen": 22, "trailN": 3.0},
-    "alt8_adaptive_exit": {**BASE},  # exit lookback varies with vol regime (simplified: baseline)
     "alt9_time_exit": {**BASE, "timeExitBars": 40},
     "alt10_profit_targets": {**BASE, "exit": "chandelier", "trailLen": 22, "trailN": 3.0,
                              "targets": (3.0, 6.0, 9.0)},
@@ -535,7 +551,6 @@ STRATEGIES = {
     "alt15_single_position": {**BASE, "maxUnits": 1, "riskPct": 4.0},
     "alt16_anti_chop": {**BASE, "adxFilter": True, "adxThresh": 25, "antiChop": True, "erThresh": 0.3},
     "alt17_dual_timeframe": {**BASE, "useMarket": True},
-    "alt18_regime_risk": {**BASE},  # risk scaled by regime (approximated by baseline sizing)
     "alt19_intrabar_execution": {**BASE, "intrabar": True},
     "alt20_asymmetric_ls": {**BASE, "entryLen": 35, "stopN": 2.5, "addStepN": 0.75},  # short-side tuned
     "alt21_breakeven_lock": {**BASE, "breakeven": True, "breakEvenN": 2.0,
@@ -584,6 +599,10 @@ STRATEGIES = {
     "alt47_momentum_scaled_sizing": {**BASE, "momentumScale": True, "initialSize": 0.5,
                                      "rsiEntry": True, "rsiLongThresh": 50, "rsiShortThresh": 50,
                                      "fractional": True, "targets": (3.0, 6.0, 9.0)},
+    # Same Donchian core as Baseline, but only allowed to enter while the ticker is
+    # concurrently inside a real IBD base per the production scanner (python/ibd_pattern_scanner.py).
+    # Tests whether gating trend-following entries by pattern quality beats the ungated baseline.
+    "alt48_pattern_gated": {**BASE, "patternGate": True},
 }
 
 
@@ -593,12 +612,37 @@ STRATEGIES = {
 
 _G_SPY = None
 _G_CFG = None
+_G_SCAN_FN = None  # lazily loaded per worker, only if a requested strategy needs patternGate
 
 
 def _init_worker(spy_above_200, cfg):
     global _G_SPY, _G_CFG
     _G_SPY = spy_above_200
     _G_CFG = cfg
+
+
+def _pattern_gate_for(ticker, fpath, n_bars):
+    """Bool array (len n_bars) True where the ticker is inside a real IBD base, per the
+    production scanner. Loaded lazily/once per worker process to avoid paying the cost
+    for strategies that don't use it."""
+    global _G_SCAN_FN
+    if _G_SCAN_FN is None:
+        from scanner_universe_backtest import load_patched_scanner
+        _G_SCAN_FN, _ = load_patched_scanner()
+    gate = np.zeros(n_bars, dtype=bool)
+    try:
+        res = _G_SCAN_FN(ticker, str(fpath))
+        hist = res.get("history") if res else None
+        if hist:
+            m = len(hist)
+            offset = n_bars - m
+            if offset >= 0:
+                for k, st in enumerate(hist):
+                    if st.get("pOn") and st.get("pCode", 0) > 0:
+                        gate[offset + k] = True
+    except Exception:
+        pass
+    return gate
 
 
 def _run_ticker(args):
@@ -616,10 +660,16 @@ def _run_ticker(args):
         c = df["Close"].values
         v = df["Volume"].values
         dates = [str(d)[:10] for d in df.index]
+        gate_cache = None
         for name in strat_names:
             cfg = STRATEGIES[name]
             try:
-                r = run_strategy(o, h, l, c, v, dates, cfg, _G_SPY)
+                pattern_gate = None
+                if cfg.get("patternGate"):
+                    if gate_cache is None:
+                        gate_cache = _pattern_gate_for(ticker, fpath, len(c))
+                    pattern_gate = gate_cache
+                r = run_strategy(o, h, l, c, v, dates, cfg, _G_SPY, pattern_gate)
                 out.append({"strategy": name, "ticker": ticker, **r})
             except Exception:
                 continue
