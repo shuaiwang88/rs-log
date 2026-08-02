@@ -356,6 +356,62 @@ def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
     return [b for b in live if b['count'] >= min_bars]
 
 
+def detect_htf_context(highs, lows, min_pole_gain=100.0, max_pole_bars=60,
+                       min_flag_bars=10, max_flag_bars=50, max_flag_depth=25.0):
+    """Is the CURRENT structure the flag portion of a High Tight Flag? Annotation only.
+
+    Separate from the `isHTF` state machine on purpose. That one demands a 300% pole, which
+    is far outside IBD's definition (100-120% in 4-8 weeks), so it fires on 11 of 172
+    benchmark events and misses ordinary HTFs outright - DELL ran 137.50 -> 469.47 (+241%)
+    into a 42-bar flag 23.9% deep, NTAP 94.89 -> 192.83 (+103% in 7 weeks) into a 43-bar flag
+    22.6% deep, and neither registers.
+
+    Relaxing the threshold in place was measured and REJECTED: `isHTF` also feeds `inBase`
+    and `activeBTop`, so more flags corrupt breakout tracking. At i_htfPole 300 -> 100,
+    primary exact falls 90 -> 79, pivot within 1% 96 -> 88, and buy points quoted dangerously
+    low rise 20 -> 26.
+
+    So detect the flag independently and report it as CONTEXT. It runs standalone over the
+    series and returns a dict, touching no state the base machine reads, which is the same
+    arrangement `detect_candidate_bases` uses and for the same reason: a reading that cannot
+    perturb the primary costs nothing to be wrong about.
+
+    The flag encloses whatever forms inside it - a cup, a double bottom - and that inner
+    pattern is the tradable one with its own buy point. This only says which larger structure
+    it is sitting in.
+    """
+    n = len(highs)
+    if n < min_flag_bars + 20:
+        return None
+    w = min(max_flag_bars, n - 1)
+    seg = highs[n - w:]
+    t = n - w + int(np.argmax(seg))          # flag top: highest high in the recent window
+    flag_bars = n - 1 - t
+    if not (min_flag_bars <= flag_bars <= max_flag_bars):
+        return None
+    top = float(highs[t])
+    if top <= 0:
+        return None
+    flag_low = float(np.min(lows[t:]))
+    depth = (top - flag_low) / top * 100.0
+    if depth > max_flag_depth:
+        return None
+    p0 = max(0, t - max_pole_bars)
+    if t - p0 < 5:
+        return None
+    j = p0 + int(np.argmin(lows[p0:t]))
+    pole_low = float(lows[j])
+    if pole_low <= 0:
+        return None
+    gain = (top / pole_low - 1.0) * 100.0
+    if gain < min_pole_gain:
+        return None
+    return {'flag_high': round(top, 2), 'flag_low': round(flag_low, 2),
+            'flag_bars': int(flag_bars), 'flag_depth_pct': round(depth, 1),
+            'pole_low': round(pole_low, 2), 'pole_gain_pct': round(gain, 1),
+            'pole_bars': int(t - j), 'flag_start_idx': int(t)}
+
+
 def locate_handle(highs, lows, volumes, sma20_vol, start, top, low, end,
                   min_age=6, lo_frac=0.88, hi_frac=1.01,
                   max_hdep=30.0, max_hdratio=0.55, vol_ratio=1.15):
@@ -1100,33 +1156,46 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # middle-peak pivots are computed differently (window max / specific pivot value)
             # and don't share this bias, so the correction is scoped to bTop only.
             if inBase:
-                if isHTF: pivRef = htf_flag_baseHigh
-                elif isCupH and cupHandlePivot is not None: pivRef = cupHandlePivot
+                # A pattern can form INSIDE the flag portion of a High Tight Flag, and when
+                # one does it prices off ITS OWN level, not the flag high. HTF used to
+                # preempt every other pivot here, so a cup or double bottom building inside
+                # the flag was quoted at the flag high - a level belonging to the enclosing
+                # structure, usually well above the inner pattern's own buy point.
+                #
+                # The label precedence below already worked this way (see the `if False and
+                # isHTF` line and its note), so the two were inconsistent: the scanner would
+                # report "Cup" and then price it off the flag. Now the inner pattern wins and
+                # the flag high is the FALLBACK, used only when HTF is the sole structure.
+                # HTF is preserved as context - `in_htf_flag` / `htf_flag_high` on the result
+                # and an 'HTF' entry in the layered readings - so the flag is still visible
+                # rather than silently dropped.
+                # Quote the base pivot off the base's HIGHEST HIGH, not the ratcheted bTop.
+                # Measured against the ground truth at 20 bars before the breakout, over
+                # base-top patterns whose pivot was >5% too low:
+                #     true pivot / max high in base = 1.000   (IBD's pivot IS that high)
+                #     bTop       / max high in base = 0.948   (we quote 5.2% under it)
+                # bTop lags because the ratchet only absorbs moves up to 5% above it; a
+                # bigger jump fires a breakout instead and the base then resurrects still
+                # carrying the stale value, so the quoted buy point is a level price has
+                # already traded through.
+                #
+                # The 8-bar lag excludes the current thrust: without it the running max picks
+                # up the breakout bar itself and overshoots (piv3 101 -> 88). A pivot should
+                # be a prior confirmed swing high, and pivot confirmation already costs
+                # pivLen(5) bars. Results are flat for lag 6-10, so this is a plateau rather
+                # than a tuned edge.
+                # No fudge factor: the old bTop * 0.975 existed to cancel the ratchet's
+                # systematic overshoot, and the base high has no overshoot to cancel. Keeping
+                # it manufactured a 2.5% error by construction (median error was exactly
+                # 2.50%); dropping it takes the median to 0.02% and lifts within-1% from 24
+                # to 101 events.
+                _e = i + 1 - 8
+                _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop
+                _base_piv = _bp if _bp else bTop
+                if isCupH and cupHandlePivot is not None: pivRef = cupHandlePivot
                 elif isDB and dbMiddlePivot is not None: pivRef = dbMiddlePivot
-                else:
-                    # Quote the base pivot off the base's HIGHEST HIGH, not the ratcheted
-                    # bTop. Measured against the ground truth at 20 bars before the
-                    # breakout, over base-top patterns whose pivot was >5% too low:
-                    #     true pivot / max high in base = 1.000   (IBD's pivot IS that high)
-                    #     bTop       / max high in base = 0.948   (we quote 5.2% under it)
-                    # bTop lags because the ratchet only absorbs moves up to 5% above it; a
-                    # bigger jump fires a breakout instead and the base then resurrects
-                    # still carrying the stale value, so the quoted buy point is a level
-                    # price has already traded through.
-                    #
-                    # The 8-bar lag excludes the current thrust: without it the running max
-                    # picks up the breakout bar itself and overshoots (piv3 101 -> 88). A
-                    # pivot should be a prior confirmed swing high, and pivot confirmation
-                    # already costs pivLen(5) bars. Results are flat for lag 6-10, so this
-                    # is a plateau rather than a tuned edge.
-                    # No fudge factor: the old bTop * 0.975 existed to cancel the ratchet's
-                    # systematic overshoot, and the base high has no overshoot to cancel.
-                    # Keeping it manufactured a 2.5% error by construction (median error was
-                    # exactly 2.50%); dropping it takes the median to 0.02% and lifts
-                    # within-1% from 24 to 101 events.
-                    _e = i + 1 - 8
-                    _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop
-                    pivRef = _bp if _bp else bTop
+                elif _base_piv: pivRef = _base_piv
+                elif isHTF: pivRef = htf_flag_baseHigh
             else:
                 pivRef = boPivot
             distPct = (closes[i] - pivRef) / pivRef * 100.0 if (pivRef and pivRef > 0) else None
@@ -1243,8 +1312,17 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                         ('Flat Base', isFlat_ind, basePivot),
                         ('Cup', isCup_ind, basePivot),
                         ('Consolidation', isConsol_ind, basePivot),
+                        # HTF is a READING like the rest, not a verdict that replaces them.
+                        # It encloses whatever forms inside it, so it prices off the flag
+                        # high while the inner pattern keeps its own buy point, and both are
+                        # listed. Previously HTF appeared nowhere in the readings and merely
+                        # hijacked the pivot, which lost the flag on any bar where a base was
+                        # also live.
+                        ('HTF', isHTF, htf_flag_baseHigh),
                     ) if ok and pv
                 ),
+                'isHTFFlag': bool(isHTF),
+                'htfFlagHigh': float(htf_flag_baseHigh) if (isHTF and htf_flag_baseHigh) else None,
                 # VCP sub-pattern state, so the contraction sequence can be painted as it forms
                 'vcpReady': bool(vcp['ready'][i]),
                 'vcpActive': bool(vcp['active'][i]),
@@ -1295,8 +1373,11 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # trailing handle window swallows the thrust and 9 of 15 lost labels flip into
         # Cup+Handle exactly there. So collect what the base was read as across the window,
         # not just on the final bar, and rank by specificity.
+        # HTF ranks LAST: it is the enclosing structure, so whatever forms inside the flag is
+        # the more specific read and should lead the list. It still earns an entry of its own
+        # because it prices off a different level (the flag high).
         PATTERN_RANK = {'Cup+Handle': 0, 'Dbl Bottom': 1, 'Flat Base': 2,
-                        'Cup': 3, 'Consolidation': 4}
+                        'Cup': 3, 'Consolidation': 4, 'HTF': 5}
         layered = {}
         for _st in history_state[-(PATTERN_WINDOW_BARS + 1):]:
             if not _st.get('pOn'):
@@ -1373,6 +1454,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # `dist_pct` travels with it: downstream (evaluate_breakaway_gap.py, fast_eval) the
         # buy point is reconstructed as close/(1+dist_pct/100), so leaving the stale value
         # would report one level in `pivot` and a different one everywhere else.
+        # Enclosing High Tight Flag, if any. Annotation only - see detect_htf_context. The
+        # inner pattern keeps its own buy point; this says which structure it formed inside.
+        _htf_ctx = detect_htf_context(highs, lows)
+
         latest_dist = latest['distPct']
         if not (latest['pOn'] and latest['pCode'] > 0) and patterns:
             latest_pivot = patterns[0]['pivot']
@@ -1482,6 +1567,15 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 # specificity, each with the pivot IT prices off. patterns[0] is the primary.
                 'patterns': patterns,
                 'pattern_count': len(patterns),
+                # --- High Tight Flag CONTEXT ------------------------------------------
+                # A base forming inside the flag is the tradable pattern and keeps its own
+                # buy point; the flag is the structure enclosing it. Reported alongside so
+                # "a cup inside the flag part of an HTF" is visible as exactly that, rather
+                # than one of the two silently replacing the other.
+                'in_htf_flag': bool(latest.get('isHTFFlag')) or bool(_htf_ctx),
+                'htf_flag_high': latest.get('htfFlagHigh') or (
+                    _htf_ctx['flag_high'] if _htf_ctx else None),
+                'htf_context': _htf_ctx,
                 # --- buy point (see the note above the computation) ---
                 'pivot': float(round(latest_pivot, 2)) if latest_pivot else None,
                 'conservative_pivot': float(round(cons_pivot, 2)) if cons_pivot else None,
