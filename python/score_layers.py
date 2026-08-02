@@ -9,18 +9,27 @@ fast_eval reports it as a no-op even when it recovers an event outright.
 
 Metrics:
     primary exact/broad     `pattern_name` vs truth, via fast_eval's own name maps
-    layered exact/broad     ANY reading matches (this is the number the user reads)
-    pivot within N%         best reading's buy point vs the ground truth Pivot Price
+    layered exact/broad     ANY reading matches
+    REPORTED pivot          the single buy point in `pivot` - the number acted on
+    best of all readings    ORACLE: the closest candidate, however many are on offer
     recovered               events with no primary pattern that a reading rescues
     precision/recall        per pattern name, over the reading set
 
-Precision matters because every other metric here is ONE-SIDED. `layered broad` counts an
-event as correct if ANY reading matches, so emitting more readings can only raise it - a
-detector that named every pattern on every base would score 100%. The same is true of the
-pivot bands, which take the best reading. Optimising those alone silently rewards
-over-claiming, and it hid a real problem: Cup+Handle is claimed on 85 of 172 events when
-only 46 are truly Cup With Handle (precision 36.5%, recall 67.4%). Any change that adds
-handle detections has to be read against this column, not just the broad count.
+Half of this file exists because ONE-SIDED metrics quietly reward over-claiming, and this
+project got caught by it twice.
+
+`layered broad` counts an event as correct if ANY reading matches, so emitting more readings
+can only raise it - a detector that named every pattern on every base would score 100%. That
+hid a real problem: Cup+Handle is claimed on 85 of 172 events when only 46 are truly Cup With
+Handle (precision 36.5%, recall 67.4%). Any change that adds handle detections has to be read
+against the precision column, not the broad count.
+
+The pivot bands had exactly the same defect, and it went unnoticed far longer. Taking the
+best of ~2.3 candidates is an oracle that assumes the right one gets picked; the buy point a
+user actually receives was 25 points worse (95 within 1% against the oracle's 139). Both are
+now printed, and the reported one is the one to optimise. Its SIGN is reported too: quoted
+below the truth the scanner claims a breakout that has not happened and buys into overhead
+supply, while quoted above it merely misses the trade. See pivot_audit.py and rank_pivots.py.
 
 Usage:
     python3 python/score_layers.py                  # baseline
@@ -57,6 +66,7 @@ def score(fe, patch=None, label=''):
     within = {1: 0, 2: 0, 3: 0, 5: 0}
     have_truth = 0
     errs = []
+    head_errs = []
     recovered = []
     no_read = []
     # name -> [true positives, false positives, false negatives] over the reading set
@@ -102,8 +112,10 @@ def score(fe, patch=None, label=''):
         if truth and res:
             cands = [p['pivot'] for p in pats]
             c, dp = res.get('close'), res.get('dist_pct')
+            head = None
             if c and dp is not None and (1.0 + dp / 100.0) != 0:
-                cands.append(c / (1.0 + dp / 100.0))
+                head = c / (1.0 + dp / 100.0)
+                cands.append(head)
             if cands:
                 e = min(abs(v - truth) / truth * 100.0 for v in cands)
                 have_truth += 1
@@ -111,12 +123,24 @@ def score(fe, patch=None, label=''):
                 for k in within:
                     if e <= k:
                         within[k] += 1
+                # The signed error of the ONE reported buy point. `within` above is a min
+                # over every candidate - an ORACLE that assumes the right reading gets
+                # picked out of ~2.3 on offer, and one-sided in the same way `layered broad`
+                # was before precision was added, since another reading can only lower a min.
+                # Quoting it alone overstated the buy point by 25 points for most of this
+                # project. The sign matters too: quoted below the truth, the scanner reports
+                # a breakout that has not happened and buys into overhead supply; quoted
+                # above, the trade is only missed. See pivot_audit.py.
+                if head:
+                    se = (head - truth) / truth * 100.0
+                    head_errs.append(se)
     return {
         'label': label, 'n': n,
         'p_exact': p_exact, 'p_broad': p_broad,
         'l_exact': l_exact, 'l_broad': l_broad,
         'within': within, 'have_truth': have_truth,
         'median_err': float(np.median(errs)) if errs else None,
+        'head_errs': head_errs,
         'recovered': recovered, 'no_read': no_read, 'pr': pr,
     }
 
@@ -129,8 +153,16 @@ def show(r):
     print(f"  layered exact  {pct(r['l_exact'])}      layered broad  {pct(r['l_broad'])}")
     h = r['have_truth']
     w = r['within']
-    print(f"  best-reading pivot vs truth (n={h}): "
-          f"<=1% {w[1]}  <=2% {w[2]}  <=3% {w[3]}  <=5% {w[5]}   median {r['median_err']:.2f}%")
+    he = np.abs(np.array(r['head_errs'])) if r['head_errs'] else np.array([])
+    if len(he):
+        sg = np.array(r['head_errs'])
+        print(f"  REPORTED pivot vs truth (n={len(he)}): "
+              f"<=1% {int((he <= 1).sum())}  <=2% {int((he <= 2).sum())}  "
+              f"<=3% {int((he <= 3).sum())}  <=5% {int((he <= 5).sum())}   "
+              f"median {np.median(he):.2f}%   quoted low by >3%: {int((sg < -3).sum())}")
+    print(f"  best of all readings   (n={h}): "
+          f"<=1% {w[1]}  <=2% {w[2]}  <=3% {w[3]}  <=5% {w[5]}   median {r['median_err']:.2f}%"
+          f"   <- ORACLE, not accuracy")
     print(f"  {'reading':<14}{'claimed':>8}{'truth':>7}{'TP':>5}{'FP':>5}{'FN':>5}"
           f"{'prec':>8}{'recall':>8}{'F1':>7}")
     for nm, (tp, fp, fn) in sorted(r['pr'].items(), key=lambda kv: -kv[1][1]):
