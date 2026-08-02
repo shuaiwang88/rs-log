@@ -2195,6 +2195,42 @@ def get_all_tickers_sorted_by_industry(filtered_df, industry_df):
 
 all_sorted_tickers = get_all_tickers_sorted_by_industry(filtered_df, df_industry)
 
+# ---------------------- Analysis helpers ----------------------
+RS_COL = 'Relative Strength'
+PRICE_COL = 'Close' if 'Close' in filtered_df.columns else 'Price'
+
+has_col = lambda sn, c: c in sn.columns
+
+def _n(sn, c):
+    return pd.to_numeric(sn[c], errors='coerce') if has_col(sn, c) else pd.Series(np.nan, index=sn.index)
+
+# Latest cross-sectional snapshot (one row per ticker) via the analysis blocks.
+if has_historical and 'date' in filtered_df.columns:
+    _maxd = filtered_df['date'].max()
+    snap = filtered_df[filtered_df['date'] == _maxd].drop_duplicates(subset=['Ticker'], keep='first').copy()
+else:
+    snap = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').copy()
+
+RS_SER = _n(snap, RS_COL)
+PCT_SER = _n(snap, 'Percentile')
+RS_BASE = RS_SER.copy()
+DELTA_S = RS_SER - RS_SER.mean()
+
+def rs_bucket(rs):
+    if rs >= 80: return 'Leader (≥80)'
+    if rs >= 65: return 'Strong (65-79)'
+    if rs >= 50: return 'Broad (50-64)'
+    return 'Laggard (<50)'
+
+def leader_score(row):
+    s = 0.0
+    if not np.isnan(row.get('Percentile', np.nan)): s += row['Percentile'] / 100.0 * 2
+    if not np.isnan(row.get('6M_RS_Percentile', np.nan)): s += (row['6M_RS_Percentile'] / 100.0)
+    if not np.isnan(row.get('3M_RS_Percentile', np.nan)): s += (row['3M_RS_Percentile'] / 100.0) * 0.5
+    if not np.isnan(row.get('PctFrom52WkHigh', np.nan)): s += max(0.0, (1 - row['PctFrom52WkHigh'] / 100.0)) * 0.5
+    if not np.isnan(row.get('RevenueGrowth', np.nan)): s += min(1.0, max(0.0, row['RevenueGrowth'] / 50.0)) * 0.5
+    return round(s, 2)
+
 # ---------------------- Tabs ----------------------
 if has_historical:
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15 = st.tabs(
@@ -2215,32 +2251,296 @@ tab_ibd_live = tab13 if has_historical else tab12
 
 # ---------- TAB 1: Overview ----------
 with tab1:
-    col1, col2, col3, col4 = st.columns(4)
-    with col1: st.metric("Total Stocks",   len(filtered_df))
-    with col2: st.metric("Avg RS",         f"{filtered_df['Relative Strength'].mean():.1f}")
-    with col3: st.metric("Avg Percentile", f"{filtered_df['Percentile'].mean():.1f}")
-    price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
-    with col4: st.metric("Avg Close",      f"${filtered_df[price_col].mean():.2f}")
-    if has_historical:
+    # ---- SPY benchmark (most recent 9 months) + volume ----
+    from plotly.subplots import make_subplots
+    _mk_dir = Path(__file__).resolve().parent / 'ticker_cache'
+    _spy_path = _mk_dir / 'SPY_1d.parquet'
+    _spy = None
+    if _spy_path.exists():
+        try:
+            _spy = pd.read_parquet(_spy_path).reset_index()
+            _spy.columns = [str(c) for c in _spy.columns]
+            if 'Date' not in _spy.columns:
+                _spy = _spy.rename(columns={_spy.columns[0]: 'Date'})
+            _spy['Date'] = pd.to_datetime(_spy['Date'])
+            _spy = _spy.sort_values('Date').drop_duplicates('Date', keep='last')
+            _cut = _spy['Date'].max() - pd.DateOffset(months=9)
+            _spy = _spy[_spy['Date'] >= _cut]
+        except Exception:
+            _spy = None
+    if _spy is not None and not _spy.empty:
+        st.subheader("🇺🇸 SPY — S&P 500 ETF (last 9 months)")
+        _spy = _spy.set_index('Date')
+        _cl = _spy['Close'].astype(float)
+        _spy['MA50'] = _cl.rolling(50).mean()
+        _spy['MA200'] = _cl.rolling(200).mean()
+        _volc = 'Volume' if 'Volume' in _spy.columns else None
+
+        # ---- IBD-style distribution days (independent of sidebar range) ----
+        _dd = _spy.copy()
+        _dd['Close'] = _dd['Close'].astype(float)
+        _dd['Volume'] = _dd['Volume'].astype(float)
+        _dd['ret'] = _dd['Close'].pct_change() * 100.0
+        _dd['is_dd'] = (_dd['ret'] <= -0.2) & (_dd['Volume'] > _dd['Volume'].shift(1))
+        _WINDOW = 25
+        _close_arr = _dd['Close'].to_numpy()
+        _act_arr = np.zeros(len(_dd), dtype=bool)
+        for _i in range(len(_dd)):
+            if not bool(_dd['is_dd'].iloc[_i]):
+                continue
+            _later = _close_arr[_i + 1:]
+            if _later.size and _later.max() >= 1.05 * _close_arr[_i]:
+                continue
+            _act_arr[_i] = True
+        _dd['active_dd'] = _act_arr
+        _active_count = int(_dd['active_dd'].iloc[-_WINDOW:].sum())
+        if _active_count <= 4:
+            _status = 'Confirmed uptrend'
+        elif _active_count <= 6:
+            _status = 'Uptrend under pressure'
+        else:
+            _status = 'Market in correction'
+
+        # ---- IBD Follow-Through Day + Accumulation Day ----
+        if _volc is not None:
+            _v = _spy[_volc].astype(float)
+            _retdd = _dd['ret'] if 'ret' in _dd else _cl.pct_change() * 100.0
+            _dd['volup'] = _v > _v.shift(1)
+            _dd['ft'] = (_retdd >= 1.25) & _dd['volup'].fillna(False)
+            _dd['acc'] = (_retdd >= 1.2) & _dd['volup'].fillna(False) & ~np.asarray(_dd['ft'])
+            # rally-attempt day counting: # sessions since the most recent N-day low
+            _low_arr = _dd['Low'].astype(float).to_numpy()
+            _dayN = np.zeros(len(_dd), dtype=int)
+            for _k in range(len(_dd)):
+                _win = _low_arr[max(0, _k - 49):_k + 1]
+                _idx = max(0, _k - 49) + int(np.argmin(_win))
+                _dayN[_k] = _k - _idx
+            _dd['ftd'] = _dd['ft'] & (_dayN >= 4) & (_dayN <= 12)
+        else:
+            _dd['ftd'] = False
+            _dd['acc'] = False
+
+        _regime_color = {'Confirmed uptrend': '#2f9e5f', 'Uptrend under pressure': '#c9a227',
+                          'Market in correction': '#d33'}.get(_status, '#888')
+
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02, row_heights=[0.75, 0.25])
+        fig.add_trace(go.Candlestick(x=_spy.index, open=_spy['Open'], high=_spy['High'],
+                                     low=_spy['Low'], close=_cl, name='SPY',
+                                     increasing_line_color='#2a6bd8', increasing_fillcolor='#2a6bd8',
+                                     decreasing_line_color='#e3548b', decreasing_fillcolor='#e3548b'), row=1, col=1)
+        _spy['EMA21'] = _cl.ewm(span=21, adjust=False).mean()
+        fig.add_trace(go.Scatter(x=_spy.index, y=_spy['EMA21'], name='21 EMA', line=dict(width=1, color='#26a69a')), row=1, col=1)
+        fig.add_trace(go.Scatter(x=_spy.index, y=_spy['MA50'], name='50 MA', line=dict(width=1, color='red')), row=1, col=1)
+        fig.add_trace(go.Scatter(x=_spy.index, y=_spy['MA200'], name='200d', line=dict(width=1, color='blue')), row=1, col=1)
+
+        # ---- Webby / IBD Power Trend (Mike Webster) ----
+        _e21 = _spy['EMA21'].to_numpy(float)
+        _s50 = _spy['MA50'].to_numpy(float)
+        _c = _cl.to_numpy(float)
+        _o = _spy['Open'].astype(float).to_numpy(float)
+        _l = _spy['Low'].astype(float).to_numpy(float)
+        _h = _spy['High'].astype(float).to_numpy(float)
+        _ns = len(_spy)
+        _low_ok = (_spy['Low'] > _spy['EMA21']).rolling(10, min_periods=10).min().fillna(False).to_numpy()
+        _ema_ok = (_spy['EMA21'] > _spy['MA50']).rolling(5, min_periods=5).min().fillna(False).to_numpy()
+        _ma50_ma = _spy['MA50'].rolling(5, min_periods=5).mean()
+        _ma50up = (_spy['MA50'] > _ma50_ma).fillna(False).to_numpy()
+        _rh = _spy['High'].rolling(63, min_periods=1).max().to_numpy(float)
+        _recent_hi = float(_h[-252:].max())
+        _cond = _low_ok.astype(bool) & _ema_ok.astype(bool) & _ma50up.astype(bool) & (_c >= _o)
+        _pt = np.zeros(_ns, dtype=bool)
+        _on = False
+        for _i in range(_ns):
+            if not _on:
+                if _cond[_i]:
+                    _on = True
+                    _pt[_i] = True
+            else:
+                if _e21[_i] < _s50[_i]:
+                    _on = False
+                elif (_c[_i] < 0.9 * _rh[_i]) and (_c[_i] < _s50[_i]):
+                    _on = False
+                else:
+                    _pt[_i] = True
+        _pt_on = bool(_pt[-1])
+
+        if _volc is not None:
+            _up = _cl >= _spy['Open'].astype(float)
+            _vcols = ['#26a69a' if d else '#ef5350' for d in _up]
+            fig.add_trace(go.Bar(x=_spy.index, y=_spy[_volc].astype(float), name='Volume',
+                                 marker_color=_vcols), row=2, col=1)
+        _sub = _dd[_dd['is_dd']]
+        if not _sub.empty:
+            fig.add_trace(go.Scatter(
+                x=_sub.index, y=_sub['Low'] * 0.992,
+                mode='markers', name='Distribution day',
+                marker=dict(symbol='circle', size=9,
+                            color=['#d33' if a else 'rgba(221,51,51,0.35)' for a in _sub['active_dd']],
+                            line=dict(color='#8b0000' if _sub['active_dd'].any() else '#d33', width=0.6)),
+                hoverinfo='text',
+                text=[d.strftime('%Y-%m-%d') + (f'<br>Active' if a else '<br>expired') for d, a in zip(_sub.index, _sub['active_dd'])]
+            ), row=1, col=1)
+        _subf = _dd[_dd['ftd']] if 'ftd' in _dd else _dd.iloc[0:0]
+        if not _subf.empty:
+            fig.add_trace(go.Scatter(
+                x=_subf.index, y=_subf['High'] * 1.015,
+                mode='markers', name='Follow-through',
+                marker=dict(symbol='triangle-up', size=9, color='#2f9e5f',
+                            line=dict(color='#14532d', width=0.6)),
+                hoverinfo='text',
+                text=[d.strftime('%Y-%m-%d') + f" ({(r):+.1f}%)" for d, r in zip(_subf.index, _subf.get('ret', 0))],
+            ), row=1, col=1)
+        _suba = _dd[_dd['acc']] if 'acc' in _dd else _dd.iloc[0:0]
+        if not _suba.empty:
+            fig.add_trace(go.Scatter(
+                x=_suba.index, y=_suba['High'] * 1.015,
+                mode='markers', name='Accumulation',
+                marker=dict(symbol='triangle-up', size=7, color='#1d6fd8',
+                            line=dict(color='#0b3a75', width=0.6)),
+                hoverinfo='text',
+                text=[d.strftime('%Y-%m-%d') + f"<br>{r:+.1f}%" for d, r in zip(_suba.index, _suba.get('ret', 0))],
+            ), row=1, col=1)
+        fig.update_layout(
+            height=470, xaxis_rangeslider_visible=False, hovermode='x unified',
+            legend=dict(orientation='h', y=1.05, x=0),
+annotations=[dict(x=1, y=1.02, xref='paper', yref='paper', xanchor='right', showarrow=False,
+                              text=f'{_active_count} distribution days · {_status}',
+                              font=dict(size=13, color=_regime_color)),
+                         dict(x=0, y=1.02, xref='paper', xanchor='left', showarrow=False,
+                              text=f'Power Trend: {"ON" if _pt_on else "OFF"} · recent high {_recent_hi:.0f}',
+                              font=dict(size=11, color='#2f9e5f' if _pt_on else '#888'))])
+        for _ax in ('xaxis', 'xaxis2'):
+            fig.layout[_ax].update(type='date', rangebreaks=[dict(bounds=['sat', 'mon'])])
+        fig.update_xaxes(rangeslider_visible=False, nticks=10, row=1, col=1)
+        fig.update_xaxes(rangeslider_visible=False, dtick='M1', tickformat='%b %y', row=2, col=1)
+        _y_pmin = float((_spy['Low'] * 0.992).min())
+        _y_pmax = float((_spy['High'] * 1.015).max())
+        _y_pad = (_y_pmax - _y_pmin) * 0.03
+        fig.update_layout(yaxis=dict(range=[_y_pmin - _y_pad, _y_pmax + _y_pad]))
+        if _volc is not None:
+            _v_max = float(_spy['Volume'].astype(float).max())
+            fig.update_layout(yaxis2=dict(range=[0, _v_max * 1.05]))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(
+            f"**IBD distribution days (S&P/SPY):** a day that closes **≥0.2% lower on higher volume than the prior day**. "
+            f"Active count over the last 25 sessions (expiring after a rally ≥5% above that day's close) = "
+            f"**{_active_count}** → **{_status}**."
+        )
         st.divider()
+
+    st.divider()
+
+    st.subheader("🎯 Market Pulse")
+    rs_ok = RS_SER.dropna()
+    n_total = len(snap)
+    n_lead = int((RS_SER >= 80).sum()); n_str = int(((RS_SER >= 65) & (RS_SER < 80)).sum())
+    n_broad = int(((RS_SER >= 50) & (RS_SER < 65)).sum()); n_lag = int((RS_SER < 50).sum())
+    rs_std = float(RS_SER.std()) if len(RS_SER) else 0.0
+
+    if has_historical and 'date' in filtered_df.columns:
+        cream_dates = sorted(filtered_df['date'].dropna().unique())
+        last_date = cream_dates[-1] if cream_dates else None
+    else:
+        last_date = None
+
+    if not snap.empty:
+        top_sector = snap.groupby('Sector')['Relative Strength'].mean().sort_values(ascending=False).head(1)
+        bot_sector = snap.groupby('Sector')['Relative Strength'].mean().sort_values(ascending=True).head(1)
+        ts = f"{top_sector.index[0]} ({top_sector.iloc[0]:.0f})" if not top_sector.empty else "n/a"
+        bs = f"{bot_sector.index[0]} ({bot_sector.iloc[0]:.0f})" if not bot_sector.empty else "n/a"
+    else:
+        ts, bs = "n/a", "n/a"
+
+    meta_cols = st.columns(4)
+    with meta_cols[0]: st.metric("Total Stocks", n_total)
+    with meta_cols[1]: st.metric("Avg RS", f"{RS_SER.mean():.1f}")
+    with meta_cols[2]: st.metric("Breadth (≥80)", f"{n_lead}", help="% of universe with RS ≥ 80")
+    with meta_cols[3]: st.metric("Median RS", f"{RS_SER.median():.1f}")
+
+    if rs_ok is not None:
+        bucket = RS_SER.apply(rs_bucket)
+        bucket_counts = bucket.value_counts()
+        bre_lead = float((RS_SER >= 80).mean() * 100) if len(RS_SER) else 0.0
+        bre_str = float(((RS_SER >= 65) & (RS_SER < 80)).mean() * 100) if len(RS_SER) else 0.0
+        bre_broad = float(((RS_SER >= 50) & (RS_SER < 65)).mean() * 100) if len(RS_SER) else 0.0
+        bre_lag = float((RS_SER < 50).mean() * 100) if len(RS_SER) else 0.0
+
+    st.markdown(
+        f"**Market regime:** **{bre_lead:.0f}%** of the universe holds leading RS (≥80) while "
+        f"**{bre_lag:.0f}%** lag below 50. Stocks with RS ≥ 80 — the actionable IBD-style band — are "
+        f"**{n_lead}** names. Broad participation across the strong (65–79) and broad (50–64) bands is "
+        f"**{bre_str:.0f}% / {bre_broad:.0f}%**.\n\n"
+        f"**Top sector:** {ts}. **Weakest sector:** {bs}. Universe median RS **{RS_SER.median():.1f}** "
+        f"and dispersion (std) **{RS_BASE.std():.1f}** set the context for the rest of the app.",
+        unsafe_allow_html=False
+    )
+
+    ma_breadth = {}
+    for key, col in [('above200', 'Price vs 200-Day'), ('above50', 'Price vs 50-Day')]:
+        if has_col(snap, col):
+            _ser = pd.to_numeric(snap[col], errors='coerce')
+            ma_breadth[key] = (_ser <= 0)
+    if ma_breadth:
+        bcols = st.columns(len(ma_breadth) + 1)
+        j = 0
+        for key, mask in ma_breadth.items():
+            lbl = "Above 200-Day" if key == 'above200' else "Above 50-Day"
+            with bcols[j]:
+                st.metric(lbl, f"{float(mask.mean() * 100):.0f}%")
+            j += 1
+        if 'above200' in ma_breadth and 'above50' in ma_breadth:
+            with bcols[j]:
+                st.metric("Above Both MAs", f"{float((ma_breadth['above200'] & ma_breadth['above50']).mean() * 100):.0f}%")
+            j += 1
+        st.caption("Trend-breadth: % of the universe that has reclaimed its key moving averages — a rising reading confirms broad participation; a falling one signals narrowing leadership.")
+
+    st.divider()
+    if has_historical:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("📊 Data Coverage")
             if 'date' in filtered_df.columns:
-                st.metric("Trading Days",  filtered_df['date'].nunique())
+                st.metric("Trading Days", filtered_df['date'].nunique())
                 st.metric("Unique Stocks", filtered_df['Ticker'].nunique())
+        with col2:
+            st.subheader("🧮 RS Breadth Breakdown")
+            if not bucket_counts.empty:
+                bdf = pd.DataFrame({'Bucket': bucket_counts.index, 'Count': bucket_counts.values})
+                bdf['Share'] = (bdf['Count'] / bdf['Count'].sum() * 100).round(1)
+                st.dataframe(bdf[['Bucket', 'Count', 'Share']], use_container_width=True, hide_index=True)
+
     st.divider()
+    st.subheader("📊 Sector Leaderboard")
+    cat_sub = snap[['Sector', 'Ticker', 'Relative Strength', 'Percentile']].reset_index(drop=True)
+    sec_tbl = cat_sub.groupby('Sector').agg(
+        count=('Ticker', 'count'),
+        avg_rs=('Relative Strength', 'mean'),
+        med_rs=('Relative Strength', 'median'),
+        max_rs=('Relative Strength', 'max'),
+        avg_pct=('Percentile', 'mean'),
+    ).reset_index()
+    sec_tbl['avg_pct'] = sec_tbl['avg_pct'].round(1)
+    sec_tbl['avg_rs'] = sec_tbl['avg_rs'].round(1)
+    sec_tbl['med_rs'] = sec_tbl['med_rs'].round(1)
+    sec_tbl['max_rs'] = sec_tbl['max_rs'].round(0)
+    sec_tbl = sec_tbl.sort_values('avg_rs', ascending=False).reset_index(drop=True)
+    top10 = sec_tbl.head(10).copy()
+    fig = px.bar(top10, x='avg_rs', y='Sector', orientation='h',
+                 color='avg_rs', color_continuous_scale='RdYlGn',
+                 text='med_rs', title="Sector Average RS (label = median)")
+    fig.update_layout(yaxis=dict(categoryorder='total ascending'))
+    st.plotly_chart(fig, use_container_width=True)
+
     col1, col2 = st.columns(2)
     with col1:
-        sector_counts = filtered_df.drop_duplicates(subset=['Ticker'])['Sector'].value_counts().head(10)
-        fig = px.bar(x=sector_counts.values, y=sector_counts.index, orientation='h',
-                     title="Top 10 Sectors by Stock Count", labels={'x': 'Count', 'y': 'Sector'})
+        sec_pct = sec_tbl.sort_values('avg_pct', ascending=False).head(8)
+        fig = px.bar(sec_pct, x='avg_pct', y='Sector', orientation='h', color='avg_pct',
+                     color_continuous_scale='Blues', title="Top Sectors by Avg RS Percentile")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
-        avg_rs_by_sector = filtered_df.drop_duplicates(subset=['Ticker']).groupby('Sector')['Relative Strength'].mean().sort_values(ascending=False).head(10)
-        fig = px.bar(x=avg_rs_by_sector.values, y=avg_rs_by_sector.index, orientation='h',
-                     title="Top 10 Sectors by Avg RS", labels={'x': 'Avg RS', 'y': 'Sector'},
-                     color=avg_rs_by_sector.values, color_continuous_scale='Viridis')
+        alph = sec_tbl.sort_values('count', ascending=False).head(8)
+        fig = px.bar(alph, x='count', y='Sector', orientation='h', color='count',
+                     color_continuous_scale='Greens', title="Sectors by Stock Count")
         st.plotly_chart(fig, use_container_width=True)
 
     # ── Notable Strategies & Actionable Tickers ──
@@ -2295,39 +2595,139 @@ with tab1:
             st.markdown("- Mid-base signals (SMA50+Shakeout) + Breakout signals (PB+SMA50) = **two-phase edge**")
             st.markdown("- 42 golden-tier tickers today — dominated by Flat Base utilities/defensives")
             st.markdown("- KO is the only ticker with **both engines firing** right now")
+    st.divider()
+
+    # ---- Advance / Decline (tracked universe, daily) ----
+    st.subheader("🛞 Advance / Decline — daily breadth (latest cached data)")
+    if has_historical:
+        try:
+            ad = df.copy()
+            ad['date'] = pd.to_datetime(ad['date'])
+            ad = ad.sort_values(['Ticker', 'date'])
+            _close_col = 'Close' if 'Close' in ad.columns else 'Price'
+            _vol_col = 'Volume' if 'Volume' in ad.columns else None
+            ad['prev_close'] = ad.groupby('Ticker')[_close_col].shift(1)
+            ad = ad[ad['prev_close'].notna()].copy()
+            ad['delta'] = ad[_close_col].astype(float) - ad['prev_close'].astype(float)
+            ad['adv'] = (ad['delta'] > 1e-8).astype(int)
+            ad['dcl'] = (ad['delta'] < -1e-8).astype(int)
+            ad['unch'] = (1 - ad['adv'] - ad['dcl']).astype(int)
+            if _vol_col is not None:
+                _vol = ad[_vol_col].fillna(0).astype(float)
+            else:
+                _vol = 0.0
+            ad['v_adv'] = _vol * ad['adv']
+            ad['v_dcl'] = _vol * ad['dcl']
+            ad['v_unch'] = _vol * ad['unch']
+            g = ad.groupby('date').agg(adv=('adv', 'sum'), dcl=('dcl', 'sum'), unch=('unch', 'sum'),
+                                       v_adv=('v_adv', 'sum'), v_dcl=('v_dcl', 'sum'), v_unch=('v_unch', 'sum')).sort_index()
+            g['cum_adl'] = (g['adv'] - g['dcl']).cumsum()
+
+            def _vfmt(val):
+                val = float(val)
+                if val >= 1e9: return f"{val/1e9:.2f}B"
+                if val >= 1e6: return f"{val/1e6:.1f}M"
+                if val >= 1e3: return f"{val/1e3:.0f}K"
+                return f"{val:.0f}"
+
+            if len(g):
+                _last = g.iloc[-1]
+                _last_date = _last.name.date() if hasattr(_last.name, 'date') else _last.name
+                st.info(
+                    f"**Latest cached day ({_last_date}): {int(_last['adv'])}** stocks up on "
+                    f"**{_vfmt(_last['v_adv'])}** volume, "
+                    f"**{int(_last['dcl'])}** stocks down on **{_vfmt(_last['v_dcl'])}** volume, "
+                    f"**{int(_last['unch'])}** unchanged on **{_vfmt(_last['v_unch'])}** volume.")
+                _c1, _c2 = st.columns(2)
+                with _c1:
+                    fig = px.line(g, x=g.index, y='cum_adl', title='Cumulative Advance/Decline Line (all cached data)')
+                    fig.update_layout(height=360, hovermode='x unified')
+                    st.plotly_chart(fig, use_container_width=True)
+                with _c2:
+                    fig = go.Figure()
+                    fig.add_trace(go.Bar(x=g.index, y=g['adv'], name='Advances', marker_color='#2ca02c'))
+                    fig.add_trace(go.Bar(x=g.index, y=g['dcl'], name='Declines', marker_color='#d62728'))
+                    fig.update_layout(barmode='group', height=360, hovermode='x unified', title='Daily Advances vs Declines')
+                    st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No advance/decline data in the selected date range.")
+        except Exception as _e:
+            st.warning(f"Advance/Decline computation failed: {_e}")
+    else:
+        st.info("Advance/Decline breadth requires historical data (with 'date' column).")
+    st.divider()
+
+    st.caption("Overview ratings reflect the latest recorded snapshot. Breadth band = RS≥80 (lead), 65–79 (strong), "
+               "50–64 (broad), <50 (laggard). A/D uses the app's tracked universe as a proxy for NYSE.")
 
 # ---------- TAB 2: Time Series ----------
 if has_historical:
     with tab2:
         st.subheader("📈 Time Series Analysis")
+        daily = filtered_df.copy()
+        daily['date'] = pd.to_datetime(daily['date'])
+
         col1, col2 = st.columns(2)
         with col1:
-            daily_avg = filtered_df.groupby('date')['Relative Strength'].agg(['mean', 'median', 'max']).reset_index()
+            daily_avg = daily.groupby('date')['Relative Strength'].agg(['mean', 'median', 'max']).reset_index()
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['mean'],   name='Mean RS',   mode='lines'))
             fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['median'], name='Median RS', mode='lines'))
-            fig.update_layout(title="Daily Average RS Trend", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
+            fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['max'],    name='Max RS',    mode='lines', opacity=0.4))
+            fig.update_layout(title="Universe RS: Mean / Median / Max", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            daily_percentile = filtered_df.groupby('date')['Percentile'].mean().reset_index()
-            fig = px.line(daily_percentile, x='date', y='Percentile', title="Daily Average Percentile Trend")
+            daily_percentile = daily.groupby('date')['Percentile'].mean().reset_index()
+            fig = px.line(daily_percentile, x='date', y='Percentile', title="Daily Average RS Percentile Trend")
             st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("📏 Market Breadth & Momentum Regime")
+        daily_breadth = daily.groupby('date')['Relative Strength'].mean().reset_index()
+        daily_breadth['lead_breadth'] = daily.groupby('date')['Relative Strength'].apply(lambda s: float((s >= 80).mean() * 100)).reset_index(drop=True)
+        daily_breadth['mom10'] = daily_breadth['Relative Strength'].rolling(10).mean()
+        daily_breadth['mom60'] = daily_breadth['Relative Strength'].rolling(60).mean()
+        col1, col2 = st.columns(2)
+        with col1:
+            fig = px.line(daily_breadth, x='date', y='lead_breadth', title="% of Universe with RS ≥ 80 Over Time (leadership breadth)")
+            fig.add_hline(y=20, line_dash="dot", line_color='orange')
+            st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=daily_breadth['date'], y=daily_breadth['mom10'], name='RS 10-day avg', mode='lines'))
+            fig.add_trace(go.Scatter(x=daily_breadth['date'], y=daily_breadth['mom60'], name='RS 60-day avg', mode='lines'))
+            fig.update_layout(title="Average RS Momentum (10d vs 60d trend)", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
+            st.plotly_chart(fig, use_container_width=True)
+
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
-            daily_count         = filtered_df.groupby('date')['Ticker'].nunique().reset_index()
+            daily_count = daily.groupby('date')['Ticker'].nunique().reset_index()
             daily_count.columns = ['date', 'stock_count']
             fig = px.line(daily_count, x='date', y='stock_count', title="Number of Stocks in Universe Over Time")
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
-            daily_price = filtered_df.groupby('date')[price_col].mean().reset_index()
-            fig = px.line(daily_price, x='date', y=price_col, title="Average Stock Close Price Over Time")
+            daily_price = daily.groupby('date')[PRICE_COL].mean().reset_index()
+            fig = px.line(daily_price, x='date', y=PRICE_COL, title="Average Stock Close Price Over Time")
             st.plotly_chart(fig, use_container_width=True)
+
         st.divider()
-        st.subheader("📊 Sector RS Trends")
+        st.subheader("📊 Sector Rotation Timeline (RS percentile, top sectors)")
+        daily_sector = daily.groupby(['date', 'Sector'])['Relative Strength'].mean().reset_index()
+        daily_sector['date'] = pd.to_datetime(daily_sector['date'])
+        top_sectors = daily_sector.groupby('Sector')['Relative Strength'].mean().nlargest(8).index.tolist()
+        pivot_d = daily_sector[daily_sector['Sector'].isin(top_sectors)].pivot(index='date', columns='Sector', values='Relative Strength').sort_index()
+        if not pivot_d.empty:
+            fig = go.Figure()
+            for s in pivot_d.columns:
+                fig.add_trace(go.Scatter(x=pivot_d.index, y=pivot_d[s], mode='lines', name=s))
+            fig.update_layout(title="Avg RS by Leading Sector (zoomed)", hovermode='x unified', yaxis_title="RS Value")
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("📊 Single-Sector RS Trend (range)")
         selected_sector_trend = st.selectbox("Select sector for trend", filtered_df['Sector'].unique(), key="sector_trend")
-        sector_trend_data = filtered_df[filtered_df['Sector'] == selected_sector_trend].groupby('date')['Relative Strength'].agg(['mean', 'min', 'max']).reset_index()
+        sector_trend_data = daily[daily['Sector'] == selected_sector_trend].groupby('date')['Relative Strength'].agg(['mean', 'min', 'max']).reset_index()
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['mean'], name='Mean RS', mode='lines+markers'))
         fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['max'],  name='Max RS',  fill='tozeroy', mode='lines', opacity=0.2))
@@ -2346,90 +2746,295 @@ else:
 
 # ---------- TAB 3: Top Performers ----------
 with tab3:
+    st.subheader("🌟 Composite Leaders (momentum + quality)")
+    lw = snap.copy()
+    for c in ['Relative Strength', 'Percentile', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile',
+              'RevenueGrowth', 'PctFrom52WkHigh', 'Avg EPS % Chg 4Q', 'ROE', 'MarketCap', 'ShortFloatPct']:
+        if has_col(lw, c):
+            lw[c] = pd.to_numeric(lw[c], errors='coerce')
+    lw['LeaderScore'] = lw.apply(leader_score, axis=1)
+    lw['RS ≥ 70'] = (lw['Relative Strength'] >= 70).astype(int)
+    leader_cols = [c for c in ['Ticker', 'LeaderScore', 'Relative Strength', 'Percentile', '6M_RS_Percentile',
+                               '3M_RS_Percentile', '1M_RS_Percentile', 'RevenueGrowth', 'PctFrom52WkHigh'] if has_col(lw, c)]
+    if not lw.empty:
+        top_leader = lw.sort_values('LeaderScore', ascending=False).head(15)[leader_cols]
+        st.dataframe(top_leader.reset_index(drop=True), use_container_width=True, hide_index=True)
+    else:
+        st.info("No leader data available.")
+    st.caption("Composite blends RS percentile, 6M/3M momentum, revenue growth, near-52-wk-high proximity and profitability.")
+
+    st.divider()
+    st.subheader("🚀 Accelerating Leaders (6M-RS building > 1M-RS)")
+    if has_col(snap, '6M_RS_Percentile') and has_col(snap, '1M_RS_Percentile'):
+        acc = snap.copy()
+        for c in ['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile', 'Relative Strength']:
+            if has_col(acc, c):
+                acc[c] = pd.to_numeric(acc[c], errors='coerce')
+        acc['Accelerating'] = (acc['6M_RS_Percentile'] >= acc['3M_RS_Percentile']) & (acc['3M_RS_Percentile'] >= acc['1M_RS_Percentile'])
+        acc_f = acc[acc['Accelerating']].sort_values('6M_RS_Percentile', ascending=False).head(15)
+        if not acc_f.empty:
+            m_cols = [c for c in ['Ticker', 'Sector', 'Relative Strength', '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile'] if has_col(acc, c)]
+            st.dataframe(acc_f[m_cols].rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'}).reset_index(drop=True),
+                         use_container_width=True, hide_index=True)
+            st.caption("Stocks whose RS percentile keeps climbing 1M → 3M → 6M: momentum is building rather than fading.")
+        else:
+            st.info("No stocks currently show clean accelerating RS momentum in this snapshot.")
+        st.divider()
+        rs_num = _n(snap, 'Relative Strength')
+        top_rs = snap.assign(RSn=rs_num).nlargest(15, 'RSn')
+        show = ['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile'] if has_col(snap, 'Rank') else ['Ticker', 'Sector', 'Relative Strength', 'Percentile']
+        top_rs = top_rs[[c for c in show + [PRICE_COL] if has_col(top_rs, c)]].drop(columns='RSn', errors='ignore')
+        st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
+    st.divider()
+
+    st.divider()
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("🏆 Top 15 by Relative Strength")
-        price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
-        top_rs = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Relative Strength')[['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile', price_col]].copy()
+        rs_num = _n(snap, 'Relative Strength')
+        top_rs = snap.assign(RSn=rs_num).nlargest(15, 'RSn')
+        show = ['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile'] if has_col(snap, 'Rank') else ['Ticker', 'Sector', 'Relative Strength', 'Percentile']
+        top_rs = top_rs[[c for c in show + [PRICE_COL] if has_col(top_rs, c)]].drop(columns='RSn', errors='ignore')
         st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
-        st.subheader("⭐ Top 15 by Percentile")
-        top_percentile = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'Percentile')[['Rank', 'Ticker', 'Sector', 'Percentile', 'Relative Strength', price_col]].copy()
-        st.dataframe(top_percentile.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.subheader("⭐ Top 15 by 6-Month Momentum")
+        if has_col(snap, '6M_RS_Percentile'):
+            top_6m = snap.assign(tmp=_n(snap, '6M_RS_Percentile')).nlargest(15, 'tmp').drop(columns=['tmp'])[['Ticker', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile']].copy()
+            top_6m = top_6m.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
+            st.dataframe(top_6m.reset_index(drop=True), use_container_width=True, hide_index=True)
+
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("💰 Top 15 by Market Cap")
-        top_mcap = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, 'MarketCap')[['Ticker', 'Sector', 'MarketCap', 'Relative Strength', 'Percentile']].copy()
-        top_mcap['MarketCap'] = top_mcap['MarketCap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "N/A")
-        st.dataframe(top_mcap.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.subheader("🚀 Top 15 by Earnings Growth (EPS)")
+        if has_col(snap, 'Avg EPS % Chg 4Q'):
+            top_eps = snap.assign(tmp=_n(snap, 'Avg EPS % Chg 4Q')).nlargest(15, 'tmp').drop(columns=['tmp'])
+            eps_cols = [c for c in ['Ticker', 'Sector', 'Avg EPS % Chg 4Q', 'ROE', 'RevenueGrowth'] if has_col(top_eps, c)]
+            st.dataframe(top_eps[eps_cols].reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
-        st.subheader("📈 Highest 6M")
-        top_6m = filtered_df.drop_duplicates(subset=['Ticker'], keep='first').nlargest(15, '6M_RS_Percentile')[['Ticker', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile']].copy()
-        top_6m = top_6m.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
-        st.dataframe(top_6m.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.subheader("💰 Top 15 by Market Cap")
+        if has_col(snap, 'MarketCap'):
+            mcol = _n(snap, 'MarketCap')
+            top_mcap = snap.assign(tmp=mcol).nlargest(15, 'tmp')[['Ticker', 'Sector', 'MarketCap', 'Relative Strength', 'Percentile']].copy()
+            top_mcap['MarketCap'] = top_mcap['MarketCap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "N/A")
+            st.dataframe(top_mcap.reset_index(drop=True), use_container_width=True, hide_index=True)
 
 # ---------- TAB 4: Deep Analysis ----------
 with tab4:
+    st.subheader("🔬 Factor Relationships")
+    da = snap.copy()
+    for c in ['Close', 'Price', 'Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
+              '6M_RS_Percentile', 'RevenueGrowth', 'PctFrom52WkHigh', 'ROE', 'Avg EPS % Chg 4Q',
+              'ShortFloatPct', 'MarketCap', 'AvgVol10']:
+        if has_col(da, c):
+            da[c] = pd.to_numeric(da[c], errors='coerce')
+    px_c = PRICE_COL if has_col(da, PRICE_COL) else None
+
     col1, col2 = st.columns(2)
     with col1:
-        price_col = 'Close' if 'Close' in filtered_df.columns else 'Price'
-        fig = px.scatter(filtered_df, x=price_col, y='Relative Strength', color='Percentile',
-                         hover_data=['Ticker', 'Sector'], title="Relative Strength vs Close Price",
-                         color_continuous_scale='Viridis')
-        st.plotly_chart(fig, use_container_width=True)
+        if px_c:
+            fig = px.scatter(da, x='Percentile', y='Relative Strength', color='Percentile',
+                             hover_data=['Ticker', 'Sector'], title="RS vs RS Percentile (color n/a)",
+                             color_continuous_scale='Viridis')
+            st.plotly_chart(fig, use_container_width=True)
     with col2:
-        percentile_data = filtered_df[['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile']].mean()
+        pdata = da[['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile']].mean()
         fig = go.Figure(data=[
-            go.Bar(name='1M', x=['1M'], y=[percentile_data['1M_RS_Percentile']]),
-            go.Bar(name='3M', x=['3M'], y=[percentile_data['3M_RS_Percentile']]),
-            go.Bar(name='6M', x=['6M'], y=[percentile_data['6M_RS_Percentile']]),
+            go.Bar(name='1M', x=['1M'], y=[pdata['1M_RS_Percentile']]),
+            go.Bar(name='3M', x=['3M'], y=[pdata['3M_RS_Percentile']]),
+            go.Bar(name='6M', x=['6M'], y=[pdata['6M_RS_Percentile']]),
         ])
-        fig.update_layout(title="Average RS Percentile Comparison", barmode='group')
+        fig.update_layout(title="RS Percentile Trajectory (1M → 3M → 6M)", barmode='group')
         st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+    st.subheader("📈 Price vs Relative Strength (log price)")
+    if px_c:
+        fig = px.scatter(da, x=px_c, y='Relative Strength', color='Percentile',
+                         hover_data=['Ticker', 'Sector'], title="RS vs Price (color = RS percentile)",
+                         color_continuous_scale='Viridis', log_x=True)
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+    st.subheader("📊 Quality at a Glance")
+    if has_col(da, 'RevenueGrowth') and has_col(da, '6M_RS_Percentile'):
+        q = da.dropna(subset=['RevenueGrowth', '6M_RS_Percentile'])
+        fig = px.scatter(q, x='6M_RS_Percentile', y='RevenueGrowth', color='Relative Strength',
+                         hover_data=['Ticker', 'Sector'], color_continuous_scale='Viridis',
+                         title="Growth vs 6M Momentum (color = RS)")
+        st.plotly_chart(fig, use_container_width=True)
+
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        fig = px.histogram(filtered_df.dropna(subset=['PctFrom52WkHigh']), x='PctFrom52WkHigh',
-                           nbins=40, title="Distribution of % from 52W High")
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Proximity to 52-Week High")
+        if has_col(da, 'PctFrom52WkHigh'):
+            fig = px.histogram(da.dropna(subset=['PctFrom52WkHigh']), x='PctFrom52WkHigh', nbins=40,
+                               title="% from 52W High (distance from highs)", marginal='box')
+            fig.add_vline(x=10, line_dash='dot', line_color='green')
+            st.plotly_chart(fig, use_container_width=True)
     with col2:
-        fig = px.scatter(filtered_df.dropna(subset=['RevenueGrowth']), x='RevenueGrowth',
-                         y='Relative Strength', color='Percentile', hover_data=['Ticker', 'Sector'],
-                         title="Revenue Growth vs Relative Strength", color_continuous_scale='Viridis')
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader("Market Cap Distribution (log $)")
+        if has_col(da, 'MarketCap'):
+            fig = px.histogram(da.dropna(subset=['MarketCap']), x='MarketCap', nbins=30, log_x=True,
+                               title="Market Cap ($ log)")
+            st.plotly_chart(fig, use_container_width=True)
+
     st.divider()
-    st.subheader("Key Statistics Summary")
-    summary_stats = filtered_df[['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
-                                  '6M_RS_Percentile', 'Close' if 'Close' in filtered_df.columns else 'Price', 'AvgVol10', 'AvgVol30', 'AvgVol50',
-                                  'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']].describe()
-    st.dataframe(summary_stats, use_container_width=True)
+    st.subheader("Key Statistics (current snapshot)")
+    stat_cols = [c for c in ['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
+                             '6M_RS_Percentile'] + ([PRICE_COL] if PRICE_COL else []) +
+                             ['AvgVol10', 'AvgVol30', 'AvgVol50', 'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']
+                             if has_col(da, c)]
+    if stat_cols:
+        st.dataframe(da[stat_cols].describe(), use_container_width=True)
+
+    st.divider()
+    st.subheader("What Drives Relative Strength? (Pearson vs RS)")
+    corr_vars = [c for c in ['Relative Strength', 'Percentile', '6M_RS_Percentile', '3M_RS_Percentile',
+                             '1M_RS_Percentile', 'PctFrom52WkHigh', 'RevenueGrowth', 'ROE', 'Avg EPS % Chg 4Q',
+                             'ShortFloatPct', 'MarketCap', 'AvgVol10'] if has_col(da, c)]
+    if len(corr_vars) >= 5 and not da[corr_vars].dropna().empty:
+        cm = da[corr_vars].corr(numeric_only=True)
+        rs_corr = cm['Relative Strength'].drop(labels='Relative Strength', errors='ignore')
+        rs_corr = rs_corr.sort_values(key=lambda s: s.abs(), ascending=False)
+        corr_df = pd.DataFrame({'Factor': rs_corr.index, 'Correlation vs RS': rs_corr.round(3)})
+        st.dataframe(corr_df, use_container_width=True, hide_index=True)
+        st.caption("Pearson correlation of each factor with Relative Strength (absolute-sorted); + means moves with leadership.")
+
+    # ----- Trend-template screening (Minervini 8-point style) -----
+    st.divider()
+    st.subheader("🎯 Trend-Template Screening (Minervini checklist)")
+    tt = snap.copy()
+    chk = {}
+    if has_col(tt, 'Relative Strength'):
+        tt['Relative Strength'] = pd.to_numeric(tt['Relative Strength'], errors = 'coerce'); chk['RS ≥ 70'] = tt['Relative Strength'] >= 70
+    for col, label in [('Price vs 200-Day', 'Above 200-Day'), ('Price vs 150-Day', 'Above 150-Day'), ('Price vs 50-Day', 'Above 50-Day')]:
+        if has_col(tt, col):
+            tt[col] = pd.to_numeric(tt[col], errors = 'coerce'); chk[label] = tt[col] <= 0
+    if has_col(tt, 'PctFrom52WkHigh'):
+        tt['PctFrom52WkHigh'] = pd.to_numeric(tt['PctFrom52WkHigh'], errors = 'coerce'); chk['Within 25% of high'] = tt['PctFrom52WkHigh'] <= 25
+    if has_col(tt, 'Avg EPS % Chg 4Q'):
+        tt['Avg EPS % Chg 4Q'] = pd.to_numeric(tt['Avg EPS % Chg 4Q'], errors = 'coerce'); chk['EPS grow ≥ 20%'] = tt['Avg EPS % Chg 4Q'] >= 20
+    if has_col(tt, 'RevenueGrowth'):
+        tt['RevenueGrowth'] = pd.to_numeric(tt['RevenueGrowth'], errors = 'coerce'); chk['Sales grow ≥ 15%'] = tt['RevenueGrowth'] >= 15
+    if has_col(tt, 'ROE'):
+        tt['ROE'] = pd.to_numeric(tt['ROE'], errors = 'coerce'); chk['ROE ≥ 17%'] = tt['ROE'] >= 17
+
+    if chk:
+        mask_all = pd.Series(True, index=tt.index)
+        for m in chk.values():
+            mask_all &= m
+        # Acceleration: 6-month momentum percentile higher than 1-month → leadership building
+        accel = pd.Series(False, index=tt.index)
+        if has_col(tt, '6M_RS_Percentile') and has_col(tt, '1M_RS_Percentile'):
+            tt['6M_RS_Percentile'] = pd.to_numeric(tt['6M_RS_Percentile'], errors='coerce')
+            tt['1M_RS_Percentile'] = pd.to_numeric(tt['1M_RS_Percentile'], errors='coerce')
+            accel = (tt['6M_RS_Percentile'] >= tt['1M_RS_Percentile'])
+
+        cc1, cc2 = st.columns([2, 2])
+        with cc1:
+            pass_rate = pd.Series({k: float(v.mean() * 100) for k, v in chk.items()}).sort_values(ascending=False)
+            rate_df = pd.DataFrame({'Criterion': pass_rate.index, '% Passing': pass_rate.round(0)})
+            st.dataframe(rate_df.reset_index(drop=True), use_container_width=True, hide_index=True)
+        with cc2:
+            n_pass = int(mask_all.sum())
+            st.metric("Full Trend-Template Passes", n_pass, help="Meet all technical + growth checks simultaneously")
+            if '6M_RS_Percentile' in tt and '1M_RS_Percentile' in tt:
+                st.metric("Accelerating Leaders (6M≥1M)", int(accel.sum()), help="6-month RS percentile equal/higher than 1-month")
+        st.caption("Health of leadership from alphabetical gauges; the trend-template 'pass rate' holds leadership to an O'Neil/Minervini quality bar.")
+
+        # Actionable watchlist
+        st.markdown("**🎯 Actionable Leaders** — RS ≥ 70, above key MAs, within 25% of 52-wk high.")
+        if mask_all.sum() > 0:
+            act = tt[mask_all].copy()
+            if has_col(act, 'Ticker'):
+                act = act.drop_duplicates(subset=['Ticker'])
+            cols_show = ['Ticker', 'Sector', 'Relative Strength', 'Percentile', '6M_RS_Percentile', 'PctFrom52WkHigh', 'Avg EPS % Chg 4Q']
+            cols_show = [c for c in cols_show if has_col(tt, c)]
+            act = act[cols_show].copy()
+            act = act.assign(Accel=accel.reindex(act.index).fillna(False)).sort_values('Relative Strength', ascending=False)
+            st.dataframe(act.reset_index(drop=True), use_container_width=True, hide_index=True)
+        else:
+            st.info("No stock currently passes the full Trend Template in this snapshot.")
 
 # ---------- TAB 5: Trends ----------
 if has_historical:
     with tab5:
-        st.subheader("📉 Trend Analysis")
+        st.subheader("📉 Trend Analysis (rotation & momentum)")
+        daily = filtered_df.copy()
+        daily['date'] = pd.to_datetime(daily['date'])
+        latest_date = daily['date'].max()
+        oldest_date = daily['date'].min()
+        N = daily['date'].nunique()
+        window = max(10, N // 4) if N else 10
+
+        sec_over = daily.groupby(['date', 'Sector'])['Relative Strength'].mean().reset_index()
+        piv = sec_over.pivot(index='date', columns='Sector', values='Relative Strength').sort_index()
+        latest_sec = piv.iloc[-1]
+        if len(piv) >= 2 and window < len(piv):
+            old_sec = piv.iloc[-(window + 1)]
+        else:
+            old_sec = piv.iloc[0]
+        momentum = (latest_sec - old_sec).dropna().sort_values(ascending=False)
+
         col1, col2 = st.columns(2)
-        latest_date = filtered_df['date'].max()
-        oldest_date = filtered_df['date'].min()
         with col1:
-            latest_rs  = filtered_df[filtered_df['date'] == latest_date].groupby('Sector')['Relative Strength'].mean()
-            oldest_rs  = filtered_df[filtered_df['date'] == oldest_date].groupby('Sector')['Relative Strength'].mean()
-            momentum   = (latest_rs - oldest_rs).sort_values(ascending=False)
             fig = px.bar(x=momentum.values, y=momentum.index, orientation='h',
-                         title=f"RS Change by Sector ({oldest_date.date()} to {latest_date.date()})",
+                         title=f"Sector RS Change (last {min(window, len(piv)-1 if len(piv)>1 else 1)} sessions)",
                          color=momentum.values, color_continuous_scale='RdYlGn')
             st.plotly_chart(fig, use_container_width=True)
         with col2:
-            latest_stocks  = filtered_df[filtered_df['date'] == latest_date][['Ticker', 'Sector', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
-            oldest_stocks  = filtered_df[filtered_df['date'] == oldest_date][['Ticker', 'Relative Strength']].drop_duplicates(subset=['Ticker'], keep='first').copy()
-            if not latest_stocks.empty and not oldest_stocks.empty:
-                merged = latest_stocks.merge(oldest_stocks, on='Ticker', suffixes=('_latest', '_oldest'))
-                merged['RS_change'] = merged['Relative Strength_latest'] - merged['Relative Strength_oldest']
-                top_gainers = merged.nlargest(10, 'RS_change')[['Ticker', 'Sector', 'RS_change']]
-                fig = px.bar(top_gainers, x='RS_change', y='Ticker', orientation='h',
-                             title="Top 10 RS Gainers", color='RS_change', color_continuous_scale='Greens')
+            daily_breadth = daily.groupby('date')['Relative Strength'].apply(lambda s: float((s >= 80).mean() * 100)).reset_index()
+            daily_breadth.columns = ['date', 'lead']
+            daily_breadth['lead60'] = daily_breadth['lead'].rolling(60).mean()
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=daily_breadth['date'], y=daily_breadth['lead'], name='% leaders ≥80', mode='lines'))
+            fig.add_trace(go.Scatter(x=daily_breadth['date'], y=daily_breadth['lead60'], name='60-day avg', mode='lines', line=dict(dash='dash')))
+            fig.update_layout(title="Leadership Breadth over time", hovermode='x unified')
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("🔄 Sector Rotation Heatmap (RS rank over time)")
+        top_s = sec_over.groupby('Sector')['Relative Strength'].mean().nlargest(10).index.tolist()
+        hm = sec_over[sec_over['Sector'].isin(top_s)].pivot(index='date', columns='Sector', values='Relative Strength').sort_index()
+        if not hm.empty:
+            fig = go.Figure(data=[go.Heatmap(z=hm.T.values,
+                                            x=hm.index,
+                                            y=hm.columns,
+                                            colorscale='RdYlGn')])
+            fig.update_layout(title="Sector RS Heatmap (rows = 10 leading sectors, cols = date)", xaxis_title="Date")
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("🚀 Top Individual RS Gainers (window)")
+            latest_stocks = daily[daily['date'] == latest_date][['Ticker', 'Sector', 'Relative Strength']].drop_duplicates(subset='Ticker').copy()
+            # use the start of the window instead
+            window_start = piv.index[-min(window, len(piv))] if len(piv) else oldest_date
+            old_stocks = daily[daily['date'] == window_start][['Ticker', 'Relative Strength']].drop_duplicates(subset='Ticker').copy()
+            merged = latest_stocks.merge(old_stocks, on='Ticker', suffixes=('_latest', '_oldest'))
+            merged['RS_change'] = merged['Relative Strength_latest'] - merged['Relative Strength_oldest']
+            merged.columns = [c.replace(' ', '_') for c in merged.columns]
+            top_gainers = merged.nlargest(12, 'RS_change')[['Ticker', 'Sector', 'RS_change']]
+            fig = px.bar(top_gainers, x='RS_change', y='Ticker', orientation='h',
+                         title="Biggest RS Improvers", color='RS_change', color_continuous_scale='Greens')
+            st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            st.subheader("📉 Most Falling RS (window)")
+            if 'RS_change' in merged.columns:
+                top_losers = merged.nsmallest(12, 'RS_change')[['Ticker', 'Sector', 'RS_change']]
+                fig = px.bar(top_losers, x='RS_change', y='Ticker', orientation='h',
+                             title="Biggest RS Drops", color='RS_change', color_continuous_scale='Reds')
                 st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown(
+            f"**Interpretation:** over the last **{min(window, len(piv))} trades**, the leading sectors are "
+            f"**{', '.join(momentum.head(3).index)}**; lagging are **{', '.join(momentum.tail(3).index)}**. "
+            f"Watch for whether leadership breadth (chart above) is expanding or contracting to gauge market "
+            f"tone."
+        )
 
 # ---------- TAB 6: Industry Rotation (corrected delta calculations) ----------
 with (tab6 if has_historical else tab5):

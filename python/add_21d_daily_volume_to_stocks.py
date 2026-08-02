@@ -128,19 +128,8 @@ def main():
     df.to_csv(rs_stocks_file, index=False)
     print(f"\nSaved updated {rs_stocks_file}")
 
-    # Split into rs_stocks_1.csv and rs_stocks_2.csv
-    n = len(df)
-    mid = n // 2
-    df1 = df.iloc[:mid]
-    df2 = df.iloc[mid:]
-
-    df1_path = output_dir / "rs_stocks_1.csv"
-    df2_path = output_dir / "rs_stocks_2.csv"
-
-    df1.to_csv(df1_path, index=False)
-    df2.to_csv(df2_path, index=False)
-    print(f"Saved {df1_path} ({len(df1):,} rows)")
-    print(f"Saved {df2_path} ({len(df2):,} rows)")
+    # rs_stocks_1.csv and rs_stocks_2.csv are derived splits of rs_stocks.csv;
+    # pipeline intentionally does not regenerate them.
 
 if __name__ == '__main__':
     main()

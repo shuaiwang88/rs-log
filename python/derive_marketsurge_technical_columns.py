@@ -267,12 +267,8 @@ def main():
     df.to_csv(rs_stocks_file, index=False)
     print(f"\nSaved updated {rs_stocks_file} ({len(df):,} rows, {len(df.columns)} columns)")
 
-    mid = len(df) // 2
-    df1_path = output_dir / "rs_stocks_1.csv"
-    df2_path = output_dir / "rs_stocks_2.csv"
-    df.iloc[:mid].to_csv(df1_path, index=False)
-    df.iloc[mid:].to_csv(df2_path, index=False)
-    print(f"Saved split files {df1_path} and {df2_path}")
+    # rs_stocks_1.csv and rs_stocks_2.csv are derived splits of rs_stocks.csv.
+    # Pipeline intentionally does not regenerate them.
 
     hist_file = output_dir / "rs_stocks_historical.csv"
     if hist_file.exists():

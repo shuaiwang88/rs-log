@@ -258,11 +258,8 @@ def run_fast_backfill(num_commits: int = 365):
     df_curr_bf = backfill_df(df_curr, ms_funds, tech_map, target_schema)
     df_curr_bf.to_csv(rs_file, index=False)
 
-    df1_path = repo_dir / "output" / "rs_stocks_1.csv"
-    df2_path = repo_dir / "output" / "rs_stocks_2.csv"
-    mid = len(df_curr_bf) // 2
-    df_curr_bf.iloc[:mid].to_csv(df1_path, index=False)
-    df_curr_bf.iloc[mid:].to_csv(df2_path, index=False)
+    # rs_stocks_1.csv and rs_stocks_2.csv are derived splits of rs_stocks.csv;
+    # pipeline intentionally does not regenerate them.
 
     elapsed = time.time() - start_time
     print(f"\n✓ Completed fast backfill processing across past {num_commits} commits in {elapsed:.2f} seconds!")

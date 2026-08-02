@@ -145,7 +145,7 @@ def execute_consolidated_pipeline():
 
     # Auto-commit pipeline output so working tree is clean for next upstream merge
     run_cmd(["git", "add",
-             "output/rs_stocks.csv", "output/rs_stocks_1.csv", "output/rs_stocks_2.csv",
+             "output/rs_stocks.csv",
              "output/rs_stocks_historical.csv", "output/rs_industries_historical.csv",
              "output/rs_stocks_metadata.json", "output/rs_industries_metadata.json"])
     run_cmd(["git", "commit", "-m", "chore: pipeline auto-update derived columns and history"])

@@ -83,13 +83,8 @@ def clean_and_backfill():
     df_out = df[target_schema]
     df_out.to_csv(rs_file, index=False)
 
-    # Also update split files if they exist in the repository
-    df1_path = repo_dir / "output" / "rs_stocks_1.csv"
-    df2_path = repo_dir / "output" / "rs_stocks_2.csv"
-    if df1_path.exists() and df2_path.exists():
-        mid = len(df_out) // 2
-        df_out.iloc[:mid].to_csv(df1_path, index=False)
-        df_out.iloc[mid:].to_csv(df2_path, index=False)
+    # rs_stocks_1.csv and rs_stocks_2.csv are derived splits of rs_stocks.csv;
+    # pipeline intentionally does not regenerate them.
 
 if __name__ == '__main__':
     clean_and_backfill()

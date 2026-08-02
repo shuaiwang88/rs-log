@@ -1,7 +1,10 @@
 output/rs_stocks.csv merge=keep_theirs
-output/rs_stocks_1.csv merge=keep_theirs
-output/rs_stocks_2.csv merge=keep_theirs
 output/rs_stocks_historical.csv merge=keep_theirs
+output/rs_industries.csv merge=keep_theirs
 output/rs_industries_historical.csv merge=keep_theirs
 output/rs_stocks_metadata.json merge=keep_theirs
 output/rs_industries_metadata.json merge=keep_theirs
+
+# Binary price-parquet files that change daily are tracked (Breakaway Gap watchlist).
+# Register 'keep_theirs' so these never surface as unavoidable merge conflicts.
+ticker_cache/*.parquet merge=keep_theirs
