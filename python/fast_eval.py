@@ -253,17 +253,28 @@ def _apply_db_close_match(src, tol_lo, tol_hi, undercut_on_close):
 
 
 def _apply_db_priority(src):
-    """Let a fully-qualified Double Bottom outrank Flat Base.
+    """SUPERSEDED - kept for the record. Do not re-run; the anchor is gone by design.
 
-    DBX satisfies every Double Bottom condition - both lows, the middle peak, the undercut,
-    the timing and the volume asymmetry - and is still reported as a Flat Base, because the
-    DB block is guarded by `not isFlatBase` AND Flat Base sits above it in the priority
-    chain. A W that qualifies is more specific than a flat range and prices off a different
-    level (the middle peak), so it should win.
+    Original idea: DBX satisfies every Double Bottom condition - both lows, the middle peak,
+    the undercut, the timing and the volume asymmetry - and was still reported as a Flat
+    Base, because the DB block was guarded by `not isFlatBase` AND Flat Base sat above it in
+    the priority chain.
+
+    Resolved a better way. Reordering the priority chain forces one label to win and moves
+    the error rather than removing it. The layered readings instead evaluate the W on its
+    own merits (`isDB_ind`, which does not carry the Flat Base veto) and report it ALONGSIDE
+    the primary label, so both defensible readings survive with their own pivots. DBX and
+    AVT both now surface `Dbl Bottom` at the exact MarketSmith middle peak while the primary
+    label is untouched.
+
+    Double Bottom now stands at 4/7 caught among the readings (was 2/7), and 6/7 on the
+    number that matters - the buy point is within 1% on six of seven, five of them exact.
     """
     g = "if isBase and not isFlatBase and not isCupH and not isLikelyConsolidation"
     if g not in src:
-        raise RuntimeError("db_priority guard anchor not found")
+        raise RuntimeError(
+            "db_priority is superseded by the layered readings (isDB_ind); the "
+            "`not isFlatBase` guard it patched no longer exists. See the docstring.")
     src = src.replace(g, "if isBase and not isCupH and not isLikelyConsolidation", 1)
     for a, b in [
         ("            if isAscendingBase: currPName, currPCode = 'Ascending Base', 8\n"
@@ -284,6 +295,57 @@ def _apply_db_priority(src):
             raise RuntimeError("db_priority chain anchor not found")
         src = src.replace(a, b, 1)
     return src
+
+
+def _apply_seed_none_off(src):
+    """NEGATIVE - do not ship. Relaxing the `noNe` no-nested-base seeding gate.
+
+    Motivated by DVA @2024-02-02 (MarketSmith: Double Bottom, middle peak 1/12 = 110.50).
+    Its 325-bar base hit the bLenB cap on 12/26/2023 and died; the successor base's seed high
+    (12/14, 111.47) passed five of the six newBase gates on 12/21 - bH, bPH, lUp, dep, noAb -
+    and failed ONLY `noNe`, because the doomed base stayed alive six more sessions. By the
+    time `noNe` cleared, 111.47 had aged out of the three most recent pivot highs, so the
+    seed window shut permanently.
+
+    Every relaxation costs more than it recovers (primary exact/broad, baseline 90/126):
+        noNe removed entirely ................ 72 / 111   (-18 / -15)
+        noNe or bCount > 0.75*bLenB .......... 84 / 121   (-6 / -5)
+        noNe or bCount > 0.90*bLenB .......... 85 / 123   (-5 / -3)
+        noNe or piv_h > H65s ................. 72 / 111   (-18 / -15)
+        reset bTop/bLow on invalidation ...... 85 / 124   (-5 / -2), and 2 events lose
+                                                          every reading
+        widen bH from aHP_list[:3] to [:5]/[:8]  90 / 126  (exactly neutral - DVA's seed is
+                                                          then blocked by bPH instead)
+
+    `noNe` is load-bearing: the single-base machine's discipline is what makes the primary
+    label accurate. The right architecture is the one now in place - a STRICT primary chain
+    plus a PERMISSIVE concurrent candidate tracker feeding the layered readings, which
+    recovers DVA at 110.50 exactly without touching the primary.
+    """
+    raise RuntimeError("seed_none_off is a documented negative; see the docstring")
+
+
+def _apply_candidate_double_bottom(src):
+    """NEGATIVE - do not ship. A standalone W-locator for candidate bases.
+
+    Two of the three remaining Double Bottom misses report the EXACT truth pivot under
+    another name (BAP: Cup+Handle@360.83 vs truth 360.83; SVM: Cup@13.98 vs truth 13.98),
+    because a W's middle peak and a handle high are the same object - a swing high in the
+    upper base with a low after it. So: name the W in the candidate path too.
+
+    It does not pay for itself. Sweeping tolerance, minimum peak prominence, the
+    two-lowest-lows constraint and the trailing search window (55/70/90 bars):
+        loose (tol 6%, peak 8%, whole base) .... DB 4 -> 6, but claims a W on 81 of 172
+                                                 bases (47%); MarketSmith labels DB on 4%
+        disciplined (two lowest lows, 55-bar) .. DB 4 -> 5 (+1, far under the +11
+                                                 significance bar), still 16 spurious claims
+
+    And the gain is cosmetic. Measured on the buy point rather than the name, Double Bottom
+    is ALREADY 6/7 within 1% (five exact to the cent). ELTX is the only event whose PRICE is
+    wrong (14.93 vs 13.89, 7.5%) - and the W-locator returns the same 14.93, so it fixes
+    nothing that would change a trade.
+    """
+    raise RuntimeError("candidate_double_bottom is a documented negative; see the docstring")
 
 
 def _apply_asc_tight(src, lo, hi, pbmin, pbmax):
