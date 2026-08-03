@@ -1352,25 +1352,51 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             elif rsWindow and rs_nh_any[i]:
                 rsCount += 1
                 
+            # Two-part score system, matched to pine/drw_pattern.pine (the authority). The
+            # port had diverged on both halves, in ways that inflate scores rather than
+            # deflate them:
+            #
+            # BEFORE-BO accumulated on `if inBase`, ignoring Pine's near-pivot gate. Pine only
+            # credits components while the stock is BOTH in the base AND within
+            # i_preBOPivotPct (15%) of the pivot, because the score is meant to describe a
+            # setup approaching its buy point - not anything that happened anywhere in a base
+            # that may be months long and 35% deep. `nearPivotScore` was even computed here
+            # and then never used, which is the port dropping the gate. DOCN sits -34.65% from
+            # its pivot and scored a full 6/6.
+            #
+            # POST-BO reset on `newBase or not inBase` - the inverse of Pine's
+            # `newBase or inBase` - and used a plain `if` where Pine uses `else if`. Two
+            # consequences: the flags were cleared and re-set on the same bar, so the score
+            # only ever reflected the CURRENT bar instead of accumulating across the window;
+            # and once a base resurrected without a `newBase` event, neither reset condition
+            # fired and a stale value rode along indefinitely. DOCN carried a post score set
+            # on 2026-05-15 for two and a half months while showing "In Base".
             nearPivotScore = inBase and (distPct is not None and abs(distPct) <= 15.0)
-            if newBase or not inBase:
-                scorePP_post = False
-                scoreShake_post = False
-                scoreTouch_post = False
-                scoreVDU_post = False
-                scoreRS_post = False
-                scoreUpRev_post = False
-                
-            if inBase:
+
+            if newBase:
+                scorePP_pre = False
+                scoreShake_pre = False
+                scoreTouch_pre = False
+                scoreVDU_pre = False
+                scoreRS_pre = False
+                scoreUpRev_pre = False
+            elif nearPivotScore:
                 if ppAny: scorePP_pre = True
                 if shakeoutEntry: scoreShake_pre = True
                 if touchedMA: scoreTouch_pre = True
                 if volDryUp1: scoreVDU_pre = True
                 if rs_nh_any[i]: scoreRS_pre = True
                 if upsideReversal: scoreUpRev_pre = True
-                
+
             postBOWindowScore = (not inBase) and (barsSBO is not None and barsSBO <= 15)
-            if postBOWindowScore:
+            if newBase or inBase:
+                scorePP_post = False
+                scoreShake_post = False
+                scoreTouch_post = False
+                scoreVDU_post = False
+                scoreRS_post = False
+                scoreUpRev_post = False
+            elif postBOWindowScore:
                 if ppAny: scorePP_post = True
                 if shakeoutEntry: scoreShake_post = True
                 if touchedMA: scoreTouch_post = True
