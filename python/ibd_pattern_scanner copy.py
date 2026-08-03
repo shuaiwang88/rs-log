@@ -356,8 +356,9 @@ def detect_candidate_bases(highs, lows, closes, pivot_highs, pivLen=5, bdF=0.50,
     return [b for b in live if b['count'] >= min_bars]
 
 
-def detect_htf_context(highs, lows, min_pole_gain=85.0, max_pole_bars=40,
-                       min_flag_bars=6, max_flag_bars=50, max_flag_depth=25.0):
+def detect_htf_context(highs, lows, min_pole_gain=80.0, max_pole_bars=40,
+                       min_flag_bars=5, max_flag_bars=50,
+                       min_flag_depth=10.0, max_flag_depth=25.0):
     """Is the CURRENT structure the flag portion of a High Tight Flag? Annotation only.
 
     Separate from the `isHTF` state machine on purpose. That one demands a 300% pole, which
@@ -380,6 +381,18 @@ def detect_htf_context(highs, lows, min_pole_gain=85.0, max_pole_bars=40,
     pattern is the tradable one with its own buy point. This only says which larger structure
     it is sitting in.
 
+    What DEFINES it, to spec: a pole gaining at least 80%, followed by a consolidation. The
+    flag retraces 10-25% from the peak of the pole - below 10% it is not a flag at all, above
+    25% a true HTF is invalidated. Both bounds are enforced; only the ceiling used to be,
+    which is why CRNX passed with a "flag" 0.6% deep.
+
+    Flag DURATION is descriptive, not disqualifying. Typically 3-5 weeks and sometimes as
+    little as 5 days, but a longer consolidation after a qualifying pole is still an HTF, so
+    `max_flag_bars` is a search window rather than a rule. Capping it at 25 was tried and
+    reverted: it does not merely filter, it moves the window the flag top is chosen from, so
+    DELL re-anchored onto a nearer peak (463.48 over 13 bars instead of 469.47 over 42) and
+    NTAP's 43-bar flag disappeared entirely. Both are HTFs by the definition above.
+
     `min_pole_gain` is 80% by request, below IBD's nominal 100-120%. That is a deliberate
     widening of a CONTEXT label, and it is safe here in a way it would not be on `isHTF`:
     nothing downstream branches on it, so a loose flag annotates a chart without moving a buy
@@ -401,7 +414,11 @@ def detect_htf_context(highs, lows, min_pole_gain=85.0, max_pole_bars=40,
         return None
     flag_low = float(np.min(lows[t:]))
     depth = (top - flag_low) / top * 100.0
-    if depth > max_flag_depth:
+    # A flag retraces 10-25% from the pole's peak. BOTH bounds matter and only the ceiling
+    # was enforced before, which is why CRNX passed with a "flag" 0.6% deep over 12 bars -
+    # price pinned to its high is not a flag, it is a flat line, and on illiquid names it is
+    # usually stale data. Exceeding 25% invalidates a true HTF outright.
+    if not (min_flag_depth <= depth <= max_flag_depth):
         return None
     # Where the pole STARTS. A fixed lookback was wrong: the pole of a High Tight Flag
     # routinely begins inside an earlier pattern - a stock bases, breaks out, and the
