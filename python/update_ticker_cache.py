@@ -37,6 +37,51 @@ SECTOR_ETFS = [
     'GLD', 'SLV', 'GDX', 'XME', 'EWZ',  # commodities / metals / emerging markets
 ]
 
+SPLIT_FACTORS = (2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30, 50, 100)
+
+
+def _looks_like_split(existing_df, new_df, min_price=1.0, tol=0.08, vol_confirm=2.0):
+    """True when the seam between cached and freshly fetched rows looks like a split.
+
+    Conservative on purpose, because the consequence of a false positive is a needless
+    download while a false negative silently corrupts the file. Requires all of:
+      - an overnight gap (new OPEN vs last cached CLOSE) near a clean split factor,
+      - the new session's CLOSE on the same new scale, not just the open,
+      - volume that does NOT confirm - a genuine 10x move trades enormous size, a split does
+        not (BANL traded 0.58x its average the day it "rose" tenfold),
+      - a real price on at least one side, since sub-penny quotes are rounded to four
+        decimals and 0.0001 -> 0.0100 is "exactly" 1-for-100 by arithmetic alone.
+    """
+    try:
+        if existing_df is None or new_df is None or existing_df.empty or new_df.empty:
+            return False
+        prior = existing_df[existing_df.index < new_df.index.min()]
+        if prior.empty:
+            return False
+        pc = float(prior["Close"].iloc[-1])
+        no = float(new_df["Open"].iloc[0])
+        nc = float(new_df["Close"].iloc[0])
+        if not all(np.isfinite(x) and x > 0 for x in (pc, no, nc)):
+            return False
+        if max(pc, nc) < min_price:
+            return False
+        ratio = no / pc
+        best = min(((abs(ratio - v) / v, v)
+                    for f in SPLIT_FACTORS for v in (float(f), 1.0 / f)),
+                   key=lambda t: t[0])
+        if best[0] > tol:
+            return False
+        if abs(nc / pc - best[1]) / best[1] > tol * 4:
+            return False
+        vol = new_df["Volume"].iloc[0]
+        avg = prior["Volume"].tail(20).mean()
+        if np.isfinite(vol) and np.isfinite(avg) and avg > 0 and (vol / avg) >= vol_confirm:
+            return False       # volume confirms it -> a real move, leave the history alone
+        return True
+    except Exception:
+        return False
+
+
 def get_target_tickers():
     tickers = set(BENCHMARKS + WATCHLIST_ETFS + SECTOR_ETFS)
 
@@ -174,6 +219,39 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
                                 # Combine existing and new data
                                 combined = pd.concat([existing_df, df_t])
                                 combined = combined[~combined.index.duplicated(keep="last")].sort_index()
+
+                                # A split makes this merge silently wrong. We only ever fetch
+                                # the last few days, so rows older than that are never
+                                # revisited: Yahoo back-adjusts ITS history on a split, but
+                                # ours keeps the pre-split prices forever and the file ends up
+                                # with a step change nothing downstream knows about. BANL
+                                # went $0.36 -> $3.82 overnight on LOWER volume (963K then
+                                # 113K) - a 1-for-10 reverse on 2026-07-20 - and the pattern
+                                # scanner read it as a +1908% flagpole into a textbook flag.
+                                # Any pattern spanning the date is affected, not just HTF: a
+                                # cup would show a fabricated depth, a base top would sit at
+                                # a price that never traded.
+                                #
+                                # So check the seam and, if it looks like a split, refetch the
+                                # whole history instead of patching it. Refetching is
+                                # authoritative - Yahoo has already done the adjustment - and
+                                # needs no split factor or ratio arithmetic on our side, which
+                                # is the part that would be dangerous to get wrong.
+                                if _looks_like_split(existing_df, df_t):
+                                    print(f"  ! {clean_t}: price discontinuity at the merge "
+                                          f"seam (likely split) - refetching full history")
+                                    try:
+                                        full = yf.download(clean_t, period="max",
+                                                           interval="1d", auto_adjust=False,
+                                                           progress=False)
+                                        if full is not None and not full.empty:
+                                            if isinstance(full.columns, pd.MultiIndex):
+                                                full.columns = full.columns.get_level_values(0)
+                                            keep = [c for c in req_cols if c in full.columns]
+                                            if keep:
+                                                combined = full[keep].dropna(how="all")
+                                    except Exception:
+                                        pass   # keep the merged frame; the scan will flag it
                                 df_t = combined
                             except Exception:
                                 pass
