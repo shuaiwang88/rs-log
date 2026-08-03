@@ -71,7 +71,7 @@ def push_to_origin(branch):
         else:
             print(f"Failed to push to origin:\n{r2.stderr}")
 
-def run_append_scripts():
+def run_append_scripts(skip_ticker_cache=False):
     print("Running daily pipeline: derive OHLCV + technical columns, append history, and update ticker cache...")
     import sys
     py = sys.executable
@@ -101,12 +101,15 @@ def run_append_scripts():
         print("  ✓ Stocks history appended.")
 
     # Step 4: Update ticker cache
-    print("\n[4/4] Updating ticker_cache daily parquet files...")
-    r = run_cmd([py, str(REPO_DIR / 'python' / 'update_ticker_cache.py')], cwd=REPO_DIR)
-    if r.returncode != 0:
-        print(f"  ⚠ update_ticker_cache.py error:\n{r.stderr}")
+    if skip_ticker_cache:
+        print("\n[4/4] Skipping ticker cache update (--skip-ticker-cache).")
     else:
-        print("  ✓ Ticker cache parquets updated.")
+        print("\n[4/4] Updating ticker_cache daily parquet files...")
+        r = run_cmd([py, str(REPO_DIR / 'python' / 'update_ticker_cache.py')], cwd=REPO_DIR)
+        if r.returncode != 0:
+            print(f"  ⚠ update_ticker_cache.py error:\n{r.stderr}")
+        else:
+            print("  ✓ Ticker cache parquets updated.")
 
     print("\n✅ Daily pipeline complete.")
 
@@ -114,16 +117,17 @@ def run_append_scripts():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--force', action='store_true')
+    parser.add_argument('--skip-ticker-cache', action='store_true')
     args = parser.parse_args()
 
     if args.force:
-        run_append_scripts()
+        run_append_scripts(skip_ticker_cache=args.skip_ticker_cache)
         sys.exit(0)
 
     branch = get_current_branch()
     if check_and_sync_upstream(branch):
         print("Successfully synced with upstream — running append scripts")
-        run_append_scripts()
+        run_append_scripts(skip_ticker_cache=args.skip_ticker_cache)
         push_to_origin(branch)
     else:
         print("No updates applied.")

@@ -1779,7 +1779,36 @@ if not st.session_state.get("_ibd_live_sync_toast_shown"):
     if st.session_state.get("_ibd_live_sync_error"):
         st.toast(f"⚠️ IBD Live sync failed: {st.session_state['_ibd_live_sync_error']}", icon="⚠️")
 
-col1, col2 = st.columns([2, 8])
+# ---------------------- Ticker Cache Update (top bar) ----------------------
+TICKER_CACHE_UPDATE_SCRIPT = Path(__file__).resolve().parent / "python" / "update_ticker_cache.py"
+TICKER_CACHE_UPDATE_LOG = Path(__file__).resolve().parent / "logs" / "ticker_cache_update.log"
+
+def is_ticker_cache_updater_running():
+    """Return pids of any running update_ticker_cache.py process (or [] if none)."""
+    try:
+        out = subprocess.run(["pgrep", "-f", "update_ticker_cache.py"],
+                             capture_output=True, text=True)
+        return [p for p in out.stdout.split() if p.strip()]
+    except Exception:
+        return []
+
+def start_ticker_cache_update():
+    """Launch update_ticker_cache.py in the background. Returns (ok, message)."""
+    pids = is_ticker_cache_updater_running()
+    if pids:
+        return False, f"Update already running (pid {', '.join(pids)})."
+    try:
+        TICKER_CACHE_UPDATE_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(TICKER_CACHE_UPDATE_LOG, "a", encoding="utf-8") as lf:
+            proc = subprocess.Popen(
+                [sys.executable, str(TICKER_CACHE_UPDATE_SCRIPT)],
+                cwd=str(Path(__file__).resolve().parent),
+                stdout=lf, stderr=lf, start_new_session=True)
+        return True, f"Started ticker cache update (pid {proc.pid})."
+    except Exception as e:
+        return False, f"Failed to start update: {e}"
+
+col1, col2, col3 = st.columns([2, 6, 4])
 with col1:
     if st.button("🔁 Reload data from disk"):
         try:
@@ -1810,11 +1839,35 @@ with col2:
                 if pull_res.returncode != 0:
                     st.error(f"Git pull failed:\n{pull_res.stderr}")
                 else:
-                    subprocess.run([sys.executable, "check_remote_and_append.py", "--force"], cwd=repo_dir, capture_output=True, text=True)
+                    subprocess.run([sys.executable, "check_remote_and_append.py", "--force", "--skip-ticker-cache"], cwd=repo_dir, capture_output=True, text=True)
                     st.cache_data.clear()
                     rerun_app()
             except Exception as e:
                 st.error(f"An error occurred: {e}")
+with col3:
+    st.subheader("🔄 Ticker Cache")
+    _tc_pids = is_ticker_cache_updater_running()
+    if _tc_pids:
+        st.warning(f"⚠️ Updating tickers… ({len(_tc_pids)} process running). "
+                   f"Price charts may show stale data until it finishes.")
+        if st.button("🛑 Stop Update", key="stop_ticker_cache_update",
+                     help="Kill the running update_ticker_cache.py process"):
+            for p in _tc_pids:
+                try:
+                    subprocess.run(["kill", p], capture_output=True)
+                except Exception:
+                    pass
+            rerun_app()
+    else:
+        st.caption("Ticker price cache is idle.")
+    if st.button("▶️ Update Ticker Cache", key="run_ticker_cache_update",
+                 help="Fetch the latest daily bars for every ticker in ticker_cache/ (yfinance)"):
+        ok, msg = start_ticker_cache_update()
+        if ok:
+            st.success(msg)
+            rerun_app()
+        else:
+            st.warning(msg)
 
 # ---------------------- Data loading functions ----------------------
 def compute_output_signature():
@@ -2091,59 +2144,6 @@ for col in numeric_cols:
     if col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
-# ---------------------- Ticker Cache Update (sidebar) ----------------------
-TICKER_CACHE_UPDATE_SCRIPT = Path(__file__).resolve().parent / "python" / "update_ticker_cache.py"
-TICKER_CACHE_UPDATE_LOG = Path(__file__).resolve().parent / "logs" / "ticker_cache_update.log"
-
-def is_ticker_cache_updater_running():
-    """Return pids of any running update_ticker_cache.py process (or [] if none)."""
-    try:
-        out = subprocess.run(["pgrep", "-f", "update_ticker_cache.py"],
-                             capture_output=True, text=True)
-        return [p for p in out.stdout.split() if p.strip()]
-    except Exception:
-        return []
-
-def start_ticker_cache_update():
-    """Launch update_ticker_cache.py in the background. Returns (ok, message)."""
-    pids = is_ticker_cache_updater_running()
-    if pids:
-        return False, f"Update already running (pid {', '.join(pids)})."
-    try:
-        TICKER_CACHE_UPDATE_LOG.parent.mkdir(parents=True, exist_ok=True)
-        with open(TICKER_CACHE_UPDATE_LOG, "a", encoding="utf-8") as lf:
-            proc = subprocess.Popen(
-                [sys.executable, str(TICKER_CACHE_UPDATE_SCRIPT)],
-                cwd=str(Path(__file__).resolve().parent),
-                stdout=lf, stderr=lf, start_new_session=True)
-        return True, f"Started ticker cache update (pid {proc.pid})."
-    except Exception as e:
-        return False, f"Failed to start update: {e}"
-
-st.sidebar.subheader("🔄 Ticker Cache")
-_tc_pids = is_ticker_cache_updater_running()
-if _tc_pids:
-    st.sidebar.warning(f"⚠️ Updating tickers… ({len(_tc_pids)} process running). "
-                       f"Price charts may show stale data until it finishes.")
-    if st.sidebar.button("🛑 Stop Update", key="stop_ticker_cache_update",
-                         help="Kill the running update_ticker_cache.py process"):
-        for p in _tc_pids:
-            try:
-                subprocess.run(["kill", p], capture_output=True)
-            except Exception:
-                pass
-        rerun_app()
-else:
-    st.sidebar.caption("Ticker price cache is idle.")
-if st.sidebar.button("▶️ Update Ticker Cache", key="run_ticker_cache_update",
-                     help="Fetch the latest daily bars for every ticker in ticker_cache/ (yfinance)"):
-    ok, msg = start_ticker_cache_update()
-    if ok:
-        st.sidebar.success(msg)
-        rerun_app()
-    else:
-        st.sidebar.warning(msg)
-
 # ---------------------- Sidebar filters (only data filters, no ticker selection) ----------------------
 st.sidebar.header("🔍 Filters")
 
@@ -2233,20 +2233,20 @@ def leader_score(row):
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15 = st.tabs(
-        ["📈 Overview", "📊 Time Series", "🎯 Top Performers", "🔬 Deep Analysis",
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
+        ["📈 Overview", "🎯 Top Performers",
          "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs(
-        ["📈 Overview", "🎯 Top Performers", "📊 Distributions", "🔬 Deep Analysis",
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
+        ["📈 Overview", "🎯 Top Performers", "📊 Distributions",
          "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads"])
 
-tab_ibd_pattern = tab10 if has_historical else tab9
-tab_drc = tab11 if has_historical else tab10
-tab_backtests = tab14 if has_historical else tab13
-tab_scans = tab15 if has_historical else tab14
-tab_ms = tab12 if has_historical else tab11
-tab_ibd_live = tab13 if has_historical else tab12
+tab_ibd_pattern = tab8
+tab_drc = tab9
+tab_backtests = tab12
+tab_scans = tab13
+tab_ms = tab10
+tab_ibd_live = tab11
 
 
 # ---------- TAB 1: Overview ----------
@@ -2623,18 +2623,8 @@ annotations=[dict(x=1, y=1.02, xref='paper', yref='paper', xanchor='right', show
     st.caption("Overview ratings reflect the latest recorded snapshot. Breadth band = RS≥80 (lead), 65–79 (strong), "
                "50–64 (broad), <50 (laggard). A/D uses the app's tracked universe as a proxy for NYSE.")
 
-# ---------- TAB 2: Time Series ----------
-if has_historical:
-    with tab2:
-        st.subheader("📈 Time Series")
-        st.caption("Time-series analysis has been consolidated into the Overview tab — see the Sector Rotation Timeline there.")
-else:
-    with tab2:
-        st.subheader("📈 Time Series")
-        st.caption("Time-series analysis requires historical data (with a 'date' column).")
-
-# ---------- TAB 3: Top Performers ----------
-with tab3:
+# ---------- TAB 2: Top Performers ----------
+with tab2:
     st.subheader("🌟 Composite Leaders (momentum + quality)")
     lw = snap.copy()
     for c in ['Relative Strength', 'Percentile', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile',
@@ -2708,148 +2698,9 @@ with tab3:
             top_mcap['MarketCap'] = top_mcap['MarketCap'].apply(lambda x: f"${x/1e9:.2f}B" if pd.notna(x) else "N/A")
             st.dataframe(top_mcap.reset_index(drop=True), use_container_width=True, hide_index=True)
 
-# ---------- TAB 4: Deep Analysis ----------
-with tab4:
-    st.subheader("🔬 Factor Relationships")
-    da = snap.copy()
-    for c in ['Close', 'Price', 'Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
-              '6M_RS_Percentile', 'RevenueGrowth', 'PctFrom52WkHigh', 'ROE', 'Avg EPS % Chg 4Q',
-              'ShortFloatPct', 'MarketCap', 'AvgVol10']:
-        if has_col(da, c):
-            da[c] = pd.to_numeric(da[c], errors='coerce')
-    px_c = PRICE_COL if has_col(da, PRICE_COL) else None
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if px_c:
-            fig = px.scatter(da, x='Percentile', y='Relative Strength', color='Percentile',
-                             hover_data=['Ticker', 'Sector'], title="RS vs RS Percentile (color n/a)",
-                             color_continuous_scale='Viridis')
-            st.plotly_chart(fig, use_container_width=True)
-    with col2:
-        pdata = da[['1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile']].mean()
-        fig = go.Figure(data=[
-            go.Bar(name='1M', x=['1M'], y=[pdata['1M_RS_Percentile']]),
-            go.Bar(name='3M', x=['3M'], y=[pdata['3M_RS_Percentile']]),
-            go.Bar(name='6M', x=['6M'], y=[pdata['6M_RS_Percentile']]),
-        ])
-        fig.update_layout(title="RS Percentile Trajectory (1M → 3M → 6M)", barmode='group')
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.divider()
-    st.subheader("📈 Price vs Relative Strength (log price)")
-    if px_c:
-        fig = px.scatter(da, x=px_c, y='Relative Strength', color='Percentile',
-                         hover_data=['Ticker', 'Sector'], title="RS vs Price (color = RS percentile)",
-                         color_continuous_scale='Viridis', log_x=True)
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.divider()
-    st.subheader("📊 Quality at a Glance")
-    if has_col(da, 'RevenueGrowth') and has_col(da, '6M_RS_Percentile'):
-        q = da.dropna(subset=['RevenueGrowth', '6M_RS_Percentile'])
-        fig = px.scatter(q, x='6M_RS_Percentile', y='RevenueGrowth', color='Relative Strength',
-                         hover_data=['Ticker', 'Sector'], color_continuous_scale='Viridis',
-                         title="Growth vs 6M Momentum (color = RS)")
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.divider()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Proximity to 52-Week High")
-        if has_col(da, 'PctFrom52WkHigh'):
-            fig = px.histogram(da.dropna(subset=['PctFrom52WkHigh']), x='PctFrom52WkHigh', nbins=40,
-                               title="% from 52W High (distance from highs)", marginal='box')
-            fig.add_vline(x=10, line_dash='dot', line_color='green')
-            st.plotly_chart(fig, use_container_width=True)
-    with col2:
-        st.subheader("Market Cap Distribution (log $)")
-        if has_col(da, 'MarketCap'):
-            fig = px.histogram(da.dropna(subset=['MarketCap']), x='MarketCap', nbins=30, log_x=True,
-                               title="Market Cap ($ log)")
-            st.plotly_chart(fig, use_container_width=True)
-
-    st.divider()
-    st.subheader("Key Statistics (current snapshot)")
-    stat_cols = [c for c in ['Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile',
-                             '6M_RS_Percentile'] + ([PRICE_COL] if PRICE_COL else []) +
-                             ['AvgVol10', 'AvgVol30', 'AvgVol50', 'ShortFloatPct', 'PctFrom52WkHigh', 'RevenueGrowth']
-                             if has_col(da, c)]
-    if stat_cols:
-        st.dataframe(da[stat_cols].describe(), use_container_width=True)
-
-    st.divider()
-    st.subheader("What Drives Relative Strength? (Pearson vs RS)")
-    corr_vars = [c for c in ['Relative Strength', 'Percentile', '6M_RS_Percentile', '3M_RS_Percentile',
-                             '1M_RS_Percentile', 'PctFrom52WkHigh', 'RevenueGrowth', 'ROE', 'Avg EPS % Chg 4Q',
-                             'ShortFloatPct', 'MarketCap', 'AvgVol10'] if has_col(da, c)]
-    if len(corr_vars) >= 5 and not da[corr_vars].dropna().empty:
-        cm = da[corr_vars].corr(numeric_only=True)
-        rs_corr = cm['Relative Strength'].drop(labels='Relative Strength', errors='ignore')
-        rs_corr = rs_corr.sort_values(key=lambda s: s.abs(), ascending=False)
-        corr_df = pd.DataFrame({'Factor': rs_corr.index, 'Correlation vs RS': rs_corr.round(3)})
-        st.dataframe(corr_df, use_container_width=True, hide_index=True)
-        st.caption("Pearson correlation of each factor with Relative Strength (absolute-sorted); + means moves with leadership.")
-
-    # ----- Trend-template screening (Minervini 8-point style) -----
-    st.divider()
-    st.subheader("🎯 Trend-Template Screening (Minervini checklist)")
-    tt = snap.copy()
-    chk = {}
-    if has_col(tt, 'Relative Strength'):
-        tt['Relative Strength'] = pd.to_numeric(tt['Relative Strength'], errors = 'coerce'); chk['RS ≥ 70'] = tt['Relative Strength'] >= 70
-    for col, label in [('Price vs 200-Day', 'Above 200-Day'), ('Price vs 150-Day', 'Above 150-Day'), ('Price vs 50-Day', 'Above 50-Day')]:
-        if has_col(tt, col):
-            tt[col] = pd.to_numeric(tt[col], errors = 'coerce'); chk[label] = tt[col] <= 0
-    if has_col(tt, 'PctFrom52WkHigh'):
-        tt['PctFrom52WkHigh'] = pd.to_numeric(tt['PctFrom52WkHigh'], errors = 'coerce'); chk['Within 25% of high'] = tt['PctFrom52WkHigh'] <= 25
-    if has_col(tt, 'Avg EPS % Chg 4Q'):
-        tt['Avg EPS % Chg 4Q'] = pd.to_numeric(tt['Avg EPS % Chg 4Q'], errors = 'coerce'); chk['EPS grow ≥ 20%'] = tt['Avg EPS % Chg 4Q'] >= 20
-    if has_col(tt, 'RevenueGrowth'):
-        tt['RevenueGrowth'] = pd.to_numeric(tt['RevenueGrowth'], errors = 'coerce'); chk['Sales grow ≥ 15%'] = tt['RevenueGrowth'] >= 15
-    if has_col(tt, 'ROE'):
-        tt['ROE'] = pd.to_numeric(tt['ROE'], errors = 'coerce'); chk['ROE ≥ 17%'] = tt['ROE'] >= 17
-
-    if chk:
-        mask_all = pd.Series(True, index=tt.index)
-        for m in chk.values():
-            mask_all &= m
-        # Acceleration: 6-month momentum percentile higher than 1-month → leadership building
-        accel = pd.Series(False, index=tt.index)
-        if has_col(tt, '6M_RS_Percentile') and has_col(tt, '1M_RS_Percentile'):
-            tt['6M_RS_Percentile'] = pd.to_numeric(tt['6M_RS_Percentile'], errors='coerce')
-            tt['1M_RS_Percentile'] = pd.to_numeric(tt['1M_RS_Percentile'], errors='coerce')
-            accel = (tt['6M_RS_Percentile'] >= tt['1M_RS_Percentile'])
-
-        cc1, cc2 = st.columns([2, 2])
-        with cc1:
-            pass_rate = pd.Series({k: float(v.mean() * 100) for k, v in chk.items()}).sort_values(ascending=False)
-            rate_df = pd.DataFrame({'Criterion': pass_rate.index, '% Passing': pass_rate.round(0)})
-            st.dataframe(rate_df.reset_index(drop=True), use_container_width=True, hide_index=True)
-        with cc2:
-            n_pass = int(mask_all.sum())
-            st.metric("Full Trend-Template Passes", n_pass, help="Meet all technical + growth checks simultaneously")
-            if '6M_RS_Percentile' in tt and '1M_RS_Percentile' in tt:
-                st.metric("Accelerating Leaders (6M≥1M)", int(accel.sum()), help="6-month RS percentile equal/higher than 1-month")
-        st.caption("Health of leadership from alphabetical gauges; the trend-template 'pass rate' holds leadership to an O'Neil/Minervini quality bar.")
-
-        # Actionable watchlist
-        st.markdown("**🎯 Actionable Leaders** — RS ≥ 70, above key MAs, within 25% of 52-wk high.")
-        if mask_all.sum() > 0:
-            act = tt[mask_all].copy()
-            if has_col(act, 'Ticker'):
-                act = act.drop_duplicates(subset=['Ticker'])
-            cols_show = ['Ticker', 'Sector', 'Relative Strength', 'Percentile', '6M_RS_Percentile', 'PctFrom52WkHigh', 'Avg EPS % Chg 4Q']
-            cols_show = [c for c in cols_show if has_col(tt, c)]
-            act = act[cols_show].copy()
-            act = act.assign(Accel=accel.reindex(act.index).fillna(False)).sort_values('Relative Strength', ascending=False)
-            st.dataframe(act.reset_index(drop=True), use_container_width=True, hide_index=True)
-        else:
-            st.info("No stock currently passes the full Trend Template in this snapshot.")
-
-# ---------- TAB 5: Trends ----------
+# ---------- TAB 3: Trends ----------
 if has_historical:
-    with tab5:
+    with tab3:
         st.subheader("📉 Trend Analysis (rotation & momentum)")
         daily = filtered_df.copy()
         daily['date'] = pd.to_datetime(daily['date'])
@@ -2925,8 +2776,8 @@ if has_historical:
             f"tone."
         )
 
-# ---------- TAB 6: Industry Rotation (corrected delta calculations) ----------
-with (tab6 if has_historical else tab5):
+# ---------- TAB 4: Industry Rotation (corrected delta calculations) ----------
+with tab4:
     st.subheader("🏭 Industry Rotation & Analysis")
     if df_industry is not None and not df_industry.empty:
         ind_display  = df_industry.copy()
@@ -3202,14 +3053,14 @@ def build_ticker_price_chart(ticker, filtered_df=None, height=800):
         df_daily_full = load_or_fetch_ticker(ticker, interval="1d", period="2y")
         if df_daily_full.empty:
             return None, f"No daily data available for {ticker}. Please check the ticker symbol."
-        df_daily = df_daily_full.iloc[-252:] if len(df_daily_full) > 252 else df_daily_full
+        df_daily = df_daily_full.iloc[-504:] if len(df_daily_full) > 504 else df_daily_full
 
         spy = yf.Ticker("^GSPC")
         try:
             spy_daily_full = spy.history(period="2y", interval="1d")
             if not spy_daily_full.empty and getattr(spy_daily_full.index, 'tz', None) is not None:
                 spy_daily_full.index = spy_daily_full.index.tz_localize(None)
-            spy_daily = spy_daily_full.iloc[-252:] if len(spy_daily_full) > 252 else spy_daily_full
+            spy_daily = spy_daily_full.iloc[-504:] if len(spy_daily_full) > 504 else spy_daily_full
         except Exception:
             spy_daily = pd.DataFrame()
 
@@ -3375,9 +3226,9 @@ def build_ticker_price_chart(ticker, filtered_df=None, height=800):
         return None, f"Error building chart for {ticker}: {e}"
 
 # ========================================================================================
-# TAB 7: Company Details — with its own ticker filter (search + selectbox)
+# TAB 5: Company Details — with its own ticker filter (search + selectbox)
 # ========================================================================================
-with (tab7 if has_historical else tab6):
+with tab5:
     st.subheader("💼 Company Details")
 
     st.markdown("### 📋 Select a Ticker")
@@ -3417,6 +3268,24 @@ with (tab7 if has_historical else tab6):
                 latest_row = ticker_rows.sort_values('date').iloc[-1]
             else:
                 latest_row = ticker_rows.iloc[0]
+
+            # Fall back to the ticker cache for OHLCV if the snapshot row is missing them
+            def _is_missing(v):
+                try:
+                    return v is None or pd.isna(v) or (isinstance(v, str) and not v.strip())
+                except Exception:
+                    return False
+            if _is_missing(latest_row.get('Close')):
+                try:
+                    _cache_df = load_or_fetch_ticker(selected_ticker_company, interval="1d", period="2y")
+                    if not _cache_df.empty:
+                        _cache_last = _cache_df.iloc[-1]
+                        latest_row = latest_row.copy()
+                        for _c in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                            if _c in _cache_last.index and _is_missing(latest_row.get(_c)):
+                                latest_row[_c] = _cache_last[_c]
+                except Exception:
+                    pass
 
             def get_display_price(price_value):
                 if pd.isna(price_value): return 'N/A'
@@ -3477,7 +3346,7 @@ with (tab7 if has_historical else tab6):
                         if df_weekly.empty:
                             st.warning(f"No weekly data available for {selected_ticker_company}.")
                         else:
-                            df_daily = df_daily_full.iloc[-252:] if len(df_daily_full) > 252 else df_daily_full
+                            df_daily = df_daily_full.iloc[-504:] if len(df_daily_full) > 504 else df_daily_full
 
                             spy = yf.Ticker("^GSPC")
                             try:
@@ -3488,7 +3357,7 @@ with (tab7 if has_historical else tab6):
                                     st.warning("Unable to fetch S&P 500 data. RS calculations may be affected.")
                                     spy_daily = pd.DataFrame()
                                 else:
-                                    spy_daily = spy_daily_full.iloc[-252:] if len(spy_daily_full) > 252 else spy_daily_full
+                                    spy_daily = spy_daily_full.iloc[-504:] if len(spy_daily_full) > 504 else spy_daily_full
                             except Exception as e:
                                 st.warning(f"Error fetching SPY data: {e}")
                                 spy_daily = pd.DataFrame()
@@ -4014,8 +3883,8 @@ with (tab7 if has_historical else tab6):
                     st.error(f"Error fetching data: {e}")
                     import traceback; st.text(traceback.format_exc())
 
-# ---------- TAB 8: Data Table ----------
-with (tab8 if has_historical else tab7):
+# ---------- TAB 6: Data Table ----------
+with tab6:
     if has_historical:
         latest_date = df['date'].max()
         table_df    = df[df['date'] == latest_date].copy()
@@ -4261,8 +4130,8 @@ with (tab8 if has_historical else tab7):
                                f"{industry.replace(' ','_')}_tickers.txt", "text/plain",
                                key=f"download_{industry}")
 
-# ---------- TAB 9 / 8: Pattern Finder ----------
-with (tab9 if has_historical else tab8):
+# ---------- TAB 7: Pattern Finder ----------
+with tab7:
     st.subheader("🔍 Tweevest Pattern Finder")
     st.markdown("Extract and view the latest pattern tickers from Tweevest.")
     
@@ -5210,7 +5079,7 @@ with tab_drc:
         else:
             st.error("Failed to save Daily Report Card.")
 
-# ---------- TAB 11: Chart Gallery ----------
+# ---------- TAB 10: Chart Gallery ----------
 with tab_ms:
     st.header("📸 Chart Gallery")
     st.markdown("Generate interactive Plotly charts for a custom list of tickers.")
@@ -5228,7 +5097,7 @@ with tab_ms:
                 st.divider()
                 render_tradingview_ticker_chart(ticker)
 
-# ---------- TAB 13: IBD Live Summary ----------
+# ---------- TAB 11: IBD Live Summary ----------
 with tab_ibd_live:
     st.header("🎙️ IBD Live Summary")
 
