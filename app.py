@@ -4347,6 +4347,30 @@ with tab7:
         st.warning("No patterns data found. Click the button above to run the extraction script for the first time.")
 
 # ---------- TAB: IBD Pattern Scanner ----------
+@st.cache_data(ttl=1800, show_spinner=False)
+def _ibd_chart_payload(ticker: str, bars: int = 300):
+    """Bars + a freshly-scanned result for ONE ticker, for the pattern chart.
+
+    The pattern shapes need the scanner's per-bar `history` (bTop/bLow/inBase/isCupH), which
+    is deliberately not written to ibd_pattern_results.json - it was 99.8% of an 8.9 GB file.
+    Rescanning the single selected ticker costs ~15 ms, so the chart pays that instead of
+    every consumer of the results carrying history for all 6,000 signals.
+    """
+    import importlib.util
+    root = Path(__file__).resolve().parent
+    fp = root / "ticker_cache" / f"{str(ticker).strip().replace('.', '-')}_1d.parquet"
+    if not fp.exists():
+        return None, None
+    spec = importlib.util.spec_from_file_location(
+        "_ibd_scanner_chart", root / "python" / "ibd_pattern_scanner.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    res = mod.scan_single_ticker(ticker, str(fp))
+    if not res:
+        return None, None
+    return pd.read_parquet(fp).sort_index(), res
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def _ibd_trend_metrics(tickers: tuple):
     """SMA50 / SMA200 / 50-day average volume per ticker, straight from ticker_cache.
@@ -4556,7 +4580,57 @@ with tab_ibd_pattern:
                 if "RS New High" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['rs_nh']]
 
                 # Output Views: Tabs for "Category View", "Data Table", and "Watchlist Export"
-                sub_tab1, sub_tab2, sub_tab3 = st.tabs(["📂 Tickers by Pattern Category", "📋 Detailed Data Table", "📤 Export Watchlists"])
+                sub_chart, sub_tab1, sub_tab2, sub_tab3 = st.tabs(
+                    ["📈 Chart", "📂 Tickers by Pattern Category", "📋 Detailed Data Table", "📤 Export Watchlists"])
+
+                # --- Sub-tab: pattern chart ---
+                with sub_chart:
+                    if filtered_ibd.empty:
+                        st.info("No tickers match the current filters.")
+                    else:
+                        ch_c1, ch_c2, ch_c3 = st.columns([3, 1, 1])
+                        _opts = filtered_ibd.sort_values('composite_score', ascending=False)['ticker'].tolist()
+                        _pre = search_ticker if search_ticker in _opts else _opts[0]
+                        with ch_c1:
+                            ch_tkr = st.selectbox("Ticker", _opts, index=_opts.index(_pre),
+                                                  key="ibd_chart_tkr")
+                        with ch_c2:
+                            ch_bars = st.select_slider("Bars", [120, 200, 300, 450, 700],
+                                                       value=300, key="ibd_chart_bars")
+                        with ch_c3:
+                            st.caption("Shapes follow pine/drw_pattern.pine")
+                        try:
+                            _cdf, _cres = _ibd_chart_payload(ch_tkr, ch_bars)
+                            if _cdf is None or _cres is None:
+                                st.warning(f"No cached price data for {ch_tkr}.")
+                            else:
+                                sys.path.insert(0, str(Path(__file__).resolve().parent / "python"))
+                                from pattern_chart import build_pattern_figure
+                                st.plotly_chart(
+                                    build_pattern_figure(ch_tkr, _cdf, _cres, bars=ch_bars),
+                                    use_container_width=True)
+                                _r = filtered_ibd[filtered_ibd['ticker'] == ch_tkr]
+                                if not _r.empty:
+                                    _r = _r.iloc[0]
+                                    q1, q2, q3, q4, q5 = st.columns(5)
+                                    with q1: st.metric("Pattern", _r.get('pattern_name', '-'))
+                                    with q2: st.metric("Buy point", f"{_r.get('pivot', float('nan')):,.2f}")
+                                    with q3: st.metric("Dist to pivot", f"{_r.get('dist_pct', float('nan')):+.1f}%")
+                                    with q4: st.metric("Before/Post", f"{_r.get('before_bo_score',0)} / {_r.get('post_bo_score',0)}")
+                                    with q5: st.metric("Composite", f"{_r.get('composite_score',0)}/12")
+                                _ctx = _cres.get('htf_context')
+                                if _ctx:
+                                    _pf = _ctx.get('pole_from')
+                                    st.caption(
+                                        f"**HTF context** — pole {_ctx['pole_low']:,.2f} → "
+                                        f"{_ctx['flag_high']:,.2f} (+{_ctx['pole_gain_pct']:.0f}% in "
+                                        f"{_ctx['pole_bars']} bars)"
+                                        + (f", out of a {_pf['pattern']}" if _pf else "")
+                                        + f" · flag {_ctx['flag_bars']} bars, "
+                                          f"{_ctx['flag_depth_pct']:.1f}% deep")
+                        except Exception as _ce:
+                            st.error(f"Could not draw the chart: {_ce}")
+
                 
                 # --- Sub-tab 1: Categorized View ---
                 with sub_tab1:
