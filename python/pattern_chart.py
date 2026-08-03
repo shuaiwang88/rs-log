@@ -77,9 +77,12 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     full_len = len(df)
     if full_len > bars:
         df = df.iloc[-bars:]
-    # history bar indices refer to the scanner's own (possibly trimmed) frame, so shift them
-    # into this window's coordinates.
-    offset = (full_len - len(df)) + int(result.get('df_trim_offset') or 0)
+    # Map history bar indices into this window's coordinates.
+    #   history bar i  ->  parquet row  i + df_trim_offset      (scanner keeps the last 1500)
+    #   parquet row r  ->  plotted col  r - (full_len - len(df))
+    # so the shift SUBTRACTS df_trim_offset. Adding it put every index far negative - XOM's
+    # base landed at -29,000, got clamped away, and the cup curve silently never drew.
+    offset = (full_len - len(df)) - int(result.get('df_trim_offset') or 0)
 
     x = list(df.index)
     fig = go.Figure()
@@ -106,6 +109,14 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         return x[i]
 
     s0, s1, btop, blow = _base_span(history, offset)
+    # The base can start before the visible window (a 320-bar base on a 120-bar chart) or,
+    # after trimming, land entirely outside it. Clamp into range and drop it if nothing of it
+    # is on screen, rather than slicing an empty frame.
+    if s0 is not None and s1 is not None:
+        s0 = int(max(0, min(len(x) - 1, s0)))
+        s1 = int(max(0, min(len(x) - 1, s1)))
+        if s1 <= s0:
+            s0 = s1 = None
     if s0 is not None and btop and blow:
         # The base itself: a box from its first bar to its last, spanning bTop..bLow.
         shapes.append(dict(type='rect', xref='x', yref='y',
@@ -117,21 +128,63 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
                           text=f"<b>{pname}</b> {depth:.0f}% deep, {max(0, s1 - s0)} bars",
                           font=dict(color=color, size=11), xanchor='left', yanchor='bottom'))
 
-    # ── Cup+Handle: the handle is a tighter box near the top of the cup ──────────────
-    if pname == 'Cup+Handle':
-        hb = [i for i, s in enumerate(history) if s.get('isCupH')]
-        if hb:
-            h0, h1 = hb[0] - offset, hb[-1] - offset
-            seg = df.iloc[max(0, int(h0)):int(h1) + 1]
-            if len(seg):
-                shapes.append(dict(type='rect', xref='x', yref='y',
-                                   x0=bar_x(h0), x1=bar_x(h1),
-                                   y0=float(seg['Low'].min()), y1=float(seg['High'].max()),
-                                   line=dict(color='#FF8C00', width=1.5, dash='dot'),
-                                   fillcolor='#FF8C00', opacity=0.14, layer='below'))
-                annos.append(dict(x=bar_x(h1), y=float(seg['High'].max()), xref='x', yref='y',
-                                  showarrow=False, text='handle', xanchor='right',
-                                  yanchor='bottom', font=dict(color='#FF8C00', size=10)))
+    # ── Cup: draw the actual U, not just its bounding box ────────────────────────────
+    # A rectangle says "a base lives here"; the point of calling something a cup is the
+    # rounded descent and recovery, so trace it. Sampled as a parabola through the three
+    # points the scanner already commits to - left top, the low, right top - which is enough
+    # to show at a glance whether the shape earns the name. XOM's "cup" is 320 bars and 44.6%
+    # deep, and that reads very differently as a curve than as a box.
+    if pname in ('Cup', 'Cup+Handle') and s0 is not None and btop and blow:
+        lo_rel = int(np.argmin(df['Low'].to_numpy()[max(0, s0):s1 + 1])) + max(0, s0)
+        span_l = max(lo_rel - s0, 1)
+        span_r = max(s1 - lo_rel, 1)
+        pts = []
+        for k in range(max(0, s0), lo_rel + 1):            # left side down
+            t = (lo_rel - k) / span_l
+            pts.append((bar_x(k), blow + (btop - blow) * (t ** 2)))
+        for k in range(lo_rel + 1, s1 + 1):                # right side up
+            t = (k - lo_rel) / span_r
+            pts.append((bar_x(k), blow + (btop - blow) * (t ** 2)))
+        if len(pts) > 2:
+            path = 'M ' + ' L '.join(f'{px},{py}' for px, py in pts)
+            shapes.append(dict(type='path', xref='x', yref='y', path=path,
+                               line=dict(color=color, width=2)))
+
+    # ── Double Bottom: the W - two lows and the middle peak between them ─────────────
+    if pname == 'Dbl Bottom' and s0 is not None and btop and blow:
+        seg = df.iloc[max(0, s0):s1 + 1]
+        if len(seg) > 6:
+            lows_a = seg['Low'].to_numpy()
+            i1 = int(np.argmin(lows_a[:len(lows_a) // 2]))
+            i2 = len(lows_a) // 2 + int(np.argmin(lows_a[len(lows_a) // 2:]))
+            mid = i1 + int(np.argmax(seg['High'].to_numpy()[i1:i2 + 1])) if i2 > i1 else i1
+            w = [(max(0, s0), btop), (max(0, s0) + i1, float(lows_a[i1])),
+                 (max(0, s0) + mid, float(seg['High'].iloc[mid])),
+                 (max(0, s0) + i2, float(lows_a[i2])), (s1, btop)]
+            path = 'M ' + ' L '.join(f'{bar_x(k)},{v}' for k, v in w)
+            shapes.append(dict(type='path', xref='x', yref='y', path=path,
+                               line=dict(color=color, width=2)))
+            annos.append(dict(x=bar_x(max(0, s0) + mid), y=float(seg['High'].iloc[mid]),
+                              xref='x', yref='y', showarrow=False, text='middle peak',
+                              yanchor='bottom', font=dict(color=color, size=10)))
+
+    # ── Handle: drawn from the scanner's OWN recorded window ────────────────────────
+    # Not from the run of bars where isCupH is true. That flag is per-bar over a trailing
+    # window, so the run is long and describes nothing - XOM's spans 94 bars while the real
+    # handle is 16 bars and 6.3% deep. hStart/hEnd carry the actual bounds.
+    hstate = next((s for s in reversed(history) if s.get('hStart') is not None), None)
+    if pname == 'Cup+Handle' and hstate:
+        h0, h1 = hstate['hStart'] - offset, hstate['hEnd'] - offset
+        shapes.append(dict(type='rect', xref='x', yref='y',
+                           x0=bar_x(h0), x1=bar_x(h1),
+                           y0=hstate['hLow'], y1=hstate['hHigh'],
+                           line=dict(color='#FF8C00', width=1.6),
+                           fillcolor='#FF8C00', opacity=0.18, layer='below'))
+        annos.append(dict(x=bar_x(h1), y=hstate['hHigh'], xref='x', yref='y',
+                          showarrow=False, xanchor='left', yanchor='bottom',
+                          text=f"handle {hstate['hEnd'] - hstate['hStart'] + 1}b "
+                               f"{hstate['hDepPct']:.1f}%",
+                          font=dict(color='#FF8C00', size=10)))
 
     # ── High Tight Flag: pole line into the flag box ─────────────────────────────────
     ctx = result.get('htf_context') or {}

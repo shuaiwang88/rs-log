@@ -818,6 +818,8 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # DETECTION ORDER: Cup+H first (most specific), then others with guards
             isCupH = False
             cupHandlePivot = None
+            handleStart = handleEnd = None
+            handleHigh = handleLow = handleDepPct = None
             cupMid = bLow + (bTop - bLow) * 0.5 if (bTop and bLow) else None
 
             # U-shape check: has the second half of the base recovered near the top?
@@ -887,6 +889,15 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     if hdRatio <= 0.45:
                         isCupH = True
                         cupHandlePivot = H12
+                        # Record the WINDOW, not just the pivot. `isCupH` is a per-bar flag
+                        # over a trailing handle_len window, so anything reading it across
+                        # bars sees a long run of True and concludes the handle is months
+                        # long - XOM's reads as 94 bars and 27.9% deep that way, when the
+                        # actual window on its last in-base bar is 13 bars and 7.3%. Charts
+                        # and diagnostics need the bounds to draw or judge it honestly.
+                        handleStart, handleEnd = int(w12_start), int(end_h_idx)
+                        handleHigh, handleLow = float(H12), float(L12)
+                        handleDepPct = float(hDep)
 
             # 5. Cup Without Handle
             isCup = False
@@ -1437,6 +1448,8 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'upsideReversal': upsideReversal,
                 'rsNH': bool(rs_nh_any[i]),
                 'isCupH': isCupH,
+                'hStart': handleStart, 'hEnd': handleEnd,
+                'hHigh': handleHigh, 'hLow': handleLow, 'hDepPct': handleDepPct,
                 # Layered readings for this bar: (name, pivot). Each pattern prices off a
                 # DIFFERENT level, so the pivot travels with the label - Cup+Handle buys the
                 # handle high, Double Bottom the middle peak, the rest the base high.
