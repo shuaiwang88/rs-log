@@ -732,8 +732,31 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             H25 = np.max(highs[w25_start:i+1]) if i >= w25_start else highs[i]
             L25 = np.min(lows[w25_start:i+1]) if i >= w25_start else lows[i]
             
+            # Prior-uptrend lookback for the `lUp` gate. The window must end at the PIVOT bar,
+            # not at the current bar.
+            #
+            # `lUp` asks whether the base's top sits >=20% above a recent low - i.e. whether a
+            # real advance preceded the base. But the pivot is `pivLag` bars behind the
+            # current bar, so ending the window at `i` lets it see bars that had not happened
+            # when the base top was set. A sharp drop straight after a pivot high then
+            # manufactures the low, which manufactures an "advance" that never occurred.
+            #
+            # XOM is the clean example. Its base seeded on a pivot of 119.91 (2025-03-31) and
+            # the gate found L103 = 98.46 - dated 2025-04-07, FIVE BARS LATER, at the bottom of
+            # a -17% four-day collapse. That scored as a "+21.8% prior uptrend" and admitted a
+            # base with no uptrend at all, which then ran 320 bars and got labelled Cup+Handle.
+            #
+            # Pine has the same construction (ta.lowest evaluated at the current bar, compared
+            # against high[pivLag]), so this is a flaw inherited from the original rather than
+            # a porting error - but it is still a lookahead, of the same shape as the
+            # "nearest to close" leak caught in the pivot work.
+            #
+            # Free on the benchmark: primary exact 88, broad 126, layered 141/153, pivot <=1%
+            # 93, dangerous quotes 23 - every figure unchanged, because it only rejects bases
+            # whose prior advance was measured from a post-pivot collapse.
             w103_start = max(0, i - 130 + 1)
-            L103 = np.min(lows[w103_start:i+1])
+            _piv_i = max(w103_start, i - pivLag)
+            L103 = np.min(lows[w103_start:_piv_i + 1])
             
             # H65s: 65-bar high shifted by 26 bars (i - pivLag - 1)
             shift_idx = i - pivLag - 1
