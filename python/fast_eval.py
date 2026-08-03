@@ -1,5 +1,5 @@
 """
-Fast in-memory evaluation harness for `ibd_pattern_scanner copy.py`.
+Fast in-memory evaluation harness for `ibd_pattern_scanner.py`.
 
 The stock evaluator (`evaluate_breakaway_gap.py`) re-reads every ticker's full parquet and
 writes+reads a temp parquet per event, so one run costs 2-4 minutes. That makes a joint
@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-SCANNER_SRC = ROOT / "python" / "ibd_pattern_scanner copy.py"
+SCANNER_SRC = ROOT / "python" / "ibd_pattern_scanner.py"
 CACHE_PATH = ROOT / "python" / ".fast_eval_windows.pkl"
 # Ascending Base excluded: only 5/177 ground-truth events, and its "not isCupH" guard
 # let it steal bars from Cup/Cup+Handle/Consolidation once those got tightened. Detection

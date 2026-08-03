@@ -4,9 +4,12 @@ evaluate_breakaway_gap.py
 Evaluates pattern-detection accuracy against the ground truth patterns and breakout event
 dates in IBD/Breakaway Gap.csv. Works against either scanner file:
 
-    python3 python/evaluate_breakaway_gap.py            # copy.py (research/default)
+    python3 python/evaluate_breakaway_gap.py            # ibd_pattern_scanner.py (current/default)
     python3 python/evaluate_breakaway_gap.py --target copy
-    python3 python/evaluate_breakaway_gap.py --target prod   # ibd_pattern_scanner.py
+    python3 python/evaluate_breakaway_gap.py --target prod   # ibd_pattern_scanner_prev.py (pre-swap baseline)
+
+Note: `ibd_pattern_scanner.py` was promoted from the former research copy on 2026-08-02; the
+prior production file is preserved as `ibd_pattern_scanner_prev.py` for comparison.
 """
 
 import argparse
@@ -25,10 +28,10 @@ sys.path.append(str(ROOT_DIR / "python"))
 
 _ap = argparse.ArgumentParser(add_help=True)
 _ap.add_argument('--target', choices=['copy', 'prod'], default='copy',
-                  help="'copy' = ibd_pattern_scanner copy.py (research file, default); "
-                       "'prod' = ibd_pattern_scanner.py (production file)")
+                  help="'copy' = ibd_pattern_scanner.py (current file, default); "
+                       "'prod' = ibd_pattern_scanner_prev.py (pre-swap baseline)")
 _args, _ = _ap.parse_known_args()
-_SCANNER_FILENAME = 'ibd_pattern_scanner copy.py' if _args.target == 'copy' else 'ibd_pattern_scanner.py'
+_SCANNER_FILENAME = 'ibd_pattern_scanner.py' if _args.target == 'copy' else 'ibd_pattern_scanner_prev.py'
 
 import importlib.util
 spec = importlib.util.spec_from_file_location('ibd_pattern_scanner_eval', str(ROOT_DIR / 'python' / _SCANNER_FILENAME))
