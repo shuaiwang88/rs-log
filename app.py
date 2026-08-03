@@ -4347,6 +4347,41 @@ with tab7:
         st.warning("No patterns data found. Click the button above to run the extraction script for the first time.")
 
 # ---------- TAB: IBD Pattern Scanner ----------
+@st.cache_data(ttl=3600, show_spinner=False)
+def _ibd_trend_metrics(tickers: tuple):
+    """SMA50 / SMA200 / 50-day average volume per ticker, straight from ticker_cache.
+
+    The pattern scanner computes sma50 internally but never emits it, and has no sma200 or
+    50-day volume at all, so the trend filters below have nothing to read. Deriving them here
+    keeps the promoted production scanner untouched — the alternative was adding three fields
+    to a live file, which is not something to do as a side effect of a dashboard filter.
+
+    Cached for an hour and keyed on the ticker tuple: it opens one parquet per ticker, which
+    is fine once but not on every widget interaction.
+    """
+    cache_dir = Path(__file__).resolve().parent / "ticker_cache"
+    rows = []
+    for t in tickers:
+        fp = cache_dir / f"{str(t).strip().replace('.', '-')}_1d.parquet"
+        if not fp.exists():
+            continue
+        try:
+            d = pd.read_parquet(fp, columns=["Close", "Volume"]).sort_index()
+        except Exception:
+            continue
+        if len(d) < 50:
+            continue
+        c = pd.to_numeric(d["Close"], errors="coerce")
+        v = pd.to_numeric(d["Volume"], errors="coerce")
+        # min_periods keeps a young listing from silently scoring NaN and being filtered out
+        # for the wrong reason; sma200 is simply absent when there is not enough history.
+        s50 = c.rolling(50, min_periods=50).mean().iloc[-1]
+        s200 = c.rolling(200, min_periods=200).mean().iloc[-1] if len(d) >= 200 else np.nan
+        av50 = v.rolling(50, min_periods=25).mean().iloc[-1]
+        rows.append({"ticker": str(t), "sma50": s50, "sma200": s200, "avg_vol50": av50})
+    return pd.DataFrame(rows)
+
+
 with tab_ibd_pattern:
     st.subheader("🏆 IBD Pattern Scanner")
     st.markdown("Automated MarketSmith / IBD pattern scanner logic (`drw_pattern_scanner.pine`). Categorizes active base patterns (Cup+Handle, Cup, Double Bottom, High Tight Flag, Flat Base, 6-Wk Flat, Base) from `ticker_cache` data.")
@@ -4372,9 +4407,24 @@ with tab_ibd_pattern:
     ibd_json_path = Path(__file__).resolve().parent / "python" / "ibd_pattern_results.json"
     if ibd_json_path.exists():
         try:
-            with open(ibd_json_path, 'r', encoding='utf-8') as f:
-                ibd_results = json.load(f)
-                
+            # A truncated results file used to surface as a raw "Expecting value: line 48
+            # column 22" and take the whole tab down. It happens when a scanner run is
+            # interrupted mid-write, which leaves valid JSON up to the cut and nothing after.
+            # Say that plainly instead, because the fix is simply to rerun the scan.
+            try:
+                with open(ibd_json_path, 'r', encoding='utf-8') as f:
+                    ibd_results = json.load(f)
+            except json.JSONDecodeError as je:
+                sz = ibd_json_path.stat().st_size
+                mt = datetime.fromtimestamp(ibd_json_path.stat().st_mtime).strftime('%Y-%m-%d %H:%M')
+                st.error(
+                    f"The IBD pattern results file is incomplete and could not be read "
+                    f"(JSON ends at line {je.lineno}). It is {sz:,} bytes, last written "
+                    f"{mt} — a scan was almost certainly interrupted part-way through saving."
+                )
+                st.info("Press **🔄 Run / Rerun IBD Pattern Scanner** above to regenerate it.")
+                st.stop()
+
             df_ibd_patterns = pd.DataFrame(ibd_results)
             
             if df_ibd_patterns.empty:
@@ -4398,6 +4448,14 @@ with tab_ibd_pattern:
                             how='left'
                         )
                 
+                # Trend/liquidity metrics the scanner does not emit (see _ibd_trend_metrics).
+                try:
+                    _tm = _ibd_trend_metrics(tuple(sorted(df_ibd_patterns['ticker'].astype(str).unique())))
+                    if not _tm.empty:
+                        df_ibd_patterns = df_ibd_patterns.merge(_tm, on='ticker', how='left')
+                except Exception as _e:
+                    st.caption(f"Trend metrics unavailable ({_e}); trend filters disabled.")
+
                 # Format numeric merged columns
                 if 'Percentile' in df_ibd_patterns.columns:
                     df_ibd_patterns['Percentile'] = pd.to_numeric(df_ibd_patterns['Percentile'], errors='coerce')
@@ -4423,8 +4481,12 @@ with tab_ibd_pattern:
                         sel_status = st.radio("Base Status", ["All", "In Base", "Post-BO"], horizontal=True, key="ibd_status_sel")
                     with f_col2:
                         min_rs_rating = st.slider("Min RS Rating (1-99)", 0, 99, 0, key="ibd_min_rs")
-                        min_price     = st.number_input("Min Price ($)", value=0.0, step=1.0, key="ibd_min_price")
+                        # Defaults are a liquidity/trend floor, not zero: sub-$12 or thin names
+                        # produce patterns that are real on the chart but untradeable, and a
+                        # base below the 200-day is a downtrend pause rather than a setup.
+                        min_price     = st.number_input("Min Price ($)", value=12.0, step=1.0, key="ibd_min_price")
                         max_price     = st.number_input("Max Price ($)", value=10000.0, step=10.0, key="ibd_max_price")
+                        min_avg_vol50 = st.number_input("Min 50D Avg Vol", value=400000, step=50000, key="ibd_min_vol50")
                         min_avg_vol30 = st.number_input("Min 30D Avg Vol", value=0, step=50000, key="ibd_min_vol30")
                     with f_col3:
                         min_comp_score = st.slider("Min Composite Score (0-12)", 0, 12, 0, key="ibd_min_comp")
@@ -4434,6 +4496,13 @@ with tab_ibd_pattern:
                         max_dist_pivot = st.number_input("Max Distance to Pivot %", value=100.0, key="ibd_max_dist")
                         max_off_52w    = st.number_input("Max % Off 52W High", value=100.0, key="ibd_max_52w")
                         sub_filter     = st.multiselect("Require Sub-signals", ["Volume Dry-Up", "Pocket Pivot", "Touched MA", "Shakeout Entry", "Upside Reversal", "RS New High"], default=[], key="ibd_sub_sig")
+                        _has_trend = {'sma50', 'sma200'} <= set(df_ibd_patterns.columns)
+                        req_above_200 = st.checkbox("Price > 200D SMA", value=True,
+                                                    disabled=not _has_trend, key="ibd_above_200")
+                        req_50_over_200 = st.checkbox("50D SMA > 200D SMA", value=True,
+                                                      disabled=not _has_trend, key="ibd_50o200")
+                        if not _has_trend:
+                            st.caption("Trend data unavailable — rerun with ticker_cache present.")
 
                 # Apply Filters
                 filtered_ibd = df_ibd_patterns.copy()
@@ -4452,7 +4521,24 @@ with tab_ibd_pattern:
                     filtered_ibd = filtered_ibd[filtered_ibd['close'] <= max_price]
                 if 'AvgVol30' in filtered_ibd.columns and min_avg_vol30 > 0:
                     filtered_ibd = filtered_ibd[filtered_ibd['AvgVol30'].fillna(0) >= min_avg_vol30]
-                    
+                if 'avg_vol50' in filtered_ibd.columns and min_avg_vol50 > 0:
+                    filtered_ibd = filtered_ibd[filtered_ibd['avg_vol50'].fillna(0) >= min_avg_vol50]
+
+                # Trend gates. NaN means the ticker has under 200 bars of history, so the test
+                # cannot be evaluated rather than being failed - dropping those silently would
+                # quietly exclude every recent IPO, which is not what "above the 200-day"
+                # means. They are excluded here because the filter is opt-in and checked by
+                # default; unchecking it brings them back.
+                if req_above_200 and {'sma200'} <= set(filtered_ibd.columns):
+                    filtered_ibd = filtered_ibd[
+                        filtered_ibd['sma200'].notna() &
+                        (filtered_ibd['close'] > filtered_ibd['sma200'])]
+                if req_50_over_200 and {'sma50', 'sma200'} <= set(filtered_ibd.columns):
+                    filtered_ibd = filtered_ibd[
+                        filtered_ibd['sma50'].notna() & filtered_ibd['sma200'].notna() &
+                        (filtered_ibd['sma50'] > filtered_ibd['sma200'])]
+
+
                 filtered_ibd = filtered_ibd[
                     (filtered_ibd['composite_score'] >= min_comp_score) &
                     (filtered_ibd['before_bo_score'] >= min_pre_score) &
