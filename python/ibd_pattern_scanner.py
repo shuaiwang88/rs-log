@@ -39,6 +39,35 @@ import pickle
 ROOT_DIR = Path(__file__).resolve().parent.parent
 TICKER_CACHE_DIR = ROOT_DIR / "ticker_cache"
 OUTPUT_JSON_PATH = ROOT_DIR / "python" / "ibd_pattern_results.json"
+
+
+def _json_safe(o):
+    """Fallback encoder for values json cannot handle - numpy scalars, arrays, NaN, NaT.
+
+    Only called for objects the encoder has already rejected, so it costs nothing on the
+    normal path. Worth having as a net rather than fixing fields one at a time: under numpy 2
+    a leaked np.bool reports __name__ as "bool", so the failure reads "Object of type bool is
+    not JSON serializable" and points nowhere useful.
+    """
+    if isinstance(o, np.bool_):
+        return bool(o)
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        f = float(o)
+        return None if (np.isnan(f) or np.isinf(f)) else f
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    if isinstance(o, np.generic):
+        return o.item()
+    if o is pd.NaT:
+        return None
+    if isinstance(o, pd.Timestamp) or hasattr(o, 'isoformat'):
+        return str(o)
+    if isinstance(o, float) and np.isnan(o):
+        return None
+    raise TypeError(f"Object of type {type(o).__module__}.{type(o).__name__} "
+                    f"is not JSON serializable")
 MODEL_PATH = ROOT_DIR / "python" / "pattern_model.pkl"
 
 PATTERN_MODEL = None
@@ -1792,11 +1821,49 @@ def run_ibd_pattern_scan(max_workers: int = None):
     elapsed = time.time() - start_time
     print(f"✅ Scan completed in {elapsed:.2f} seconds! Found {len(results)} pattern signals.")
     
-    # Save to JSON
+    # Save to JSON.
+    #
+    # Written to a temp file and moved into place. json.dump streams, so a value it cannot
+    # encode raises PART WAY THROUGH after bytes are already on disk - which is exactly how
+    # ibd_pattern_results.json ended up as 1,762 bytes of valid-JSON-then-nothing and took the
+    # dashboard tab down with "Expecting value: line 75". An atomic replace means the old
+    # results survive a failed scan instead of being replaced by a corpse.
+    #
+    # `default=_json_safe` handles the encode failure itself. numpy scalars are not JSON
+    # serializable, and under numpy 2 the error message is actively misleading: np.bool
+    # reports __name__ as "bool", so a leaked numpy value says "Object of type bool is not
+    # JSON serializable", which reads like a Python bool and sends you looking in the wrong
+    # place. history[] carries three of them - volDryUp, touchedMA, upsideReversal - because
+    # comparisons like `volumes[i] < sma20_vol[i] * 0.55` return np.bool and were never
+    # coerced. Converting at the encoder covers those and anything similar added later,
+    # rather than chasing individual fields.
+    # `history` is the full per-bar state, ~570 entries of ~35 fields per ticker. It is 99.8%
+    # of the payload - 427 KB of a 428 KB record - and writing it made the results file 8.9 GB
+    # for 6072 signals. Nothing in app.py reads it; the only consumer is
+    # plot_patterns_openbb.py, which charts ONE ticker at a time and can recover it by
+    # rescanning that ticker in about 15 ms. So the dashboard was being asked to parse 8.9 GB
+    # to use 0.2% of it.
+    #
+    # This was invisible until now only because the encoder always died at 1.7 KB, so the file
+    # never finished being written.
+    #
+    # Stripped from the SAVED file only - the in-memory return value is untouched, so any
+    # caller holding the return of run_ibd_pattern_scan() still sees history.
+    _slim = [{k: v for k, v in r.items() if k != "history"} for r in results]
+
     OUTPUT_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_JSON_PATH, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
-        
+    _tmp = OUTPUT_JSON_PATH.with_suffix(".json.tmp")
+    try:
+        with open(_tmp, "w", encoding="utf-8") as f:
+            json.dump(_slim, f, indent=2, default=_json_safe)
+        os.replace(_tmp, OUTPUT_JSON_PATH)
+    except Exception:
+        try:
+            os.remove(_tmp)
+        except OSError:
+            pass
+        raise
+
     print(f"💾 Results saved to {OUTPUT_JSON_PATH}")
     return results
 

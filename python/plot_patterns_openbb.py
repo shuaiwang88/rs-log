@@ -65,6 +65,36 @@ def load_results() -> List[Dict[str, Any]]:
         return json.load(f)
 
 
+def ensure_history(result):
+    """Return `result` with its per-bar `history`, rescanning the ticker if it is absent.
+
+    The scanner no longer writes `history` to ibd_pattern_results.json: it was 99.8% of the
+    payload and made the file 8.9 GB, which the dashboard then had to parse in full to use
+    none of it. This script is the only consumer, it charts one ticker at a time, and a single
+    rescan costs about 15 ms - so recovering it here is far cheaper than shipping it to
+    everyone who reads the results.
+    """
+    if result.get('history'):
+        return result
+    tkr = result.get('ticker')
+    if not tkr:
+        return result
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            '_ibd_scanner', ROOT_DIR / 'python' / 'ibd_pattern_scanner.py')
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        fp = ROOT_DIR / 'ticker_cache' / f"{str(tkr).replace('.', '-')}_1d.parquet"
+        fresh = mod.scan_single_ticker(tkr, str(fp))
+        if fresh and fresh.get('history'):
+            result = dict(result)
+            result['history'] = fresh['history']
+    except Exception:
+        pass          # charts degrade to no base overlay rather than failing outright
+    return result
+
+
 def load_ticker_data(ticker: str, bars: int = 400) -> Optional[pd.DataFrame]:
     """Load ticker parquet data from cache."""
     file_path = TICKER_CACHE_DIR / f"{ticker}_1d.parquet"
@@ -166,6 +196,7 @@ def find_double_bottom_bounds(history: List[Dict]) -> Dict[str, Any]:
 
 def plot_pattern_matplotlib(ticker: str, df: pd.DataFrame, result: Dict[str, Any], save_path: Path):
     """Plot pattern using matplotlib (fallback when OpenBB not available)."""
+    result = ensure_history(result)
     history = result.get('history', [])
     pattern_name = result.get('pattern_name', 'Unknown')
     pattern_code = result.get('pattern_code', 0)
