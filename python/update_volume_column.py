@@ -16,6 +16,9 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import yf_ratelimit as yfrl
+
 def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
     if repo_dir is None:
         repo_dir = Path(__file__).resolve().parent.parent
@@ -47,7 +50,12 @@ def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
     for i in range(0, total, batch_size):
         batch = clean_tickers[i:i + batch_size]
         try:
-            data = yf.download(batch, period='5d', interval='1d', progress=False, group_by='ticker', threads=True)
+            data = yfrl.download(batch, period='5d', interval='1d', progress=False,
+                                 group_by='ticker', threads=True,
+                                 label=f'volume batch {i}')
+            if data is None:
+                yfrl.note_dropped(f'volume batch {i}', f'{len(batch)} tickers unfetched')
+                continue
             if isinstance(data.columns, pd.MultiIndex):
                 for t in batch:
                     try:
@@ -65,9 +73,13 @@ def add_volume_to_rs_stocks(repo_dir: Path = None) -> bool:
                     vol_map[batch[0]] = int(vs.iloc[-1])
         except Exception as e:
             print(f"Notice during same-day volume fetch (batch {i}): {e}")
-        time.sleep(0.1)
+        # 0.1s paired with 400-ticker batches was the most aggressive caller in the repo.
+        # The chart endpoint sustained ~10 req/s when measured, and 0.4s matches what
+        # update_ticker_cache.py already uses. See docs/yfinance_rate_limits.md.
+        time.sleep(0.4)
 
     print(f"Retrieved same-day volume data for {len(vol_map):,} / {total:,} tickers.")
+    yfrl.report()
 
     # Assign Volume column
     def get_same_day_vol(row):

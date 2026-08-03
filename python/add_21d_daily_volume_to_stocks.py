@@ -15,6 +15,9 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import yf_ratelimit as yfrl
+
 def fetch_all_21_daily_volumes(tickers: list, batch_size: int = 300) -> dict:
     """Fetch past 21 trading days volume series for all tickers with yfinance period='1mo'."""
     vol_map = {}
@@ -27,7 +30,12 @@ def fetch_all_21_daily_volumes(tickers: list, batch_size: int = 300) -> dict:
         batch = clean_tickers[i:i + batch_size]
         print(f"Downloading batch {i//batch_size + 1}/{(total + batch_size - 1)//batch_size} ({len(batch)} tickers)...", end="", flush=True)
         try:
-            data = yf.download(batch, period='1mo', interval='1d', progress=False, group_by='ticker', threads=True)
+            data = yfrl.download(batch, period='1mo', interval='1d', progress=False,
+                                 group_by='ticker', threads=True,
+                                 label=f'21d volume batch {i}')
+            if data is None:
+                yfrl.note_dropped(f'21d volume batch {i}', f'{len(batch)} tickers unfetched')
+                continue
             batch_found = 0
             if isinstance(data.columns, pd.MultiIndex):
                 for t in batch:

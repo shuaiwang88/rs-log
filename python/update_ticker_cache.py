@@ -15,6 +15,9 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import yf_ratelimit as yfrl
+
 REPO_DIR = Path(__file__).resolve().parent.parent
 CACHE_DIR = REPO_DIR / "ticker_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -213,16 +216,24 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
             batch = t_list[i:i + batch_size]
             clean_batch = [str(t).strip().replace(".", "-") for t in batch]
             try:
-                data = yf.download(
+                # Rate limiting used to land in the bare `except Exception` below, which made
+                # a 429'd batch look exactly like a batch of delisted symbols: 100 tickers
+                # silently skipped and the run still reported success. Back off and retry
+                # instead, and record anything still unfetchable so the summary says so.
+                data = yfrl.download(
                     tickers=clean_batch,
                     period=period_str,
                     interval="1d",
                     group_by="ticker",
                     auto_adjust=False,
                     progress=False,
-                    threads=True
+                    threads=True,
+                    label=f"batch {i}-{i + len(batch)}",
                 )
                 if data is None or data.empty:
+                    if data is None:
+                        yfrl.note_dropped(f"batch {i}-{i + len(batch)}",
+                                          f"{len(clean_batch)} tickers unfetched")
                     time.sleep(0.5)
                     continue
 
@@ -313,9 +324,10 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
                                     print(f"  ! {clean_t}: price discontinuity ({reason}) "
                                           f"- refetching full history")
                                     try:
-                                        full = yf.download(clean_t, period="max",
-                                                           interval="1d", auto_adjust=False,
-                                                           progress=False)
+                                        full = yfrl.download(clean_t, period="max",
+                                                             interval="1d", auto_adjust=False,
+                                                             progress=False,
+                                                             label=f"{clean_t} split refetch")
                                         if full is not None and not full.empty:
                                             if isinstance(full.columns, pd.MultiIndex):
                                                 full.columns = full.columns.get_level_values(0)

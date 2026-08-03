@@ -216,3 +216,5 @@ python/backtests/*_trades.csv
 python/backtests/*.pkl
 *.pkl
 
+data/.fund_holdings_cache.json
+ticker_cache/.split_repairs.json

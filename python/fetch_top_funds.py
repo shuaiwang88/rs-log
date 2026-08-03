@@ -41,6 +41,8 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 # Official 20 IBD Mutual Fund Index Funds Definition
 OFFICIAL_20_IBD_FUNDS = [
     ('ACFSX', 'Am Cent Focus Dyn Gr', ['american century focused dynamic', 'am cent focus', 'acfsx']),
@@ -86,19 +88,75 @@ def parse_pct(pct_val):
             pass
     return 0.0
 
+_HOLDINGS_CACHE = Path(__file__).resolve().parent.parent / "data" / ".fund_holdings_cache.json"
+_HOLDINGS_TTL = 24 * 3600          # holdings are reported quarterly; a day is generous
+_holdings_mem = None
+
+
+def _fund_holdings(f_ticker):
+    """Top holdings for one fund, cached on disk.
+
+    This is the heaviest call in the repo and it was the most repeated. Every stock lookup
+    ran `_check_reverse_fund_holding` across all 20 IBD funds, so checking 50 stocks meant
+    1000 `Ticker.funds_data` fetches of the SAME 20 funds. That path needs a cookie+crumb
+    handshake and is exactly what produced the 429s measured on 2026-08-02, while the plain
+    chart endpoint sustained ~10 req/s untroubled.
+
+    Caching collapses it to 20 fetches a day. Holdings are disclosed quarterly, so a 24h TTL
+    loses nothing real. Cached on disk rather than in memory because the caller is a Streamlit
+    app that restarts often, which would otherwise re-warm from zero every time.
+    """
+    global _holdings_mem
+    import time as _t
+    if _holdings_mem is None:
+        try:
+            with open(_HOLDINGS_CACHE) as fh:
+                _holdings_mem = json.load(fh)
+        except Exception:
+            _holdings_mem = {}
+    ent = _holdings_mem.get(f_ticker)
+    if ent and (_t.time() - ent.get('ts', 0)) < _HOLDINGS_TTL:
+        return ent.get('rows', [])
+    rows = []
+    try:
+        fd = yf.Ticker(f_ticker).funds_data
+        if fd is not None and fd.top_holdings is not None:
+            for idx, r in fd.top_holdings.iterrows():
+                rows.append({'symbol': str(idx).upper(),
+                             'name': str(r.get('Name', '')).upper(),
+                             'pct': float(r.get('Holding Percent', 0) or 0)})
+    except Exception as e:
+        # A rate-limited fund must not be cached as "no holdings" - that would poison the
+        # cache for a full day on a transient failure. Serve any stale entry instead.
+        try:
+            import yf_ratelimit as _yfrl
+            if _yfrl._is_rate_limit(e):
+                _yfrl.note_dropped(f_ticker, 'fund holdings rate limited')
+                return ent.get('rows', []) if ent else []
+        except Exception:
+            pass
+        return ent.get('rows', []) if ent else []
+    _holdings_mem[f_ticker] = {'ts': _t.time(), 'rows': rows}
+    try:
+        _HOLDINGS_CACHE.parent.mkdir(parents=True, exist_ok=True)
+        with open(_HOLDINGS_CACHE, 'w') as fh:
+            json.dump(_holdings_mem, fh)
+    except Exception:
+        pass
+    return rows
+
+
 def _check_reverse_fund_holding(args):
     f_ticker, f_name, keywords, target_symbol = args
     target_symbol = target_symbol.upper().strip()
     try:
-        tk = yf.Ticker(f_ticker)
-        fd = tk.funds_data
-        if fd is not None and fd.top_holdings is not None:
-            th = fd.top_holdings
-            for idx, row in th.iterrows():
-                symbol = str(idx).upper()
-                name = str(row.get('Name', '')).upper()
+        th = _fund_holdings(f_ticker)
+        if th:
+            for row in th:
+                symbol = row['symbol']
+                name = row['name']
                 if target_symbol == symbol or target_symbol in name:
-                    pct = float(row.get('Holding Percent', 0)) * 100
+                    pct = float(row.get('pct', 0)) * 100
                     return {
                         'fund_name': f_name,
                         'fund_ticker': f_ticker,
