@@ -1,9 +1,22 @@
 """Paint detected IBD patterns on a candlestick chart, following pine/drw_pattern.pine.
 
-The Pine indicator is the reference for WHAT each pattern looks like on a chart, so the shapes
-here mirror what it draws: the base box between bTop and bLow, the handle as a tighter box in
-the upper half of a cup, the double bottom as its two lows and middle peak, and the High Tight
-Flag as a pole line into a flag box.
+The Pine indicator is the reference for WHAT each pattern looks like on a chart, and it is
+almost entirely a LINE vocabulary, not a box one. Filled rectangles read as "a pattern lives
+somewhere in here"; Pine's lines say where the structure actually runs. Each shape below is
+the Pine primitive it is named after:
+
+  channel     drw_pattern.pine:984  dotted width-3 line at the base high + solid width-2 line
+              at the base low, both running from the base's first bar to now. This is what a
+              Consolidation, a Flat Base, and any unnamed base look like - the whole shape.
+  cup         :1024-1047  two exponential curves, decay from the left rim down to the low and
+              a mirror rise out to the right rim. Not a parabola and not a box.
+  dbl bottom  :1060-1064  five segments - a dashed line at the middle peak plus the W itself
+              through fH -> fL -> sH -> sL, drawn from the corners the DETECTOR matched.
+  handle      :1140-1146  orange dotted line at the handle's peak, blue dashed box beneath.
+  flag (HTF)  :914-916  three dotted lines - flag high, flag low, and the pole running up
+              into the flag's low. Deliberately not a box: the pole is a line in Pine, and a
+              box hides that the flag is a tight range rather than a filled zone.
+  trade zone  :1244-1246  entry / stop / target bands off the active pivot.
 
 Why Plotly rather than an actual TradingView chart: the TradingView embed widget renders
 THEIR data and cannot draw our geometry, so it can show XOM but not the 325-bar base the
@@ -33,6 +46,13 @@ PATTERN_COLORS = {
     'Consolidation': '#A0A0A0',
 }
 UP, DOWN = '#26a69a', '#ef5350'          # TradingView's default candle colours
+
+# Pine's literal colours, so a shape here is the same colour as on TradingView.
+PINE_BASE = '#92C183'      # color.rgb(146, 193, 131) - channel and cup
+PINE_GREEN = '#4CAF50'     # color.green  - double bottom
+PINE_ORANGE = '#FF9800'    # color.orange - handle separation line
+PINE_BLUE = '#2196F3'      # color.blue   - handle box
+ZONE_ENTRY, ZONE_SL, ZONE_TP = '#007AFF', '#FF3B30', '#34C759'
 
 
 def _base_span(history: List[Dict[str, Any]], offset: int):
@@ -73,10 +93,12 @@ def _base_span(history: List[Dict[str, Any]], offset: int):
 def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
                          bars: int = 300, height: int = 620) -> go.Figure:
     """Candlestick + volume with the detected pattern painted on top."""
-    df = df.sort_index()
+    df_full = df.sort_index()
+    df = df_full
     full_len = len(df)
     if full_len > bars:
         df = df.iloc[-bars:]
+    win0 = full_len - len(df)                # window column k  ->  df_full row  k + win0
     # Map history bar indices into this window's coordinates.
     #   history bar i  ->  parquet row  i + df_trim_offset      (scanner keeps the last 1500)
     #   parquet row r  ->  plotted col  r - (full_len - len(df))
@@ -84,7 +106,12 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     # base landed at -29,000, got clamped away, and the cup curve silently never drew.
     offset = (full_len - len(df)) - int(result.get('df_trim_offset') or 0)
 
-    x = list(df.index)
+    # Category axis, so the x values ARE the category labels: keep them as plain strings.
+    # Passing Timestamps works in the browser only because Plotly's own encoder converts
+    # them; anything else serialising the figure (a static export, say) chokes on them, and
+    # a shape whose x doesn't match a category string silently fails to place.
+    xd = list(df.index)
+    x = [ts.strftime('%Y-%m-%d') for ts in xd]
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
         x=x, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'],
@@ -98,7 +125,6 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
 
     history = result.get('history') or []
     pname = result.get('pattern_name') or 'None'
-    color = PATTERN_COLORS.get(pname, '#92C183')
     # `facts` collects every metric into ONE block instead of scattering text across the
     # plot. With HTF + Double Bottom both live, DELL was drawing the base label, the
     # since-the-high label, "middle peak", the pole/flag metrics, the buy point and three
@@ -113,7 +139,21 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         i = int(max(0, min(len(x) - 1, i)))
         return x[i]
 
+    def seg(i0, y0, i1, y1, col, width=2, dash=None):
+        """One Pine `line.new`: bar index -> bar index, price -> price."""
+        shapes.append(dict(type='line', xref='x', yref='y',
+                           x0=bar_x(i0), y0=y0, x1=bar_x(i1), y1=y1,
+                           line=dict(color=col, width=width, dash=dash or 'solid')))
+
     s0, s1, btop, blow = _base_span(history, offset)
+    # The base as it really is, independent of how far back the chart is zoomed. s0/s1 get
+    # clamped to the window below, and measuring the cup off the clamped span made the SAME
+    # base read as a different shape at different zooms - AAPL drew a cup at 120 bars and
+    # refused one at 300, because clamping s0 to 0 moved the low 60 bars deeper into it.
+    f0 = f1 = None
+    if s0 is not None and s1 is not None:
+        f0 = int(max(0, min(full_len - 1, s0 + win0)))
+        f1 = int(max(0, min(full_len - 1, s1 + win0)))
 
     # The base the scanner CARRIES is often not the structure on the chart. `bTop` ratchets
     # up 5% at a time while `bLow` never re-anchors, so a stock that ADVANCED gets recorded as
@@ -127,11 +167,14 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     # the detection keeps its frame and the CHART draws the honest one: the range since bTop
     # was last set, with the full base span still stated in the label so nothing is hidden.
     live_top = next((s.get('bTopBar') for s in reversed(history) if s.get('bTopBar') is not None), None)
-    t0 = None
-    if live_top is not None and s0 is not None:
-        t0 = int(max(0, min(len(x) - 1, live_top - offset)))
-        if t0 <= s0 or t0 >= (s1 if s1 is not None else 0):
-            t0 = None                    # bTop never ratcheted, or lands outside the window
+    tf = None                            # bar bTop was last set, as a df_full row
+    if live_top is not None and f0 is not None:
+        tf = live_top - offset + win0
+        # Under ~10 bars there is no "range since the high" to speak of - AAPL reported
+        # "13% deep, 2 bars", which is a two-day pullback dressed up as a structure. Measured
+        # against the true base bounds so the verdict does not change with the zoom.
+        if not (f0 < tf < f1) or (f1 - tf) < 10:
+            tf = None
     # The base can start before the visible window (a 320-bar base on a 120-bar chart) or,
     # after trimming, land entirely outside it. Clamp into range and drop it if nothing of it
     # is on screen, rather than slicing an empty frame.
@@ -140,65 +183,109 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         s1 = int(max(0, min(len(x) - 1, s1)))
         if s1 <= s0:
             s0 = s1 = None
+    # A Double Bottom replaces the plain channel with its own high/low lines in Pine
+    # (drw_pattern.pine:1060-1064 deletes highLine and lowLine before redrawing them), so
+    # decide here whether the channel is this pattern's shape or the DB construction is.
+    dbs = next((s for s in reversed(history) if s.get('dbPts')), None) if pname == 'Dbl Bottom' else None
+
     if s0 is not None and btop and blow:
-        # The base itself: a box from its first bar to its last, spanning bTop..bLow.
-        shapes.append(dict(type='rect', xref='x', yref='y',
-                           x0=bar_x(s0), x1=bar_x(s1), y0=blow, y1=btop,
-                           line=dict(color=color, width=1.5),
-                           fillcolor=color, opacity=0.10, layer='below'))
         depth = (btop - blow) / btop * 100 if btop else 0
-        facts.append(f"<b>{pname}</b>  {depth:.0f}% deep · {max(0, s1 - s0)} bars")
-        # The actual range since the high, drawn solid over the carried base.
-        if t0 is not None:
-            seg = df.iloc[t0:s1 + 1]
-            if len(seg) > 2:
-                lo_since = float(seg['Low'].min())
-                d_since = (btop - lo_since) / btop * 100 if btop else 0
-                shapes.append(dict(type='rect', xref='x', yref='y',
-                                   x0=bar_x(t0), x1=bar_x(s1), y0=lo_since, y1=btop,
-                                   line=dict(color='#e0e0e0', width=1.6),
-                                   fillcolor='#e0e0e0', opacity=0.07, layer='below'))
-                facts.append(f"since the high  {d_since:.0f}% deep · {s1 - t0} bars")
+        # Length from the true span, not the on-screen one: zooming out must not lengthen a
+        # base. MUSA's read "248 bars" at 250 bars of chart and 118 at 120 - the same base.
+        cut = ' ◀' if (f0 - win0) < 0 else ''
+        facts.append(f"<b>{pname}</b>  {depth:.0f}% deep · {f1 - f0} bars{cut}")
+        if dbs is None:
+            # ── The channel. Pine's highLine + lowLine, and for a Consolidation or a Flat
+            #    Base this IS the pattern - there is nothing else to draw. A filled box in
+            #    its place said only "something is here"; the two lines say the price has
+            #    been capped at this high and held above this low for the whole span.
+            seg(s0, btop, s1, btop, PINE_BASE, width=3, dash='dot')
+            seg(s0, blow, s1, blow, PINE_BASE, width=2)
+        # The actual range since the high. bTop ratchets up 5% at a time while bLow never
+        # re-anchors, so the carried base can be far deeper and longer than the structure on
+        # screen - XOM: 37.4% over 212 bars carried, 23.5% over 86 bars real. Drawn as a
+        # dashed low line under the same bTop rather than a second box, so the two readings
+        # share a ceiling and the eye compares floors.
+        if tf is not None:
+            lo_since = float(df_full['Low'].iloc[tf:f1 + 1].min())
+            d_since = (btop - lo_since) / btop * 100 if btop else 0
+            if lo_since > blow * 1.005:
+                seg(tf - win0, lo_since, f1 - win0, lo_since, '#8b93a3', width=1.4, dash='dash')
+                facts.append(f"since the high  {d_since:.0f}% deep · {f1 - tf} bars")
 
-    # ── Cup: draw the actual U, not just its bounding box ────────────────────────────
-    # A rectangle says "a base lives here"; the point of calling something a cup is the
-    # rounded descent and recovery, so trace it. Sampled as a parabola through the three
-    # points the scanner already commits to - left top, the low, right top - which is enough
-    # to show at a glance whether the shape earns the name. XOM's "cup" is 320 bars and 44.6%
-    # deep, and that reads very differently as a curve than as a box.
-    if pname in ('Cup', 'Cup+Handle') and s0 is not None and btop and blow:
-        lo_rel = int(np.argmin(df['Low'].to_numpy()[max(0, s0):s1 + 1])) + max(0, s0)
-        span_l = max(lo_rel - s0, 1)
-        span_r = max(s1 - lo_rel, 1)
-        pts = []
-        for k in range(max(0, s0), lo_rel + 1):            # left side down
-            t = (lo_rel - k) / span_l
-            pts.append((bar_x(k), blow + (btop - blow) * (t ** 2)))
-        for k in range(lo_rel + 1, s1 + 1):                # right side up
-            t = (k - lo_rel) / span_r
-            pts.append((bar_x(k), blow + (btop - blow) * (t ** 2)))
-        if len(pts) > 2:
-            path = 'M ' + ' L '.join(f'{px},{py}' for px, py in pts)
-            shapes.append(dict(type='path', xref='x', yref='y', path=path,
-                               line=dict(color=color, width=2)))
+    # ── Cup: Pine's two exponential curves ───────────────────────────────────────────
+    # drw_pattern.pine:1024-1047. The left side decays  bottom + (rim - bottom)*e^(-6t)  from
+    # the left rim down to the low; the right side rises  bottom + (rim - bottom)*(e^(6t)-1)/e^6
+    # back out. The 6 is Pine's own constant and sets how square the U reads - a parabola
+    # (what this drew before) bottoms out far too gently and made every cup look like a bowl.
+    # The rims sit at the LOW of the base's first and last bars, x0.99, so the curve nests
+    # just inside the channel exactly as it does on TradingView.
+    if pname in ('Cup', 'Cup+Handle') and s0 is not None and f1 > f0 and btop and blow:
+        lo_f = int(np.argmin(df_full['Low'].to_numpy()[f0:f1 + 1])) + f0
+        n_l, n_r = lo_f - f0, f1 - lo_f
+        # A cup needs two sides. Where the low sits at the base's first bar the left "side"
+        # is a one-bar drop and the exponential draws a wall - AAPL's 236-bar base bottoms on
+        # bar 1 and painted a 120-point vertical line, then a curve sweeping across eight
+        # months of price it has nothing to do with. Pine shares the construction and the
+        # blind spot, but it does delete a Double Bottom on a 2:1 asymmetry (:1101), so
+        # refusing a lopsided cup is in its spirit.
+        #
+        # This refuses 54% of the 1,958 Cup / Cup+Handle signals in the last scan, and the
+        # refusals are not borderline - the asymmetric ones sit at a median 11:1 split. That
+        # is the bTop ratchet showing up again, not a strict threshold. Say which, rather
+        # than drawing a shape the data does not support.
+        why = None
+        if min(n_l, n_r) < 3:
+            why = f"the base low is bar {n_l} of {n_l + n_r}"
+        elif max(n_l, n_r) > 5 * min(n_l, n_r):
+            why = f"sides are {n_l} / {n_r} bars"
+        if why:
+            facts.append(f"<i>no cup curve — {why}</i>")
+        else:
+            bottom = blow * 0.99
+            rim_l = float(df_full['Low'].iloc[f0]) * 0.99
+            rim_r = float(df_full['Low'].iloc[max(f1 - 1, 0)]) * 0.99
+            # Pine guards on `startUpPrice > bottomPrice`; with no rim above the low there is
+            # no curve. Fall back to the channel top so a cup label still shows a cup.
+            if rim_l <= bottom * 1.01:
+                rim_l = btop * 0.99
+            if rim_r <= bottom * 1.01:
+                rim_r = btop * 0.99
+            # Clip to the window, do not clamp. bar_x() pins an out-of-range index to column
+            # 0, which is right for a horizontal line (it just starts at the edge) and wrong
+            # for a curve: MUSA's base begins before a 250-bar window, so every off-screen
+            # point of the left side stacked onto column 0 and drew a 140-point vertical wall
+            # that no candle there supports.
+            pts = []
+            for k in range(n_l + 1):                                 # left rim -> low
+                t = k / n_l
+                y = bottom if k == n_l else bottom + (rim_l - bottom) * np.exp(-6.0 * t)
+                pts.append((f0 + k - win0, y))
+            for k in range(1, n_r + 1):                              # low -> right rim
+                t = k / n_r
+                pts.append((lo_f + k - win0,
+                            bottom + (rim_r - bottom) * (np.exp(6.0 * t) - 1.0) / np.exp(6.0)))
+            pts = [(bar_x(i), y) for i, y in pts if 0 <= i < len(x)]
+            if len(pts) > 2:
+                path = 'M ' + ' L '.join(f'{px},{py}' for px, py in pts)
+                shapes.append(dict(type='path', xref='x', yref='y', path=path,
+                                   line=dict(color=PINE_BASE, width=3)))
 
-    # ── Double Bottom: the W - two lows and the middle peak between them ─────────────
-    if pname == 'Dbl Bottom' and s0 is not None and btop and blow:
-        seg = df.iloc[max(0, s0):s1 + 1]
-        if len(seg) > 6:
-            lows_a = seg['Low'].to_numpy()
-            i1 = int(np.argmin(lows_a[:len(lows_a) // 2]))
-            i2 = len(lows_a) // 2 + int(np.argmin(lows_a[len(lows_a) // 2:]))
-            mid = i1 + int(np.argmax(seg['High'].to_numpy()[i1:i2 + 1])) if i2 > i1 else i1
-            w = [(max(0, s0), btop), (max(0, s0) + i1, float(lows_a[i1])),
-                 (max(0, s0) + mid, float(seg['High'].iloc[mid])),
-                 (max(0, s0) + i2, float(lows_a[i2])), (s1, btop)]
-            path = 'M ' + ' L '.join(f'{bar_x(k)},{v}' for k, v in w)
-            shapes.append(dict(type='path', xref='x', yref='y', path=path,
-                               line=dict(color=color, width=2)))
-            annos.append(dict(x=bar_x(max(0, s0) + mid), y=float(seg['High'].iloc[mid]),
-                              xref='x', yref='y', showarrow=False, text='middle peak',
-                              yanchor='bottom', font=dict(color=color, size=10)))
+    # ── Double Bottom: Pine's five segments through the corners the detector matched ──
+    # drw_pattern.pine:1060-1064. Not re-derived from the bar data: argmin over each half of
+    # the base finds A W, but not necessarily the one that passed the eleven conditions, and
+    # a chart that draws a different W than the detector matched is worse than no chart.
+    if dbs is not None:
+        fHt, fH, fLt, fL, sHt, sH, sLt, sL = dbs['dbPts']
+        fHt, fLt, sHt, sLt = (v - offset for v in (fHt, fLt, sHt, sLt))
+        last = len(x) - 1
+        seg(sHt, sH, last, sH, PINE_GREEN, width=2, dash='dash')     # highLine = the pivot
+        seg(fHt, fH, fLt, fL, PINE_GREEN)                            # dbLine1
+        seg(fLt, fL, sHt, sH, PINE_GREEN)                            # dbLine2
+        seg(sHt, sH, sLt, sL, PINE_GREEN)                            # dbLine3
+        seg(sLt, sL, last, float(df['Close'].iloc[-1]), PINE_GREEN, width=3, dash='dot')
+        facts.append(f"<span style='color:{PINE_GREEN}'>W</span>  lows {fL:,.2f} / {sL:,.2f}"
+                     f" · middle peak {sH:,.2f}")
 
     # ── Handle: drawn from the scanner's OWN recorded window ────────────────────────
     # Not from the run of bars where isCupH is true. That flag is per-bar over a trailing
@@ -207,29 +294,32 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     hstate = next((s for s in reversed(history) if s.get('hStart') is not None), None)
     if pname == 'Cup+Handle' and hstate:
         h0, h1 = hstate['hStart'] - offset, hstate['hEnd'] - offset
+        # handleSepLine: the peak the handle drifts down from, extended to the right edge -
+        # that level is the buy point, which is why Pine draws it as a line and not just as
+        # the top of the box (drw_pattern.pine:1140).
+        seg(h0, hstate['hHigh'], len(x) - 1, hstate['hHigh'], PINE_ORANGE, width=2, dash='dot')
         shapes.append(dict(type='rect', xref='x', yref='y',
                            x0=bar_x(h0), x1=bar_x(h1),
                            y0=hstate['hLow'], y1=hstate['hHigh'],
-                           line=dict(color='#FF8C00', width=1.6),
-                           fillcolor='#FF8C00', opacity=0.18, layer='below'))
-        facts.append(f"<span style='color:#FF8C00'>handle</span>  "
+                           line=dict(color=PINE_BLUE, width=1, dash='dash'),
+                           fillcolor=PINE_BLUE, opacity=0.10, layer='below'))
+        facts.append(f"<span style='color:{PINE_ORANGE}'>handle</span>  "
                      f"{hstate['hEnd'] - hstate['hStart'] + 1} bars · {hstate['hDepPct']:.1f}% deep")
 
-    # ── High Tight Flag: pole line into the flag box ─────────────────────────────────
+    # ── High Tight Flag: Pine's three dotted lines, not a box ───────────────────────
+    # drw_pattern.pine:914-916 - flagHLine and flagLLine cap and floor the flag, flagPLine
+    # runs from the pole's low up into the flag's LOW (not its high: the pole ends where the
+    # consolidation begins). A filled box lost the pole entirely and made a 15% flag look
+    # like a zone rather than the tight range that earns the name.
     ctx = result.get('htf_context') or {}
     if ctx:
         fs = ctx.get('flag_start_idx')
         pl = ctx.get('pole_low_idx')
         if fs is not None and pl is not None:
-            shapes.append(dict(type='line', xref='x', yref='y',
-                               x0=bar_x(pl - offset), y0=ctx['pole_low'],
-                               x1=bar_x(fs - offset), y1=ctx['flag_high'],
-                               line=dict(color='#FFD700', width=2, dash='dot')))
-            shapes.append(dict(type='rect', xref='x', yref='y',
-                               x0=bar_x(fs - offset), x1=x[-1],
-                               y0=ctx['flag_low'], y1=ctx['flag_high'],
-                               line=dict(color='#FFD700', width=1.5),
-                               fillcolor='#FFD700', opacity=0.12, layer='below'))
+            fs_x, pl_x, last = fs - offset, pl - offset, len(x) - 1
+            seg(pl_x, ctx['pole_low'], fs_x, ctx['flag_low'], '#FFD700', width=2, dash='dot')
+            seg(fs_x, ctx['flag_high'], last, ctx['flag_high'], '#FFD700', width=2, dash='dot')
+            seg(fs_x, ctx['flag_low'], last, ctx['flag_low'], '#FFD700', width=2, dash='dot')
             facts.append(f"<span style='color:#FFD700'>HTF</span>  pole +{ctx['pole_gain_pct']:.0f}%"
                          f" · flag {ctx['flag_bars']}b {ctx['flag_depth_pct']:.0f}% deep")
 
@@ -249,7 +339,7 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         placed.append(pv)
         # Nudge a label that would sit on top of one already placed. Readings often price
         # within a percent of each other, which stacked their labels into an unreadable blur.
-        shift = sum(1 for q in placed[:-1] if abs(q - pv) / max(pv, 1e-9) < 0.012)
+        shift = sum(1 for q in placed[:-1] if abs(q - pv) / max(pv, 1e-9) < 0.02)
         annos.append(dict(x=1, y=pv, xref='paper', yref='y', showarrow=False,
                           text=f" {p.get('name')} {pv:,.2f}", xanchor='left',
                           yshift=shift * -12,
@@ -261,6 +351,17 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         shapes.append(dict(type='line', xref='paper', yref='y', x0=0, x1=1, y0=piv, y1=piv,
                            line=dict(color='#ffffff', width=1.6, dash='longdash')))
         facts.insert(0, f"<b>buy point {piv:,.2f}</b>  ({result.get('dist_pct'):+.1f}% away)")
+        # Trade zones (drw_pattern.pine:1244-1246): the 5% buy range above the pivot, the
+        # 8% stop below it, and the 20-25% target. Pine anchors them at the right edge and
+        # extends them while price stays in range, so they stay a right-edge ribbon here
+        # rather than washing over the pattern itself.
+        z0 = bar_x(int(len(x) * 0.88))
+        for lo, hi, col in ((piv, piv * 1.05, ZONE_ENTRY),
+                            (piv * 0.92, piv * 0.95, ZONE_SL),
+                            (piv * 1.20, piv * 1.25, ZONE_TP)):
+            shapes.append(dict(type='rect', xref='x', yref='y', x0=z0, x1=x[-1],
+                               y0=lo, y1=hi, line=dict(width=0),
+                               fillcolor=col, opacity=0.16, layer='below'))
 
     if facts:
         annos.append(dict(x=0.005, y=0.985, xref='paper', yref='paper', showarrow=False,
@@ -275,10 +376,10 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     # would leave as holes) but place ticks only at month boundaries.
     ticks_v, ticks_t = [], []
     last_m = None
-    for k, ts in enumerate(x):
+    for k, ts in enumerate(xd):
         m = (ts.year, ts.month)
         if m != last_m:
-            ticks_v.append(ts)
+            ticks_v.append(x[k])
             ticks_t.append(ts.strftime('%b %Y') if m[1] == 1 else ts.strftime('%b'))
             last_m = m
     step = max(1, -(-len(ticks_v) // 11))      # ceiling: at most 11 labels, any window

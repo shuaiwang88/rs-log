@@ -984,6 +984,11 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # 3. Double Bottom Detection (W-shape symmetry)
             isDB = False
             dbMiddlePivot = None
+            # The four corners of the W, kept for drawing only: drw_pattern.pine paints a
+            # Double Bottom as five line segments through fH -> fL -> sH -> sL, and a chart
+            # that re-derives them from the bar data draws a different W than the one the
+            # detector actually matched.
+            dbPts = None
             # Tighter W span: 85 bars let unrelated swing pairs far apart in time qualify,
             # which produced most of the Double Bottom false positives.
             dbMaxBars = 55
@@ -1031,6 +1036,8 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                             if cPT and cA and cB and cC and cD and cE and cTA and cTB and cTC and cSh and cVol and second_leg_undercut:
                                 isDB = True
                                 dbMiddlePivot = sH
+                                dbPts = (int(fH_t), float(fH), int(fLt), float(fL),
+                                         int(sH_t), float(sH), int(sLt), float(sL))
                                 break
                     if isDB:
                         break
@@ -1050,6 +1057,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # Reporting the runner-up costs nothing - it is already computed.
             isDB_ind = isDB
             dbMiddlePivot_ind = dbMiddlePivot
+            dbPts_ind = dbPts
             if isFlatBase or isCupH:          # restore the original isDB semantics exactly
                 isDB = False
                 dbMiddlePivot = None
@@ -1477,6 +1485,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'isCupH': isCupH,
                 'hStart': handleStart, 'hEnd': handleEnd,
                 'hHigh': handleHigh, 'hLow': handleLow, 'hDepPct': handleDepPct,
+                'dbPts': dbPts_ind,
                 # Layered readings for this bar: (name, pivot). Each pattern prices off a
                 # DIFFERENT level, so the pivot travels with the label - Cup+Handle buys the
                 # handle high, Double Bottom the middle peak, the rest the base high.
