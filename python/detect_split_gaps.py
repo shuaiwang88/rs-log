@@ -64,6 +64,8 @@ def scan_one(df, min_ratio=1.8, min_price=1.0):
         return []
     c = df['Close'].to_numpy(dtype=float)
     o = df['Open'].to_numpy(dtype=float)
+    h_ = df['High'].to_numpy(dtype=float)
+    l_ = df['Low'].to_numpy(dtype=float)
     v = df['Volume'].to_numpy(dtype=float)
     dates = [str(d)[:10] for d in df.index]
     v20 = pd.Series(v).rolling(20).mean().to_numpy()
@@ -95,6 +97,16 @@ def scan_one(df, min_ratio=1.8, min_price=1.0):
         rv = v[i] / v20[i] if (i < len(v20) and v20[i] and np.isfinite(v20[i])) else np.nan
         if np.isfinite(rv) and rv >= VOL_CONFIRM:
             continue                      # volume confirms -> a real move, leave it alone
+        # Stale quotes, not corporate actions. An illiquid listing that stops trading keeps
+        # printing the same number - INDV held O=H=L=C=19.6420 for four sessions, dropped to
+        # 3.13 on ZERO volume, then went straight back to 21.19. That is a bad tick, and
+        # Yahoo confirms INDV never split. Both shapes are unambiguous and neither can be a
+        # split, since a split gap is always accompanied by real trading.
+        if v[i] == 0:
+            continue
+        p = i - 1
+        if o[p] == h_[p] == l_[p] == c[p]:
+            continue
         if not np.isfinite(rv):
             # No 20-day average yet, so the volume test - the strongest discriminator here -
             # could not run. Silently letting the gap through is how PTLE was reported as a
