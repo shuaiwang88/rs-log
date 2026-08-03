@@ -39,6 +39,51 @@ SECTOR_ETFS = [
 
 SPLIT_FACTORS = (2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30, 50, 100)
 
+# Ledger of split repairs already attempted, so a ticker is never re-downloaded for the same
+# discontinuity twice. Without it the history scan below would refetch the same ~360 damaged
+# tickers on EVERY run, and for splits old enough that Yahoo does not adjust them either the
+# retry would never terminate. Recording the outcome turns "unfixable" into a fact we keep.
+REPAIR_LEDGER = CACHE_DIR / ".split_repairs.json"
+_LEDGER = {}
+SCAN_WINDOW = 1500          # the scanner only ever reads this many bars; older gaps are inert
+
+
+def _load_ledger():
+    try:
+        import json
+        with open(REPAIR_LEDGER) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_ledger(led):
+    try:
+        import json
+        with open(REPAIR_LEDGER, "w") as f:
+            json.dump(led, f, indent=1, sort_keys=True)
+    except Exception:
+        pass
+
+
+def _history_split_gaps(df, window=SCAN_WINDOW):
+    """Split-like discontinuities anywhere in the window the pattern scanner actually reads.
+
+    The seam check catches a split happening right now. This catches damage already sitting in
+    the file from before the check existed - 360 tickers at the time it was written. Scanning
+    only the last `window` bars is deliberate: the scanner trims to 1500, so an unadjusted
+    1998 split is real but inert, and refetching for it would be pure cost.
+    """
+    try:
+        from detect_split_gaps import scan_one
+    except Exception:
+        return []
+    try:
+        d = df.iloc[-window:] if len(df) > window else df
+        return scan_one(d)
+    except Exception:
+        return []
+
 
 def _looks_like_split(existing_df, new_df, min_price=1.0, tol=0.08, vol_confirm=2.0):
     """True when the seam between cached and freshly fetched rows looks like a split.
@@ -159,6 +204,11 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
     def process_download_data(t_list, period_str):
         success_count = 0
         total_len = len(t_list)
+        # Ledger is read once per pass and written once at the end, so a crash mid-run costs
+        # at most one repeated repair rather than corrupting the record.
+        global _LEDGER
+        _LEDGER = _load_ledger()
+        _pending_ledger = {}
         for i in range(0, total_len, batch_size):
             batch = t_list[i:i + batch_size]
             clean_batch = [str(t).strip().replace(".", "-") for t in batch]
@@ -237,9 +287,31 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
                                 # authoritative - Yahoo has already done the adjustment - and
                                 # needs no split factor or ratio arithmetic on our side, which
                                 # is the part that would be dangerous to get wrong.
+                                # Two ways a split shows up. The SEAM check catches one
+                                # happening right now, between the cached rows and today's
+                                # fetch. The HISTORY scan catches damage already in the file
+                                # from before this existed - 360 tickers when it was written.
+                                # Both want the same repair, so decide once.
+                                reason = None
                                 if _looks_like_split(existing_df, df_t):
-                                    print(f"  ! {clean_t}: price discontinuity at the merge "
-                                          f"seam (likely split) - refetching full history")
+                                    reason = "merge seam"
+                                else:
+                                    gaps = _history_split_gaps(combined)
+                                    if gaps:
+                                        # Skip if we already tried and Yahoo's own history
+                                        # still carries the gap - retrying downloads forever
+                                        # and never converges.
+                                        seen = _LEDGER.get(clean_t, {})
+                                        if seen.get("date") != gaps[0]["date"]:
+                                            reason = f"history {gaps[0]['date']} " \
+                                                     f"x{gaps[0]['ratio']:.2f}"
+                                            _pending_ledger[clean_t] = {
+                                                "date": gaps[0]["date"],
+                                                "ratio": gaps[0]["ratio"],
+                                                "kind": gaps[0]["kind"]}
+                                if reason:
+                                    print(f"  ! {clean_t}: price discontinuity ({reason}) "
+                                          f"- refetching full history")
                                     try:
                                         full = yf.download(clean_t, period="max",
                                                            interval="1d", auto_adjust=False,
@@ -249,7 +321,18 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
                                                 full.columns = full.columns.get_level_values(0)
                                             keep = [c for c in req_cols if c in full.columns]
                                             if keep:
-                                                combined = full[keep].dropna(how="all")
+                                                refetched = full[keep].dropna(how="all")
+                                                # Only accept the refetch if it actually
+                                                # resolves the discontinuity. Yahoo does not
+                                                # adjust every old split either, and swapping
+                                                # in an equally broken frame that also drops
+                                                # cached history would be a net loss.
+                                                if not _history_split_gaps(refetched):
+                                                    combined = refetched
+                                                    if clean_t in _pending_ledger:
+                                                        _pending_ledger[clean_t]["resolved"] = True
+                                                elif clean_t in _pending_ledger:
+                                                    _pending_ledger[clean_t]["resolved"] = False
                                     except Exception:
                                         pass   # keep the merged frame; the scan will flag it
                                 df_t = combined
@@ -271,6 +354,13 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
             processed_num = min(i + batch_size, total_len)
             if (i // batch_size + 1) % 5 == 0 or processed_num == total_len:
                 print(f"    Batch {i // batch_size + 1}: Processed {processed_num:,} / {total_len:,} tickers ({success_count:,} saved successfully)...")
+        if _pending_ledger:
+            _LEDGER.update(_pending_ledger)
+            _save_ledger(_LEDGER)
+            n_fixed = sum(1 for v in _pending_ledger.values() if v.get("resolved"))
+            print(f"  split repairs: {n_fixed} resolved, "
+                  f"{len(_pending_ledger) - n_fixed} still discontinuous after refetch "
+                  f"(recorded, will not retry)")
         return success_count
 
     # 1. Process incremental updates for existing files that already cover target_min_date

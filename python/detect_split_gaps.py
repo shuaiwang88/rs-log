@@ -95,6 +95,14 @@ def scan_one(df, min_ratio=1.8, min_price=1.0):
         rv = v[i] / v20[i] if (i < len(v20) and v20[i] and np.isfinite(v20[i])) else np.nan
         if np.isfinite(rv) and rv >= VOL_CONFIRM:
             continue                      # volume confirms -> a real move, leave it alone
+        if not np.isfinite(rv):
+            # No 20-day average yet, so the volume test - the strongest discriminator here -
+            # could not run. Silently letting the gap through is how PTLE was reported as a
+            # split: scanned in a 200-bar window the split bar sat at index 15, v20 was NaN,
+            # the test was skipped, and a genuine 17.3x-volume spike to $30.96 was recorded as
+            # a 1-for-2 reverse. With the full history it is correctly rejected. Refuse to
+            # judge rather than guess.
+            continue
         out.append({'date': dates[i], 'bar': i, 'ratio': round(float(ratio), 3),
                     'factor': val, 'kind': label,
                     'prev_close': round(float(c[i - 1]), 4),
