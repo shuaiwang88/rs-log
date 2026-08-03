@@ -661,6 +661,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         
         # Base variables
         bTop = None
+        bTopBar = 0
         bLow = None
         bStart = None
         isBase = False
@@ -790,6 +791,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             if newBase and not prev_isBase:
                 piv_idx = i - pivLag
                 bTop = highs[piv_idx]
+                bTopBar = piv_idx
                 bLow = L25
                 bStart = piv_idx
                 bCount = pivLag
@@ -808,6 +810,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 bCount += 1
                 if bTop is not None and highs[i] > bTop and highs[i] <= bTop * 1.05:
                     bTop = highs[i]
+                    bTopBar = i
                 lastBTop = bTop
                 if bLow is not None and lows[i] < bLow and bTop is not None and lows[i] >= bTop * (1.0 - bdF):
                     bLow = lows[i]
@@ -1453,6 +1456,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'pOn': pOn,
                 'bCount': bCount if inBase else None,
                 'bTop': bTop,
+                'bTopBar': bTopBar,
                 'bLow': bLow,
                 'bDepPct': float(bDepPct) if bDepPct is not None else None,
                 'barsSBO': barsSBO,

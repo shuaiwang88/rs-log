@@ -109,6 +109,24 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         return x[i]
 
     s0, s1, btop, blow = _base_span(history, offset)
+
+    # The base the scanner CARRIES is often not the structure on the chart. `bTop` ratchets
+    # up 5% at a time while `bLow` never re-anchors, so a stock that ADVANCED gets recorded as
+    # consolidating and keeps a low from months earlier. XOM: bTop climbed 118.36 -> 176.41
+    # across 28 steps between 2025-10-03 and 2026-03-30 while bLow stayed pinned at 110.39
+    # from November, giving a "37.4% deep, 212 bar" base where the real consolidation is
+    # 176.41/134.95, 23.5% deep, since the 2026-03-30 high.
+    #
+    # Re-anchoring bLow inside the scanner produces exactly that - and costs 34 primary-exact
+    # events on the benchmark, which scores labels and pivots and never looks at geometry. So
+    # the detection keeps its frame and the CHART draws the honest one: the range since bTop
+    # was last set, with the full base span still stated in the label so nothing is hidden.
+    live_top = next((s.get('bTopBar') for s in reversed(history) if s.get('bTopBar') is not None), None)
+    t0 = None
+    if live_top is not None and s0 is not None:
+        t0 = int(max(0, min(len(x) - 1, live_top - offset)))
+        if t0 <= s0 or t0 >= (s1 if s1 is not None else 0):
+            t0 = None                    # bTop never ratcheted, or lands outside the window
     # The base can start before the visible window (a 320-bar base on a 120-bar chart) or,
     # after trimming, land entirely outside it. Clamp into range and drop it if nothing of it
     # is on screen, rather than slicing an empty frame.
@@ -127,6 +145,20 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         annos.append(dict(x=bar_x(s0), y=btop, xref='x', yref='y', showarrow=False,
                           text=f"<b>{pname}</b> {depth:.0f}% deep, {max(0, s1 - s0)} bars",
                           font=dict(color=color, size=11), xanchor='left', yanchor='bottom'))
+        # The actual range since the high, drawn solid over the carried base.
+        if t0 is not None:
+            seg = df.iloc[t0:s1 + 1]
+            if len(seg) > 2:
+                lo_since = float(seg['Low'].min())
+                d_since = (btop - lo_since) / btop * 100 if btop else 0
+                shapes.append(dict(type='rect', xref='x', yref='y',
+                                   x0=bar_x(t0), x1=bar_x(s1), y0=lo_since, y1=btop,
+                                   line=dict(color='#e0e0e0', width=1.6),
+                                   fillcolor='#e0e0e0', opacity=0.07, layer='below'))
+                annos.append(dict(x=bar_x(t0), y=lo_since, xref='x', yref='y', showarrow=False,
+                                  text=f"since the high · {d_since:.0f}% deep, {s1 - t0} bars",
+                                  xanchor='left', yanchor='top',
+                                  font=dict(color='#e0e0e0', size=10)))
 
     # ── Cup: draw the actual U, not just its bounding box ────────────────────────────
     # A rectangle says "a base lives here"; the point of calling something a cup is the
