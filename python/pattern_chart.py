@@ -99,7 +99,12 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     history = result.get('history') or []
     pname = result.get('pattern_name') or 'None'
     color = PATTERN_COLORS.get(pname, '#92C183')
-    shapes, annos = [], []
+    # `facts` collects every metric into ONE block instead of scattering text across the
+    # plot. With HTF + Double Bottom both live, DELL was drawing the base label, the
+    # since-the-high label, "middle peak", the pole/flag metrics, the buy point and three
+    # pivot labels - most of them near the same corner, overlapping each other and the
+    # candles. Positional text is kept only where the position IS the information.
+    shapes, annos, facts = [], [], []
 
     def bar_x(i):
         """Bar index -> x value, clamped into the visible window."""
@@ -142,9 +147,7 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
                            line=dict(color=color, width=1.5),
                            fillcolor=color, opacity=0.10, layer='below'))
         depth = (btop - blow) / btop * 100 if btop else 0
-        annos.append(dict(x=bar_x(s0), y=btop, xref='x', yref='y', showarrow=False,
-                          text=f"<b>{pname}</b> {depth:.0f}% deep, {max(0, s1 - s0)} bars",
-                          font=dict(color=color, size=11), xanchor='left', yanchor='bottom'))
+        facts.append(f"<b>{pname}</b>  {depth:.0f}% deep · {max(0, s1 - s0)} bars")
         # The actual range since the high, drawn solid over the carried base.
         if t0 is not None:
             seg = df.iloc[t0:s1 + 1]
@@ -155,10 +158,7 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
                                    x0=bar_x(t0), x1=bar_x(s1), y0=lo_since, y1=btop,
                                    line=dict(color='#e0e0e0', width=1.6),
                                    fillcolor='#e0e0e0', opacity=0.07, layer='below'))
-                annos.append(dict(x=bar_x(t0), y=lo_since, xref='x', yref='y', showarrow=False,
-                                  text=f"since the high · {d_since:.0f}% deep, {s1 - t0} bars",
-                                  xanchor='left', yanchor='top',
-                                  font=dict(color='#e0e0e0', size=10)))
+                facts.append(f"since the high  {d_since:.0f}% deep · {s1 - t0} bars")
 
     # ── Cup: draw the actual U, not just its bounding box ────────────────────────────
     # A rectangle says "a base lives here"; the point of calling something a cup is the
@@ -212,11 +212,8 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
                            y0=hstate['hLow'], y1=hstate['hHigh'],
                            line=dict(color='#FF8C00', width=1.6),
                            fillcolor='#FF8C00', opacity=0.18, layer='below'))
-        annos.append(dict(x=bar_x(h1), y=hstate['hHigh'], xref='x', yref='y',
-                          showarrow=False, xanchor='left', yanchor='bottom',
-                          text=f"handle {hstate['hEnd'] - hstate['hStart'] + 1}b "
-                               f"{hstate['hDepPct']:.1f}%",
-                          font=dict(color='#FF8C00', size=10)))
+        facts.append(f"<span style='color:#FF8C00'>handle</span>  "
+                     f"{hstate['hEnd'] - hstate['hStart'] + 1} bars · {hstate['hDepPct']:.1f}% deep")
 
     # ── High Tight Flag: pole line into the flag box ─────────────────────────────────
     ctx = result.get('htf_context') or {}
@@ -233,15 +230,13 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
                                y0=ctx['flag_low'], y1=ctx['flag_high'],
                                line=dict(color='#FFD700', width=1.5),
                                fillcolor='#FFD700', opacity=0.12, layer='below'))
-            annos.append(dict(x=bar_x(fs - offset), y=ctx['flag_high'], xref='x', yref='y',
-                              showarrow=False, xanchor='left', yanchor='bottom',
-                              text=f"HTF pole +{ctx['pole_gain_pct']:.0f}% · "
-                                   f"flag {ctx['flag_bars']}b {ctx['flag_depth_pct']:.0f}%",
-                              font=dict(color='#FFD700', size=10)))
+            facts.append(f"<span style='color:#FFD700'>HTF</span>  pole +{ctx['pole_gain_pct']:.0f}%"
+                         f" · flag {ctx['flag_bars']}b {ctx['flag_depth_pct']:.0f}% deep")
 
     # ── Every reading's buy point. They price off DIFFERENT levels, which is the whole
     #    reason the layered list exists, so drawing only the headline hides the disagreement.
     seen = set()
+    placed = []
     for j, p in enumerate(result.get('patterns') or []):
         pv = p.get('pivot')
         if not pv or round(pv, 2) in seen:
@@ -251,8 +246,13 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         shapes.append(dict(type='line', xref='paper', yref='y', x0=0, x1=1, y0=pv, y1=pv,
                            line=dict(color=pc, width=1.2,
                                      dash='solid' if j == 0 else 'dash')))
+        placed.append(pv)
+        # Nudge a label that would sit on top of one already placed. Readings often price
+        # within a percent of each other, which stacked their labels into an unreadable blur.
+        shift = sum(1 for q in placed[:-1] if abs(q - pv) / max(pv, 1e-9) < 0.012)
         annos.append(dict(x=1, y=pv, xref='paper', yref='y', showarrow=False,
                           text=f" {p.get('name')} {pv:,.2f}", xanchor='left',
+                          yshift=shift * -12,
                           font=dict(color=pc, size=10)))
 
     # The reported buy point, drawn last so it sits on top of any reading line it coincides with.
@@ -260,16 +260,36 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     if piv:
         shapes.append(dict(type='line', xref='paper', yref='y', x0=0, x1=1, y0=piv, y1=piv,
                            line=dict(color='#ffffff', width=1.6, dash='longdash')))
-        annos.append(dict(x=0, y=piv, xref='paper', yref='y', showarrow=False,
-                          text=f"<b>buy point {piv:,.2f}</b>  ({result.get('dist_pct')}%) ",
-                          xanchor='left', yanchor='bottom',
-                          font=dict(color='#ffffff', size=11)))
+        facts.insert(0, f"<b>buy point {piv:,.2f}</b>  ({result.get('dist_pct'):+.1f}% away)")
+
+    if facts:
+        annos.append(dict(x=0.005, y=0.985, xref='paper', yref='paper', showarrow=False,
+                          text='<br>'.join(facts), align='left',
+                          xanchor='left', yanchor='top',
+                          font=dict(size=11, color='#d8dde6'),
+                          bgcolor='rgba(19,23,34,0.82)', bordercolor='#2a3040',
+                          borderwidth=1, borderpad=6))
+
+    # Date axis. A category axis gives every bar its own tick slot, so 300 bars produced a
+    # solid smear of dates. Keep category (it suppresses weekend gaps, which a date axis
+    # would leave as holes) but place ticks only at month boundaries.
+    ticks_v, ticks_t = [], []
+    last_m = None
+    for k, ts in enumerate(x):
+        m = (ts.year, ts.month)
+        if m != last_m:
+            ticks_v.append(ts)
+            ticks_t.append(ts.strftime('%b %Y') if m[1] == 1 else ts.strftime('%b'))
+            last_m = m
+    step = max(1, -(-len(ticks_v) // 11))      # ceiling: at most 11 labels, any window
+    ticks_v, ticks_t = ticks_v[::step], ticks_t[::step]
 
     fig.update_layout(
         height=height, margin=dict(l=8, r=110, t=34, b=8),
         template='plotly_dark', paper_bgcolor='#131722', plot_bgcolor='#131722',
         xaxis=dict(rangeslider=dict(visible=False), showgrid=True, gridcolor='#1f2430',
-                   type='category', nticks=12),
+                   type='category', tickmode='array', tickvals=ticks_v, ticktext=ticks_t,
+                   tickangle=0, tickfont=dict(size=10), ticks='outside', ticklen=4),
         yaxis=dict(domain=[0.26, 1.0], side='right', showgrid=True, gridcolor='#1f2430',
                    title=None),
         yaxis2=dict(domain=[0.0, 0.20], side='right', showgrid=False, title=None),
