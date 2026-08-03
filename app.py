@@ -2465,14 +2465,9 @@ annotations=[dict(x=1, y=1.02, xref='paper', yref='paper', xanchor='right', show
         bre_broad = float(((RS_SER >= 50) & (RS_SER < 65)).mean() * 100) if len(RS_SER) else 0.0
         bre_lag = float((RS_SER < 50).mean() * 100) if len(RS_SER) else 0.0
 
-    st.markdown(
-        f"**Market regime:** **{bre_lead:.0f}%** of the universe holds leading RS (≥80) while "
-        f"**{bre_lag:.0f}%** lag below 50. Stocks with RS ≥ 80 — the actionable IBD-style band — are "
-        f"**{n_lead}** names. Broad participation across the strong (65–79) and broad (50–64) bands is "
-        f"**{bre_str:.0f}% / {bre_broad:.0f}%**.\n\n"
-        f"**Top sector:** {ts}. **Weakest sector:** {bs}. Universe median RS **{RS_SER.median():.1f}** "
-        f"and dispersion (std) **{RS_BASE.std():.1f}** set the context for the rest of the app.",
-        unsafe_allow_html=False
+    st.caption(
+        f"Latest ({last_date}): {n_lead} leaders (RS≥80), {n_str} strong, {n_broad} broad, {n_lag} laggards. "
+        f"Strongest sector today: {ts}. Weakest: {bs}."
     )
 
     ma_breadth = {}
@@ -2495,53 +2490,21 @@ annotations=[dict(x=1, y=1.02, xref='paper', yref='paper', xanchor='right', show
         st.caption("Trend-breadth: % of the universe that has reclaimed its key moving averages — a rising reading confirms broad participation; a falling one signals narrowing leadership.")
 
     st.divider()
-    if has_historical:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("📊 Data Coverage")
-            if 'date' in filtered_df.columns:
-                st.metric("Trading Days", filtered_df['date'].nunique())
-                st.metric("Unique Stocks", filtered_df['Ticker'].nunique())
-        with col2:
-            st.subheader("🧮 RS Breadth Breakdown")
-            if not bucket_counts.empty:
-                bdf = pd.DataFrame({'Bucket': bucket_counts.index, 'Count': bucket_counts.values})
-                bdf['Share'] = (bdf['Count'] / bdf['Count'].sum() * 100).round(1)
-                st.dataframe(bdf[['Bucket', 'Count', 'Share']], use_container_width=True, hide_index=True)
-
-    st.divider()
-    st.subheader("📊 Sector Leaderboard")
-    cat_sub = snap[['Sector', 'Ticker', 'Relative Strength', 'Percentile']].reset_index(drop=True)
-    sec_tbl = cat_sub.groupby('Sector').agg(
-        count=('Ticker', 'count'),
-        avg_rs=('Relative Strength', 'mean'),
-        med_rs=('Relative Strength', 'median'),
-        max_rs=('Relative Strength', 'max'),
-        avg_pct=('Percentile', 'mean'),
-    ).reset_index()
-    sec_tbl['avg_pct'] = sec_tbl['avg_pct'].round(1)
-    sec_tbl['avg_rs'] = sec_tbl['avg_rs'].round(1)
-    sec_tbl['med_rs'] = sec_tbl['med_rs'].round(1)
-    sec_tbl['max_rs'] = sec_tbl['max_rs'].round(0)
-    sec_tbl = sec_tbl.sort_values('avg_rs', ascending=False).reset_index(drop=True)
-    top10 = sec_tbl.head(10).copy()
-    fig = px.bar(top10, x='avg_rs', y='Sector', orientation='h',
-                 color='avg_rs', color_continuous_scale='RdYlGn',
-                 text='med_rs', title="Sector Average RS (label = median)")
-    fig.update_layout(yaxis=dict(categoryorder='total ascending'))
-    st.plotly_chart(fig, use_container_width=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        sec_pct = sec_tbl.sort_values('avg_pct', ascending=False).head(8)
-        fig = px.bar(sec_pct, x='avg_pct', y='Sector', orientation='h', color='avg_pct',
-                     color_continuous_scale='Blues', title="Top Sectors by Avg RS Percentile")
-        st.plotly_chart(fig, use_container_width=True)
-    with col2:
-        alph = sec_tbl.sort_values('count', ascending=False).head(8)
-        fig = px.bar(alph, x='count', y='Sector', orientation='h', color='count',
-                     color_continuous_scale='Greens', title="Sectors by Stock Count")
-        st.plotly_chart(fig, use_container_width=True)
+    st.subheader("📊 Sector Rotation Timeline (RS percentile, top sectors)")
+    if has_historical and 'date' in filtered_df.columns:
+        _daily = filtered_df.copy()
+        _daily['date'] = pd.to_datetime(_daily['date'])
+        _dsector = _daily.groupby(['date', 'Sector'])['Relative Strength'].mean().reset_index()
+        _top_secs = _dsector.groupby('Sector')['Relative Strength'].mean().nlargest(8).index.tolist()
+        _pivot = _dsector[_dsector['Sector'].isin(_top_secs)].pivot(index='date', columns='Sector', values='Relative Strength').sort_index()
+        if not _pivot.empty:
+            fig = go.Figure()
+            for _s in _pivot.columns:
+                fig.add_trace(go.Scatter(x=_pivot.index, y=_pivot[_s], mode='lines', name=_s))
+            fig.update_layout(title="Avg RS by Leading Sector (zoomed)", hovermode='x unified', yaxis_title="RS Value")
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Sector rotation timeline needs historical data (with a 'date' column).")
 
     # ── Notable Strategies & Actionable Tickers ──
     st.divider()
@@ -2663,86 +2626,12 @@ annotations=[dict(x=1, y=1.02, xref='paper', yref='paper', xanchor='right', show
 # ---------- TAB 2: Time Series ----------
 if has_historical:
     with tab2:
-        st.subheader("📈 Time Series Analysis")
-        daily = filtered_df.copy()
-        daily['date'] = pd.to_datetime(daily['date'])
-
-        col1, col2 = st.columns(2)
-        with col1:
-            daily_avg = daily.groupby('date')['Relative Strength'].agg(['mean', 'median', 'max']).reset_index()
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['mean'],   name='Mean RS',   mode='lines'))
-            fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['median'], name='Median RS', mode='lines'))
-            fig.add_trace(go.Scatter(x=daily_avg['date'], y=daily_avg['max'],    name='Max RS',    mode='lines', opacity=0.4))
-            fig.update_layout(title="Universe RS: Mean / Median / Max", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            daily_percentile = daily.groupby('date')['Percentile'].mean().reset_index()
-            fig = px.line(daily_percentile, x='date', y='Percentile', title="Daily Average RS Percentile Trend")
-            st.plotly_chart(fig, use_container_width=True)
-
-        st.divider()
-        st.subheader("📏 Market Breadth & Momentum Regime")
-        daily_breadth = daily.groupby('date')['Relative Strength'].mean().reset_index()
-        daily_breadth['lead_breadth'] = daily.groupby('date')['Relative Strength'].apply(lambda s: float((s >= 80).mean() * 100)).reset_index(drop=True)
-        daily_breadth['mom10'] = daily_breadth['Relative Strength'].rolling(10).mean()
-        daily_breadth['mom60'] = daily_breadth['Relative Strength'].rolling(60).mean()
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.line(daily_breadth, x='date', y='lead_breadth', title="% of Universe with RS ≥ 80 Over Time (leadership breadth)")
-            fig.add_hline(y=20, line_dash="dot", line_color='orange')
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=daily_breadth['date'], y=daily_breadth['mom10'], name='RS 10-day avg', mode='lines'))
-            fig.add_trace(go.Scatter(x=daily_breadth['date'], y=daily_breadth['mom60'], name='RS 60-day avg', mode='lines'))
-            fig.update_layout(title="Average RS Momentum (10d vs 60d trend)", xaxis_title="Date", yaxis_title="RS Value", hovermode='x unified')
-            st.plotly_chart(fig, use_container_width=True)
-
-        st.divider()
-        col1, col2 = st.columns(2)
-        with col1:
-            daily_count = daily.groupby('date')['Ticker'].nunique().reset_index()
-            daily_count.columns = ['date', 'stock_count']
-            fig = px.line(daily_count, x='date', y='stock_count', title="Number of Stocks in Universe Over Time")
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            daily_price = daily.groupby('date')[PRICE_COL].mean().reset_index()
-            fig = px.line(daily_price, x='date', y=PRICE_COL, title="Average Stock Close Price Over Time")
-            st.plotly_chart(fig, use_container_width=True)
-
-        st.divider()
-        st.subheader("📊 Sector Rotation Timeline (RS percentile, top sectors)")
-        daily_sector = daily.groupby(['date', 'Sector'])['Relative Strength'].mean().reset_index()
-        daily_sector['date'] = pd.to_datetime(daily_sector['date'])
-        top_sectors = daily_sector.groupby('Sector')['Relative Strength'].mean().nlargest(8).index.tolist()
-        pivot_d = daily_sector[daily_sector['Sector'].isin(top_sectors)].pivot(index='date', columns='Sector', values='Relative Strength').sort_index()
-        if not pivot_d.empty:
-            fig = go.Figure()
-            for s in pivot_d.columns:
-                fig.add_trace(go.Scatter(x=pivot_d.index, y=pivot_d[s], mode='lines', name=s))
-            fig.update_layout(title="Avg RS by Leading Sector (zoomed)", hovermode='x unified', yaxis_title="RS Value")
-            st.plotly_chart(fig, use_container_width=True)
-
-        st.divider()
-        st.subheader("📊 Single-Sector RS Trend (range)")
-        selected_sector_trend = st.selectbox("Select sector for trend", filtered_df['Sector'].unique(), key="sector_trend")
-        sector_trend_data = daily[daily['Sector'] == selected_sector_trend].groupby('date')['Relative Strength'].agg(['mean', 'min', 'max']).reset_index()
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['mean'], name='Mean RS', mode='lines+markers'))
-        fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['max'],  name='Max RS',  fill='tozeroy', mode='lines', opacity=0.2))
-        fig.add_trace(go.Scatter(x=sector_trend_data['date'], y=sector_trend_data['min'],  name='Min RS',  fill='tonexty', mode='lines', opacity=0.2))
-        fig.update_layout(title=f"{selected_sector_trend} - RS Trend", hovermode='x unified')
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader("📈 Time Series")
+        st.caption("Time-series analysis has been consolidated into the Overview tab — see the Sector Rotation Timeline there.")
 else:
     with tab2:
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.histogram(filtered_df, x='Relative Strength', nbins=50, title="Distribution of Relative Strength")
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            fig = px.histogram(filtered_df, x='Percentile', nbins=50, title="Distribution of Percentile Rank")
-            st.plotly_chart(fig, use_container_width=True)
+        st.subheader("📈 Time Series")
+        st.caption("Time-series analysis requires historical data (with a 'date' column).")
 
 # ---------- TAB 3: Top Performers ----------
 with tab3:
