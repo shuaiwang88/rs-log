@@ -22,23 +22,33 @@ REPO_DIR = Path(__file__).resolve().parent.parent
 CACHE_DIR = REPO_DIR / "ticker_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+# ── universe filters (user's call, 2026-08-03) ───────────────────────────────────────────
+# Only liquid, non-penny names are worth carrying: the cache had grown to 7,132 tickers, of
+# which 4,721 were under $10 or under 300K average volume - two thirds of the files for names
+# that were never going to be traded. These thresholds are applied when choosing what to fetch
+# AND by prune_cache() below, so the cache cannot silently refill with them.
+MIN_PRICE = 10.0
+MIN_AVG_VOL50 = 300_000
+
 BENCHMARKS = ['SPY', 'QQQ', 'IWM', 'DIA', 'VTI']
-# ETFs the IBD Live tab references that aren't core benchmarks but should be kept current too.
-WATCHLIST_ETFS = ['VOO', 'XLF', 'TBT', 'XBI', 'RSP', 'MUZ', 'JMKE']
-# Sector & industry ETFs (GICS Select Sector SPDRs + key industry/thematic funds the show follows).
+# The main sector and industry ETFs only - the long tail of thematic, country and commodity
+# funds was dropped on 2026-08-03. Every symbol kept here clears the filters above on its own,
+# so this list is a statement of intent rather than an exemption. `SPY` is not optional: both
+# pattern scanners use it as the RS comparative symbol.
 SECTOR_ETFS = [
-    'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY',  # Select Sector SPDRs
-    'SMH', 'SOXX', 'IGV',            # semiconductors / software
-    'XBI', 'IBB', 'IHI',            # biotech / health care
-    'KRE',                          # regional banks
-    'XOP', 'OIH',                   # energy producers / oil services
-    'ITA', 'XHB', 'IYT',            # aerospace-defense / homebuilders / transports
-    'XRT',                          # retail
-    'URA', 'TAN',                   # uranium / clean energy
-    'VNQ',                          # REITs
-    'KWEB',                         # China internet
-    'GLD', 'SLV', 'GDX', 'XME', 'EWZ',  # commodities / metals / emerging markets
+    # GICS Select Sector SPDRs - the canonical sector set
+    'XLB', 'XLC', 'XLE', 'XLF', 'XLI', 'XLK', 'XLP', 'XLRE', 'XLU', 'XLV', 'XLY',
+    # The most heavily traded industry funds, one per theme (SMH over SOXX, XBI over IBB)
+    'SMH',      # semiconductors     12.3M avg vol
+    'IGV',      # software           17.3M
+    'XBI',      # biotech             9.1M
+    'KRE',      # regional banks     14.4M
+    'GDX',      # gold miners        21.8M
+    'XRT',      # retail              5.2M
+    'XOP',      # oil & gas E&P       3.6M
+    'XHB',      # homebuilders        2.8M
 ]
+WATCHLIST_ETFS = []          # folded into the two lists above
 
 SPLIT_FACTORS = (2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30, 50, 100)
 
@@ -130,39 +140,131 @@ def _looks_like_split(existing_df, new_df, min_price=1.0, tol=0.08, vol_confirm=
         return False
 
 
-def get_target_tickers():
-    tickers = set(BENCHMARKS + WATCHLIST_ETFS + SECTOR_ETFS)
+ALWAYS_KEEP = set(BENCHMARKS + WATCHLIST_ETFS + SECTOR_ETFS)
 
-    # Add tickers from rs_stocks.csv if present
-    rs_file = REPO_DIR / "output" / "rs_stocks.csv"
-    if rs_file.exists():
+
+def cache_price_volume(ticker):
+    """Last close and 50-day average volume from the cached parquet, or (None, None)."""
+    fp = CACHE_DIR / f"{str(ticker).strip().replace('.', '-')}_1d.parquet"
+    if not fp.exists():
+        return None, None
+    try:
+        d = pd.read_parquet(fp, columns=['Close', 'Volume']).sort_index()
+    except Exception:
+        return None, None
+    if d.empty:
+        return None, None
+    c = pd.to_numeric(d['Close'], errors='coerce').dropna()
+    v = pd.to_numeric(d['Volume'], errors='coerce')
+    # Last VALID close, not the last row's: a feed that leaves today's close NaN while still
+    # reporting volume would otherwise make the ticker look unmeasurable and exempt it.
+    close = float(c.iloc[-1]) if len(c) else None
+    av = v.rolling(50, min_periods=25).mean().iloc[-1] if len(v) else np.nan
+    return close, (float(av) if pd.notna(av) else None)
+
+
+def _csv_price_volume():
+    """Close / AvgVol50 per ticker from the RS csvs - what a NEW ticker is judged on.
+
+    A ticker with no cached file yet cannot be measured from the cache, and fetching it just to
+    find out it is a $3 shell is the cost this is avoiding. Both csvs carry Close and AvgVol50
+    already, so the decision is made before any network call.
+    """
+    out = {}
+    for name in ("rs_stocks.csv", "rs_stocks_historical.csv"):
+        fp = REPO_DIR / "output" / name
+        if not fp.exists():
+            continue
         try:
-            df = pd.read_csv(rs_file, usecols=['Ticker'])
+            cols = ['Ticker', 'Close', 'AvgVol50']
+            d = pd.read_csv(fp, usecols=lambda c: c in cols)
+            if 'date' not in d.columns and name.endswith("historical.csv"):
+                pass
+            d = d.dropna(subset=['Ticker'])
+            for t, c, v in zip(d['Ticker'], d.get('Close', pd.Series(dtype=float)),
+                               d.get('AvgVol50', pd.Series(dtype=float))):
+                t = str(t).strip()
+                if t:                       # later files win; historical is read second
+                    out[t] = (c, v)
+        except Exception:
+            continue
+    return out
+
+
+def passes_universe_filter(ticker, csv_pv=None):
+    """True if `ticker` is worth carrying: at least MIN_PRICE and MIN_AVG_VOL50.
+
+    Judged on the cached parquet when there is one, otherwise on the RS csvs. A ticker we know
+    nothing about is kept - the filter removes what is measurably too small, and never guesses.
+    """
+    if str(ticker).strip() in ALWAYS_KEEP:
+        return True
+    close, vol = cache_price_volume(ticker)
+    # Each field falls back on its own. Filling both from the csv whenever the close happened
+    # to be missing threw away a volume the cache knew perfectly well, and let GALDY through
+    # at 118K on a day its close came back NaN.
+    if (close is None or vol is None) and csv_pv is not None:
+        c_csv, v_csv = csv_pv.get(str(ticker).strip(), (None, None))
+        if close is None:
+            close = c_csv
+        if vol is None:
+            vol = v_csv
+    if close is not None and pd.notna(close) and float(close) < MIN_PRICE:
+        return False
+    if vol is not None and pd.notna(vol) and float(vol) < MIN_AVG_VOL50:
+        return False
+    return True
+
+
+def prune_cache(dry_run=False, verbose=True):
+    """Delete cached parquets for tickers that no longer clear the universe filters.
+
+    Run at the end of every update so a name that drifts under $10 or dries up on volume leaves
+    the cache on its own, instead of the cache only ever growing. Weekly files follow their
+    daily counterpart so the two never disagree about which tickers exist.
+    """
+    csv_pv = _csv_price_volume()
+    tickers = sorted({f.stem.split("_")[0] for f in CACHE_DIR.glob("*.parquet") if "_" in f.stem})
+    doomed = [t for t in tickers if not passes_universe_filter(t, csv_pv)]
+    freed = 0
+    for t in doomed:
+        for fp in CACHE_DIR.glob(f"{t}_*.parquet"):
+            freed += fp.stat().st_size
+            if not dry_run:
+                fp.unlink()
+    if verbose:
+        verb = "would remove" if dry_run else "removed"
+        print(f"🧹 prune: {verb} {len(doomed):,} of {len(tickers):,} tickers "
+              f"(<${MIN_PRICE:g} or <{MIN_AVG_VOL50:,} avg vol), {freed/1e6:.0f} MB")
+    return doomed
+
+
+def get_target_tickers():
+    tickers = set(ALWAYS_KEEP)
+    csv_pv = _csv_price_volume()
+
+    def add_from(fp):
+        if not fp.exists():
+            return
+        try:
+            df = pd.read_csv(fp, usecols=['Ticker'])
             for t in df['Ticker'].dropna():
                 clean = str(t).strip()
-                if clean:
+                if clean and passes_universe_filter(clean, csv_pv):
                     tickers.add(clean)
         except Exception:
             pass
 
-    # Add tickers from rs_stocks_historical.csv if present
-    rs_hist = REPO_DIR / "output" / "rs_stocks_historical.csv"
-    if rs_hist.exists():
-        try:
-            df_h = pd.read_csv(rs_hist, usecols=['Ticker'])
-            for t in df_h['Ticker'].dropna():
-                clean = str(t).strip()
-                if clean:
-                    tickers.add(clean)
-        except Exception:
-            pass
+    add_from(REPO_DIR / "output" / "rs_stocks.csv")
+    add_from(REPO_DIR / "output" / "rs_stocks_historical.csv")
 
-    # Add any existing tickers in ticker_cache/
+    # Existing tickers in ticker_cache/ - still filtered, so a name that has fallen under the
+    # thresholds stops being refreshed even before prune_cache() deletes it.
     for f in CACHE_DIR.glob("*.parquet"):
         stem = f.stem
         if "_" in stem:
             t = stem.split("_")[0].strip()
-            if t:
+            if t and passes_universe_filter(t, csv_pv):
                 tickers.add(t)
 
     return sorted(tickers)
@@ -391,5 +493,14 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
     print(f"✅ Ticker cache update finished in {elapsed:.2f} seconds.")
 
 if __name__ == "__main__":
-    update_ticker_cache_batch()
+    # --prune / --prune-dry-run maintain the universe without refetching anything.
+    if "--prune-dry-run" in sys.argv:
+        prune_cache(dry_run=True)
+    elif "--prune" in sys.argv:
+        prune_cache()
+    else:
+        update_ticker_cache_batch()
+        # Names that drifted under the thresholds leave on the same run that refreshed them,
+        # so the cache tracks the universe instead of accumulating everything ever fetched.
+        prune_cache()
 

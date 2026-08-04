@@ -207,3 +207,502 @@ $ZBAI: possibly delisted; no timezone found
     Batch 15: Processed 1,433 / 1,433 tickers (1,264 saved successfully)...
   ✓ Created/Backfilled 1,264 / 1,433 ticker parquets.
 ✅ Ticker cache update finished in 194.45 seconds.
+$AMTR: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AMTR']: possibly delisted; no price data found  (period=5d)
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$KORE: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['KORE']: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NSA']: possibly delisted; no price data found  (period=5d)
+$SACC: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['SACC']: possibly delisted; no price data found  (period=5d)
+
+100 Failed downloads:
+['SMSMY', 'SMTK', 'SNY', 'SOHU', 'SNGX', 'SNOW', 'SN', 'SPCB', 'SNDX', 'SPPJY', 'SPSC', 'SPRO', 'SNN', 'SMX', 'SNAP', 'SOHOO', 'SMSI', 'SOUN', 'SOPH', 'SNFCA', 'SMTC', 'SOJC', 'SPRB', 'SND', 'SNDR', 'SPKL', 'SPIR', 'SNES', 'SNOA', 'SNPS', 'SOPAQ', 'SPPP', 'SMRT', 'SNX', 'SPB', 'SNAX', 'SPOT', 'SPOK', 'SONY', 'SOHOB', 'SNPHY', 'SOTK', 'SMSGY', 'SPRY', 'SNNGF', 'SMMT', 'SMR', 'SPCE', 'SMID', 'SNDA', 'SNT', 'SON', 'SPH', 'SMMYY', 'SPNT', 'SOJE', 'SNEX', 'SOAR', 'SOHON', 'SOFI', 'SOGP', 'SNA', 'SOLV', 'SOXX', 'SNDL', 'SONDQ', 'SMNNY', 'SOJD', 'SNBRQ', 'SOTGY', 'SMXT', 'SPKKY', 'SNAL', 'SONO', 'SNTG', 'SOS', 'SNTI', 'SOWG', 'SPGI', 'SPHR', 'SPG', 'SOBR', 'SOR', 'SONM', 'SMP', 'SMTI', 'SMHI', 'SO', 'SMHB', 'SOC', 'SPFI', 'SPRC', 'SPE', 'SMPL', 'SOMLY', 'SOBKY', 'SPKLU', 'SMWB', 'SPPL', 'SPRU']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['STAA', 'SUPX', 'SRTS', 'SSNC', 'SSD', 'SU', 'SRG', 'SR', 'SRZN', 'SUHJY', 'SQM', 'STVN', 'SUGP', 'SPXC', 'STKE', 'STRR', 'SSTI', 'SPY', 'STX', 'SRGHY', 'SRBK', 'STTK', 'SRE', 'SREA', 'STEW', 'STNG', 'SUI', 'SUN', 'STT', 'STOK', 'STRW', 'STKH', 'STEP', 'SSDOY', 'STK', 'SUNE', 'SRFM', 'STRS', 'STBA', 'SPWH', 'ST', 'STRRP', 'STAI', 'STLD', 'SRI', 'STI', 'STRA', 'STG', 'STM', 'SUIG', 'STEX', 'STLA', 'SQFTP', 'SRV', 'SSYS', 'SST', 'SUPV', 'SRPT', 'STHO', 'STKS', 'STRO', 'STE', 'SPXX', 'SSP', 'STXS', 'STIM', 'STAG', 'SRXH', 'SSL', 'STWD', 'STRT', 'SQFT', 'SPYU', 'SRRK', 'SSREY', 'SPT', 'STRL', 'STEM', 'STBFY', 'STN', 'SSKN', 'STGW', 'SSUMY', 'SUPN', 'STNE', 'STC', 'SSMXY', 'SSRM', 'SRTA', 'SSLZY', 'SRCE', 'STZ', 'SSM', 'SSBI', 'SPWR', 'SSTK', 'SSB', 'SQNS', 'SRAD', 'SRL']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['SVRE', 'SVM', 'TCBX', 'TAP-A', 'TDW', 'TAC', 'SYRS', 'SZKMY', 'TDUP', 'SYPR', 'TCBIO', 'TBB', 'SXI', 'T', 'TACT', 'TALK', 'TECH', 'SVNDY', 'TBIO', 'TCEHY', 'SVCO', 'SYF', 'TARS', 'TD', 'SXTP', 'SYY', 'TAIT', 'TBCH', 'TDOC', 'TBLD', 'SVV', 'SYM', 'SVRA', 'SYNA', 'TALO', 'TDG', 'SWVL', 'TCRX', 'TCI', 'TBBK', 'SVRN', 'SWIM', 'TCOM', 'TANH', 'TDAY', 'TDF', 'TEAD', 'TDS', 'TBBB', 'TCRT', 'TC', 'TE', 'TEAM', 'SUZ', 'SYBT', 'SWBI', 'TAN', 'SYK', 'SYRE', 'SWX', 'SWK', 'SXC', 'TCBK', 'TBPH', 'SYNX', 'TASK', 'SW', 'TAK', 'SWDBY', 'SUTNY', 'SURG', 'TAOX', 'TCMD', 'TBT', 'SWAG', 'TARA', 'SWKS', 'SVC', 'TBLA', 'SWZ', 'TATYY', 'TCBI', 'SWKHL', 'TAL', 'TCBS', 'TAP', 'TATT', 'SYRA', 'TAYD', 'SWGAY', 'SXT', 'TDC', 'TCX', 'SY', 'SYBX', 'SXTC', 'TDY', 'TCPC', 'TAOP', 'TBI']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['TKO', 'TK', 'TOI', 'TELNY', 'TOMZ', 'TONX', 'TENX', 'TNON', 'TLPH', 'TFIN', 'TEL', 'THRY', 'THC', 'TLF', 'TILE', 'TENB', 'TMUS', 'TIRXF', 'TGEN', 'TLSI', 'TELA', 'THM', 'THO', 'TMC', 'TJX', 'TLN', 'TGB', 'TLYS', 'TGS', 'THRM', 'TNET', 'TMDX', 'TH', 'TIGR', 'TGL', 'TLSA', 'TKOMY', 'TII', 'TNXP', 'TLS', 'TLGPY', 'TOELY', 'TMO', 'TEX', 'TEZNY', 'TOON', 'TM', 'TOL', 'TNYA', 'TKNO', 'TFSL', 'THG', 'TITN', 'TMHC', 'TMP', 'TIL', 'TNGX', 'TNC', 'TFPM', 'TFC', 'TGLS', 'THCH', 'TKC', 'TKLF', 'TEVA', 'TIMB', 'THFF', 'TGT', 'TGTX', 'TEI', 'TNK', 'TEN', 'TMCWW', 'TOP', 'TME', 'TEO', 'TELO', 'TMQ', 'TISI', 'TLK', 'TG', 'TNL', 'TLSIW', 'TKR', 'TORO', 'TFII', 'TLRY', 'TIPT', 'TNDM', 'TIGO', 'TNMG', 'TFX', 'TER', 'THW', 'TOPS', 'TECK', 'TECX', 'TMCI', 'THQ', 'TELFY']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['TRON', 'TSEM', 'TSM', 'TSLX', 'TV', 'TPST', 'TRNS', 'TSHA', 'TSBK', 'TOWN', 'TVE', 'TRT', 'TSN', 'TVGN', 'TPVG', 'TRV', 'TRAW', 'TRUG', 'TPZ', 'TRI', 'TRNR', 'TWIN', 'TRINZ', 'TRMK', 'TTGT', 'TURB', 'TROW', 'TS', 'TULP', 'TRVG', 'TSEOQ', 'TPET', 'TREE', 'TRLV', 'TPG', 'TRNO', 'TOST', 'TRMB', 'TRN', 'TOUR', 'TRC', 'TRSG', 'TSI', 'TVRD', 'TRTX', 'TSLA', 'TSNDF', 'TRX', 'TSSI', 'TTD', 'TVC', 'TUSK', 'TRST', 'TTNDY', 'TRAK', 'TPGXL', 'TRGP', 'TTMI', 'TT', 'TRS', 'TROO', 'TRDA', 'TRUP', 'TPR', 'TREX', 'TTDKY', 'TROX', 'TRIP', 'TRU', 'TWAV', 'TUYA', 'TVTX', 'TWG', 'TOYO', 'TTEC', 'TU', 'TRVN', 'TSQ', 'TPB', 'TTWO', 'TRIB', 'TRP', 'TRMD', 'TOVX', 'TTC', 'TTEK', 'TPC', 'TR', 'TTOO', 'TRVI', 'TPCS', 'TTI', 'TWI', 'TTSH', 'TPL', 'TSAT', 'TRIN', 'TW', 'TSCO', 'TTE']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['ULH', 'TXO', 'UOVEY', 'UMH', 'UGP', 'UPC', 'ULTA', 'UHT', 'URA', 'UNCY', 'UAMY', 'UNMA', 'UAN', 'TXNM', 'ULBI', 'UCB', 'UMAC', 'USB', 'UNF', 'UDR', 'URG', 'UPMMY', 'U', 'UI', 'TYG', 'UBCP', 'UCAR', 'TXG', 'UMBF', 'UNM', 'TX', 'UNFI', 'UPWK', 'TXN', 'UONEK', 'UEIC', 'TYIDY', 'UE', 'UCL', 'UIS', 'UP', 'USAC', 'UNP', 'UEC', 'USAR', 'UPLD', 'UFCS', 'UCIB', 'UHAL-B', 'UOKAF', 'UHS', 'TWST', 'USAS', 'UAA', 'TXMD', 'TYL', 'UAL', 'UFI', 'URGN', 'UAVS', 'TWLO', 'UPBD', 'UNB', 'UA', 'ULS', 'USA', 'UBS', 'UNIT', 'TWN', 'UPXI', 'UFPT', 'UCTT', 'URBN', 'TWO', 'UK', 'ULCC', 'UONE', 'TXRH', 'TZOO', 'TYGO', 'UBER', 'UFPI', 'UBSI', 'UNTY', 'UL', 'TY', 'UG', 'UNH', 'UGI', 'TYRA', 'UPS', 'URI', 'USAU', 'UMC', 'UPST', 'UHAL', 'UROY', 'UCFI', 'UNICY', 'TXT']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['USGO', 'VIASP', 'USML', 'UZF', 'VIVHY', 'UVE', 'VKTX', 'VISL', 'VEEE', 'UZX', 'UXIN', 'USCB', 'VCTR', 'VEEV', 'VIAV', 'VALU', 'VFC', 'VINP', 'VIRT', 'VICI', 'USNZY', 'UVV', 'VEEA', 'USLM', 'USOI', 'VABK', 'VHI', 'VALN', 'VET', 'VEL', 'VCNX', 'VAL', 'USNA', 'VEOEY', 'VIVO', 'VIV', 'VALE', 'UUUU', 'UWMC', 'UTI', 'VCYT', 'VFF', 'VECO', 'UTL', 'VERU', 'UTF', 'VIVS', 'VEON', 'VERA', 'VIK', 'UTSI', 'USPH', 'VCV', 'USFD', 'VKI', 'UVSP', 'USBC', 'VITL', 'VFS', 'UUU', 'VISN', 'VHC', 'VERI', 'VIOT', 'UZE', 'UTG', 'VATE', 'VBF', 'UZD', 'VAC', 'VCEL', 'VGZ', 'VELO', 'VGAS', 'VIRC', 'VINC', 'VGI', 'VGM', 'VERX', 'VANI', 'USIO', 'VFSWW', 'VIP', 'UTHR', 'VKQ', 'USEA', 'VBNK', 'VCIG', 'VIPS', 'VC', 'VINO', 'VIR', 'VLEEY', 'UTMD', 'VBIO', 'UTZ', 'VICR', 'VIVK', 'V', 'VIST']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['WALDW', 'VXX', 'VTN', 'VLO', 'VSME', 'VRRM', 'VVX', 'VRTS', 'VRME', 'VRSN', 'WAVE', 'VS', 'VMAR', 'VTOL', 'WASH', 'VSXY', 'VOO', 'VRAX', 'VLN', 'VTMX', 'VSTM', 'VOXR', 'VRNO', 'VTAK', 'WAFU', 'VWDRY', 'VOD', 'VWAGY', 'VNQ', 'VOR', 'VTI', 'VPG', 'VNDA', 'VRT', 'VWAPY', 'VOC', 'VOYA', 'VSTS', 'WAB', 'VZ', 'VTVT', 'VMD', 'WAFDP', 'VREOF', 'VSEC', 'VLTO', 'VSTD', 'VMI', 'VYNE', 'VREX', 'WAT', 'VRNS', 'VSA', 'VZLA', 'WALD', 'VVR', 'VRDN', 'W', 'VRCA', 'VRA', 'VVV', 'VXZ', 'WAFD', 'WB', 'VUZI', 'WATT', 'VTSI', 'VTS', 'VNO', 'VLT', 'VNOM', 'VLRS', 'WABC', 'VTEX', 'VYGR', 'VNRX', 'VSAT', 'VTR', 'VTGN', 'VLY', 'VMC', 'WAL', 'VST', 'VTRS', 'VLGEA', 'VYX', 'VMO', 'VNT', 'VSEE', 'VVOS', 'VLYPP', 'VXRT', 'VSH', 'VRSK', 'VLYPO', 'VNET', 'VNCE', 'VRTX', 'VRPX', 'VPV']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['WLDN', 'WMS', 'WBUY', 'WKSP', 'WILC', 'WHLR', 'WSO', 'WCC', 'WBS', 'WHR', 'WRB', 'WEYS', 'WMMVY', 'WT', 'WHLRP', 'WFC', 'WELL', 'WSC', 'WSBF', 'WDAY', 'WGO', 'WDH', 'WDC', 'WSM', 'WFRD', 'WRBY', 'WEC', 'WIMI', 'WRTBY', 'WGS', 'WRCDF', 'WOOF', 'WH', 'WMT', 'WHLM', 'WHFCL', 'WRAP', 'WKHS', 'WBX', 'WEN', 'WIX', 'WMK', 'WNW', 'WPP', 'WINA', 'WHWK', 'WLYB', 'WCN', 'WK', 'WPRT', 'WHLRD', 'WMG', 'WIA', 'WPC', 'WSFS', 'WLFC', 'WING', 'WDI', 'WES', 'WFCF', 'WEX', 'WPM', 'WEST', 'WSO-B', 'WNC', 'WETH', 'WD', 'WBRBY', 'WF', 'WHD', 'WBD', 'WINV', 'WEAV', 'WIW', 'WINVU', 'WRLD', 'WEA', 'WST', 'WDS', 'WHG', 'WLY', 'WIT', 'WFG', 'WOR', 'WKEY', 'WRN', 'WHF', 'WM', 'WMB', 'WLKP', 'WLK', 'WORX', 'WINT', 'WLDS', 'WKC', 'WS', 'WERN', 'WNEB', 'WDFC', 'WSBC']: TypeError("'NoneType' object is not subscriptable")
+
+100 Failed downloads:
+['YHC', 'XPO', 'XOS', 'XEL', 'XLC', 'YARW', 'XLV', 'XLK', 'XLY', 'XNCR', 'WTI', 'XELAP', 'XPEL', 'WWD', 'WTKWY', 'YCBD', 'XTLB', 'XME', 'XAIR', 'YALA', 'XRAY', 'WTIU', 'XPON', 'XELB', 'WVVI', 'XBIT', 'XXII', 'XLU', 'XBI', 'XPEV', 'WU', 'WULF', 'WYY', 'XPL', 'XYF', 'WTM', 'XLO', 'XNET', 'XTIA', 'XIFR', 'WWW', 'XHR', 'YEXT', 'WTBA', 'YDKG', 'WTID', 'XP', 'XLE', 'WTW', 'XERS', 'XLB', 'XRT', 'WVE', 'XYZ', 'XPOF', 'WTRG', 'WVVIP', 'XLRE', 'XWEL', 'WXXWY', 'WYNN', 'XRTX', 'XENE', 'XBIO', 'YETI', 'XGN', 'XLP', 'XAGE', 'XLI', 'XELA', 'XNGSY', 'WTTR', 'YHGJ', 'XRX', 'XCUR', 'XTNT', 'XYL', 'XBP', 'YGMZF', 'YASKY', 'WTS', 'XPRO', 'YAHOY', 'XLF', 'YARIY', 'XHB', 'XOM', 'WTFC', 'XFOR', 'YELP', 'XHG', 'XRN', 'WY', 'WUCT', 'XMTR', 'XMAX', 'XPER', 'XOP', 'XFLT', 'WWR']: TypeError("'NoneType' object is not subscriptable")
+
+60 Failed downloads:
+['ZDPY', 'YUM', 'ZCAR', 'ZVRA', 'ZLAB', 'ZG', 'ZS', 'YPF', 'ZDGE', 'ZEPP', 'ZVSA', 'YIBO', 'Z', 'ZTS', 'ZKIN', 'ZBRA', 'ZNTL', 'YRD', 'ZWS', 'ZION', 'ZIONP', 'ZGN', 'ZM', 'ZSTK', 'ZSQR', 'ZONE', 'ZURA', 'YMM', 'ZEO', 'ZTO', 'ZBAO', 'YYAI', 'YJ', 'ZCMD', 'YOU', 'ZTR', 'ZOOZ', 'ZTEK', 'ZH', 'ZENVF', 'ZETA', 'ZYME', 'ZIP', 'YOTA', 'YUMC', 'ZD', 'ZVIA', 'YSG', 'YORW', 'ZUMZ', 'YTRA', 'YI', 'ZJYL', 'ZIM', 'YOTAU', 'ZNB', 'YYGH', 'ZBH', 'ZKH', 'YQ']: TypeError("'NoneType' object is not subscriptable")
+Failed to get ticker 'AGH' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'ALEX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'ALCY' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ALCY: possibly delisted; no timezone found
+Failed to get ticker 'AMWD' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$AMWD: possibly delisted; no timezone found
+Failed to get ticker 'ALTS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ALTS: possibly delisted; no timezone found
+Failed to get ticker 'APAD' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$APAD: possibly delisted; no timezone found
+Failed to get ticker 'ACLX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ACLX: possibly delisted; no timezone found
+Failed to get ticker 'AGAE' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$AGAE: possibly delisted; no timezone found
+Failed to get ticker 'AL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$AL: possibly delisted; no timezone found
+Failed to get ticker 'APLS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$APLS: possibly delisted; no timezone found
+Failed to get ticker 'ALCYU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'AHH' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ALCYU: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+Failed to get ticker 'APADU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$APADU: possibly delisted; no timezone found
+
+100 Failed downloads:
+['APXT', 'AIQD', 'AEXA', 'AACI', 'ALUR', 'ALFUU', 'APXTU', 'APMC', 'APUS', 'AGMB', 'ADGM', 'APLMW', 'AAPG', 'AERO', 'ADAMI', 'ALOVU', 'ALPX', 'ARAI', 'ACOG', 'APC', 'AIRO', 'ALIS', 'ADAC', 'APACU', 'AMPGW', 'AMBQ', 'ABVE', 'APM', 'ARCI', 'ALPS', 'AESP', 'ABVEF', 'AEAQ', 'ANTA', 'AIDX', 'ANPA', 'AARD', 'AADX', 'AOMN', 'AACO', 'ACGC', 'AHMA', 'AGCC', 'ACCL', 'AIIR', 'AIIA', 'AIQU', 'AMTM', 'AEAQU', 'AOMD', 'ALMS', 'AII', 'ANDG', 'AMAN', 'AKTS', 'ALDFU', 'AACBU', 'ALDF', 'AQUNU', 'ANGX', 'ALMR', 'AEBI', 'ALUB', 'AGNCZ', 'ADAMH', 'AACP', 'ACTU', 'ALISU', 'AAUC', 'ADACU', 'AACB', 'AGRZ', 'AMRZ', 'APUR', 'AMSS', 'ACAA', 'ALH', 'ALF', 'ADVB', 'AIB', 'ADUR', 'ADAMG', 'AIAI', 'AGBK', 'ALOV', 'APAC', 'AIBZ']: TypeError("'NoneType' object is not subscriptable")
+['AGH', 'ALEX']: DNSError('Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.')
+['ALCY', 'AMWD', 'ALTS', 'APAD', 'ACLX', 'AGAE', 'AL', 'APLS', 'ALCYU', 'AHH', 'APADU']: possibly delisted; no timezone found
+Failed to get ticker 'ATON' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ATON: possibly delisted; no timezone found
+Failed to get ticker 'BBU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BBU: possibly delisted; no timezone found
+Failed to get ticker 'BHAT' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BHAT: possibly delisted; no timezone found
+Failed to get ticker 'BACQU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BACQU: possibly delisted; no timezone found
+Failed to get ticker 'ASGN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ASGN: possibly delisted; no timezone found
+Failed to get ticker 'BLFY' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BLFY: possibly delisted; no timezone found
+Failed to get ticker 'BITF' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BITF: possibly delisted; no timezone found
+Failed to get ticker 'BK' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BK: possibly delisted; no timezone found
+
+100 Failed downloads:
+['BAYAU', 'AXIN', 'BLUW', 'BLUWU', 'BMM', 'BNKD', 'BACC', 'BACCU', 'BPRE', 'AZI', 'BLRK', 'BLIV', 'ASRT', 'BRKL', 'BRKHU', 'BRBI', 'BCAX', 'ARCIU', 'AVLN', 'ATII', 'AVEX', 'BPH', 'BMHL', 'BOWN', 'AXINU', 'ATLN', 'BCARU', 'BGSI', 'BIII', 'BLRKU', 'BIYA', 'BDCIU', 'BAYA', 'BREZ', 'ARDT', 'BGIN', 'ARMH', 'ARX', 'BKV', 'BNKU', 'BETA', 'AVAT', 'BACQ', 'BLSH', 'ATIIU', 'ASPCU', 'BID', 'BBCQU', 'BOBS', 'ATCX', 'BDCI', 'BIXIU', 'BRAI', 'AVBC', 'BALY', 'ARTV', 'BEAG', 'ARQQW', 'BLZR', 'BEBE', 'AUGO', 'BLLN', 'ASPC', 'BLZRU', 'AVR', 'ARCL', 'BMGL', 'ATHR', 'BBNX', 'BBCQ', 'ASIC', 'BLD', 'ASMH', 'BRCB', 'BEAGU', 'BIXI', 'BCAR', 'BCSS', 'AZUL', 'BOT', 'ARXS', 'BHAV', 'ARTC', 'BIOA', 'BLMZF', 'BGL', 'BMNR', 'BRIA', 'ARTCU', 'BPAC', 'BRKH', 'BOUYY']: TypeError("'NoneType' object is not subscriptable")
+['ATON', 'BBU', 'BHAT', 'BACQU', 'ASGN', 'BLFY', 'BITF', 'BK']: possibly delisted; no timezone found
+Failed to get ticker 'CAEP' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CAEP: possibly delisted; no timezone found
+Failed to get ticker 'BXMX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BXMX: possibly delisted; no timezone found
+Failed to get ticker 'BTM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$BTM: possibly delisted; no timezone found
+Failed to get ticker 'CHAC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CHAC: possibly delisted; no timezone found
+Failed to get ticker 'CHACU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'CCLDO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CHACU: possibly delisted; no timezone found
+$CCLDO: possibly delisted; no timezone found
+Failed to get ticker 'CMBM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CMBM: possibly delisted; no timezone found
+Failed to get ticker 'CFLT' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CFLT: possibly delisted; no timezone found
+Failed to get ticker 'COEP' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$COEP: possibly delisted; no timezone found
+
+100 Failed downloads:
+['BSLK', 'CMU', 'CGTL', 'CABR', 'CHPG', 'BRKRP', 'CAQUU', 'CCIIW', 'CBRG', 'BSAA', 'CEPS', 'CHA', 'CAPNU', 'CAPT', 'CHECU', 'CEPV', 'CFND', 'CITR', 'CLIK', 'CBLL', 'CEPL', 'CLSD', 'BUUU', 'CEPO', 'CDNL', 'BUSEP', 'CHEC', 'CARD', 'CEPF', 'CAES', 'BTGO', 'CPRX', 'CCXIU', 'CBC', 'CGCT', 'BTTC', 'CAPN', 'BSP', 'CCID', 'CJMB', 'CCXI', 'BXDC', 'COPR', 'CCIIU', 'CNXU', 'CHAR', 'COPL', 'CBNA', 'CNTA', 'BWIV', 'CARL', 'CLBR', 'BRRWW', 'CEPT', 'CBRS', 'CBK', 'CIF', 'BUDA', 'BTQ', 'CIMO', 'CAST', 'CCAQ', 'CAMP', 'BSAAU', 'CGCTU', 'COLAU', 'BRUN', 'CLVLY', 'BRR', 'CON', 'CCAQU', 'COAG', 'COLA', 'CIGL', 'CCII', 'CMDB', 'BYAH', 'COSO', 'CMII', 'CCIX', 'BXBL', 'CHPGU', 'CAI', 'CHARU', 'CHYM', 'CAII', 'CHOW', 'CCHH', 'CARU', 'CICB', 'CAQ']: TypeError("'NoneType' object is not subscriptable")
+['CAEP', 'BXMX', 'BTM', 'CHAC', 'CHACU', 'CCLDO', 'CMBM', 'CFLT', 'COEP']: possibly delisted; no timezone found
+Failed to get ticker 'CTRA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'EKSO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CTRA: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+Failed to get ticker 'EICC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EICC: possibly delisted; no timezone found
+Failed to get ticker 'DHIL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$DHIL: possibly delisted; no timezone found
+Failed to get ticker 'ECCW' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ECCW: possibly delisted; no timezone found
+Failed to get ticker 'EHAB' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'CSGS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'CUK' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EHAB: possibly delisted; no timezone found
+$CSGS: possibly delisted; no timezone found
+$CUK: possibly delisted; no timezone found
+Failed to get ticker 'DAWN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$DAWN: possibly delisted; no timezone found
+Failed to get ticker 'DVS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$DVS: possibly delisted; no timezone found
+Failed to get ticker 'DIAX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'DCOMG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$DIAX: possibly delisted; no timezone found
+$DCOMG: possibly delisted; no timezone found
+Failed to get ticker 'DCOMP' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$DCOMP: possibly delisted; no timezone found
+Failed to get ticker 'EB' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EB: possibly delisted; no timezone found
+Failed to get ticker 'ECCX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ECCX: possibly delisted; no timezone found
+Failed to get ticker 'DTCK' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$DTCK: possibly delisted; no timezone found
+Failed to get ticker 'CTLP' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$CTLP: possibly delisted; no timezone found
+
+100 Failed downloads:
+['ECG', 'EGHA', 'DSAC', 'CRAUY', 'CRCL', 'CXH', 'CSHR', 'ELOG', 'DSACU', 'DRDB', 'CURX', 'CRWV', 'CRE', 'CYTHW', 'DNMXU', 'DTSQU', 'EHGO', 'CV', 'CXII', 'CRACU', 'DXF', 'CSAI', 'DEFT', 'DYNC', 'DBCA', 'DYORU', 'CVGW', 'CYATY', 'EFTY', 'DYOR', 'CTBB', 'EHLD', 'DYNCU', 'CYCU', 'CTW', 'DKI', 'DMIIU', 'CRAQU', 'CRAC', 'DRDBU', 'CXE', 'DAAQU', 'DSC', 'CRAN', 'DMII', 'CRAQ', 'DAIC', 'CWAN', 'DTSQ', 'DAAQ', 'CUB', 'DJTWW', 'CUBWU', 'ECCU', 'DGNX', 'ELOX', 'CSQR', 'DETX', 'CRANU', 'CTDD', 'CRBD', 'CURR', 'CURB', 'EDHL', 'EEX', 'EDAP', 'CTAA', 'CYAB', 'EGG', 'DMAAU', 'EIIA', 'EGHAU', 'DPC', 'DGAC', 'DEVS', 'DLXY', 'EIKN', 'DEVSF', 'CUPR', 'ELMT', 'DMAA', 'DXST', 'DNMX']: TypeError("'NoneType' object is not subscriptable")
+['CTRA', 'EKSO', 'EICC', 'DHIL', 'ECCW', 'EHAB', 'CSGS', 'CUK', 'DAWN', 'DVS', 'DIAX', 'DCOMG', 'DCOMP', 'EB', 'ECCX', 'DTCK', 'CTLP']: possibly delisted; no timezone found
+Failed to get ticker 'ETHZ' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ETHZ: possibly delisted; no timezone found
+Failed to get ticker 'FARM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'FCRX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FARM: possibly delisted; no timezone found
+Failed to get ticker 'FCO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FCRX: possibly delisted; no timezone found
+$FCO: possibly delisted; no timezone found
+Failed to get ticker 'ETHMU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ETHMU: possibly delisted; no timezone found
+Failed to get ticker 'FORA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FORA: possibly delisted; no timezone found
+Failed to get ticker 'ESHA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ESHA: possibly delisted; no timezone found
+Failed to get ticker 'FRGE' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FRGE: possibly delisted; no timezone found
+Failed to get ticker 'FOLD' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FOLD: possibly delisted; no timezone found
+Failed to get ticker 'EXAS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EXAS: possibly delisted; no timezone found
+Failed to get ticker 'FIHL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FIHL: possibly delisted; no timezone found
+Failed to get ticker 'FTEL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'FFWM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$FTEL: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+Failed to get ticker 'EM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EM: possibly delisted; no timezone found
+Failed to get ticker 'EXPI' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EXPI: possibly delisted; no timezone found
+Failed to get ticker 'ETHM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ETHM: possibly delisted; no timezone found
+Failed to get ticker 'EWCZ' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'ESGL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$EWCZ: possibly delisted; no timezone found
+$ESGL: possibly delisted; no timezone found
+
+100 Failed downloads:
+['FATN', 'FACTU', 'ETS', 'FITBO', 'FMFC', 'FOFO', 'ELWT', 'EROC', 'EVMN', 'FITBP', 'FLOC', 'FRVO', 'EVOX', 'FAC', 'FBLA', 'FRBT', 'FIGR', 'FGII', 'EURKU', 'EOSEW', 'FERAU', 'FISN', 'ELVR', 'FOXO', 'EXEEW', 'FIGXU', 'ETOR', 'FRTT', 'EROK', 'FONR', 'FGL', 'EQPT', 'ESPR', 'FGIIU', 'EMAT', 'FRMI', 'ENHA', 'EVAC', 'FIGX', 'FBGL', 'FITBI', 'FGSN', 'EXEEL', 'FIG', 'EXEEZ', 'FMACU', 'FMAC', 'FJET', 'FCRS', 'EPSM', 'ENGS', 'FSSL', 'FLX', 'FCBM', 'FFIC', 'FSHP', 'FRNM', 'FACT', 'ENRD', 'FDSB', 'FGMC', 'EURK', 'EVOXU', 'FLYE', 'EMIS', 'FNGU', 'FSHPU', 'EMPG', 'FERA', 'FLY', 'EXOZ', 'FTAIN', 'FGMCU', 'FDXF', 'FTHA', 'EXYN', 'EVTV', 'EVGOW', 'ETSS', 'FCHL', 'FDP', 'FPS']: TypeError("'NoneType' object is not subscriptable")
+['ETHZ', 'FARM', 'FCRX', 'FCO', 'ETHMU', 'FORA', 'ESHA', 'FRGE', 'FOLD', 'EXAS', 'FIHL', 'FTEL', 'FFWM', 'EM', 'EXPI', 'ETHM', 'EWCZ', 'ESGL']: possibly delisted; no timezone found
+Failed to get ticker 'GDEN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$GDEN: possibly delisted; no timezone found
+Failed to get ticker 'GLPG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$GLPG: possibly delisted; no timezone found
+Failed to get ticker 'GLTO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$GLTO: possibly delisted; no timezone found
+Failed to get ticker 'GLDD' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$GLDD: possibly delisted; no timezone found
+Failed to get ticker 'GMGI' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$GMGI: possibly delisted; no timezone found
+Failed to get ticker 'HOLX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$HOLX: possibly delisted; no timezone found
+Failed to get ticker 'GAINN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$GAINN: possibly delisted; no timezone found
+
+100 Failed downloads:
+['GIX', 'HCAC', 'FVN', 'GLE', 'GOAI', 'GTERA', 'GRAL', 'GSRFU', 'GECCH', 'HQ', 'GIG', 'GOGL', 'HBNB', 'GLXY', 'GTERU', 'HCIC', 'GMTL', 'FVNNU', 'HAVAU', 'HSLV', 'GAUZ', 'HCMAU', 'GMRS', 'HAVA', 'GPAT', 'HOOK', 'GLND', 'GPACU', 'GLED', 'HSPT', 'GIWWU', 'HLXC', 'GCDT', 'HKPD', 'GSHR', 'GRAF', 'HMR', 'GENB', 'GIW', 'FXAC', 'GELS', 'HCWC', 'HNNAZ', 'GLIBA', 'GSKH', 'HOTH', 'GENVR', 'GSRF', 'HMH', 'HBANZ', 'GLXG', 'HCHL', 'HCACU', 'HPAI', 'GEMI', 'GCGR', 'GUAC', 'GLIBK', 'HDRN', 'GECCO', 'HIT', 'GRDN', 'FVR', 'HCAI', 'HCICU', 'GIGGU', 'GLOO', 'HONA', 'GAINI', 'GALDY', 'GPAC', 'FTW', 'GSHRU', 'GFUZ', 'FVNNR', 'GSRV', 'HODO', 'HNGE', 'FVAV', 'HAWK', 'HCMA', 'GRAN', 'GTENU', 'HACQ', 'GTI', 'GDSTU', 'GIXXU', 'GTEN', 'GOCO', 'GRO', 'GTLS', 'GBFH', 'FTRK']: TypeError("'NoneType' object is not subscriptable")
+['GDEN', 'GLPG', 'GLTO', 'GLDD', 'GMGI', 'HOLX', 'GAINN']: possibly delisted; no timezone found
+Failed to get ticker 'HTBK' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'IOBT' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$HTBK: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+Failed to get ticker 'IMG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$IMG: possibly delisted; no timezone found
+Failed to get ticker 'JMG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$JMG: possibly delisted; no timezone found
+Failed to get ticker 'KFS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$KFS: possibly delisted; no timezone found
+Failed to get ticker 'KLTO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$KLTO: possibly delisted; no timezone found
+Failed to get ticker 'IINN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$IINN: possibly delisted; no timezone found
+Failed to get ticker 'JFBR' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$JFBR: possibly delisted; no timezone found
+Failed to get ticker 'IROQ' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'ITRM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$IROQ: possibly delisted; no timezone found
+$ITRM: possibly delisted; no timezone found
+
+100 Failed downloads:
+['IGAC', 'JAGU', 'IACQ', 'JENA', 'IAS', 'HVIIU', 'KALV', 'HYMCL', 'IPST', 'JUNS', 'ITHAU', 'IDAC', 'IBG', 'IRAB', 'HVMC', 'HTFL', 'KOYNU', 'IPOD', 'HTLM', 'KBONU', 'JCAP', 'KEYY', 'KCHV', 'IPEX', 'ITOC', 'ICON', 'KCHVU', 'HTOOW', 'JLHL', 'IINNW', 'INFQ', 'IAC', 'INEO', 'ILLU', 'IQMX', 'HSPTU', 'JATT', 'KAZR', 'JETU', 'IEAGU', 'IGACU', 'ITHA', 'KDK', 'IOTR', 'KKRT', 'IPFX', 'IACO', 'HXHX', 'KLC', 'KBON', 'JMKE', 'IPCX', 'INLF', 'INR', 'JEM', 'KOYN', 'KMRK', 'JACS', 'ITG', 'HYAC', 'IEAG', 'HUHU', 'JAN', 'IRHOU', 'KMTS', 'IPCXU', 'KFIIU', 'INACU', 'IBO', 'KFII', 'KLAR', 'INIO', 'HVII', 'JBS', 'INGM', 'IMSR', 'KNRX', 'IPEXU', 'HYNE', 'KLRA', 'KAPA', 'HVMCU', 'JFB', 'IPODU', 'JHG', 'IRHO', 'INAC', 'KARD', 'JBDI', 'KIDZ']: TypeError("'NoneType' object is not subscriptable")
+['HTBK', 'IOBT', 'IMG', 'JMG', 'KFS', 'KLTO', 'IINN', 'JFBR', 'IROQ', 'ITRM']: possibly delisted; no timezone found
+Failed to get ticker 'MBCN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'MAXN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$MAXN: possibly delisted; no timezone found
+Failed to get ticker 'LNKB' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$LNKB: possibly delisted; no timezone found
+$MBCN: possibly delisted; no timezone found
+Failed to get ticker 'KZR' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$KZR: possibly delisted; no timezone found
+Failed to get ticker 'LITM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$LITM: possibly delisted; no timezone found
+Failed to get ticker 'LGCB' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$LGCB: possibly delisted; no timezone found
+
+100 Failed downloads:
+['MBAVU', 'LFTO', 'LINE', 'LAFA', 'LPAA', 'LHSW', 'LAFAU', 'MANE', 'MBINL', 'MDCX', 'KPET', 'LGN', 'MBGL', 'KYIVW', 'MCHPP', 'LFS', 'KRMN', 'LWAC', 'KYIV', 'MCGA', 'MCAH', 'MACI', 'LAZR', 'MDA', 'MCTA', 'LCCC', 'MBVIU', 'LFACU', 'LGPS', 'KW', 'LIFE', 'LEGO', 'MCRP', 'LCCCU', 'LOKV', 'KTWO', 'LKSP', 'LBRX', 'LIF', 'LCLN', 'MAZE', 'LIXT', 'LOKVU', 'LUD', 'LSE', 'MASI', 'LFCBY', 'LPCV', 'KWM', 'LMRI', 'LPBBW', 'LFAC', 'LZMH', 'MBNKO', 'LIME', 'MAIR', 'MBAV', 'LB', 'LTM', 'KTWOU', 'MCVT', 'LIMN', 'MBX', 'LSB', 'KRAQU', 'LWACU', 'KRAQ', 'MCW', 'LHAI', 'KRSP', 'MAGH', 'MDCXW', 'LPBBU', 'MB', 'LNKS', 'LBGJ', 'MACIU', 'MAMK', 'MBVI', 'LPBB', 'LATAU', 'LPCVU', 'MASK', 'LAWR', 'LEGT', 'LKSPU', 'LABT', 'MCR', 'LPAAU', 'MCGAU', 'LATA', 'LC', 'LSH', 'LGCY']: TypeError("'NoneType' object is not subscriptable")
+['MAXN', 'LNKB', 'MBCN', 'KZR', 'LITM', 'LGCB']: possibly delisted; no timezone found
+Failed to get ticker 'NQP' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$NQP: possibly delisted; no timezone found
+Failed to get ticker 'MRCC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$MRCC: possibly delisted; no timezone found
+Failed to get ticker 'NOM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$NOM: possibly delisted; no timezone found
+Failed to get ticker 'MYNZ' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$MYNZ: possibly delisted; no timezone found
+Failed to get ticker 'NGD' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$NGD: possibly delisted; no timezone found
+Failed to get ticker 'MIGI' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$MIGI: possibly delisted; no timezone found
+Failed to get ticker 'NBY' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$NBY: possibly delisted; no timezone found
+Failed to get ticker 'MEG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$MEG: possibly delisted; no timezone found
+Failed to get ticker 'MPX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$MPX: possibly delisted; no timezone found
+
+100 Failed downloads:
+['NATKY', 'NEWTH', 'MESH', 'NBRGU', 'NAMM', 'MEDS', 'MIMI', 'NNNN', 'NMP', 'MDLN', 'NIQ', 'MUZ', 'NRGU', 'MEHA', 'NHP', 'NOTV', 'NSRX', 'NIPG', 'MWC', 'MKLYU', 'METCI', 'NOEMU', 'MESHU', 'MUZE', 'NRGD', 'MLAA', 'NICM', 'MOBI', 'MNTN', 'NOVTU', 'MLAC', 'NOEM', 'MICC', 'MTNE', 'MUZEU', 'NBIS', 'MGN', 'MOBBW', 'MLAAU', 'MTPLF', 'MRLN', 'MSIF', 'NPB', 'MRP', 'MGRT', 'NMAX', 'MLACU', 'NINE', 'NOMA', 'METCZ', 'NCT', 'MWH', 'MMED', 'NPT', 'NHICU', 'MSW', 'MTAL', 'NLSPW', 'MEVO', 'MKZR', 'NEWTP', 'MPLT', 'NMPAU', 'NAMI', 'NCEW', 'NHIC', 'MKLY', 'MZYX', 'NKLR', 'MEVOU', 'MGRM', 'NESR', 'NAVN', 'MYX', 'MSGY', 'MYPSW', 'MIAX', 'MINE', 'MSPRW', 'NBRG', 'NPACU', 'NP', 'NHIV', 'MH', 'MFP', 'MONRY', 'NPAC', 'MMTX', 'MMTXU', 'MWYN', 'MENS']: TypeError("'NoneType' object is not subscriptable")
+['NQP', 'MRCC', 'NOM', 'MYNZ', 'NGD', 'MIGI', 'NBY', 'MEG', 'MPX']: possibly delisted; no timezone found
+Failed to get ticker 'OAKU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$OAKU: possibly delisted; no timezone found
+Failed to get ticker 'OCCIO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$OCCIO: possibly delisted; no timezone found
+Failed to get ticker 'OS' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$OS: possibly delisted; no timezone found
+Failed to get ticker 'OTH' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$OTH: possibly delisted; no timezone found
+Failed to get ticker 'PKST' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$PKST: possibly delisted; no timezone found
+Failed to get ticker 'ONTF' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ONTF: possibly delisted; no timezone found
+Failed to get ticker 'PELI' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$PELI: possibly delisted; no timezone found
+Failed to get ticker 'NXJ' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$NXJ: possibly delisted; no timezone found
+Failed to get ticker 'PELIU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$PELIU: possibly delisted; no timezone found
+Failed to get ticker 'OAKUU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$OAKUU: possibly delisted; no timezone found
+
+100 Failed downloads:
+['OXLCG', 'OXLCI', 'NTHI', 'ORKT', 'PDCC', 'PLMK', 'PAAC', 'OSTX', 'OMSE', 'PCLA', 'PAII', 'ONCHU', 'ODV', 'ORISF', 'OYSEU', 'PALO', 'PAYP', 'NUVL', 'PGACU', 'OTGA', 'OBAI', 'ORIQU', 'NUCL', 'PGAC', 'ODTX', 'OPI', 'NUTR', 'OIM', 'PHOE', 'PLUT', 'PLUN', 'OIMAU', 'ONCH', 'PC', 'OHAC', 'ORIS', 'PACH', 'NTWOU', 'PACHU', 'ORGN', 'PECE', 'OTGAU', 'PLMKU', 'OAKUR', 'PLSM', 'PDPA', 'PCSC', 'OFAL', 'PICS', 'OCTV', 'OTAI', 'OBA', 'PCAPU', 'PLYX', 'PFSA', 'PASW', 'ONEG', 'PLBL', 'OMDA', 'OACCU', 'NXB', 'PCAP', 'NVA', 'PLTS', 'OXSQH', 'OYSER', 'OBAWU', 'PARK', 'OWLS', 'ORIQ', 'OTF', 'NTSK', 'NVOH', 'PBLS', 'OFSSO', 'OLPX', 'PLRZ', 'NTCL', 'OFRM', 'PFAI', 'OCCIM', 'PGYWW', 'NTWO', 'PDYNW', 'NWAX', 'PINC', 'PECEU', 'OACC', 'OPTH', 'OYSE']: TypeError("'NoneType' object is not subscriptable")
+['OAKU', 'OCCIO', 'OS', 'OTH', 'PKST', 'ONTF', 'PELI', 'NXJ', 'PELIU', 'OAKUU']: possibly delisted; no timezone found
+Failed to get ticker 'QVCC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$QVCC: possibly delisted; no timezone found
+Failed to get ticker 'PSTG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$PSTG: possibly delisted; no timezone found
+Failed to get ticker 'RVYL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$RVYL: possibly delisted; no timezone found
+Failed to get ticker 'RWAYZ' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'QVCD' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$RWAYZ: possibly delisted; no timezone found
+Failed to get ticker 'RNAM' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$QVCD: possibly delisted; no timezone found
+$RNAM: possibly delisted; no timezone found
+Failed to get ticker 'RAPT' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$RAPT: possibly delisted; no timezone found
+Failed to get ticker 'RILYK' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'QVCGP' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$RILYK: possibly delisted; no timezone found
+Failed to get ticker 'RCB' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'QVCGA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$QVCGP: possibly delisted; no timezone found
+$RCB: possibly delisted; no timezone found
+$QVCGA: possibly delisted; no timezone found
+Failed to get ticker 'QIPT' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$QIPT: possibly delisted; no timezone found
+
+100 Failed downloads:
+['PPHC', 'RBNE', 'ROC', 'RANG', 'PURR', 'QMMM', 'QUMSU', 'PONO', 'RDACU', 'RUBI', 'PSUS', 'POAS', 'RREV', 'RIBBU', 'RANGU', 'PTNM', 'PMI', 'RWTP', 'QNT', 'RFAI', 'RNGT', 'PMTRU', 'RHLD', 'RTACU', 'RACD', 'QNC', 'PMA', 'Q', 'RFAM', 'QLEP', 'RDAG', 'QSEA', 'RDAC', 'PMAX', 'ROLR', 'PUSA', 'RVI', 'PMTR', 'RNGTU', 'PS', 'QRED', 'RTACW', 'QADR', 'PN', 'PWRL', 'PMTV', 'QUMS', 'REA', 'RNA', 'RADX', 'PRHIZ', 'PTLE', 'RACC', 'REE', 'RAC', 'RMIX', 'PTOR', 'PMTW', 'RTAC', 'PONY', 'RAAQU', 'RIBB', 'RECT', 'PSNYW', 'POLEU', 'RITR', 'QMLS', 'RAL', 'RAIN', 'QSEAU', 'POLE', 'PTRN', 'RCT', 'PRTC', 'POM', 'RDAGU', 'PSIG', 'PXED', 'RPGL', 'PTORU', 'RGNT', 'RWTO', 'RCD', 'RAAQ', 'PTAC', 'RYET', 'RAPP', 'PRA']: TypeError("'NoneType' object is not subscriptable")
+['QVCC', 'PSTG', 'RVYL', 'RWAYZ', 'QVCD', 'RNAM', 'RAPT', 'RILYK', 'QVCGP', 'RCB', 'QVCGA', 'QIPT']: possibly delisted; no timezone found
+Failed to get ticker 'SLNO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SLNO: possibly delisted; no timezone found
+Failed to get ticker 'SBLX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'SNCY' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SBLX: possibly delisted; no timezone found
+$SNCY: possibly delisted; no timezone found
+Failed to get ticker 'SEMR' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SEMR: possibly delisted; no timezone found
+Failed to get ticker 'SAVA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SAVA: possibly delisted; no timezone found
+Failed to get ticker 'SEE' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SEE: possibly delisted; no timezone found
+Failed to get ticker 'SGN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SGN: possibly delisted; no timezone found
+
+100 Failed downloads:
+['SSMR', 'SOCAU', 'SEV', 'SSAC', 'SSSS', 'SCIIU', 'SAFX', 'SSEA', 'SLBT', 'SCAG', 'SPMA', 'SDM', 'SILA', 'SION', 'SDHIU', 'SPHL', 'SAIL', 'SCVL', 'SNWV', 'SPTX', 'SAC', 'SEG', 'SNSE', 'SHOT', 'SORNU', 'SPEG', 'SPMC', 'SIND', 'SSII', 'SPCX', 'SOBO', 'SPAI', 'SGP', 'SKYQ', 'SSSSL', 'SKHY', 'SKBL', 'SGMO', 'SI', 'SNDK', 'SAPH', 'SPEGU', 'SFHG', 'SATS', 'SMJF', 'SBXE', 'SAAQ', 'SARO', 'SHAZ', 'SIMA', 'STDN', 'SORA', 'SDHI', 'SAGT', 'SEPN', 'SECZ', 'SOUL', 'SAGU', 'SORN', 'SCPQ', 'SPME', 'SLDE', 'SLAI', 'SNPX', 'SBMT', 'SCCC', 'SCPQU', 'SBXD', 'RZB', 'SOLS', 'SFD', 'SELX', 'SEMG', 'SOJF', 'STAK', 'SNBR', 'SSEAU', 'SMA', 'SEM', 'SMPNY', 'SOPA', 'SKLZ', 'SAAQU', 'SATA', 'SOCA', 'SLGB', 'SOMN', 'SKK', 'SSACU', 'RYOJ', 'SCII', 'SIMAU', 'SNYR']: TypeError("'NoneType' object is not subscriptable")
+['SLNO', 'SBLX', 'SNCY', 'SEMR', 'SAVA', 'SEE', 'SGN']: possibly delisted; no timezone found
+Failed to get ticker 'TFSA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TFSA: possibly delisted; no timezone found
+Failed to get ticker 'TIVC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TIVC: possibly delisted; no timezone found
+Failed to get ticker 'SWKH' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$SWKH: possibly delisted; no timezone found
+Failed to get ticker 'TSE' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TSE: possibly delisted; no timezone found
+Failed to get ticker 'STKL' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$STKL: possibly delisted; no timezone found
+Failed to get ticker 'TIRX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'UBFO' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TIRX: possibly delisted; no timezone found
+$UBFO: possibly delisted; no timezone found
+Failed to get ticker 'TGNA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TGNA: possibly delisted; no timezone found
+Failed to get ticker 'TBMCR' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TBMCR: possibly delisted; no timezone found
+Failed to get ticker 'TBMC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TBMC: possibly delisted; no timezone found
+Failed to get ticker 'TERN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TERN: possibly delisted; no timezone found
+Failed to get ticker 'TICKER' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TICKER: possibly delisted; no timezone found
+Failed to get ticker 'TPH' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$TPH: possibly delisted; no timezone found
+
+100 Failed downloads:
+['SUNB', 'TDACU', 'TLX', 'TTAN', 'TACHU', 'TEST', 'TGE', 'STSS', 'THH', 'TMTS', 'TMS', 'TIC', 'TDWD', 'STRD', 'SVAC', 'TMDE', 'SVACU', 'SWMR', 'SUMA', 'TVIV', 'TMCR', 'TBH', 'TLNC', 'TLIH', 'TGHL', 'TTAM', 'TWLVU', 'TRAD', 'SVAQ', 'TVAIU', 'TTRX', 'SZZLU', 'SUNC', 'TACH', 'TPTA', 'SVIV', 'TDIC', 'TDTH', 'SVCC', 'TACO', 'STUB', 'SVCCU', 'STEL', 'STRF', 'THTX', 'SUUN', 'TVA', 'TWLV', 'TMUSL', 'TECTP', 'TVAI', 'TLNCU', 'STRK', 'TRINI', 'TMUSZ', 'THR', 'TRGS', 'TBRG', 'STRC', 'TMH', 'STHH', 'TVACU', 'STRZ', 'SUJA', 'TOPP', 'STFS', 'TACOU', 'TEM', 'TRAX', 'TWNPQ', 'TBN', 'UAC', 'TDWDU', 'SVII', 'TJGC', 'UBXG', 'SZZL', 'TWFG', 'TDAC', 'TMUSI', 'TWOD', 'SVAQU', 'TBHC', 'SVA', 'SUNS', 'TAVIU', 'TAVI']: TypeError("'NoneType' object is not subscriptable")
+['TFSA', 'TIVC', 'SWKH', 'TSE', 'STKL', 'TIRX', 'UBFO', 'TGNA', 'TBMCR', 'TBMC', 'TERN', 'TICKER', 'TPH']: possibly delisted; no timezone found
+Failed to get ticker 'VTYX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$VTYX: possibly delisted; no timezone found
+Failed to get ticker 'WLACU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$WLACU: possibly delisted; no timezone found
+Failed to get ticker 'VCICU' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$VCICU: possibly delisted; no timezone found
+Failed to get ticker 'VRE' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$VRE: possibly delisted; no timezone found
+Failed to get ticker 'UDMY' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$UDMY: possibly delisted; no timezone found
+Failed to get ticker 'UOKA' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$UOKA: possibly delisted; no timezone found
+Failed to get ticker 'VBIX' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$VBIX: possibly delisted; no timezone found
+Failed to get ticker 'UHG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$UHG: possibly delisted; no timezone found
+Failed to get ticker 'VCIC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$VCIC: possibly delisted; no timezone found
+Failed to get ticker 'VVPR' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$VVPR: possibly delisted; no timezone found
+Failed to get ticker 'ULY' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Failed to get ticker 'WLAC' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ULY: possibly delisted; no timezone found
+$WLAC: possibly delisted; no timezone found
+
+100 Failed downloads:
+['VFL', 'XRPN', 'XE', 'VCRE', 'VMET', 'VII', 'VNMEU', 'WENN', 'VG', 'VLYPN', 'VSSYW', 'UMBFO', 'UPB', 'WGRX', 'VSECU', 'VIDA', 'UYSCU', 'WSBCO', 'WAY', 'VSNT', 'WETO', 'WXM', 'VACI', 'VHUB', 'WCT', 'VRNT', 'XOMA', 'USDE', 'WBI', 'WSTNU', 'WSBK', 'WW', 'WTGUU', 'UFG', 'WFF', 'VACHU', 'WENC', 'VHCPU', 'VWAV', 'WSHP', 'XNDU', 'VLOSU', 'WYHG', 'WRD', 'WSR', 'WAI', 'WSE', 'WTF', 'USEG', 'WOLF', 'XFLH', 'WLII', 'VENU', 'WOK', 'XHLD', 'VLOS', 'WENNU', 'WYFI', 'XOMAP', 'VRM', 'VGNT', 'WTO', 'XCBE', 'VACH', 'VRXA', 'WHK', 'WSTN', 'WTG', 'VNTG', 'UGRO', 'WBTN', 'VYLD', 'UYSC', 'VECA', 'VTIX', 'XOMAO', 'XCH', 'VOYG', 'VCX', 'WPAC', 'XCBEU', 'XINRY', 'WTFCN', 'WLTH', 'XIACY', 'VNME', 'VIA', 'VSCO']: TypeError("'NoneType' object is not subscriptable")
+['VTYX', 'WLACU', 'VCICU', 'VRE', 'UDMY', 'UOKA', 'VBIX', 'UHG', 'VCIC', 'VVPR', 'ULY', 'WLAC']: possibly delisted; no timezone found
+Failed to get ticker 'ZBAI' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ZBAI: possibly delisted; no timezone found
+Failed to get ticker 'XWIN' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$XWIN: possibly delisted; no timezone found
+Failed to get ticker 'XTKG' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$XTKG: possibly delisted; no timezone found
+Failed to get ticker 'ZENV' reason: Failed to perform, curl: (6) Could not resolve host: query2.finance.yahoo.com. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+$ZENV: possibly delisted; no timezone found
+
+35 Failed downloads:
+['ZYBT', 'ZJK', 'ZKPU', 'ZSPC', 'ZGM', 'YDES', 'ZENA', 'YOOV', 'YAAS', 'YHNA', 'ZKP', 'YCY', 'YDDL', 'YSXT', 'XSLL', 'YSWY', 'YICC', 'XSLLU', 'XZO', 'YSS', 'YMT', 'YOUL', 'YMAT', 'XXI', 'YXT', 'XRPNU', 'YB', 'ZTG', 'ZDAI', 'YHNAU', 'ZBIO']: TypeError("'NoneType' object is not subscriptable")
+['ZBAI', 'XWIN', 'XTKG', 'ZENV']: possibly delisted; no timezone found
+🔄 Starting ticker_cache update for 7,295 tickers (Target earliest date: 2024-06-04)...
+  • 5,860 tickers with complete cache (incremental 5d update)
+  • 1,435 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+  ! AFJK: price discontinuity (history 2025-12-10 x0.49) - refetching full history
+  ! AIMD: price discontinuity (history 2022-05-27 x2.93) - refetching full history
+  ! ALURD: price discontinuity (history 2026-06-18 x14.69) - refetching full history
+  ! APVO: price discontinuity (history 2020-11-09 x2.11) - refetching full history
+  ! ASBP: price discontinuity (history 2026-05-11 x29.73) - refetching full history
+  ! ATLX: price discontinuity (history 2020-12-24 x2.00) - refetching full history
+    Batch 5: Processed 500 / 5,860 tickers (499 saved successfully)...
+  ! BANL: price discontinuity (history 2026-07-20 x10.67) - refetching full history
+  ! BBGI: price discontinuity (history 2025-12-11 x0.53) - refetching full history
+  ! BCTX: price discontinuity (history 2025-01-29 x14.97) - refetching full history
+  ! BESS: price discontinuity (history 2023-11-29 x0.50) - refetching full history
+  ! BGLC: price discontinuity (history 2021-06-21 x1.87) - refetching full history
+  ! BJDX: price discontinuity (history 2025-04-08 x0.51) - refetching full history
+  ! BLTH: price discontinuity (history 2024-04-10 x1.88) - refetching full history
+  ! BVC: price discontinuity (history 2026-01-05 x9.93) - refetching full history
+    Batch 10: Processed 1,000 / 5,860 tickers (998 saved successfully)...
+  ! CDT: price discontinuity (history 2026-07-20 x10.51) - refetching full history
+  ! CIIT: price discontinuity (history 2020-11-17 x0.52) - refetching full history
+  ! CLRO: price discontinuity (history 2023-06-01 x0.51) - refetching full history
+  ! CMCT: price discontinuity (history 2025-01-06 x10.59) - refetching full history
+  ! CNTM: price discontinuity (history 2025-08-11 x0.09) - refetching full history
+  ! CREG: price discontinuity (history 2026-07-22 x0.13) - refetching full history
+  ! DBGI: price discontinuity (history 2024-12-17 x0.49) - refetching full history
+  ! DBVT: price discontinuity (history 2024-11-29 x5.56) - refetching full history
+  ! DEC: price discontinuity (history 2023-12-05 x19.89) - refetching full history
+    Batch 15: Processed 1,500 / 5,860 tickers (1,498 saved successfully)...
+  ! DUKR: price discontinuity (history 2026-03-06 x25.53) - refetching full history
+  ! ELPW: price discontinuity (history 2026-05-15 x0.51) - refetching full history
+  ! ELUXY: price discontinuity (history 2026-06-29 x0.53) - refetching full history
+  ! ENSC: price discontinuity (history 2022-12-07 x0.49) - refetching full history
+  ! EXOD: price discontinuity (history 2022-12-23 x2.00) - refetching full history
+  ! FFAI: price discontinuity (history 2024-05-15 x2.10) - refetching full history
+    Batch 20: Processed 2,000 / 5,860 tickers (1,998 saved successfully)...
+  ! FNUC: price discontinuity (history 2024-12-19 x0.52) - refetching full history
+  ! GME: price discontinuity (history 2021-01-29 x1.96) - refetching full history
+  ! GMM: price discontinuity (history 2024-11-26 x14.45) - refetching full history
+  ! HAO: price discontinuity (history 2025-01-27 x23.79) - refetching full history
+    Batch 25: Processed 2,500 / 5,860 tickers (2,498 saved successfully)...
+  ! HTHIY: price discontinuity (history 2025-02-19 x0.50) - refetching full history
+  ! IMNN: price discontinuity (history 2024-07-31 x0.52) - refetching full history
+  ! INCR: price discontinuity (history 2021-04-08 x4.67) - refetching full history
+  ! JXG: price discontinuity (history 2025-01-08 x4.06) - refetching full history
+  ! JZXN: price discontinuity (history 2023-07-17 x0.50) - refetching full history
+  ! KAVL: price discontinuity (history 2024-06-21 x0.48) - refetching full history
+    Batch 30: Processed 3,000 / 5,860 tickers (2,997 saved successfully)...
+  ! LEXX: price discontinuity (merge seam) - refetching full history
+  ! MEGL: price discontinuity (history 2025-02-18 x3.78) - refetching full history
+  ! MF: price discontinuity (history 2024-11-27 x15.51) - refetching full history
+    Batch 35: Processed 3,500 / 5,860 tickers (3,497 saved successfully)...
+  ! MVIS: price discontinuity (merge seam) - refetching full history
+  ! NXTS: price discontinuity (history 2026-06-23 x0.51) - refetching full history
+  ! NXTT: price discontinuity (history 2025-09-12 x0.53) - refetching full history
+  ! NYC: price discontinuity (history 2023-01-12 x7.49) - refetching full history
+  ! OCGN: price discontinuity (history 2021-01-04 x1.87) - refetching full history
+  ! OGEN: price discontinuity (history 2024-09-04 x0.52) - refetching full history
+  ! OMH: price discontinuity (history 2025-03-10 x9.77) - refetching full history
+  ! OPAD: price discontinuity (history 2026-06-05 x9.46) - refetching full history
+  ! ORGS: price discontinuity (history 2025-09-25 x0.05) - refetching full history
+    Batch 40: Processed 4,000 / 5,860 tickers (3,996 saved successfully)...
+  ! POET: price discontinuity (history 2026-07-22 x0.52) - refetching full history
+  ! PPCB: price discontinuity (history 2025-01-30 x0.53) - refetching full history
+  ! PRFX: price discontinuity (history 2024-11-21 x3.18) - refetching full history
+  ! PSHG: price discontinuity (history 2020-11-02 x10.05) - refetching full history
+  ! QH: price discontinuity (history 2026-04-27 x30.00) - refetching full history
+  ! QTEX: price discontinuity (history 2021-10-27 x0.51) - refetching full history
+  ! REVB: price discontinuity (history 2022-07-26 x0.52) - refetching full history
+    Batch 45: Processed 4,500 / 5,860 tickers (4,496 saved successfully)...
+  ! SEGG: price discontinuity (merge seam) - refetching full history
+  split repairs: 1 resolved, 55 still discontinuous after refetch (recorded, will not retry)
+  ✓ Updated 4,795 / 5,860 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+  ✓ Created/Backfilled 0 / 1,435 ticker parquets.
+✅ Ticker cache update finished in 478.20 seconds.

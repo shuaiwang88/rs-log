@@ -2233,15 +2233,16 @@ def leader_score(row):
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs(
         ["📈 Overview", "🎯 Top Performers",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern"])
 
 tab_ibd_pattern = tab8
+tab_tv_pattern = tab14
 tab_drc = tab9
 tab_backtests = tab12
 tab_scans = tab13
@@ -4372,17 +4373,24 @@ def _ibd_chart_payload(ticker: str, bars: int = 300):
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _ibd_trend_metrics(tickers: tuple):
-    """SMA50 / SMA200 / 50-day average volume per ticker, straight from ticker_cache.
+def _trend_table(mtime: float):
+    """The whole universe's SMA50 / SMA200 / 50-day volume, precomputed by the TV scan.
 
-    The pattern scanner computes sma50 internally but never emits it, and has no sma200 or
-    50-day volume at all, so the trend filters below have nothing to read. Deriving them here
-    keeps the promoted production scanner untouched — the alternative was adding three fields
-    to a live file, which is not something to do as a side effect of a dashboard filter.
-
-    Cached for an hour and keyed on the ticker tuple: it opens one parquet per ticker, which
-    is fine once but not on every widget interaction.
+    `tv_pattern_scanner.py` already opens every parquet in ticker_cache, so it writes these
+    three numbers out to `python/trend_metrics.parquet` on the way past. One 7k-row read
+    instead of 7k reads.
     """
+    fp = Path(__file__).resolve().parent / "python" / "trend_metrics.parquet"
+    if not fp.exists():
+        return None
+    try:
+        return pd.read_parquet(fp).set_index("ticker")
+    except Exception:
+        return None
+
+
+def _trend_from_cache(tickers: tuple):
+    """Fallback: derive the metrics by opening one parquet per ticker, as this used to."""
     cache_dir = Path(__file__).resolve().parent / "ticker_cache"
     rows = []
     for t in tickers:
@@ -4404,6 +4412,35 @@ def _ibd_trend_metrics(tickers: tuple):
         av50 = v.rolling(50, min_periods=25).mean().iloc[-1]
         rows.append({"ticker": str(t), "sma50": s50, "sma200": s200, "avg_vol50": av50})
     return pd.DataFrame(rows)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _ibd_trend_metrics(tickers: tuple):
+    """SMA50 / SMA200 / 50-day average volume per ticker.
+
+    The pattern scanner computes sma50 internally but never emits it, and has no sma200 or
+    50-day volume at all, so the trend filters below have nothing to read. Deriving them here
+    keeps the promoted production scanner untouched — the alternative was adding three fields
+    to a live file, which is not something to do as a side effect of a dashboard filter.
+
+    Served from the precomputed table when it is there. It used to open one parquet per ticker
+    on every cold load, and with two tabs asking for it that was ~8,200 files and 19 of the
+    ~24 seconds the app took to appear. Anything the table does not cover still falls back to
+    the per-ticker read, so a ticker added since the last scan is missing numbers, never wrong
+    ones — and the fallback computes them identically.
+    """
+    fp = Path(__file__).resolve().parent / "python" / "trend_metrics.parquet"
+    tbl = _trend_table(fp.stat().st_mtime) if fp.exists() else None
+    if tbl is None:
+        return _trend_from_cache(tickers)
+    want = [str(t) for t in tickers]
+    have = tbl.reindex([t for t in want if t in tbl.index]).reset_index()
+    missing = tuple(t for t in want if t not in tbl.index)
+    if missing:
+        extra = _trend_from_cache(missing)
+        if not extra.empty:
+            have = pd.concat([have, extra], ignore_index=True)
+    return have.dropna(subset=["sma50"], how="all") if not have.empty else have
 
 
 with tab_ibd_pattern:
@@ -4731,6 +4768,693 @@ with tab_ibd_pattern:
             st.error(f"Error loading IBD pattern results: {e}")
     else:
         st.info("No IBD pattern results JSON found. Click the button above to run the pattern scanner.")
+
+
+# ---------- TAB: TradingView Pattern (exact drw_pattern.pine port) ----------
+# Double bottoms are switched off in the scanner (DETECT_DOUBLE_BOTTOM); a "Dbl Bottom" can no
+# longer appear in the results file, so it is not an option here either.
+TV_PATTERN_ORDER = ["Cup+Handle", "Cup", "HTF", "Base"]
+# How a non-cup base is drawn - the scanner's `base_shape`, describing the same channel the
+# Pine paints for all of them (lines 984-985).
+TV_SHAPE_ORDER = ["Flat Base", "Consolidation"]
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _tv_load_results(mtime: float):
+    """Results keyed on the file's mtime, so a rerun of the scanner invalidates the cache."""
+    with open(Path(__file__).resolve().parent / "python" / "tv_pattern_results.json",
+              "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _tv_load_history(mtime: float):
+    """Every base the scanner has ever seen, ~36k rows / 17MB — loaded only when asked for."""
+    fp = Path(__file__).resolve().parent / "python" / "tv_pattern_history.json"
+    if not fp.exists():
+        return None
+    with open(fp, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+TV_FAV_PATH = Path(__file__).resolve().parent / "python" / "tv_favorites.json"
+
+
+def _tv_load_favs():
+    """Favourites survive a restart, so ctrl+space is worth pressing."""
+    try:
+        with open(TV_FAV_PATH, "r", encoding="utf-8") as f:
+            return list(dict.fromkeys(json.load(f)))
+    except Exception:
+        return []
+
+
+def _tv_save_favs(favs):
+    try:
+        TV_FAV_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(TV_FAV_PATH, "w", encoding="utf-8") as f:
+            json.dump(list(dict.fromkeys(favs)), f, indent=1)
+    except Exception as e:
+        st.warning(f"Could not save favourites: {e}")
+
+
+def _tv_keyboard_nav(next_label: str, prev_label: str, fav_label: str):
+    """Space / shift+space / ctrl+space, wired to the three nav buttons.
+
+    Streamlit has no keyboard API, so this listens on the parent document from inside the
+    component's iframe (same origin) and clicks the button whose text matches. Typing in the
+    search box must keep working, so the handler bails out whenever the focus is in an input,
+    a textarea or anything contenteditable - otherwise a space in a ticker name would page
+    through the list instead.
+    """
+    st_html(f"""
+<script>
+const doc = window.parent.document;
+const hit = (label) => {{
+  for (const b of doc.querySelectorAll('button')) {{
+    if ((b.innerText || '').trim() === label) {{ b.click(); return true; }}
+  }}
+  return false;
+}};
+const typing = () => {{
+  const a = doc.activeElement;
+  if (!a) return false;
+  const tag = (a.tagName || '').toLowerCase();
+  return tag === 'input' || tag === 'textarea' || a.isContentEditable;
+}};
+if (!window.parent.__tvNavBound) {{
+  window.parent.__tvNavBound = true;
+  doc.addEventListener('keydown', (e) => {{
+    if (e.code !== 'Space' || e.altKey || e.metaKey) return;
+    if (typing()) return;
+    const label = e.ctrlKey ? {fav_label!r} : (e.shiftKey ? {prev_label!r} : {next_label!r});
+    if (hit(label)) e.preventDefault();
+  }}, true);
+}}
+</script>""", height=0)
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def _tv_chart_bars(ticker: str):
+    """Price bars for the pattern chart.
+
+    Unlike the IBD tab this does NOT rescan the ticker: tv_pattern_scanner writes the drawing
+    anchors (cup arcs, base channel, handle box, flag pole, trade boxes) into each record, so
+    the chart only needs candles.
+    """
+    fp = (Path(__file__).resolve().parent / "ticker_cache"
+          / f"{str(ticker).strip().replace('.', '-')}_1d.parquet")
+    if not fp.exists():
+        return None
+    return pd.read_parquet(fp).sort_index()
+
+
+with tab_tv_pattern:
+    st.subheader("📐 TradingView Pattern Scan — `pine/drw_pattern.pine`")
+    st.markdown(
+        "Bar-by-bar port of the **MarketSmith Indicator**'s Chart Pattern Recognition block, "
+        "replayed over `ticker_cache`. Same pivots, same 25-bar detection lag, same base / cup "
+        "/ high-tight-flag state machine and the same trade boxes — so a hit here is what the "
+        "indicator is drawing on that chart right now. Double bottoms are switched off. "
+        "(The 🏆 IBD Pattern tab ports a *different* script, `drw_pattern_scanner.pine`, with "
+        "its own thresholds and scoring; the two are expected to disagree.)")
+
+    tv_col1, tv_col2 = st.columns([4, 6])
+    with tv_col1:
+        if st.button("🔄 Run / Rerun TV Pattern Scan", key="run_tv_pattern_scanner_btn"):
+            with st.spinner("Replaying drw_pattern.pine over 7,000+ tickers (~30s)..."):
+                try:
+                    script_path = Path(__file__).resolve().parent / "python" / "tv_pattern_scanner.py"
+                    result = subprocess.run([sys.executable, str(script_path)],
+                                            cwd=str(Path(__file__).resolve().parent),
+                                            capture_output=True, text=True)
+                    if result.returncode == 0:
+                        st.success("✅ Scan complete.")
+                        st.cache_data.clear()
+                        rerun_app()
+                    else:
+                        st.error(f"Scan failed:\n{result.stderr[-2000:]}")
+                except Exception as e:
+                    st.error(f"Error running the TV pattern scanner: {e}")
+    with tv_col2:
+        tv_search = st.text_input("🔍 Ticker Search", value="", placeholder="e.g. NVDA, XOM...",
+                                  key="tv_quick_ticker_search").strip().upper()
+
+    tv_json_path = Path(__file__).resolve().parent / "python" / "tv_pattern_results.json"
+    if not tv_json_path.exists():
+        st.info("No `tv_pattern_results.json` yet — press **🔄 Run / Rerun TV Pattern Scan**.")
+    else:
+        try:
+            try:
+                tv_payload = _tv_load_results(tv_json_path.stat().st_mtime)
+            except json.JSONDecodeError as je:
+                st.error(f"`tv_pattern_results.json` is incomplete (JSON ends at line "
+                         f"{je.lineno}); a scan was interrupted mid-write. Rerun the scan.")
+                tv_payload = None
+
+            if tv_payload:
+                tv_results = tv_payload.get("results", [])
+                gen_at = str(tv_payload.get("generated_at", ""))[:16].replace("T", " ")
+                df_tv = pd.DataFrame(tv_results)
+
+                if df_tv.empty:
+                    st.info("The scan found no live patterns.")
+                else:
+                    # Same enrichment as the IBD tab: RS/sector from the stocks dataset, and
+                    # trend/liquidity from ticker_cache (the scanner emits neither).
+                    if 'df' in locals() and df is not None and not df.empty:
+                        if 'date' in df.columns:
+                            latest_stocks = df.sort_values('date').groupby('Ticker').last().reset_index()
+                        else:
+                            latest_stocks = df.drop_duplicates(subset=['Ticker']).copy()
+                        merge_fields = ['Ticker', 'Percentile', 'Relative Strength', 'AvgVol30',
+                                        'Sector', 'Industry']
+                        avail_m = [c for c in merge_fields if c in latest_stocks.columns]
+                        if len(avail_m) > 1:
+                            df_tv = df_tv.merge(latest_stocks[avail_m], left_on='ticker',
+                                                right_on='Ticker', how='left')
+                    try:
+                        _tm = _ibd_trend_metrics(tuple(sorted(df_tv['ticker'].astype(str).unique())))
+                        if not _tm.empty:
+                            df_tv = df_tv.merge(_tm, on='ticker', how='left')
+                    except Exception as _e:
+                        st.caption(f"Trend metrics unavailable ({_e}); trend filters disabled.")
+
+                    for c in ('Percentile', 'AvgVol30'):
+                        if c in df_tv.columns:
+                            df_tv[c] = pd.to_numeric(df_tv[c], errors='coerce')
+
+                    m1, m2, m3, m4, m5 = st.columns(5)
+                    with m1: st.metric("Live patterns", len(df_tv))
+                    with m2: st.metric("In Base", int((df_tv['status'] == 'In Base').sum()))
+                    with m3: st.metric("Post-BO", int((df_tv['status'] == 'Post-BO').sum()))
+                    with m4: st.metric("In Flag (HTF)", int((df_tv['status'] == 'In Flag').sum()))
+                    with m5: st.metric("Within 5% of pivot",
+                                       int((df_tv['dist_pct'].abs() <= 5).sum()))
+                    st.caption(f"Scanned {tv_payload.get('universe', '?')} tickers · generated {gen_at} · "
+                               f"Pine quirk settings: {tv_payload.get('pine_quirks', {})}")
+                    st.divider()
+
+                    with st.expander("🎛️ Filter & Refine", expanded=False):
+                        g1, g2, g3, g4 = st.columns(4)
+                        with g1:
+                            avail_pat = [p for p in TV_PATTERN_ORDER
+                                         if p in set(df_tv['pattern_name'])]
+                            tv_pats = st.multiselect("Pattern", avail_pat, default=avail_pat,
+                                                     key="tv_pat_sel")
+                            avail_shape = [s for s in TV_SHAPE_ORDER
+                                           if s in set(df_tv.get('base_shape', pd.Series(dtype=object)))]
+                            tv_shapes = st.multiselect(
+                                "Base shape", avail_shape, default=avail_shape,
+                                key="tv_shape_sel",
+                                help="Only applies to Base rows: a flat base is ≤15% deep over "
+                                     "5+ weeks, anything else is a consolidation.")
+                            tv_status = st.radio("Status", ["All", "In Base", "Post-BO", "In Flag"],
+                                                 horizontal=True, key="tv_status_sel")
+                        with g2:
+                            tv_min_rs = st.slider("Min RS Rating (1-99)", 0, 99, 0, key="tv_min_rs")
+                            tv_min_price = st.number_input("Min Price ($)", value=12.0, step=1.0,
+                                                           key="tv_min_price")
+                            tv_max_price = st.number_input("Max Price ($)", value=10000.0, step=10.0,
+                                                           key="tv_max_price")
+                            tv_min_vol50 = st.number_input("Min 50D Avg Vol", value=400000,
+                                                           step=50000, key="tv_min_vol50")
+                        with g3:
+                            tv_max_dist = st.number_input("Max |distance to pivot| %", value=100.0,
+                                                          key="tv_max_dist")
+                            tv_max_52w = st.number_input("Max % Off 52W High", value=100.0,
+                                                         key="tv_max_52w")
+                            tv_depth = st.slider("Base depth % range", 0, 60, (0, 60),
+                                                 key="tv_depth_rng")
+                            tv_min_days = st.number_input("Min days in base", value=0, step=5,
+                                                          key="tv_min_days")
+                        with g4:
+                            _has_trend = {'sma50', 'sma200'} <= set(df_tv.columns)
+                            tv_above200 = st.checkbox("Price > 200D SMA", value=True,
+                                                      disabled=not _has_trend, key="tv_above200")
+                            tv_50o200 = st.checkbox("50D SMA > 200D SMA", value=True,
+                                                    disabled=not _has_trend, key="tv_50o200")
+                            tv_rs_nh = st.checkbox("RS line at a new high", value=False,
+                                                   key="tv_rs_nh")
+                            # The Pine's cup test is a per-bar snapshot that decays as the right
+                            # side of the cup completes, so "how many bars of this base ever
+                            # passed it" is the real strength signal. 1 bar is a marginal cup,
+                            # 20+ is unambiguous; median is 11.
+                            tv_min_cup = st.slider("Min cup evidence (bars)", 0, 30, 0,
+                                                   key="tv_min_cup",
+                                                   help="Bars of this base that passed the cup "
+                                                        "test. Raise it to drop marginal cups.")
+
+                    f_tv = df_tv.copy()
+                    if tv_search:
+                        f_tv = f_tv[f_tv['ticker'].str.upper().str.contains(tv_search, na=False)]
+                    if tv_pats:
+                        f_tv = f_tv[f_tv['pattern_name'].isin(tv_pats)]
+                    # Shape is a property of Base rows only; a cup or a flag has none, so they
+                    # pass this filter rather than being dropped by a control about bases.
+                    if tv_shapes and 'base_shape' in f_tv.columns and set(tv_shapes) != set(avail_shape):
+                        f_tv = f_tv[f_tv['base_shape'].isna()
+                                    | f_tv['base_shape'].isin(tv_shapes)]
+                    if tv_status != "All":
+                        f_tv = f_tv[f_tv['status'] == tv_status]
+                    if 'Percentile' in f_tv.columns and tv_min_rs > 0:
+                        f_tv = f_tv[f_tv['Percentile'].fillna(0) >= tv_min_rs]
+                    if tv_min_price > 0:
+                        f_tv = f_tv[f_tv['close'] >= tv_min_price]
+                    if tv_max_price < 10000.0:
+                        f_tv = f_tv[f_tv['close'] <= tv_max_price]
+                    if 'avg_vol50' in f_tv.columns and tv_min_vol50 > 0:
+                        f_tv = f_tv[f_tv['avg_vol50'].fillna(0) >= tv_min_vol50]
+                    if tv_max_dist < 100.0:
+                        f_tv = f_tv[f_tv['dist_pct'].abs().fillna(999.0) <= tv_max_dist]
+                    if tv_max_52w < 100.0:
+                        f_tv = f_tv[f_tv['pct_off_52w_high'].fillna(999.0) <= tv_max_52w]
+                    if tv_depth != (0, 60):
+                        _d = f_tv['base_depth_pct'].fillna(-1)
+                        f_tv = f_tv[(_d >= tv_depth[0]) & (_d <= tv_depth[1])]
+                    if tv_min_days > 0:
+                        f_tv = f_tv[f_tv['days_in_base'].fillna(0) >= tv_min_days]
+                    # NaN sma200 means under 200 bars of history, i.e. the test cannot be
+                    # evaluated rather than failed - same treatment as the IBD tab.
+                    if tv_above200 and 'sma200' in f_tv.columns:
+                        f_tv = f_tv[f_tv['sma200'].notna() & (f_tv['close'] > f_tv['sma200'])]
+                    if tv_50o200 and {'sma50', 'sma200'} <= set(f_tv.columns):
+                        f_tv = f_tv[f_tv['sma50'].notna() & f_tv['sma200'].notna()
+                                    & (f_tv['sma50'] > f_tv['sma200'])]
+                    if tv_rs_nh and 'rs_nh' in f_tv.columns:
+                        f_tv = f_tv[f_tv['rs_nh'] == True]  # noqa: E712
+                    # Applies to cup readings only: a Base or HTF has no cup evidence by
+                    # definition and would otherwise be filtered out by a control about cups.
+                    if tv_min_cup > 0 and 'cup_bars_in_base' in f_tv.columns:
+                        f_tv = f_tv[(f_tv['pattern_name'] != 'Cup')
+                                    | (f_tv['cup_bars_in_base'].fillna(0) >= tv_min_cup)]
+
+                    tv_chart_tab, tv_cat_tab, tv_hist_tab, tv_tbl_tab, tv_exp_tab = st.tabs(
+                        ["📈 Chart", "📂 By Pattern", "🕘 History", "📋 Data Table", "📤 Export"])
+
+                    # --- Chart: the Pine's own shapes ---
+                    with tv_chart_tab:
+                        if f_tv.empty:
+                            st.info("No tickers match the current filters.")
+                        else:
+                            c1, c2, c3 = st.columns([3, 1, 1])
+                            _opts = f_tv.sort_values(
+                                'dist_pct', key=lambda s: s.abs())['ticker'].tolist()
+                            _pre = tv_search if tv_search in _opts else _opts[0]
+                            with c1:
+                                tv_tkr = st.selectbox("Ticker", _opts, index=_opts.index(_pre),
+                                                      key="tv_chart_tkr")
+                            with c2:
+                                tv_bars = st.select_slider("Bars", [120, 200, 300, 450, 700],
+                                                           value=300, key="tv_chart_bars")
+                            with c3:
+                                # The Pine ships this detector's input off (line 409) and only
+                                # runs it on weekly bars, so it is opt-out here rather than
+                                # silently on top of a chart the user compares to TradingView.
+                                tv_tight = st.checkbox("3-week tight boxes", value=True,
+                                                       key="tv_show_tight",
+                                                       help="The Pine's Tight Closes Detector "
+                                                            "(weekly), drawn on the daily chart.")
+                            try:
+                                _bars_df = _tv_chart_bars(tv_tkr)
+                                _row = f_tv[f_tv['ticker'] == tv_tkr].iloc[0].to_dict()
+                                if _bars_df is None:
+                                    st.warning(f"No cached price data for {tv_tkr}.")
+                                else:
+                                    sys.path.insert(0, str(Path(__file__).resolve().parent / "python"))
+                                    from tv_pattern_chart import build_tv_pattern_figure
+                                    st.plotly_chart(
+                                        build_tv_pattern_figure(tv_tkr, _bars_df, _row,
+                                                                bars=tv_bars,
+                                                                show_tight=tv_tight),
+                                        use_container_width=True)
+                                    q1, q2, q3, q4, q5 = st.columns(5)
+                                    with q1: st.metric("Pattern", _row.get('base_shape')
+                                                                  or _row.get('pattern_name', '-'))
+                                    with q2: st.metric("Buy point", f"{_row.get('pivot') or float('nan'):,.2f}")
+                                    with q3: st.metric("Dist to pivot", f"{_row.get('dist_pct') or 0:+.1f}%")
+                                    with q4: st.metric("Base", f"{_row.get('days_in_base') or 0}d / "
+                                                               f"{_row.get('base_depth_pct') or 0:.0f}%")
+                                    with q5: st.metric("Acc / Dis days",
+                                                       f"{_row.get('acc_days', 0)} / {_row.get('dis_days', 0)}")
+
+                                    _ctx = _row.get('htf_context')
+                                    if isinstance(_ctx, dict) and _ctx:
+                                        st.caption(
+                                            f"**High tight flag** — pole {_ctx.get('pole_low')} → "
+                                            f"{_ctx.get('flag_high')} (+{_ctx.get('pole_gain_pct') or 0:.0f}% "
+                                            f"in {_ctx.get('pole_bars')} bars), flag "
+                                            f"{_ctx.get('flag_bars')} bars / "
+                                            f"{_ctx.get('flag_depth_pct') or 0:.1f}% deep")
+
+                                    # Why a cup base is not reported as cup-with-handle. The
+                                    # Pine's handle branch is effectively unreachable on daily
+                                    # bars, so show how far this base got rather than leaving
+                                    # the absence unexplained.
+                                    _hg = _row.get('handle_gates')
+                                    if isinstance(_hg, dict) and _hg:
+                                        _fail = [n for n, ok in (("bars 5-25", _hg.get('bars_ok')),
+                                                                 ("depth ≤12%", _hg.get('depth_ok')),
+                                                                 ("above base mid", _hg.get('mid_ok')),
+                                                                 ("volume ≤50% of MA", _hg.get('vol_ok')),
+                                                                 ("cup present", _hg.get('cup_ok')))
+                                                 if not ok]
+                                        st.caption(
+                                            f"**Handle test** — {_hg.get('bars')} bars since the "
+                                            f"locked peak {_hg.get('peak_locked')}, low "
+                                            f"{_hg.get('low')} vs base mid {_hg.get('base_mid')}, "
+                                            f"volume {_hg.get('vol_pct_of_ma')}% of the 50-day MA"
+                                            + (f" · fails: {', '.join(_fail)}" if _fail
+                                               else " · passes every gate"))
+                            except Exception as _ce:
+                                st.error(f"Could not draw the chart: {_ce}")
+
+                    # --- By pattern, with the chart alongside and keyboard paging ---
+                    with tv_cat_tab:
+                        _cat_pats = [p for p in TV_PATTERN_ORDER
+                                     if p in set(f_tv['pattern_name'])]
+                        if not _cat_pats:
+                            st.info("No tickers match the current filters.")
+                        else:
+                            tv_cat_pat = st.radio(
+                                "Pattern", _cat_pats, horizontal=True, key="tv_cat_pat",
+                                format_func=lambda p: f"{p} "
+                                                      f"({int((f_tv['pattern_name'] == p).sum())})")
+                            pat_df = f_tv[f_tv['pattern_name'] == tv_cat_pat].sort_values(
+                                'dist_pct', key=lambda s: s.abs()).reset_index(drop=True)
+                            _tick = pat_df['ticker'].tolist()
+
+                            # The cursor is stored per pattern, so switching pattern and coming
+                            # back does not lose your place, and is clamped rather than reset
+                            # when a filter shrinks the list under it.
+                            _ck = f"tv_cat_i_{tv_cat_pat}"
+                            i = min(st.session_state.get(_ck, 0), len(_tick) - 1)
+                            if 'tv_favs' not in st.session_state:
+                                st.session_state['tv_favs'] = _tv_load_favs()
+
+                            NEXT_L, PREV_L, FAV_L = "Next ▶", "◀ Prev", "☆ Favourite"
+                            n1, n2, n3, n4 = st.columns([1, 1, 1.4, 5])
+                            with n1:
+                                if st.button(PREV_L, key="tv_cat_prev",
+                                             use_container_width=True):
+                                    i = (i - 1) % len(_tick)
+                            with n2:
+                                if st.button(NEXT_L, key="tv_cat_next",
+                                             use_container_width=True):
+                                    i = (i + 1) % len(_tick)
+                            with n3:
+                                if st.button(FAV_L, key="tv_cat_fav",
+                                             use_container_width=True):
+                                    _f = list(st.session_state['tv_favs'])
+                                    _t = _tick[i]
+                                    if _t in _f:
+                                        _f.remove(_t)
+                                    else:
+                                        _f.append(_t)
+                                    st.session_state['tv_favs'] = _f
+                                    _tv_save_favs(_f)
+                            st.session_state[_ck] = i
+                            cur = _tick[i]
+                            with n4:
+                                st.caption(
+                                    f"**{cur}** — {i + 1} of {len(_tick)} · "
+                                    "`space` next · `shift+space` previous · "
+                                    "`ctrl+space` favourite"
+                                    + ("  ·  ⭐ on your list" if cur in st.session_state['tv_favs']
+                                       else ""))
+                            _tv_keyboard_nav(NEXT_L, PREV_L, FAV_L)
+
+                            lc, rc = st.columns([2, 3])
+                            with lc:
+                                mini = ['ticker', 'base_shape', 'status', 'Percentile', 'close',
+                                        'pivot', 'dist_pct', 'base_depth_pct', 'days_in_base',
+                                        'cup_bars_in_base', 'acc_days', 'dis_days',
+                                        'pct_off_52w_high']
+                                mini = [c for c in mini if c in pat_df.columns]
+                                _shown = pat_df[mini].rename(columns={
+                                    'ticker': 'Ticker', 'base_shape': 'Shape',
+                                    'Percentile': 'RS Rating', 'close': 'Price ($)',
+                                    'pivot': 'Buy pt', 'dist_pct': 'Dist %',
+                                    'base_depth_pct': 'Depth %', 'days_in_base': 'Days',
+                                    'cup_bars_in_base': 'Cup bars',
+                                    'acc_days': 'Acc', 'dis_days': 'Dis',
+                                    'pct_off_52w_high': '% off 52W'})
+                                _sel = st.dataframe(
+                                    _shown, hide_index=True, use_container_width=True,
+                                    height=470, on_select="rerun",
+                                    selection_mode="single-row", key=f"tv_cat_tbl_{tv_cat_pat}")
+                                # Only a NEW click on the table moves the cursor. Streamlit keeps
+                                # the selected row across reruns, so comparing it to `i` instead
+                                # would make the row you last clicked fight every press of Next
+                                # and snap the cursor straight back to it.
+                                _rows = (_sel.get("selection") or {}).get("rows") or []
+                                _seen = f"{_ck}_seen"
+                                _clicked = _rows[0] if _rows else None
+                                if _clicked is not None and _clicked != st.session_state.get(_seen):
+                                    st.session_state[_seen] = _clicked
+                                    st.session_state[_ck] = _clicked
+                                    st.rerun()
+                                st.session_state[_seen] = _clicked
+                                t_str = ",".join(_tick)
+                                st.download_button(
+                                    f"Download {tv_cat_pat} ({len(_tick)})", t_str,
+                                    f"tv_{tv_cat_pat.replace('+', 'Plus').replace(' ', '_')}.txt",
+                                    "text/plain", key=f"tv_dl_{tv_cat_pat}",
+                                    use_container_width=True)
+                                if st.session_state['tv_favs']:
+                                    with st.expander(
+                                            f"⭐ Favourites ({len(st.session_state['tv_favs'])})",
+                                            expanded=False):
+                                        _fs = ",".join(st.session_state['tv_favs'])
+                                        st.code(_fs, language="text")
+                                        fb1, fb2 = st.columns(2)
+                                        with fb1:
+                                            st.download_button("Download", _fs,
+                                                               "tv_favorites.txt", "text/plain",
+                                                               key="tv_dl_favs",
+                                                               use_container_width=True)
+                                        with fb2:
+                                            if st.button("Clear", key="tv_clear_favs",
+                                                         use_container_width=True):
+                                                st.session_state['tv_favs'] = []
+                                                _tv_save_favs([])
+                                                st.rerun()
+                            with rc:
+                                try:
+                                    _bdf = _tv_chart_bars(cur)
+                                    if _bdf is None:
+                                        st.warning(f"No cached price data for {cur}.")
+                                    else:
+                                        sys.path.insert(
+                                            0, str(Path(__file__).resolve().parent / "python"))
+                                        from tv_pattern_chart import build_tv_pattern_figure
+                                        st.plotly_chart(
+                                            build_tv_pattern_figure(
+                                                cur, _bdf, pat_df.iloc[i].to_dict(),
+                                                bars=300, height=560),
+                                            use_container_width=True,
+                                            key=f"tv_cat_fig_{tv_cat_pat}")
+                                except Exception as _ce:
+                                    st.error(f"Could not draw the chart: {_ce}")
+
+                    # --- History: every base the scanner has seen, not just today's ---
+                    with tv_hist_tab:
+                        _hp = Path(__file__).resolve().parent / "python" / "tv_pattern_history.json"
+                        if not _hp.exists():
+                            st.info("No history file yet — press **🔄 Run / Rerun TV Pattern "
+                                    "Scan** above to build `tv_pattern_history.json`.")
+                        else:
+                            _hpay = _tv_load_history(_hp.stat().st_mtime)
+                            df_h = pd.DataFrame((_hpay or {}).get("patterns", []))
+                            if df_h.empty:
+                                st.info("The history file is empty.")
+                            else:
+                                st.markdown(
+                                    f"**{len(df_h):,}** finished bases across "
+                                    f"{df_h['ticker'].nunique():,} tickers, back "
+                                    f"{'~6 years' if len(df_h) else ''} to "
+                                    f"`{df_h['end_date'].min()}`. A base is recorded the day it "
+                                    "ends — at a breakout, or when it broke its 35% depth limit "
+                                    "or ran past 325 bars.")
+                                _bo = df_h[df_h['ended'] == 'Breakout']
+                                _res = _bo[_bo['outcome'].isin(['Target', 'Stop'])]
+                                h1, h2, h3, h4, h5 = st.columns(5)
+                                with h1: st.metric("Breakouts", f"{len(_bo):,}")
+                                with h2: st.metric("Breakdowns",
+                                                   f"{int((df_h['ended'] == 'Breakdown').sum()):,}")
+                                with h3: st.metric("Hit +20% first",
+                                                   f"{int((_bo['outcome'] == 'Target').sum()):,}")
+                                with h4: st.metric("Hit −8% first",
+                                                   f"{int((_bo['outcome'] == 'Stop').sum()):,}")
+                                with h5: st.metric(
+                                    "Resolved win rate",
+                                    f"{(_bo['outcome'] == 'Target').sum() / len(_res) * 100:.0f}%"
+                                    if len(_res) else "—")
+                                # The metric above divides by RESOLVED breakouts only. Saying
+                                # "hit +20%" over all breakouts would count every still-open one
+                                # as a loss, and counting "ever reached +20%" would count a
+                                # breakout that stopped out first as a win. Both flatter or
+                                # punish the scan for the wrong reason - so the denominator is
+                                # stated, and Open is shown separately rather than folded in.
+                                st.caption(
+                                    f"Win rate is over the **{len(_res):,} resolved** breakouts "
+                                    f"only (+20% or −8% touched within "
+                                    f"{(_hpay or {}).get('hold_bars', 60)} bars, whichever came "
+                                    f"**first**); {int((_bo['outcome'] == 'Open').sum()):,} are "
+                                    "still open and are not counted either way. A bar that spans "
+                                    "both levels is scored a stop.")
+
+                                e1, e2, e3, e4 = st.columns(4)
+                                with e1:
+                                    h_pat = st.multiselect(
+                                        "Pattern", sorted(df_h['pattern'].dropna().unique()),
+                                        default=sorted(df_h['pattern'].dropna().unique()),
+                                        key="tv_h_pat")
+                                with e2:
+                                    h_end = st.multiselect(
+                                        "Ended as", ["Breakout", "Breakdown"],
+                                        default=["Breakout", "Breakdown"], key="tv_h_end")
+                                    h_out = st.multiselect(
+                                        "Outcome", ["Target", "Stop", "Open"],
+                                        default=["Target", "Stop", "Open"], key="tv_h_out")
+                                with e3:
+                                    h_from = st.text_input("From date (YYYY-MM-DD)", "",
+                                                           key="tv_h_from")
+                                    h_tkr = st.text_input("Ticker contains", "",
+                                                          key="tv_h_tkr").strip().upper()
+                                with e4:
+                                    h_min_days = st.number_input("Min days in base", value=0,
+                                                                 step=5, key="tv_h_days")
+                                    h_favs = st.checkbox("Favourites only", value=False,
+                                                         key="tv_h_favs")
+
+                                f_h = df_h.copy()
+                                if h_pat:
+                                    f_h = f_h[f_h['pattern'].isin(h_pat)]
+                                if h_end:
+                                    f_h = f_h[f_h['ended'].isin(h_end)]
+                                # Breakdowns have no outcome; the filter is about breakouts and
+                                # must not silently delete them.
+                                if h_out:
+                                    f_h = f_h[f_h['outcome'].isna() | f_h['outcome'].isin(h_out)]
+                                if h_from:
+                                    f_h = f_h[f_h['end_date'] >= h_from]
+                                if h_tkr:
+                                    f_h = f_h[f_h['ticker'].str.contains(h_tkr, na=False)]
+                                if h_min_days > 0:
+                                    f_h = f_h[f_h['days'].fillna(0) >= h_min_days]
+                                if h_favs:
+                                    f_h = f_h[f_h['ticker'].isin(
+                                        st.session_state.get('tv_favs', _tv_load_favs()))]
+
+                                st.markdown(f"Showing **{len(f_h):,}** of {len(df_h):,}.")
+                                hcols = ['ticker', 'pattern', 'base_shape', 'ended',
+                                         'start_date', 'end_date', 'days', 'pivot',
+                                         'base_top', 'base_low', 'depth_pct', 'cup_bars',
+                                         'outcome', 'bars_to_outcome', 'max_gain_pct',
+                                         'max_drawdown_pct', 'bars_forward', 'acc_days',
+                                         'dis_days']
+                                hcols = [c for c in hcols if c in f_h.columns]
+                                st.dataframe(
+                                    f_h[hcols].head(3000).rename(columns={
+                                        'ticker': 'Ticker', 'pattern': 'Pattern',
+                                        'base_shape': 'Shape', 'ended': 'Ended',
+                                        'start_date': 'Started', 'end_date': 'Ended on',
+                                        'days': 'Days', 'pivot': 'Buy point',
+                                        'base_top': 'Base top', 'base_low': 'Base low',
+                                        'depth_pct': 'Depth %', 'cup_bars': 'Cup bars',
+                                        'outcome': 'Outcome',
+                                        'bars_to_outcome': 'Bars to outcome',
+                                        'max_gain_pct': 'Max gain %',
+                                        'max_drawdown_pct': 'Max DD %',
+                                        'bars_forward': 'Window (bars)',
+                                        'acc_days': 'Acc', 'dis_days': 'Dis'}),
+                                    hide_index=True, use_container_width=True, height=430)
+                                if len(f_h) > 3000:
+                                    st.caption("Table capped at 3,000 rows — the CSV below has "
+                                               "all of them.")
+                                st.download_button("Download filtered history CSV",
+                                                   f_h[hcols].to_csv(index=False),
+                                                   "tv_pattern_history.csv", "text/csv",
+                                                   key="tv_dl_hist")
+
+                                # Per-pattern scoreboard, same denominator rule as above.
+                                _r = f_h[f_h['outcome'].isin(['Target', 'Stop'])]
+                                if len(_r):
+                                    _g = _r.groupby('pattern').agg(
+                                        resolved=('outcome', 'size'),
+                                        target=('outcome', lambda s: int((s == 'Target').sum())),
+                                        med_gain=('max_gain_pct', 'median')).reset_index()
+                                    _g['win %'] = (_g['target'] / _g['resolved'] * 100).round(1)
+                                    _g['med_gain'] = _g['med_gain'].round(1)
+                                    st.markdown("**By pattern** — resolved breakouts only")
+                                    st.dataframe(
+                                        _g.rename(columns={
+                                            'pattern': 'Pattern', 'resolved': 'Resolved',
+                                            'target': 'Hit +20% first',
+                                            'med_gain': 'Median max gain %'}),
+                                        hide_index=True, use_container_width=True)
+
+                    # --- Data table ---
+                    with tv_tbl_tab:
+                        st.markdown(f"Showing **{len(f_tv)}** of {len(df_tv)} live patterns.")
+                        cols = ['ticker', 'pattern_name', 'base_shape', 'status', 'Percentile', 'rs_score',
+                                'close', 'pivot', 'dist_pct', 'base_top', 'base_low',
+                                'base_depth_pct', 'days_in_base', 'bars_sbo', 'acc_days',
+                                'dis_days', 'neu_days', 'pct_off_52w_high', 'cup_bars_in_base',
+                                'rs_nh', 'rs_nh_period', 'AvgVol30', 'Sector', 'Industry']
+                        cols = [c for c in cols if c in f_tv.columns]
+                        st.dataframe(
+                            f_tv[cols].rename(columns={
+                                'ticker': 'Ticker', 'pattern_name': 'Pattern',
+                                'base_shape': 'Shape', 'status': 'Status',
+                                'Percentile': 'RS Rating', 'rs_score': 'RS Score',
+                                'close': 'Close ($)', 'pivot': 'Buy point',
+                                'dist_pct': 'Dist to pivot %', 'base_top': 'Base top',
+                                'base_low': 'Base low', 'base_depth_pct': 'Depth %',
+                                'days_in_base': 'Days in base', 'bars_sbo': 'Bars post-BO',
+                                'acc_days': 'Acc', 'dis_days': 'Dis', 'neu_days': 'Neu',
+                                'pct_off_52w_high': '% off 52W high',
+                                'cup_bars_in_base': 'Cup bars', 'rs_nh': 'RS NH',
+                                'rs_nh_period': 'RS NH period', 'AvgVol30': '30D Avg Vol'}),
+                            hide_index=True, use_container_width=True)
+                        st.download_button("Download full CSV",
+                                           f_tv[cols].to_csv(index=False),
+                                           "tv_pattern_scan.csv", "text/csv", key="tv_dl_csv")
+
+                    # --- Export ---
+                    with tv_exp_tab:
+                        all_t = f_tv['ticker'].unique().tolist()
+                        st.write(f"**Filtered tickers:** {len(all_t)}")
+                        tv_lines, ibkr_lines = [], []
+                        for pat in TV_PATTERN_ORDER:
+                            p_df = f_tv[f_tv['pattern_name'] == pat]
+                            if p_df.empty:
+                                continue
+                            tv_lines.append(f"###{pat}")
+                            for t in p_df['ticker']:
+                                tv_lines.append(t)
+                                ibkr_lines.append(f"SYM, {t.upper()}, SMART/ARCA")
+                        e1, e2, e3 = st.columns(3)
+                        with e1:
+                            st.markdown("##### 📄 Plain list")
+                            st.code(",".join(all_t), language="text")
+                            st.download_button("Download list", ",".join(all_t),
+                                               "tv_patterns_list.txt", "text/plain",
+                                               key="tv_dl_list")
+                        with e2:
+                            st.markdown("##### 📈 TradingView")
+                            st.code("\n".join(tv_lines), language="text")
+                            st.download_button("Download TV watchlist", "\n".join(tv_lines),
+                                               "tv_patterns_tv.txt", "text/plain", key="tv_dl_tv")
+                        with e3:
+                            st.markdown("##### 💼 IBKR")
+                            st.code("\n".join(ibkr_lines), language="text")
+                            st.download_button("Download IBKR watchlist", "\n".join(ibkr_lines),
+                                               "tv_patterns_ibkr.txt", "text/plain",
+                                               key="tv_dl_ibkr")
+        except Exception as e:
+            st.error(f"Error loading TV pattern results: {e}")
 
 
 # ---------- TAB: Daily Report Card ----------

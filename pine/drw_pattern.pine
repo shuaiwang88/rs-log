@@ -173,36 +173,24 @@ plot(emaQuick,     color=colQuick,     linewidth=1, title='Quick')
 plot(emaQuickSand, color=colQuickSand, linewidth=1, title='QuickSand')
 plot(emaGrateful,  color=colGD,        linewidth=1, title='Grateful Dead')
 
-f_rrs_highest(src, len) =>
-    h = src
-    for i = 1 to len - 1
-        if not na(src[i]) and src[i] > h
-            h := src[i]
-    h
-
-f_rrs_lowest(src, len) =>
-    l = src
-    for i = 1 to len - 1
-        if not na(src[i]) and src[i] < l
-            l := src[i]
-    l
-
+// ta.highest/ta.lowest are built-in monotonic-window functions (O(1) amortized per bar);
+// these replace hand-rolled O(len) loops that ran up to 250 iterations, 6x per bar.
 int lb1Y = timeframe.isweekly ? 52  : 250
 int lb6M = timeframe.isweekly ? 24  : 126
 int lb3M = timeframe.isweekly ? 12  : 63
 
-_rsH1Y = f_rrs_highest(rsCurve, lb1Y)[1]
-_rsH6M = f_rrs_highest(rsCurve, lb6M)[1]
-_rsH3M = f_rrs_highest(rsCurve, lb3M)[1]
+_rsH1Y = ta.highest(rsCurve, lb1Y)[1]
+_rsH6M = ta.highest(rsCurve, lb6M)[1]
+_rsH3M = ta.highest(rsCurve, lb3M)[1]
 
 rs_nh1Y = not na(rsCurve) and not na(_rsH1Y) and rsCurve > _rsH1Y
 rs_nh6M = not na(rsCurve) and not na(_rsH6M) and rsCurve > _rsH6M and not rs_nh1Y
 rs_nh3M = not na(rsCurve) and not na(_rsH3M) and rsCurve > _rsH3M and not rs_nh1Y and not rs_nh6M
 rs_nh_any = rs_nh1Y or rs_nh6M or rs_nh3M
 
-_prH1Y = f_rrs_highest(high, lb1Y)[1]
-_prH6M = f_rrs_highest(high, lb6M)[1]
-_prH3M = f_rrs_highest(high, lb3M)[1]
+_prH1Y = ta.highest(high, lb1Y)[1]
+_prH6M = ta.highest(high, lb6M)[1]
+_prH3M = ta.highest(high, lb3M)[1]
 
 price_nh1Y = not na(_prH1Y) and high > _prH1Y
 price_nh6M = not na(_prH6M) and high > _prH6M
@@ -215,8 +203,8 @@ f_nhColor() =>
     leadsPrice = not price_nh_matching
     leadsPrice ? col_nhLP : rs_nh1Y ? col_nh1Y : rs_nh6M ? col_nh6M : col_nh3M
 
-_rsL  = f_rrs_lowest(rsCurve, prevlookback2)[1]
-_prL  = f_rrs_lowest(low,     prevlookback2)[1]
+_rsL  = ta.lowest(rsCurve, prevlookback2)[1]
+_prL  = ta.lowest(low,     prevlookback2)[1]
 rs_nl    = not na(rsCurve) and not na(_rsL) and rsCurve < _rsL
 price_nl = not na(low)     and not na(_prL) and low     < _prL
 
@@ -1354,16 +1342,14 @@ ma3 = maType3 == "EMA" ? ta.ema(close, ima3) : maType3 == "SMA" ? ta.sma(close, 
 ma4 = maType4 == "EMA" ? ta.ema(close, ima4) : maType4 == "SMA" ? ta.sma(close, ima4) : na
 ma5 = maType5 == "EMA" ? ta.ema(close, ima5) : maType3 == "SMA" ? ta.sma(close, ima5) : na
 ma6 = maType6 == "EMA" ? ta.ema(close, ima6) : maType4 == "SMA" ? ta.sma(close, ima6) : na
-nasVolAvg = request.security('TVOL.NQ', 'D', ta.sma(close,50))
-spxVolAvg = request.security('TVOL.NY', 'D', ta.sma(close,50))
-nasVolAvgWk = request.security('TVOL.NQ', "W", ta.sma(close,10))
-spxVolAvgWk = request.security('TVOL.NY', 'W', ta.sma(close,10))
+// Each symbol+timeframe pair merged into one request.security() tuple call instead of two
+// (avg-volume and close were separate calls to the same series) - halves the NQ/NY call count.
+[nasVolAvg, nasVol]     = request.security('TVOL.NQ', 'D', [ta.sma(close,50), close])
+[spxVolAvg, spxVol]     = request.security('TVOL.NY', 'D', [ta.sma(close,50), close])
+[nasVolAvgWk, nasVolWk] = request.security('TVOL.NQ', 'W', [ta.sma(close,10), close])
+[spxVolAvgWk, spxVolWk] = request.security('TVOL.NY', 'W', [ta.sma(close,10), close])
 avgVol = syminfo.ticker == 'IXIC' ? nasVolAvg : syminfo.ticker == 'SPX' ? spxVolAvg : ta.sma(volume,50)
 avgVolWk = syminfo.ticker == 'IXIC' ? nasVolAvgWk : syminfo.ticker == 'SPX' ? spxVolAvgWk : ta.sma(volume,10)
-nasVol = request.security('TVOL.NQ', 'D', close)
-spxVol = request.security('TVOL.NY', 'D', close)
-nasVolWk = request.security('TVOL.NQ', 'W', close)
-spxVolWk = request.security('TVOL.NY', 'W', close)
 
 
 
