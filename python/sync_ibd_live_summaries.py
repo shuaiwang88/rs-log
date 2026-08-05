@@ -23,6 +23,34 @@ OUT_DIR = REPO_DIR / "IBD" / "live_summaries"
 
 DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 TABLE_ROW_RE = re.compile(r"^\|(.+)\|\s*$")
+HEADING_RE = re.compile(r"^(#{1,6})\s+(.*)$")
+EMPHASIS_RE = re.compile(r"[*_`]+")
+SEPARATOR_CELL_RE = re.compile(r":?-{2,}:?")
+TICKER_TOKEN_RE = re.compile(r"[A-Z][A-Z0-9.\-]{0,6}")
+
+
+def strip_md(text):
+    """Drop markdown emphasis/backticks and collapse whitespace."""
+    return re.sub(r"\s+", " ", EMPHASIS_RE.sub("", text or "")).strip()
+
+
+def parse_heading(line):
+    """(level, plain title) for an ATX heading, else None. Summaries pasted into the
+    app's ingest box use '###' where Zoom-synced ones use '##', so accept any level."""
+    m = HEADING_RE.match(line.strip())
+    return (len(m.group(1)), strip_md(m.group(2))) if m else None
+
+
+def clean_ticker(cell, strict=False):
+    """'**GOOGL** (Alphabet)' -> 'GOOGL'. Returns '' when the text isn't a symbol.
+    strict=True also rejects anything with leftover words, so prose lines in the
+    ticker-list section can't masquerade as symbols."""
+    text = re.sub(r"\(.*?\)", " ", strip_md(cell)).replace("/", " ").strip()
+    words = text.split()
+    if not words or (strict and len(words) > 1):
+        return ""
+    token = words[0].upper().strip(".,;:")
+    return token if TICKER_TOKEN_RE.fullmatch(token) else ""
 
 
 def find_summary_files():
@@ -50,29 +78,40 @@ def find_summary_files():
         yield date_str, summary_path, transcript_path
 
 
-def parse_section(lines, heading_prefixes):
-    """Return the lines belonging to the first section whose heading starts with
-    any of heading_prefixes, up to (not including) the next '## ' heading."""
-    start = None
+def parse_section(lines, keywords):
+    """Return the lines belonging to the first section whose heading contains any of
+    keywords (lowercase, matched after stripping a '3.'-style number prefix), up to
+    the next heading at the same or shallower level so sub-headings stay inside."""
+    start = start_level = None
     for i, line in enumerate(lines):
-        if line.startswith("## ") and any(line[3:].strip().startswith(p) for p in heading_prefixes):
-            start = i + 1
+        heading = parse_heading(line)
+        if not heading:
+            continue
+        level, title = heading
+        title = re.sub(r"^\d+[.)]\s*", "", title.lower())
+        if any(k in title for k in keywords):
+            start, start_level = i + 1, level
             break
     if start is None:
         return []
     end = start
-    while end < len(lines) and not lines[end].startswith("## "):
+    while end < len(lines):
+        heading = parse_heading(lines[end])
+        if heading and heading[0] <= start_level:
+            break
         end += 1
     return lines[start:end]
 
 
 def parse_market_summary(lines):
-    section = parse_section(lines, ["1. Market Pulse", "Market Pulse"])
+    section = parse_section(lines, ["market pulse"])
     for line in section:
         line = line.strip()
         if line.startswith("-"):
             text = line.lstrip("-").strip()
-            text = re.sub(r"^\*\*(.+?)\*\*:?\s*", r"\1: ", text)
+            # '**Overall Sentiment:** Cautiously bullish' -> 'Overall Sentiment: Cautiously
+            # bullish' — the colon sits inside the bold as often as outside it.
+            text = re.sub(r"^\*\*(.+?)\*\*:?\s*", lambda m: m.group(1).rstrip(":") + ": ", text)
             return text.strip()
     for line in section:
         if line.strip():
@@ -80,45 +119,72 @@ def parse_market_summary(lines):
     return ""
 
 
+def find_column(header_cols, *keywords):
+    """Index of the header cell matching the earliest-listed keyword, else None. Column
+    titles drift between shows ('Story' vs 'The Story / Catalyst'), so match on
+    substrings — and try keywords in priority order, since a loose one like 'action'
+    would otherwise claim an 'Actionability' column ahead of 'Technical Action'."""
+    for keyword in keywords:
+        for i, col in enumerate(header_cols):
+            if keyword in col:
+                return i
+    return None
+
+
 def parse_ticker_table(lines):
     """Parse the '2. Top Tickers & Technical Setups' markdown table into
     {ticker: {actionability, technical_action, story}}, preserving first-seen order."""
-    section = parse_section(lines, ["2. Top Tickers", "Top Tickers"])
+    section = parse_section(lines, ["top tickers"])
     details = {}
-    header_cols = None
+    cols = None
     for line in section:
         m = TABLE_ROW_RE.match(line.strip())
         if not m:
             continue
-        cells = [c.strip() for c in m.group(1).split("|")]
-        if header_cols is None:
-            header_cols = [c.lower() for c in cells]
+        cells = [strip_md(c) for c in m.group(1).split("|")]
+        if cells and all(SEPARATOR_CELL_RE.fullmatch(c) for c in cells if c):
+            continue  # |---|---| separator row
+        if cols is None:
+            lower = [c.lower() for c in cells]
+            cols = {
+                "ticker": find_column(lower, "ticker", "symbol"),
+                "technical_action": find_column(lower, "technical", "action"),
+                "story": find_column(lower, "story", "catalyst"),
+                "actionability": find_column(lower, "actionab", "status"),
+            }
             continue
-        if all(re.fullmatch(r":?-+:?", c) for c in cells):
-            continue  # separator row
-        row = dict(zip(header_cols, cells))
-        ticker = (row.get("ticker symbol") or row.get("ticker") or "").upper().strip()
+
+        def cell(name):
+            i = cols.get(name)
+            return cells[i] if i is not None and i < len(cells) else ""
+
+        ticker = clean_ticker(cell("ticker"))
         if not ticker or ticker in details:
             continue
         details[ticker] = {
-            "actionability": row.get("actionability") or row.get("status", ""),
-            "technical_action": row.get("technical action", ""),
-            "story": row.get("the story (catalyst & fundamental rationale)") or row.get("story", ""),
+            "actionability": cell("actionability"),
+            "technical_action": cell("technical_action"),
+            "story": cell("story"),
         }
     return details
 
 
 def parse_ticker_list(lines, fallback_details):
-    section = parse_section(lines, ["7. Consolidated Ticker List", "7. Full Ticker List",
-                                     "Consolidated Ticker List", "Full Ticker List"])
+    """Symbols from the '7. … Ticker List' section, in order of first mention. The
+    heading is variously 'Full', 'Consolidated' or 'Merged', and the list can wrap
+    across several lines, so collect every comma-separated line in the section."""
+    section = parse_section(lines, ["ticker list"])
+    tickers = []
     for line in section:
-        line = line.strip()
-        if line and "," in line or (line and not line.startswith("#")):
-            if line:
-                tickers = [t.strip().upper() for t in line.split(",") if t.strip()]
-                if tickers:
-                    return tickers
-    return list(fallback_details.keys())
+        line = strip_md(line).lstrip("-•* ").strip()
+        if not line or line.startswith("|") or line.startswith("#"):
+            continue
+        parts = [p for p in line.split(",") if p.strip()]
+        found = [t for t in (clean_ticker(p, strict=True) for p in parts) if t]
+        if len(found) >= max(1, len(parts) // 2):  # a real list, not a prose sentence
+            tickers.extend(found)
+    tickers = list(dict.fromkeys(tickers))
+    return tickers or list(fallback_details.keys())
 
 
 def build_sidecar(date_str, summary_path, transcript_path):

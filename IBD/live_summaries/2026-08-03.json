@@ -1,9 +1,184 @@
 {
   "date": "2026-08-03",
   "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-03.md",
-  "market_summary": "",
-  "tickers": [],
-  "ticker_details": {},
+  "market_summary": "Overall Sentiment: Cautiously optimistic. The action today is a stark contrast to the prior Monday's failed gap-up. The S&P 500's close on Friday above the 50-day and today's follow-through are encouraging. \"I think the market is making a stand... the market is set up to move up to another leg higher.\" (Webby). However, the NASDAQ still needs to prove itself by clearing the downtrend line, 50-day, and 26,000 level.",
+  "tickers": [
+    "HACK",
+    "AMZN",
+    "CNQ",
+    "CRWD",
+    "SPY",
+    "VOO",
+    "RSP",
+    "IWM",
+    "MAGS",
+    "CIBR",
+    "DRAM",
+    "SNDK",
+    "MU",
+    "SNOW",
+    "DELL",
+    "NBIS",
+    "LITE",
+    "IONQ",
+    "XBI",
+    "LLY",
+    "MSFT",
+    "AAPL",
+    "CRM",
+    "GOOGL",
+    "IBM",
+    "WDAY",
+    "SHOP",
+    "PLTR",
+    "DDOG",
+    "BMY",
+    "AZN",
+    "ATKR",
+    "BABA",
+    "FERG",
+    "KRYS",
+    "TWST",
+    "TGTX",
+    "CRCL",
+    "EBAY",
+    "BLZE",
+    "FANG",
+    "JAZZ",
+    "ALAB",
+    "AMD",
+    "SPCX",
+    "TQQQ",
+    "SPUU",
+    "FNGS",
+    "FNGU",
+    "UWM",
+    "TNA",
+    "UPRO",
+    "SSO",
+    "CVX",
+    "PBF",
+    "KSPI",
+    "NUAI",
+    "ORR",
+    "GS",
+    "SCHW",
+    "TDY",
+    "HWM",
+    "GE",
+    "LMT",
+    "NOC",
+    "PNC",
+    "URI",
+    "MSM",
+    "INSW",
+    "PSMT",
+    "XLV",
+    "VIK",
+    "RCL",
+    "NCLH",
+    "CCL",
+    "DAL",
+    "JETS",
+    "CAKE",
+    "EAT",
+    "TNX",
+    "USO",
+    "XLE",
+    "CRAK"
+  ],
+  "ticker_details": {
+    "SPY": {
+      "actionability": "Actionable",
+      "technical_action": "Retook 50-day Friday, strong follow-through. Close below 50-day is stop.",
+      "story": "Broad market S&P 500. The safest way to play a market call."
+    },
+    "RSP": {
+      "actionability": "Actionable",
+      "technical_action": "Trending above 21-day, making new highs. Regression line \"step on gas\" signal.",
+      "story": "Equal-weight S&P 500. Leading index, broad participation."
+    },
+    "IWM": {
+      "actionability": "Actionable",
+      "technical_action": "Above 50-day/21-day, clearing trendline.",
+      "story": "Russell 2000 small caps. Broad-based strength."
+    },
+    "MAGS": {
+      "actionability": "Actionable",
+      "technical_action": "Clearing 50-day, low ATR. Ali bought a 3/4 position.",
+      "story": "Magnificent Seven ETF. A balanced way to play the mega-cap tech recovery."
+    },
+    "AMZN": {
+      "actionability": "Actionable (extended from pivot)",
+      "technical_action": "Powerful earnings gap, breaking out of a \"double bottom in spirit.\" Pivot at 258.08. Webby added Friday and today.",
+      "story": "Mega-cap e-commerce/AWS. Potential new leader of this leg, driven by explosive earnings growth."
+    },
+    "HACK": {
+      "actionability": "Actionable (tight stop)",
+      "technical_action": "Bounce off 50-day, retaking 21-day. Viable buy point Friday with stop at that day's low.",
+      "story": "Cybersecurity ETF. One of the only tech spaces showing relative strength."
+    },
+    "CIBR": {
+      "actionability": "Actionable",
+      "technical_action": "Similar to HACK; strong bounce off 50-day. Justin prefers over HACK due to stronger component charts (CRWD, FTNT, PANW).",
+      "story": "Cybersecurity ETF. Same thesis as HACK."
+    },
+    "CRWD": {
+      "actionability": "Actionable (tight stop)",
+      "technical_action": "Bounce off 50-day, now 7.6% above. Use Friday's low or 21-day as stop.",
+      "story": "Cybersecurity leader. Held up better than most tech."
+    },
+    "CNQ": {
+      "actionability": "Actionable (with stop)",
+      "technical_action": "Double bottom/cup-with-handle setup. Scott owns with a stop at 45.75. Earnings today.",
+      "story": "Canadian Natural Resources. Oil play. Thesis: new normal of higher oil prices."
+    },
+    "SNOW": {
+      "actionability": "Watchlist",
+      "technical_action": "Held above 21-day during pullback, now breaking out of a small consolidation. RS line strong.",
+      "story": "Data software. A \"held up best\" name. Scott likes the company long-term but hasn't been able to handle the trade."
+    },
+    "DELL": {
+      "actionability": "Watchlist (above Friday high)",
+      "technical_action": "Holding support at the 50-day. Webby's top pick for individual AI exposure if someone \"wants heat.\"",
+      "story": "AI server. Best-looking broken AI leader."
+    },
+    "NBIS": {
+      "actionability": "Watchlist (speculative)",
+      "technical_action": "Forming a potential double-bottom. Scott is long, plans to hold through earnings.",
+      "story": "Neocloud/AI compute. Highly speculative. Scott's \"hold on to\" pick."
+    },
+    "LITE": {
+      "actionability": "Watchlist",
+      "technical_action": "Coming off lows.",
+      "story": "Optical/AI. Speculative bounce."
+    },
+    "IONQ": {
+      "actionability": "Speculative",
+      "technical_action": "Speculative bounce.",
+      "story": "Quantum computing. \"Animal spirits\" gauge."
+    },
+    "XBI": {
+      "actionability": "Watchlist",
+      "technical_action": "Pulling back, RS weakening. First pullback to 50-day not looking ideal yet. Ali wants to see it clear prior highs.",
+      "story": "Biotech ETF. Sector is strong, but ETF chart is messy."
+    },
+    "LLY": {
+      "actionability": "Hold (defensive trim)",
+      "technical_action": "Outside day downside reversal. Ali trimmed when it undercut today's low, may trim more ahead of earnings.",
+      "story": "Weight-loss drug giant. A core medical leader, but showing short-term distribution."
+    },
+    "MSFT": {
+      "actionability": "Avoid (play via ETF)",
+      "technical_action": "Weekly chart looks \"horrible,\" but earnings line is steady. Prefer to play via MAGS rather than direct.",
+      "story": "Mega-cap software. A rotation play, but chart is messy."
+    },
+    "SNDK": {
+      "actionability": "Avoid",
+      "technical_action": "Broken, below 50-day, wide swings. Webby says avoid, too hard to trade.",
+      "story": "Memory/AI hardware. \"There are easy trades, hard trades, and trades that are way too hard.\""
+    }
+  },
   "sector_leaders": [],
   "sector_laggards": []
 }

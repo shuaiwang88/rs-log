@@ -8,6 +8,9 @@ output/*_metadata.json
 *.parquet
 data/yf_cache/
 
+# Ignore ticker_cache fundamentals dumps (large, rewritten on every fetch)
+*_fund.json
+
 # Whitelist Breakaway Gap 1d ticker_cache files
 !ticker_cache/A_1d.parquet
 !ticker_cache/AAON_1d.parquet

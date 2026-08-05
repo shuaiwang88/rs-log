@@ -1,15 +1,37 @@
 """
 ibd_pattern_scanner.py
 
+FOUR primary patterns, with Double Bottom as an attribute that can occur inside any of them:
+
+    Cup+Handle · Cup · Flat Base · Consolidation      (+ Double Bottom, orthogonal)
+
+Changed 2026-08-04 (promoted from the research copy `ibd_pattern_scanner_four.py`; git history
+is the rollback, and `ibd_pattern_scanner_prev.py` remains the pre-2026-08-02 file):
+
+  * Double Bottom stopped competing for the label. It is out of both priority chains, sets no
+    buy point, and in the layered readings prices off the BASE TOP and is demoted in
+    PATTERN_RANK, so it folds into the host pattern's `also_reads_as`. Detection itself is
+    unchanged - the W test is bit-for-bit what it was. Reported as `is_double_bottom` /
+    `db_middle_peak` / `db_bars_ago`.
+    Why: the detector scores 1 true positive in 23 claims on the 137-event benchmark and 0 in
+    41 against IBD's own "Bases Forming" list, and where it led the readings its middle-peak
+    pivot ran a median 8.4% BELOW IBD's buy point (worst -26.0%, COF) while the next reading -
+    the base top - was median 0.0%. Quoting a buy point too LOW is the expensive error.
+  * The vocabulary was made TOTAL, so a live base always carries one of the four names.
+    'Base' was the fallback when none matched and fired on 59 live rows - 57 still IN a base,
+    58 of the 59 already carrying a layered reading that named them. See `nameConsol` for the
+    one non-obvious constraint on how the residual is applied.
+
+Measured on both truth sets before promotion:
+
+    137 benchmark   exact 76 -> 77   within-1% 74 -> 75   quoted low >3% 16 -> 15
+    331 bases fmg   exact 86 -> 87   within-1% 242 (=)    quoted low >3% 28 -> 27
+    full scan       'Base' 59 -> 0   Consolidation 298 -> 357
+
 Python implementation of the TradingView IBD Pattern Scanner (drw_pattern_scanner.pine).
-Scans all ticker parquet data in `ticker_cache/` to detect MarketSmith / IBD patterns:
-  1. Base (Deep Base)
-  2. Flat Base
-  3. Cup
-  4. Cup + Handle
-  5. Double Bottom
-  6. High Tight Flag (HTF)
-  7. 6-Wk Flat Base
+Scans all ticker parquet data in `ticker_cache/`. High Tight Flag is detected and reported as
+context (`in_htf_flag` / `htf_context`) rather than as a competing label, and 6-Wk Flat and
+Ascending Base are disabled - see the notes at their detection sites.
 
 Calculates technical metrics & scoring matching drw_pattern_scanner.pine:
   - In-Base / Post-BO status & Days in Base / Bars Since Breakout
@@ -577,9 +599,10 @@ def classify_candidate_base(highs, lows, top, low, count, end, lag=8):
        (130 < count <= 250 and 15.0 <= dep <= 45.0) or \
        (count > 250 and 20.0 <= dep <= 50.0):
         return 'Cup', pivot
-    if count > 200 or 5.0 <= dep <= 35.0:
-        return 'Consolidation', pivot
-    return None, None
+    # Consolidation as the unconditional residual, same reasoning as the main loop: the old
+    # `count > 200 or 5 <= dep <= 35` gate returned no name and no pivot for a candidate base
+    # it had already located.
+    return 'Consolidation', pivot
 
 
 def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series = None):
@@ -908,7 +931,36 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     _hxm = _hx - _hx.mean()
                     _hsl = float((_hxm * (_hw - _hw.mean())).sum() / (_hxm * _hxm).sum()) / H12 * 100.0
                     slopeOk_h = (_hsl <= 0.60)
-                if inTop and depOk_h and volOk_h and slopeOk_h and H12 < bTop * 1.02:
+                # A handle must not make a new high above the cup's LEFT RIM - the highest
+                # high in the base BEFORE the handle window opens. IBD's handle is a pullback
+                # from the area of the prior high; a window whose own high clears that prior
+                # high is a new leg up, not a handle.
+                #
+                # The test this replaces, `H12 < bTop * 1.02`, could not enforce that because
+                # it is CIRCULAR: bTop ratchets upward to absorb any move within 5% of itself,
+                # so by the time the handle window is measured bTop has usually BECOME the
+                # handle's own high. RF is the clean case - bTop 32.47 and H12 32.47 are the
+                # same number, so the gate read 32.47 < 33.12 and passed, while the actual
+                # left rim was 31.53 and the "handle" sat 3.0% ABOVE the high it was supposed
+                # to be pulling back from. (RF's bTop had ratcheted +147% from 13.13 over the
+                # base's 268 bars, which is how far that drift can run.)
+                #
+                # 1% tolerance, not 0: a wick poking marginally through the rim is normal.
+                # Measured over the 137 benchmark events, rim*1.00 / 1.01 / 1.02 give handle
+                # precision 76% / 79% / 75% - 1.01 dominates both neighbours.
+                #
+                # Cost, taken deliberately: primary exact 77 -> 75 and pivot-level 104 -> 103,
+                # because 3 events IBD labels Cup With Handle lose the label. They are not
+                # losses in substance - the handle the scanner had found on each sat above the
+                # rim (BHP +2.3%, CCEP +2.5%, ROK +5.6%), so it was never the handle IBD saw
+                # and the label was right by accident. The other 2 flips are outright
+                # corrections: ASH (+9.9%) and BUD (+1.7%) are Cup WITHOUT Handle in the truth
+                # and were being called Cup+Handle. The buy point is untouched either way -
+                # within-1% stays 75 and quotes-low->3% stays 15.
+                _rim = (float(np.max(highs[bStart:w12_start]))
+                        if (bStart is not None and w12_start > bStart) else bTop)
+                belowRim = H12 <= _rim * 1.01
+                if inTop and depOk_h and volOk_h and slopeOk_h and belowRim:
                     hdRatio = hDep / bDepPct if bDepPct and bDepPct > 0 else 1.0
                     # Handle depth must stay well under the cup depth (IBD: no more than
                     # a third to a half of the cup's decline).
@@ -1058,9 +1110,12 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             isDB_ind = isDB
             dbMiddlePivot_ind = dbMiddlePivot
             dbPts_ind = dbPts
-            if isFlatBase or isCupH:          # restore the original isDB semantics exactly
-                isDB = False
-                dbMiddlePivot = None
+            # The `if isFlatBase or isCupH: isDB = False` suppression that stood here is gone.
+            # It existed to keep the label chain single-valued; a Double Bottom that was also
+            # a Flat Base had to stop being a Double Bottom so Flat Base could win. With DB
+            # off the chain there is nothing to arbitrate, and the honest answer is that it is
+            # both. `isDB` is now the independent verdict and feeds only `inBase` (where it is
+            # redundant, since the W test already requires isBase) and the reported attribute.
 
             isFlat_ind = isBase and (rDepPct <= 20.0) and (20 <= bCount <= 130) and not isLikelyConsolidation
             if isBase and not isFlat_ind:
@@ -1082,14 +1137,25 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             # A clear U-shape recovery strongly suggests Cup, not Consolidation.
             isConsolidation = isBase and (
                 (bCount > 200 and not isCup and not isCupH) or
-                (bDepPct is not None and 5.0 <= bDepPct <= 35.0 and not isCup and not isCupH and not isFlatBase and not isDB and not isAscendingBase)
+                # `not isDB` dropped: a W-shaped low inside a consolidation no longer stops it
+                # being a consolidation, now that Double Bottom is an attribute.
+                (bDepPct is not None and 5.0 <= bDepPct <= 35.0 and not isCup and not isCupH and not isFlatBase and not isAscendingBase)
             )
 
             # Independent Consolidation verdict + the base-top pivot the bTop-family
             # patterns all price off (same 8-bar lag as pivRef below, so they agree).
-            isConsol_ind = isBase and (
-                bCount > 200 or (bDepPct is not None and 5.0 <= bDepPct <= 35.0)
-            )
+            # Naming-only residual. `isConsolidation` above is deliberately NOT widened,
+            # because it feeds `inBase`, and `inBase` is read AFTER the breakout check has set
+            # `isBase = False` - so the flag is stale by then and a base that broke out this
+            # bar still reports `inBase = True`. Widening it therefore keeps bases nominally
+            # alive on their breakout bar and suppresses the NEXT base's seed: measured
+            # 658 -> 649 seeds and -4 exact events, with knock-on label and pivot changes on
+            # 12 events that have nothing to do with the 'Base' fallback this is meant to fix.
+            # The staleness is load-bearing too - `inBase = isBase or isHTF` doubles seeding
+            # to 1259 and drops exact 76 -> 61. So name around it rather than through it.
+            # RULE: before widening any flag in this loop, check whether it feeds `inBase`.
+            nameConsol = isBase and not isCup and not isCupH and not isFlatBase and not isAscendingBase
+            isConsol_ind = isBase
             _pe = i + 1 - 8
             basePivot = (float(np.max(highs[bStart:_pe]))
                          if (isBase and bStart is not None and _pe > bStart) else bTop)
@@ -1100,10 +1166,13 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             if isAscendingBase: currPName, currPCode = 'Ascending Base', 8
             elif is6WkFlat: currPName, currPCode = '6-Wk Flat', 7
             elif isFlatBase: currPName, currPCode = 'Flat Base', 2
-            elif isDB: currPName, currPCode = 'Dbl Bottom', 5
+            # 'Dbl Bottom' removed from the chain - it is an attribute now, not a verdict.
             elif isCupH: currPName, currPCode = 'Cup+Handle', 4
             elif isCup: currPName, currPCode = 'Cup', 3
-            elif isConsolidation: currPName, currPCode = 'Consolidation', 9
+            elif isConsolidation or nameConsol: currPName, currPCode = 'Consolidation', 9
+            # 'Base' is unreachable now: isDeepBase implies isBase and not isFlatBase, which
+            # nameConsol already claims. Kept as a tripwire - if 'Base' appears in output
+            # again, the residual has been re-gated somewhere.
 
             if False and isBase and PATTERN_MODEL is not None:
                 lookback65 = min(i+1, 65)
@@ -1143,7 +1212,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                     pass
 
             # Breakout: price clears the base top or middle pivot
-            active_pivot = dbMiddlePivot if (isDB and dbMiddlePivot is not None) else (cupHandlePivot if (isCupH and cupHandlePivot is not None) else bTop)
+            # The double-bottom middle peak no longer arms the breakout. It sits below the base
+            # top by construction, so a false W made the base "break out" early, at a level
+            # price had already traded through - and then froze that level into boPivot.
+            active_pivot = (cupHandlePivot if (isCupH and cupHandlePivot is not None) else bTop)
             if isBase and active_pivot is not None and highs[i] > active_pivot:
                 isBase = False
                 boPivot = active_pivot
@@ -1158,8 +1230,11 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
             if was_in_base and not isBase and boBar != i and activeBTop is not None and highs[i] > activeBTop:
                 boPivot = activeBTop
                 boBar = i
-                boPatternCode = history_state[-1]['pCode'] if history_state and history_state[-1]['pCode'] > 0 else 1
-                boPatternName = history_state[-1]['pName'] if history_state and history_state[-1]['pName'] != 'None' else 'Base'
+                # Last 'Base' leak: when the prior bar carried no name this froze 'Base' into
+                # the breakout record. Consolidation is the residual now, so it is the right
+                # fallback and keeps the emitted vocabulary to exactly the four.
+                boPatternCode = history_state[-1]['pCode'] if history_state and history_state[-1]['pCode'] > 0 else 9
+                boPatternName = history_state[-1]['pName'] if history_state and history_state[-1]['pName'] != 'None' else 'Consolidation'
                 
             if newBase:
                 boPivot = None
@@ -1292,10 +1367,10 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 elif isAscendingBase: pName, pCode, pOn = 'Ascending Base', 8, True
                 elif is6WkFlat: pName, pCode, pOn = '6-Wk Flat', 7, True
                 elif isFlatBase: pName, pCode, pOn = 'Flat Base', 2, True
-                elif isDB: pName, pCode, pOn = 'Dbl Bottom', 5, True
+                # 'Dbl Bottom' removed here too - see the note on the currPName chain above.
                 elif isCupH: pName, pCode, pOn = 'Cup+Handle', 4, True
                 elif isCup: pName, pCode, pOn = 'Cup', 3, True
-                elif isConsolidation: pName, pCode, pOn = 'Consolidation', 9, True
+                elif isConsolidation or nameConsol: pName, pCode, pOn = 'Consolidation', 9, True
                 elif isDeepBase: pName, pCode, pOn = 'Base', 1, True
             else:
                 if barsSBO is not None and barsSBO <= 15:
@@ -1347,7 +1422,7 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 _bp = float(np.max(highs[bStart:_e])) if (bStart is not None and _e > bStart) else bTop
                 _base_piv = _bp if _bp else bTop
                 if isCupH and cupHandlePivot is not None: pivRef = cupHandlePivot
-                elif isDB and dbMiddlePivot is not None: pivRef = dbMiddlePivot
+                # The DB middle peak is out of the headline buy point - see the module note.
                 elif _base_piv: pivRef = _base_piv
                 elif isHTF: pivRef = htf_flag_baseHigh
             else:
@@ -1492,7 +1567,14 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 'altPat': tuple(
                     (nm, pv) for nm, ok, pv in (
                         ('Cup+Handle', isCupH, cupHandlePivot),
-                        ('Dbl Bottom', isDB_ind, dbMiddlePivot_ind),
+                        # Dbl Bottom prices off the BASE TOP, not its own middle peak. The
+                        # middle peak is still computed and reported (`db_middle_peak`), it
+                        # just no longer sets a price. Combined with its demotion in
+                        # PATTERN_RANK below, the reading folds into whichever base-top
+                        # pattern owns the entry, so it surfaces as
+                        # `also_reads_as: ['Dbl Bottom']` beside Flat Base / Cup /
+                        # Consolidation instead of displacing them at a lower buy point.
+                        ('Dbl Bottom', isDB_ind, basePivot),
                         ('Flat Base', isFlat_ind, basePivot),
                         ('Cup', isCup_ind, basePivot),
                         ('Consolidation', isConsol_ind, basePivot),
@@ -1560,8 +1642,11 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
         # HTF ranks LAST: it is the enclosing structure, so whatever forms inside the flag is
         # the more specific read and should lead the list. It still earns an entry of its own
         # because it prices off a different level (the flag high).
-        PATTERN_RANK = {'Cup+Handle': 0, 'Dbl Bottom': 1, 'Flat Base': 2,
-                        'Cup': 3, 'Consolidation': 4, 'HTF': 5}
+        # Dbl Bottom demoted from rank 1 to just above HTF. Rank decides who OWNS a shared
+        # pivot entry and who gets folded into its `also_reads_as`, so at rank 1 a double
+        # bottom sharing the base top would still have taken the entry and led the list.
+        PATTERN_RANK = {'Cup+Handle': 0, 'Flat Base': 1,
+                        'Cup': 2, 'Consolidation': 3, 'Dbl Bottom': 4, 'HTF': 5}
         layered = {}
         for _st in history_state[-(PATTERN_WINDOW_BARS + 1):]:
             if not _st.get('pOn'):
@@ -1570,12 +1655,21 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 prev = layered.get(_nm)
                 if prev is None or _st['bar'] >= prev[1]:
                     layered[_nm] = (_pv, _st['bar'], _st['date'])
+        # The Double Bottom attribute, read over the SAME window as the layered readings so
+        # the boolean and the `also_reads_as: ['Dbl Bottom']` entry can never contradict each
+        # other in the UI. `latest['isDB']` is the final bar alone, and a W typically completes
+        # some bars before the base does: over the 140 benchmark events it is set on 6 last
+        # bars against 23 that carry a double bottom somewhere in the window.
+        _db_st = next((s for s in reversed(history_state[-(PATTERN_WINDOW_BARS + 1):])
+                       if s.get('pOn') and s.get('isDB') and s.get('dbPts')), None)
+
         # Collapse readings that quote the SAME buy point. Flat Base, Cup and Consolidation
         # all price off the base high, so listing three of them is a naming distinction, not
         # a decision - it changes nothing you would do. A second entry earns its place only
-        # when it moves the entry price, which in practice means Cup+Handle (handle high) or
-        # Double Bottom (middle peak) disagreeing with the base high. Names that share a
-        # pivot are folded into `also_reads_as` on the entry that owns it.
+        # when it moves the entry price, which in practice now means Cup+Handle (handle high)
+        # disagreeing with the base high - Double Bottom used to qualify here too and no
+        # longer does, since it prices off the base top. Names that share a pivot are folded
+        # into `also_reads_as` on the entry that owns it.
         patterns = []
         for _nm in sorted(layered, key=lambda k: PATTERN_RANK.get(k, 9)):
             _pv, _bar, _dt = layered[_nm]
@@ -1819,6 +1913,17 @@ def scan_single_ticker(ticker: str, file_path: str, spy_close_series: pd.Series 
                 # specificity, each with the pivot IT prices off. patterns[0] is the primary.
                 'patterns': patterns,
                 'pattern_count': len(patterns),
+                # --- Double Bottom as a SUB-PATTERN ------------------------------------
+                # Like `vcp` below, this qualifies the host base rather than replacing it, so
+                # "a Flat Base that is also a double bottom" is reportable as exactly that.
+                # `db_middle_peak` is IBD's textbook buy point for a W and is kept for drawing
+                # and for anyone who wants it, but it is deliberately NOT the quoted pivot -
+                # the detector scores 1 true positive in 23 claims on the benchmark and 0 in
+                # 41 against IBD's own "Bases Forming" list, and its middle peak ran a median
+                # 8.4% BELOW IBD's buy point, which is the expensive direction.
+                'is_double_bottom': _db_st is not None,
+                'db_middle_peak': (float(round(_db_st['dbPts'][5], 2)) if _db_st else None),
+                'db_bars_ago': (int(latest['bar'] - _db_st['bar']) if _db_st else None),
                 # --- High Tight Flag CONTEXT ------------------------------------------
                 # A base forming inside the flag is the tradable pattern and keeps its own
                 # buy point; the flag is the structure enclosing it. Reported alongside so

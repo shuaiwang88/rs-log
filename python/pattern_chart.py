@@ -183,10 +183,20 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         s1 = int(max(0, min(len(x) - 1, s1)))
         if s1 <= s0:
             s0 = s1 = None
-    # A Double Bottom replaces the plain channel with its own high/low lines in Pine
-    # (drw_pattern.pine:1060-1064 deletes highLine and lowLine before redrawing them), so
-    # decide here whether the channel is this pattern's shape or the DB construction is.
-    dbs = next((s for s in reversed(history) if s.get('dbPts')), None) if pname == 'Dbl Bottom' else None
+    # Double Bottom is a SUB-PATTERN as of 2026-08-04, not a label of its own, so this can no
+    # longer key off `pname` - that never says 'Dbl Bottom' any more and the W simply stopped
+    # being drawn. It keys off the recorded W instead, and the host pattern keeps its channel:
+    # the Pine deleted highLine/lowLine before redrawing them (drw_pattern.pine:1060-1064)
+    # because a DB was the whole pattern there, whereas here it sits inside a Cup / Flat Base /
+    # Consolidation that still needs its own shape drawn.
+    # Gated on the RESULT's flag, not on a free search of history. Searching all of history
+    # finds any W the base ever contained and drew one on every chart tested, including bases
+    # the scanner does not report as double bottoms - the same window mismatch the scanner
+    # itself had between `latest['isDB']` and the layered reading. `is_double_bottom` is
+    # computed over the last PATTERN_WINDOW_BARS bars, so defer to it and the chart, the
+    # attribute and the `also_reads_as` entry all agree by construction.
+    dbs = (next((s for s in reversed(history) if s.get('dbPts') and s.get('isDB')), None)
+           if result.get('is_double_bottom') else None)
 
     if s0 is not None and btop and blow:
         depth = (btop - blow) / btop * 100 if btop else 0
@@ -194,13 +204,14 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
         # base. MUSA's read "248 bars" at 250 bars of chart and 118 at 120 - the same base.
         cut = ' ◀' if (f0 - win0) < 0 else ''
         facts.append(f"<b>{pname}</b>  {depth:.0f}% deep · {f1 - f0} bars{cut}")
-        if dbs is None:
-            # ── The channel. Pine's highLine + lowLine, and for a Consolidation or a Flat
-            #    Base this IS the pattern - there is nothing else to draw. A filled box in
-            #    its place said only "something is here"; the two lines say the price has
-            #    been capped at this high and held above this low for the whole span.
-            seg(s0, btop, s1, btop, PINE_BASE, width=3, dash='dot')
-            seg(s0, blow, s1, blow, PINE_BASE, width=2)
+        # ── The channel. Pine's highLine + lowLine, and for a Consolidation or a Flat
+        #    Base this IS the pattern - there is nothing else to draw. A filled box in
+        #    its place said only "something is here"; the two lines say the price has
+        #    been capped at this high and held above this low for the whole span.
+        #    Drawn unconditionally now: a double bottom no longer suppresses it, because it
+        #    is an annotation on this base rather than a replacement for it.
+        seg(s0, btop, s1, btop, PINE_BASE, width=3, dash='dot')
+        seg(s0, blow, s1, blow, PINE_BASE, width=2)
         # The actual range since the high. bTop ratchets up 5% at a time while bLow never
         # re-anchors, so the carried base can be far deeper and longer than the structure on
         # screen - XOM: 37.4% over 212 bars carried, 23.5% over 86 bars real. Drawn as a
@@ -278,14 +289,15 @@ def build_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any],
     if dbs is not None:
         fHt, fH, fLt, fL, sHt, sH, sLt, sL = dbs['dbPts']
         fHt, fLt, sHt, sLt = (v - offset for v in (fHt, fLt, sHt, sLt))
-        last = len(x) - 1
-        seg(sHt, sH, last, sH, PINE_GREEN, width=2, dash='dash')     # highLine = the pivot
+        # The middle-peak line that used to run from sH to the right edge is GONE. It read as
+        # the buy point, and the middle peak is no longer quoted as one - it came in a median
+        # 8.4% below IBD's pivot where it led. Only the W itself is drawn now; the buy point
+        # on this chart is the host pattern's, which the channel above already shows.
         seg(fHt, fH, fLt, fL, PINE_GREEN)                            # dbLine1
         seg(fLt, fL, sHt, sH, PINE_GREEN)                            # dbLine2
         seg(sHt, sH, sLt, sL, PINE_GREEN)                            # dbLine3
-        seg(sLt, sL, last, float(df['Close'].iloc[-1]), PINE_GREEN, width=3, dash='dot')
-        facts.append(f"<span style='color:{PINE_GREEN}'>W</span>  lows {fL:,.2f} / {sL:,.2f}"
-                     f" · middle peak {sH:,.2f}")
+        facts.append(f"<span style='color:{PINE_GREEN}'>W</span>  double bottom · lows "
+                     f"{fL:,.2f} / {sL:,.2f} · middle peak {sH:,.2f} (not the buy point)")
 
     # ── Handle: drawn from the scanner's OWN recorded window ────────────────────────
     # Not from the run of bars where isCupH is true. That flag is per-bar over a trailing

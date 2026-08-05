@@ -4,13 +4,6 @@
 //@version=6
 indicator('MarketSmith Indicator', overlay = true, max_bars_back = 500, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500)
 
-// ── BARS ──────────────────────────────────────────────────────────────────────
-prevClose   = input(true, title='Color Based On Previous Close',  group='----------BARS----------', inline='x')
-i_posColor = input(color.rgb(39, 54,233,0), title='Candle Color Positive', group='----------BARS----------', inline = '1')
-i_negColor = input(color.rgb(222,50,174,0), title='Negative', group='----------BARS----------', inline = '1')
-isUp = prevClose ? (close >= close[1]) : (close >= open)
-plotbar(open = close, high = high, low = low, close = close, color = isUp ? i_posColor : i_negColor)
-
 iSma10 = input(true, title = 'MA 1', group = '----------SMAs----------', inline = 'sma10')
 iSmaV10 = input(10, title = 'Lenght', group = '----------SMAs----------', inline = 'sma10')
 iExp10 = input(true, title = 'Exponential', group = '----------SMAs----------', inline = 'sma10')
@@ -566,7 +559,12 @@ var baseCond = false
 isBase = false
 
 _highest65shifted = ta.highest(high, 65)[26]
-_dynamicHighestPrior = ta.highest(high, math.min(4950, math.max(1, bar_index - 26)))[26]
+// The IPO fallback, used only while `_highest65shifted` is still na - which is only true
+// before bar 90 (ta.highest needs 65 bars, then [26] shifts it). Past that the value is
+// computed and thrown away. Capping the lookback at 90 returns the identical number in the
+// window where it is read, but turns an O(bar_index) call on EVERY bar - the length grew
+// with the chart, so the cost was quadratic in chart length - into a bounded one.
+_dynamicHighestPrior = ta.highest(high, math.min(90, math.max(1, bar_index - 26)))[26]
 _dynamicLegLookback = math.min(103, math.max(1, bar_index))
 _dynamicLowestIPOLeg = ta.lowest(low, _dynamicLegLookback)
 
@@ -618,8 +616,24 @@ if isBox[1] and not boxOver[1]
     isBox
 
 detectDoubleBottom = false
-int _dbFL = array.size(pivotLowBars) > 0 ? math.min(4950, math.max(1, bar_index - array.get(pivotLowBars, 0) + 1)) : 1
 _priorLowFull = ta.lowest(low, math.max(1, math.min(bar_index, 250)))
+
+// Suffix maxima of `high`: _sufMaxHigh[j] == ta.highest(high, j + 1). Built once per bar so
+// the pivot search below can look up "highest since the second low" instead of calling
+// ta.highest with a series length inside a double loop - that was up to 20 dynamic-length
+// calls per bar, and ta.* inside a loop is the one Pine construct guaranteed to be slow.
+//
+// maxDbBars is the deepest it can ever be asked for: the search only proceeds when
+// `fHt >= bar_index - maxDbBars`, and the second low sLt always sits after fHt, so
+// `bar_index - sLt` cannot exceed maxDbBars.
+int _maxDbBars = i_dbLength * 5
+var array<float> _sufMaxHigh = array.new_float(0)
+if isBase
+    array.clear(_sufMaxHigh)
+    float _run = high
+    for j = 0 to math.min(_maxDbBars, bar_index)
+        _run := math.max(_run, high[j])
+        array.push(_sufMaxHigh, _run)
 
 if isBase
     int numHP = array.size(pivotHighPrices)
@@ -674,8 +688,8 @@ if isBase
                         int minDbBars = timeframe.isweekly ? i_dbMinLengthWeeks : (i_dbMinLengthWeeks * 5)
                         bool condTimeC = (sLt - fHt) >= minDbBars
 
-                        int checkLen = math.min(4950, math.max(1, bar_index - sLt + 1))
-                        float highestSince2ndLow = ta.highest(high, checkLen)
+                        int checkLen = math.max(1, bar_index - sLt + 1)
+                        float highestSince2ndLow = array.get(_sufMaxHigh, math.min(array.size(_sufMaxHigh) - 1, checkLen - 1))
                         bool condBothA = highestSince2ndLow <= sH * 1.02
 
                         if condPriorTrend and condPricesH and condPricesA and condPricesB and condPricesC and condPricesD and condPricesE and condPricesF and condPricesG and condTimeA and condTimeB and condTimeC and condBothA
@@ -726,28 +740,29 @@ if isBase
     condMaxLength = bar_index - startBaseBar <= i_baseLength
     condMinLength = bar_index - startBaseBar >= 30
     condAbsolutePos = (highCup - lowCup) * 0.5 + lowCup <= high
-    for i = baseCount to 2 * baseTier by 1
-        if close[i] >= middleOfCup
-            numberOfValidCl1 := numberOfValidCl1 + 1
-            numberOfValidCl1
-    condThirdTwo := numberOfValidCl1 / baseTier >= 0.3
+    // Two of the four close-counting loops that used to be here were dead, and both are gone:
+    //
+    //   * the `baseCount -> 2 * baseTier` loop set condThirdTwo, which the
+    //     `baseCount -> 3 * baseFourth` loop below overwrites on the same bar before anything
+    //     reads it. Its result was never observable, including through condThirdTwo[1].
+    //   * the `baseCount - baseFourth -> baseFourth` loop set condFourth, which is only read
+    //     in `condFourth and condFourth[1] and condFourthTwo and condFourthTwo[1]` - and
+    //     condFourthTwo is declared false and never assigned anywhere in the file, so that
+    //     whole disjunct is a constant false.
+    //
+    // NOTE the second one is a latent bug, not just dead weight: the four-quarter cup test
+    // has never been able to fire. If condFourthTwo is meant to be computed, the loop needs
+    // to come back along with whatever assigns it.
     for i = baseCount - baseTier to baseTier by 1
         if close[i] <= middleOfCup
             numberOfValidCl2 := numberOfValidCl2 + 1
             numberOfValidCl2
     condThird := numberOfValidCl2 / baseTier >= 0.90
-    numberOfValidCl1 := 0
-    numberOfValidCl2 := 0
     for i = baseCount to 3 * baseFourth by 1
         if close[i] >= middleOfCup
             numberOfValidCl1 := numberOfValidCl1 + 1
             numberOfValidCl1
     condThirdTwo := numberOfValidCl1 / baseFourth >= 0.3
-    for i = baseCount - baseFourth to baseFourth by 1
-        if close[i] <= middleOfCup
-            numberOfValidCl2 := numberOfValidCl2 + 1
-            numberOfValidCl2
-    condFourth := numberOfValidCl2 / (2 * baseFourth) >= 0.90
     cupForm = condThird and condThird[1] and condThirdTwo and condThirdTwo[1] or condFourth and condFourth[1] and condFourthTwo and condFourthTwo[1]
     detectCup := condMaxDepth and condMinDepth and condMaxLength and condMinLength and condAbsolutePos and cupForm
     detectCup
@@ -976,9 +991,28 @@ var line handleSepLine = na
 var box  handleBox = na
 var float activePivot = 0.0
 
+// Clean candle markers use the signal formulas from drw_pattern_scanner.pine.
+// They intentionally have no text; the symbol/color is the visual key.
+i_showSignalMarkers = input.bool(true, 'Show Clean Signal Markers', group = 'Chart Pattern Recognition')
+i_signalVduLength = input.int(50, 'Marker VDU Average Volume Length', minval = 1, group = 'Chart Pattern Recognition')
+i_signalDryUpReq = input.float(45.0, 'Marker VDU Level %', minval = 0, maxval = 100, group = 'Chart Pattern Recognition')
+i_signalMaLength1 = input.int(10, 'Marker MA Length 1', minval = 1, group = 'Chart Pattern Recognition')
+i_signalMaLength2 = input.int(21, 'Marker MA Length 2', minval = 1, group = 'Chart Pattern Recognition')
+i_signalMaLength3 = input.int(34, 'Marker MA Length 3', minval = 1, group = 'Chart Pattern Recognition')
+i_signalTouchThresh = input.float(0.5, 'Marker MA Touch Tolerance %', minval = 0, step = 0.1, group = 'Chart Pattern Recognition')
+i_signalRsLookback = input.int(250, 'Marker RS 1Y Lookback', minval = 50, maxval = 500, group = 'Chart Pattern Recognition')
+i_signalShakeTrendLen = input.int(50, 'Marker Shakeout Trend EMA', minval = 10, group = 'Chart Pattern Recognition')
+i_signalShakeLR = input.int(3, 'Marker Shakeout Swing Bars', minval = 1, group = 'Chart Pattern Recognition')
+var int markerBreakoutBar = na
+var float markerBreakoutPivot = na
+
 var box entryBox = na
 var box slBox = na
 var box tpBox = na
+
+if baseCond and not isBase[1]
+    markerBreakoutBar := na
+    markerBreakoutPivot := na
 
 if baseCond and not isBase[1] and timeframe.isdaily and i_displayPattern
     highLine := line.new(x1 = startBaseBar, y1 = array.get(startBasePrice, 0), x2 = bar_index, y2 = array.get(startBasePrice, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
@@ -1004,9 +1038,15 @@ if lowerBaseBar - startBaseBar <= 0
 lengthLeft = lowerBaseBar - startBaseBar
 lengthRight = bar_index - lowerBaseBar
 if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDoubleBottom[1] and barstate.islast
-    if array.size(linesRight) > lengthRight - 1
-        for i = 0 to lengthRight - 1 by 1
-            line.delete(array.get(linesRight, i))
+    // Clear BOTH sides of the previous cup, and empty the arrays with them. This runs on
+    // every realtime tick, and it used to delete only the first `lengthRight` right-side
+    // lines while never touching linesLeft at all - so each tick redrew the left side on top
+    // of the last one and pushed more handles into an array that only ever grew. The 500-line
+    // cap then evicted lines that were still referenced from it.
+    while array.size(linesLeft) > 0
+        line.delete(array.pop(linesLeft))
+    while array.size(linesRight) > 0
+        line.delete(array.pop(linesRight))
     line.delete(lowLine)
     var int x1 = 0
     var float y1 = na
@@ -1020,7 +1060,7 @@ if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDou
         bottomPrice := array.get(lowBasePrice, 0) * (1 - 0.01)
         bottomPrice
     endUpPrice = low[1] * (1 - 0.01)
-    if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
+    if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice and lengthLeft > 0
         for i = 0 to lengthLeft - 1 by 1
             float k = 1 / math.exp(0) / (startUpPrice - bottomPrice)
             x1 := bar_index[lengthLeft - 1 - (i - 1)]
@@ -1034,7 +1074,7 @@ if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDou
             array.unshift(linesLeft, cupLineLeftLive)
             isLeftDrawn := true
             isLeftDrawn
-        if isLeftDrawn
+        if isLeftDrawn and lengthRight > 0
             for i = 0 to lengthRight - 1 by 1
                 float k = math.exp(6) / (endUpPrice - bottomPrice)
                 x1 := bar_index[lengthRight - 1 - (i - 1)]
@@ -1047,9 +1087,10 @@ if detectCup and isBase and timeframe.isdaily and i_displayPattern and not isDou
                 cupLineRightLive := line.new(x1 = x1, y1 = y1, x2 = x2, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 array.unshift(linesRight, cupLineRightLive)
 
-_lowCompareFull = ta.lowest(low, math.min(4950, math.max(1, bar_index - topDBBar)))
-
-lowCompare = bar_index - topDBBar > 0 ? _lowCompareFull : low
+// Removed: `lowCompare`, and the `ta.lowest(low, bar_index - topDBBar)` feeding it. Nothing
+// read the result. topDBBar stays 0 until the first Double Bottom is detected, so on any
+// chart without one the lookback was the entire chart, recomputed every bar - the single
+// most expensive thing in the script, and it produced a value that was never used.
 if detectDoubleBottom and not isDoubleBottom[1] and timeframe.isdaily and i_displayPattern
     line.delete(highLine)
     line.delete(lowLine)
@@ -1160,7 +1201,10 @@ if high <= line.get_y1(highLine) and low >= line.get_y1(lowLine) and isBase
             handleBox := na
 
 bool isHandleBreakoutSep = handleBreakoutSep and not isBox and isBase
-if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHandleBreakoutSep
+bool markerBaseBreakout = high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])
+bool markerHTFBreakout = isHTF[1] and not na(flag_baseHigh[1]) and high > flag_baseHigh[1]
+bool markerBreakoutEvent = markerBaseBreakout or isHandleBreakoutSep or markerHTFBreakout
+if markerBreakoutEvent
     isBase := false
     line.delete(handleSepLine)
     handleSepLine := na
@@ -1170,7 +1214,10 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
     if isDoubleBottom
         isDoubleBottom := false
         isDoubleBottom
-    activePivot := isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
+    activePivot := markerHTFBreakout ? flag_baseHigh[1] : isHandleBreakoutSep ? handlePeakLockedSep : line.get_y1(highLine)
+    if na(markerBreakoutBar)
+        markerBreakoutBar := bar_index
+        markerBreakoutPivot := activePivot
     // ── Base Info Label ────────────────────────────────────────────────────────
     if timeframe.isdaily and i_displayPattern
         baseTop = activePivot
@@ -1214,7 +1261,7 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
                     lowValue
         lengthLeft := lowerBaseBar - startBaseBar
         lengthRight := bar_index - lowerBaseBar
-        if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice
+        if timeframe.isdaily and i_displayPattern and array.size(lowBasePrice) > 0 and startUpPrice > bottomPrice and lengthLeft > 0
             for i = 0 to lengthLeft - 1 by 1
                 float k = 1 / math.exp(0) / (startUpPrice - bottomPrice)
                 x1 := bar_index[lengthLeft - 1 - (i - 1)]
@@ -1227,7 +1274,7 @@ if (high > line.get_y1(highLine) and (isBase[1] or isDoubleBottom[1])) or isHand
                 cupLineLeft := line.new(x1 = x1 - lengthRight, y1 = y1, x2 = x2 - lengthRight, y2 = y2, color = color.rgb(146, 193, 131, 0), width = 3)
                 isLeftDrawn := true
                 isLeftDrawn
-            if isLeftDrawn
+            if isLeftDrawn and lengthRight > 0
                 for i = 0 to lengthRight - 1 by 1
                     float k = math.exp(6) / (endUpPrice - bottomPrice)
                     x1 := bar_index[lengthRight - 1 - (i - 1)]
@@ -1257,6 +1304,176 @@ if high <= activePivot * (1 + 0.25) and low >= activePivot * (1 - 0.08) and isBo
     isBox := true
     boxOver := false
     boxOver
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  CLEAN CANDLE SIGNAL MARKERS
+//  Calculation reference: drw_pattern_scanner.pine.
+//  Pre-BO markers require the candle to be within 15% of the active pivot.
+//  Post-BO markers remain visible for 20 bars (the requested post-BO window).
+//  No signal text is printed on the chart.
+// ═════════════════════════════════════════════════════════════════════════════
+// Scanner-style pivot reference: the active base top while forming, or the
+// saved breakout pivot after BO. `markerInBase` mirrors scanner `inBase`.
+bool markerInBase = isBase or isDoubleBottom or isCup or handleFormingSep or isHTF
+float markerPrePivot = isHTF and not na(flag_baseHigh) ? flag_baseHigh : not na(highLine) ? line.get_y1(highLine) : array.size(startBasePrice) > 0 ? array.get(startBasePrice, 0) : na
+float markerPivotRef = markerInBase ? markerPrePivot : markerBreakoutPivot
+float markerDistPct = not na(markerPivotRef) and markerPivotRef > 0 ? (close - markerPivotRef) / markerPivotRef * 100 : na
+bool markerPreWindow = na(markerBreakoutBar) and markerInBase and not na(markerDistPct) and math.abs(markerDistPct) <= 15.0
+int markerBarsSinceBO = not na(markerBreakoutBar) ? bar_index - markerBreakoutBar : na
+bool markerPostWindow = not na(markerBreakoutBar) and not na(markerBarsSinceBO) and markerBarsSinceBO >= 0 and markerBarsSinceBO <= 20
+bool markerWindow = markerPreWindow or markerPostWindow
+
+// VDU: scanner formula = volume below (100 - dry-up level)% of its SMA.
+float markerAvgVol = ta.sma(volume, i_signalVduLength)
+bool markerVDU = not na(markerAvgVol) and markerAvgVol > 0 and volume / markerAvgVol * 100 < (100.0 - i_signalDryUpReq)
+
+// Pocket pivots: current up-day volume exceeds the largest down-day volume in
+// the previous 10 bars or previous 5 bars.
+markerVols10 = array.new<float>()
+markerVols5 = array.new<float>()
+for markerI = 1 to 10
+    if not na(close[markerI]) and not na(close[markerI + 1]) and close[markerI] < close[markerI + 1]
+        array.push(markerVols10, volume[markerI])
+for markerI = 1 to 5
+    if not na(close[markerI]) and not na(close[markerI + 1]) and close[markerI] < close[markerI + 1]
+        array.push(markerVols5, volume[markerI])
+float markerMaxDnVol10 = array.size(markerVols10) > 0 ? array.max(markerVols10) : na
+float markerMaxDnVol5 = array.size(markerVols5) > 0 ? array.max(markerVols5) : na
+bool markerPP10 = close > close[1] and not na(markerMaxDnVol10) and volume > markerMaxDnVol10
+bool markerPP5 = close > close[1] and not na(markerMaxDnVol5) and volume > markerMaxDnVol5
+bool markerPP = markerPP10 or markerPP5
+
+// MA touch: the low must reach the MA band and the candle must reverse
+// higher through the MA. A price that stays below the MA is not a signal.
+float markerMA10 = ta.ema(close, i_signalMaLength1)
+float markerMA21 = ta.ema(close, i_signalMaLength2)
+float markerMA34 = ta.ema(close, i_signalMaLength3)
+f_markerReclaimsMA(maVal, threshPct) =>
+    not na(maVal) and maVal > 0 and low >= maVal * (1.0 - threshPct / 100.0) and low <= maVal * (1.0 + threshPct / 100.0) and close > maVal and close > close[1]
+bool markerMATouch = f_markerReclaimsMA(markerMA10, i_signalTouchThresh) or
+     f_markerReclaimsMA(markerMA21, i_signalTouchThresh) or
+     f_markerReclaimsMA(markerMA34, i_signalTouchThresh)
+
+// Scanner-style upside reversal: an ATR-wide candle closing in the upper
+// half of its range. Only color it green when it also reclaims an MA.
+float markerATR14 = ta.atr(14)
+bool markerUpsideReversal = not na(markerATR14) and (high - low) > markerATR14 and close > (high + low) / 2.0
+bool markerUpsideReversalNearMA = markerUpsideReversal and markerMATouch
+
+// Shakeout: undercut the latest 3-bar pivot low, reclaim the 3 EMA within
+// three bars while above the 50 EMA, then clear the reclaim bar's high.
+float markerShakeEMA3 = ta.ema(close, 3)
+float markerShakeTrendEMA = ta.ema(close, i_signalShakeTrendLen)
+bool markerShakeUptrend = close > markerShakeTrendEMA
+float markerShakeSwingLow = ta.pivotlow(low, i_signalShakeLR, i_signalShakeLR)
+var float markerShakeLastSwingLow = na
+if not na(markerShakeSwingLow)
+    markerShakeLastSwingLow := markerShakeSwingLow
+var int markerShakeUndercutBar = na
+var int markerShakeReclaimBar = na
+var float markerShakeReclaimHigh = na
+var bool markerShakeSetupActive = false
+bool markerShakeUndercut = not na(markerShakeLastSwingLow) and low < markerShakeLastSwingLow and markerShakeUptrend
+if markerShakeUndercut and not markerShakeSetupActive
+    markerShakeUndercutBar := bar_index
+    markerShakeSetupActive := true
+    markerShakeReclaimBar := na
+    markerShakeReclaimHigh := na
+bool markerShakeValidWindow = markerShakeSetupActive and bar_index > markerShakeUndercutBar and bar_index - markerShakeUndercutBar <= 3
+bool markerShakeReclaim = markerShakeValidWindow and close > markerShakeEMA3 and na(markerShakeReclaimBar) and markerShakeUptrend
+if markerShakeReclaim
+    markerShakeReclaimBar := bar_index
+    markerShakeReclaimHigh := high
+bool markerShakeout = markerShakeSetupActive and not na(markerShakeReclaimBar) and bar_index > markerShakeReclaimBar and high > markerShakeReclaimHigh and markerShakeUptrend
+if markerShakeout or (markerShakeSetupActive and bar_index - markerShakeUndercutBar > 3)
+    markerShakeSetupActive := false
+    markerShakeUndercutBar := na
+    markerShakeReclaimBar := na
+    markerShakeReclaimHigh := na
+
+// RS new high: same raw-RS formula and 1Y/6M/3M prior-high windows as the scanner.
+float markerRsRaw = not na(comparativeSymbol) and comparativeSymbol != 0 ? close * 7.0 * 1000.0 / comparativeSymbol : na
+int markerRsLB6M = math.max(1, math.round(i_signalRsLookback / 2.0))
+int markerRsLB3M = math.max(1, math.round(i_signalRsLookback / 4.0))
+float markerRsH1Y = ta.highest(markerRsRaw, i_signalRsLookback)[1]
+float markerRsH6M = ta.highest(markerRsRaw, markerRsLB6M)[1]
+float markerRsH3M = ta.highest(markerRsRaw, markerRsLB3M)[1]
+bool markerRSNH = not na(markerRsRaw) and ((not na(markerRsH1Y) and markerRsRaw > markerRsH1Y) or
+     (not na(markerRsH6M) and markerRsRaw > markerRsH6M) or
+     (not na(markerRsH3M) and markerRsRaw > markerRsH3M))
+
+// Combine all signals found on the same candle into one tiny marker.
+// Each signal type still keeps its two newest candles independently.
+// The combined marker's hover tooltip lists every signal found on that candle.
+var array<int> recentVDUBars = array.new_int()
+var array<int> recentPPBars = array.new_int()
+var array<int> recentMATouchBars = array.new_int()
+var array<int> recentShakeoutBars = array.new_int()
+var array<int> recentRSNHBars = array.new_int()
+var array<label> combinedSignalMarkers = array.new_label()
+var array<int> combinedSignalMarkerBars = array.new_int()
+
+f_keepRecentSignal(array<int> signalBars, int signalBar) =>
+    array.push(signalBars, signalBar)
+    if array.size(signalBars) > 2
+        array.shift(signalBars)
+
+f_pruneCombinedMarkers(array<label> markerLabels, array<int> markerBars, array<int> vduBars, array<int> ppBars, array<int> maBars, array<int> shakeoutBars, array<int> rsnhBars) =>
+    int markerIndex = array.size(markerLabels) - 1
+    while markerIndex >= 0
+        int markerBar = array.get(markerBars, markerIndex)
+        bool stillRetained = array.includes(vduBars, markerBar) or array.includes(ppBars, markerBar) or array.includes(maBars, markerBar) or array.includes(shakeoutBars, markerBar) or array.includes(rsnhBars, markerBar)
+        if not stillRetained
+            label.delete(array.get(markerLabels, markerIndex))
+            array.remove(markerLabels, markerIndex)
+            array.remove(markerBars, markerIndex)
+        markerIndex -= 1
+
+bool markerVDUSignal = markerWindow and markerVDU
+bool markerPPSignal = markerWindow and markerPP
+bool markerMATouchSignal = markerWindow and markerMATouch
+bool markerShakeoutSignal = markerWindow and markerShakeout
+bool markerRSNHSignal = markerWindow and markerRSNH
+bool markerAnySignal = markerVDUSignal or markerPPSignal or markerMATouchSignal or markerShakeoutSignal or markerRSNHSignal
+
+if i_showSignalMarkers and barstate.isconfirmed and markerAnySignal
+    string combinedTooltip = ''
+    if markerVDUSignal
+        f_keepRecentSignal(recentVDUBars, bar_index)
+        combinedTooltip := 'VDU: volume dry-up near the pivot'
+    if markerPPSignal
+        f_keepRecentSignal(recentPPBars, bar_index)
+        combinedTooltip := combinedTooltip == '' ? 'PP: pocket pivot near the pivot' : combinedTooltip + '\nPP: pocket pivot near the pivot'
+    if markerMATouchSignal
+        f_keepRecentSignal(recentMATouchBars, bar_index)
+        combinedTooltip := combinedTooltip == '' ? 'MA touch: low touched the MA and reversed higher' : combinedTooltip + '\nMA touch: low touched the MA and reversed higher'
+    if markerShakeoutSignal
+        f_keepRecentSignal(recentShakeoutBars, bar_index)
+        combinedTooltip := combinedTooltip == '' ? 'Shakeout: undercut and reclaim' : combinedTooltip + '\nShakeout: undercut and reclaim'
+    if markerRSNHSignal
+        f_keepRecentSignal(recentRSNHBars, bar_index)
+        combinedTooltip := combinedTooltip == '' ? 'RSNH: relative strength new high' : combinedTooltip + '\nRSNH: relative strength new high'
+
+    bool markerAboveBar = markerVDUSignal or markerRSNHSignal
+    color combinedMarkerColor = markerRSNHSignal ? color.blue : markerShakeoutSignal ? color.lime : markerPPSignal ? color.yellow : markerMATouchSignal ? color.aqua : color.rgb(218, 165, 32)
+    float markerPrice = markerAboveBar ? high : low
+    label combinedMarker = label.new(bar_index, markerPrice, '', yloc = markerAboveBar ? yloc.abovebar : yloc.belowbar, style = label.style_circle, color = combinedMarkerColor, textcolor = combinedMarkerColor, size = size.tiny, tooltip = combinedTooltip)
+    array.push(combinedSignalMarkers, combinedMarker)
+    array.push(combinedSignalMarkerBars, bar_index)
+    f_pruneCombinedMarkers(combinedSignalMarkers, combinedSignalMarkerBars, recentVDUBars, recentPPBars, recentMATouchBars, recentShakeoutBars, recentRSNHBars)
+
+if not i_showSignalMarkers
+    array.clear(recentVDUBars)
+    array.clear(recentPPBars)
+    array.clear(recentMATouchBars)
+    array.clear(recentShakeoutBars)
+    array.clear(recentRSNHBars)
+    int markerIndex = array.size(combinedSignalMarkers) - 1
+    while markerIndex >= 0
+        label.delete(array.get(combinedSignalMarkers, markerIndex))
+        markerIndex -= 1
+    array.clear(combinedSignalMarkers)
+    array.clear(combinedSignalMarkerBars)
 
 if array.size(linesLeft) > 500
     line.delete(array.pop(linesLeft))
@@ -1294,7 +1511,7 @@ nearHigh = close >= (recentHigh * 0.95)
 
 strongSignal = volumeNoProgress and nearHigh
 
-barcolor(volumeNoProgress ? color.yellow : na, title="Heavy Volume No Progress Candle")
+barcolor(markerUpsideReversalNearMA ? color.green : volumeNoProgress ? color.yellow : na, title="Signal Bar Color")
 
 if showLabels and volumeNoProgress and barstate.isconfirmed
     labelText = (strongSignal ?
@@ -1342,14 +1559,17 @@ ma3 = maType3 == "EMA" ? ta.ema(close, ima3) : maType3 == "SMA" ? ta.sma(close, 
 ma4 = maType4 == "EMA" ? ta.ema(close, ima4) : maType4 == "SMA" ? ta.sma(close, ima4) : na
 ma5 = maType5 == "EMA" ? ta.ema(close, ima5) : maType3 == "SMA" ? ta.sma(close, ima5) : na
 ma6 = maType6 == "EMA" ? ta.ema(close, ima6) : maType4 == "SMA" ? ta.sma(close, ima6) : na
-// Each symbol+timeframe pair merged into one request.security() tuple call instead of two
-// (avg-volume and close were separate calls to the same series) - halves the NQ/NY call count.
-[nasVolAvg, nasVol]     = request.security('TVOL.NQ', 'D', [ta.sma(close,50), close])
-[spxVolAvg, spxVol]     = request.security('TVOL.NY', 'D', [ta.sma(close,50), close])
-[nasVolAvgWk, nasVolWk] = request.security('TVOL.NQ', 'W', [ta.sma(close,10), close])
-[spxVolAvgWk, spxVolWk] = request.security('TVOL.NY', 'W', [ta.sma(close,10), close])
-avgVol = syminfo.ticker == 'IXIC' ? nasVolAvg : syminfo.ticker == 'SPX' ? spxVolAvg : ta.sma(volume,50)
-avgVolWk = syminfo.ticker == 'IXIC' ? nasVolAvgWk : syminfo.ticker == 'SPX' ? spxVolAvgWk : ta.sma(volume,10)
+// Each symbol+timeframe pair is one request.security() tuple call (avg-volume and close were
+// separate calls to the same series), and only the ONE exchange the chart symbol needs is
+// requested. Both NQ and NY used to be fetched at both timeframes on every chart - four
+// foreign-symbol history requests - while `avgVol` reads at most one of them, and reads none
+// at all unless the chart is IXIC or SPX. Each of those requests is a data fetch on load.
+string _volSym = syminfo.ticker == 'SPX' ? 'TVOL.NY' : 'TVOL.NQ'
+[idxVolAvg, idxVol]     = request.security(_volSym, 'D', [ta.sma(close,50), close])
+[idxVolAvgWk, idxVolWk] = request.security(_volSym, 'W', [ta.sma(close,10), close])
+bool _isIdx = syminfo.ticker == 'IXIC' or syminfo.ticker == 'SPX'
+avgVol = _isIdx ? idxVolAvg : ta.sma(volume,50)
+avgVolWk = _isIdx ? idxVolAvgWk : ta.sma(volume,10)
 
 
 
@@ -1372,8 +1592,8 @@ distMa6 = ((close / ma6) - 1) * 100
 dollarChng = ta.change(close,1)
 perChng = dollarChng / close[1] * 100
 closeRange = (close - low) / (high - low) *100
-runRate = syminfo.ticker == 'IXIC' ? 100 * (nasVol / nasVolAvg) - 100 : syminfo.ticker == 'SPX' ? 100 * (spxVol / spxVolAvg) - 100 : projVolPer
-runRateWk = syminfo.ticker == 'IXIC' ? 100 * (nasVolWk / nasVolAvgWk) - 100 : syminfo.ticker == 'SPX' ? 100 * (spxVolWk / spxVolAvgWk) - 100 : projVolPerWk
+runRate = _isIdx ? 100 * (idxVol / idxVolAvg) - 100 : projVolPer
+runRateWk = _isIdx ? 100 * (idxVolWk / idxVolAvgWk) - 100 : projVolPerWk
 
 dateTitle = "Date:       "
 highTitle = "High:       "
@@ -1402,8 +1622,7 @@ if ISDAILY and (barstate.isconfirmed or barstate.islast)
          perChangeTitle + str.tostring(perChng, "##.##") + nl +
          clsrngTitle + str.tostring(closeRange, "#") + "%" +  nl +
 
-         volTitle + (syminfo.ticker == 'IXIC' ? str.tostring(nasVol, "#,###,###,###") :
-         syminfo.ticker == 'SPX' ? str.tostring(spxVol, "#,###,###,###") : str.tostring(volume, "#,###,###,###")) + nl +
+         volTitle + (_isIdx ? str.tostring(idxVol, "#,###,###,###") : str.tostring(volume, "#,###,###,###")) + nl +
          volPercTitle + str.tostring(runRate, "#") + '%' +  nl +
          maTitle1 + str.tostring(ma1, format.mintick) + ' (' + str.tostring(distMa1, "#.#") + '%)' + nl +
          maTitle2 + str.tostring(ma2, format.mintick) + ' (' + str.tostring(distMa2, "#.#") + '%)' + nl +
@@ -1419,8 +1638,7 @@ if ISWEEKLY and (barstate.isconfirmed or barstate.islast)
          closeTitle + str.tostring(close, "##.##") + ' (' + str.tostring(dollarChng, format.mintick) + ')' + nl +
          perChangeTitle + str.tostring(perChng, "##.##") + nl +
          clsrngTitleWk + str.tostring(closeRange, "#") + "%" +  nl +
-         volTitle + (syminfo.ticker == 'IXIC' ? str.tostring(nasVolWk, "#,###,###,###") :
-         syminfo.ticker == 'SPX' ? str.tostring(spxVolWk, "#,###,###,###") : str.tostring(volume, "#,###,###,###")) + nl +
+         volTitle + (_isIdx ? str.tostring(idxVolWk, "#,###,###,###") : str.tostring(volume, "#,###,###,###")) + nl +
          volPercTitle + str.tostring(runRateWk, "#") + '%' +  nl +
          maTitle5 + str.tostring(ma5, format.mintick) + ' (' + str.tostring(distMa5, "#.#") + '%)' + nl +
          maTitle6 + str.tostring(ma6, format.mintick) + ' (' + str.tostring(distMa6, "#.#") + '%)'

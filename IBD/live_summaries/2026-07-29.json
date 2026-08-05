@@ -1,22 +1,327 @@
 {
   "date": "2026-07-29",
   "source_file": "/Users/sw/Documents/Zoom/2026-07-29 10.27.55 IBD Live/IBD Live transcript_2026-07-29_11.13.10.txt",
-  "market_summary": "Market in correction ahead of 2PM Fed/Warsh. Oil +7% to $84 on Iran missiles hitting US base in Jordan. Guest Mark Minervini: hedged/short S&P, margin debt at records matching 2000/2008 tops, Aug/Sep seasonality. '43 years trading, never seen the market this split.' The 70% Rule: biggest winners from 4-5 sectors. 'Don't bottom-fish broken leaders. Hope is a f*****.'",
-  "tickers": ["CAT", "PG", "V", "STX", "SKHY", "KLAC", "TER", "BE", "CAKE", "APH", "HUM", "VRT", "ARCB", "BAND", "CHEF", "FLEX", "FTNT", "HOOD", "GRMN", "NUE", "STLD", "MS", "C", "EOG", "FANG", "TRGP", "KMI", "ATRO", "PAX", "NET", "VIK", "SNOW", "DDOG", "YOU", "YETI", "SBUX", "EBAY", "SNDK", "GKOS", "VCYT", "MDGL", "INDV", "ANRO", "COGT", "VSXY", "LLY", "JNJ", "MRK", "HSBC"],
+  "market_summary": "Hedged and short the S&P 500: Shorted on July 27 into a dead-cat bounce with mental stop just above recent pivot ledge highs.",
+  "tickers": [
+    "CAT",
+    "PG",
+    "V",
+    "STX",
+    "SKHY",
+    "KLAC",
+    "TER",
+    "BE",
+    "CAKE",
+    "APH",
+    "HUM",
+    "VRT",
+    "ARCB",
+    "BAND",
+    "CHEF",
+    "FLEX",
+    "FTNT",
+    "HOOD",
+    "META",
+    "MSFT",
+    "SIMO",
+    "GRMN",
+    "NUE",
+    "STLD",
+    "MS",
+    "C",
+    "EOG",
+    "FANG",
+    "TRGP",
+    "KMI",
+    "ATRO",
+    "PAX",
+    "NET",
+    "VIK",
+    "SNOW",
+    "DDOG",
+    "YOU",
+    "YETI",
+    "SBUX",
+    "EBAY",
+    "SNDK",
+    "GKOS",
+    "VCYT",
+    "MDGL",
+    "INDV",
+    "ANRO",
+    "COGT",
+    "VSXY",
+    "LLY",
+    "JNJ",
+    "MRK",
+    "HSBC",
+    "RVMD"
+  ],
   "ticker_details": {
-    "CAKE": {"actionability": "Actionable", "technical_action": "Near all-time highs, hasn't tested 50-day in months", "story": "Cheesecake Factory: restaurant group leader. Dave and Minervini highlight."},
-    "PAX": {"actionability": "Actionable", "technical_action": "Bought Jun 24 from base, up 20%+, trimming 15-25% into strength", "story": "Minervini financing break-even stop before earnings. 2x implied volatility sizing."},
-    "NET": {"actionability": "Watchlist", "technical_action": "Holding up on right side of base, higher lows while tech crashes 50-80%", "story": "Cloudflare: tech resistor. Minervini waiting for confirmation turn-up, not bottom-fishing."},
-    "VIK": {"actionability": "Actionable", "technical_action": "Holding near 50-day on low volume despite oil spike", "story": "Viking Holdings: cruise leader. Minervini traded out into strength, added back."},
-    "YOU": {"actionability": "Watchlist", "technical_action": "IPO approaching all-time highs, earnings turned positive", "story": "Clear Secure: competing with TSA PreCheck. Minervini using Livermore IPO playbook. Needs tight base."},
-    "SNDK": {"actionability": "Watchlist", "technical_action": "Down massively, approaching large haircut", "story": "SanDisk: Minervini: 'I would never be buying here. The snapback rally is the gift to EXIT.'"},
-    "LLY": {"actionability": "Actionable", "technical_action": "Held with de-risked earnings cushion", "story": "Eli Lilly: held by Minervini and Ali Coram."},
-    "GRMN": {"actionability": "Watchlist", "technical_action": "Massive earnings breakout", "story": "Garmin: Ken Shreve: don't chase — wait 1-2 weeks for tight consolidation."},
-    "TER": {"actionability": "Watchlist", "technical_action": "+13% pre-market on strong results", "story": "Teradyne: robotics + chip equipment strength."},
-    "VRT": {"actionability": "Watchlist", "technical_action": "Gapped below 200-day on earnings", "story": "Vertiv: AI trade in severe trouble — strong numbers, broken chart."},
-    "BAND": {"actionability": "Watchlist", "technical_action": "Down 20%+ on earnings", "story": "Bandwidth: former speculative leader, character change."},
-    "NUE": {"actionability": "Watchlist", "technical_action": "Coming up right side of cup base on expanding volume", "story": "Nucor: Ken watching. Cyclical — Minervini gives demerits vs growth sectors."}
+    "CAT": {
+      "actionability": "Watchlist",
+      "technical_action": "Down 4.5% pre-market on Baird downgrade ($1,200\u2192$900)",
+      "story": "Caterpillar: earnings next week. Tariff/cyclical headwinds cited."
+    },
+    "PG": {
+      "actionability": "Watchlist",
+      "technical_action": "Weakness on earnings",
+      "story": "Procter & Gamble: consumer staple headwinds."
+    },
+    "V": {
+      "actionability": "Watchlist",
+      "technical_action": "Reporting after the close",
+      "story": "Visa: consumer spending barometer."
+    },
+    "STX": {
+      "actionability": "Watchlist",
+      "technical_action": "Strong top and bottom-line beat",
+      "story": "Seagate: storage demand from data center cycle."
+    },
+    "SKHY": {
+      "actionability": "Watchlist",
+      "technical_action": "Down 9.5% in Korea overnight on earnings",
+      "story": "SK Hynix: memory earnings sell-off in Asia."
+    },
+    "KLAC": {
+      "actionability": "Watchlist",
+      "technical_action": "Down on sluggish guidance",
+      "story": "KLA Corp: semi-equipment softness."
+    },
+    "TER": {
+      "actionability": "Watchlist",
+      "technical_action": "+13% pre-market on strong results",
+      "story": "Teradyne: heavy into robotics + chip equipment. Major gap up."
+    },
+    "BE": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 9% on data center fuel cell momentum",
+      "story": "Bloom Energy: AI-adjacent clean energy demand."
+    },
+    "CAKE": {
+      "actionability": "Actionable",
+      "technical_action": "Up 5.5%, near all-time highs without testing 50-day in months",
+      "story": "Cheesecake Factory: restaurant group leader. Dave/Minervini highlight."
+    },
+    "APH": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 6.5% on strong earnings",
+      "story": "Amphenol: fiber optic connectors for data center buildout."
+    },
+    "HUM": {
+      "actionability": "Watchlist",
+      "technical_action": "Up on earnings after upside reversal",
+      "story": "Humana: healthcare/insurance turnaround."
+    },
+    "VRT": {
+      "actionability": "Watchlist",
+      "technical_action": "Gapped below 200-day on earnings",
+      "story": "Vertiv: AI trade showing severe trouble \u2014 strong numbers, broken technicals."
+    },
+    "ARCB": {
+      "actionability": "Watchlist",
+      "technical_action": "Gave up 50-day on earnings",
+      "story": "ArcBest: trucking under pressure."
+    },
+    "BAND": {
+      "actionability": "Watchlist",
+      "technical_action": "Down 20%+ on earnings, weak fundamentals",
+      "story": "Bandwidth: former speculative software leader, character change."
+    },
+    "CHEF": {
+      "actionability": "Watchlist",
+      "technical_action": "Hit all-time highs",
+      "story": "Chef's Warehouse: high composite rating, food service distribution leader."
+    },
+    "FLEX": {
+      "actionability": "Watchlist",
+      "technical_action": "Down despite strong results and raised guidance",
+      "story": "Flex: good news not rewarded \u2014 bearish signal."
+    },
+    "FTNT": {
+      "actionability": "Watchlist",
+      "technical_action": "Reporting after close",
+      "story": "Fortinet: cybersecurity earnings on deck."
+    },
+    "HOOD": {
+      "actionability": "Watchlist",
+      "technical_action": "Reporting after close",
+      "story": "Robinhood: fintech earnings."
+    },
+    "GRMN": {
+      "actionability": "Watchlist",
+      "technical_action": "Massive earnings breakout",
+      "story": "Garmin: Ken Shreve: don't chase \u2014 wait for tight sideways consolidation 1-2 weeks for alternate entry."
+    },
+    "NUE": {
+      "actionability": "Watchlist",
+      "technical_action": "Coming up right side of cup base on expanding volume",
+      "story": "Nucor: steel producer. Ken watching. Cyclical \u2014 less secular preference per Minervini."
+    },
+    "STLD": {
+      "actionability": "Watchlist",
+      "technical_action": "Similar cup base",
+      "story": "Steel Dynamics: peer to NUE."
+    },
+    "MS": {
+      "actionability": "Watchlist",
+      "technical_action": "Selling pressure, broke 50-day",
+      "story": "Morgan Stanley: financials under pressure."
+    },
+    "C": {
+      "actionability": "Watchlist",
+      "technical_action": "Selling pressure, broke 50-day",
+      "story": "Citigroup: mixed earnings reaction."
+    },
+    "EOG": {
+      "actionability": "Watchlist",
+      "technical_action": "High volatility on Iran headlines",
+      "story": "EOG Resources: commodity E&P \u2014 avoid per Minervini."
+    },
+    "FANG": {
+      "actionability": "Watchlist",
+      "technical_action": "Volatile on oil spike",
+      "story": "Diamondback Energy: headline risk."
+    },
+    "TRGP": {
+      "actionability": "Watchlist",
+      "technical_action": "Pipeline stability",
+      "story": "Targa Resources: natural gas pipeline, dividend stability preferred over E&P."
+    },
+    "KMI": {
+      "actionability": "Watchlist",
+      "technical_action": "Pipeline dividend play",
+      "story": "Kinder Morgan: infrastructure over commodity exposure."
+    },
+    "ATRO": {
+      "actionability": "Watchlist",
+      "technical_action": "Sitting in base, not near entry",
+      "story": "Astronix: Dave's radar but not ready."
+    },
+    "TICKER": {
+      "actionability": "Status",
+      "technical_action": "Technical Action",
+      "story": "Story"
+    },
+    "PAX": {
+      "actionability": "Actionable",
+      "technical_action": "Bought June 24, up 20%+; trimming 15-25% into strength",
+      "story": "Financing break-even stop before earnings next week. Using 2x implied volatility for sizing."
+    },
+    "NET": {
+      "actionability": "Watchlist",
+      "technical_action": "\"Tech resistor\" \u2014 holding up on right side of base, making higher lows while tech crashes 50-80%",
+      "story": "Cloudflare: Minervini: \"Waiting for confirmation to turn up off troughs, not bottom-fishing.\""
+    },
+    "VIK": {
+      "actionability": "Actionable",
+      "technical_action": "Holding near 50-day despite oil spike, low volume pullback",
+      "story": "Viking Holdings: cruise leader. Minervini traded out into strength, added back on recent strength. Best money comes on climactic blow-off."
+    },
+    "SNOW": {
+      "actionability": "Watchlist",
+      "technical_action": "Breakout attempt, too much short-term volatility",
+      "story": "Snowflake: not immediately actionable \u2014 wide swings."
+    },
+    "DDOG": {
+      "actionability": "Watchlist",
+      "technical_action": "Must hold current level or be punted",
+      "story": "Datadog: software decision point."
+    },
+    "YOU": {
+      "actionability": "Watchlist",
+      "technical_action": "Recent IPO approaching all-time highs (high 50s/60s)",
+      "story": "Clear Secure: competing with TSA PreCheck. Earnings turned positive in recent quarters. Minervini: \"Needs to build a tight right-side base. Using forward imagination \u2014 looking weeks out.\" Livermore IPO playbook."
+    },
+    "YETI": {
+      "actionability": "Actionable",
+      "technical_action": "Held with smaller position, de-risked with cushion",
+      "story": "Yeti: lower-octane consumer. Minervini holding."
+    },
+    "SBUX": {
+      "actionability": "Actionable",
+      "technical_action": "Held with smaller position, de-risked",
+      "story": "Starbucks: consumer staple-like hold."
+    },
+    "EBAY": {
+      "actionability": "Watchlist",
+      "technical_action": "Knocked below 50-day, attempting recovery",
+      "story": "eBay: previously exited, being re-evaluated."
+    },
+    "SNDK": {
+      "actionability": "Watchlist",
+      "technical_action": "Down massively from highs, approaching massive haircut",
+      "story": "SanDisk: Minervini's warning: \"I would never be buying here. I don't care if it bounces back and I miss it. I don't even care if I missed the low.\" Snapback rally is the gift to exit, not enter."
+    },
+    "GKOS": {
+      "actionability": "Watchlist",
+      "technical_action": "Testing top of base",
+      "story": "Glaucos: eye-care/medical leader."
+    },
+    "VCYT": {
+      "actionability": "Watchlist",
+      "technical_action": "Finding support near moving averages",
+      "story": "Verisyt: medical diagnostics leader."
+    },
+    "MDGL": {
+      "actionability": "Watchlist",
+      "technical_action": "Large base forming in uptrend",
+      "story": "Madrigal Pharmaceuticals: biotech strength."
+    },
+    "INDV": {
+      "actionability": "Watchlist",
+      "technical_action": "Large base in uptrend",
+      "story": "Indivior: biotech/medical trend."
+    },
+    "ANRO": {
+      "actionability": "Watchlist",
+      "technical_action": "Large base forming",
+      "story": "Biotech: part of strong medical group."
+    },
+    "COGT": {
+      "actionability": "Watchlist",
+      "technical_action": "Large base forming",
+      "story": "Cognition Therapeutics: biotech strength."
+    },
+    "VSXY": {
+      "actionability": "Watchlist",
+      "technical_action": "Higher-alpha momentum name",
+      "story": "Victoria's Secret: speculative consumer."
+    },
+    "LLY": {
+      "actionability": "Actionable",
+      "technical_action": "Held as long with de-risked earnings cushion",
+      "story": "Eli Lilly: pharma leader. Minervini and Ali both hold."
+    },
+    "JNJ": {
+      "actionability": "Actionable",
+      "technical_action": "Held as long, defensive strength",
+      "story": "Johnson & Johnson: part of Minervini's defensive bucket."
+    },
+    "MRK": {
+      "actionability": "Actionable",
+      "technical_action": "Held as long, de-risked",
+      "story": "Merck: pharma stability."
+    },
+    "HSBC": {
+      "actionability": "Actionable",
+      "technical_action": "Held as long",
+      "story": "HSBC: international banking exposure."
+    }
   },
-  "sector_leaders": ["Biotech/medical", "Pharma defensives", "Restaurants", "Cybersecurity (holding up)", "Cruise lines", "Energy pipelines"],
-  "sector_laggards": ["Tech (50/80 rule — leaders can correct 50-80%)", "AI infrastructure", "Semiconductors", "Financials", "Oil E&P (headline risk)"]
+  "sector_leaders": [
+    "Biotech/medical",
+    "Pharma defensives",
+    "Restaurants",
+    "Cybersecurity (holding up)",
+    "Cruise lines",
+    "Energy pipelines"
+  ],
+  "sector_laggards": [
+    "Tech (50/80 rule \u2014 leaders can correct 50-80%)",
+    "AI infrastructure",
+    "Semiconductors",
+    "Financials",
+    "Oil E&P (headline risk)"
+  ]
 }

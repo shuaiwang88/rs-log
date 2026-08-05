@@ -120,15 +120,28 @@ def build_tv_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any
                 continue
             rect(X(s), tb.get("low"), X(e), tb.get("high"), TIGHT_C, 0.10, "dot", 1)
 
+    # Where the base stops being a base. Once price clears the top, the pivot has been taken
+    # and the level is history - running the line on to the right edge draws a buy point that
+    # is no longer available and makes an extended stock look like it is still at its entry.
+    # `bars_sbo` counts bars since the breakout, so the breakout bar is that many back from
+    # the scanner's last bar (which is not necessarily the chart's, if the frame is short).
+    _last_pos = _pos(idx, ov.get("last_date"))
+    if _last_pos is None:
+        _last_pos = n - 1
+    _sbo = result.get("bars_sbo")
+    base_end = n - 1
+    if result.get("status") == "Post-BO" and isinstance(_sbo, (int, float)):
+        base_end = max(0, min(n - 1, int(_last_pos - _sbo)))
+
     # ── base high / low lines (drw_pattern.pine:984-985) ─────────────────────────────────
     # For a flat base or a consolidation this pair IS the pattern, so the channel between them
     # is shaded. A cup gets the lines only, so the arcs stay readable inside them.
     if b0 is not None and base_top and pname != "HTF":
         if not is_cup and base_low:
-            rect(X(b0), base_low, X(n - 1), base_top, BASE_C, 0.07, None, 0)
-        line(X(b0), base_top, X(n - 1), base_top, BASE_C, 3, "dot")
+            rect(X(b0), base_low, X(base_end), base_top, BASE_C, 0.07, None, 0)
+        line(X(b0), base_top, X(base_end), base_top, BASE_C, 3, "dot")
         if base_low:
-            line(X(b0), base_low, X(n - 1), base_low, BASE_C, 2)
+            line(X(b0), base_low, X(base_end), base_low, BASE_C, 2)
         depth = (base_top - base_low) / base_top * 100 if (base_top and base_low) else 0
         annos.append(dict(
             x=X(b0), y=base_top, xref="x", yref="y", showarrow=False, xanchor="left",
@@ -171,10 +184,13 @@ def build_tv_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any
     if h:
         hp = _pos(idx, h.get("peak_date"))
         if hp is not None and h.get("peak"):
-            line(X(hp), h["peak"], X(n - 1), h["peak"], HANDLE_C, 2, "dot")
+            # Stops at the breakout for the same reason the base top does - on a Cup+Handle
+            # the handle peak IS the buy point, so carrying it to the right edge quotes a
+            # level price has already gone through.
+            line(X(hp), h["peak"], X(base_end), h["peak"], HANDLE_C, 2, "dot")
             if h.get("low"):
-                rect(X(hp), h["low"], X(n - 1), h["peak"], HANDLE_BOX_C, 0.10, "dash")
-            annos.append(dict(x=X(n - 1), y=h["peak"], xref="x", yref="y", showarrow=False,
+                rect(X(hp), h["low"], X(base_end), h["peak"], HANDLE_BOX_C, 0.10, "dash")
+            annos.append(dict(x=X(base_end), y=h["peak"], xref="x", yref="y", showarrow=False,
                               xanchor="left", yanchor="bottom",
                               text=f" handle {h.get('bars', 0)}b {h.get('depth_pct') or 0:.1f}%",
                               font=dict(color=HANDLE_C, size=10)))

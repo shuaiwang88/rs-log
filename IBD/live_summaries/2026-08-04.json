@@ -1,0 +1,221 @@
+{
+  "date": "2026-08-04",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-04.md",
+  "market_summary": "Overall Sentiment: Cautiously bullish, awaiting a follow-through day. \"This would be the fourth day of the rally\u2026 if we get above 1% today, that would constitute a follow-through day, and you should be adding stocks to your portfolio\" (David Ryan). The equal-weighted S&P 500 (RSP) and QQQE are well above the 50-day, showing broad strength beyond mega-caps. Hatman noted bullish sentiment is subdued (AAII bulls at 31%, Investors Intelligence at 49%), a contrarian positive.",
+  "tickers": [
+    "DDOG",
+    "CRWD",
+    "PANW",
+    "FTNT",
+    "AIR",
+    "GE",
+    "GOOGL",
+    "AMZN",
+    "HNGE",
+    "TWST",
+    "NBIS",
+    "AMD",
+    "PLTR",
+    "AME",
+    "NTAP",
+    "HPE",
+    "LLY",
+    "CVS",
+    "OSCR",
+    "TIGO",
+    "MU",
+    "WDC",
+    "STX",
+    "CAT",
+    "FIX",
+    "ZM",
+    "VIK",
+    "DEL",
+    "JETS",
+    "LIND",
+    "NUE",
+    "STLD",
+    "SNDK",
+    "MRVL",
+    "TER",
+    "SEZL",
+    "AFRM",
+    "DAVE",
+    "XYZ",
+    "CPAY",
+    "FLYW",
+    "EXPD",
+    "MATX",
+    "KNSA",
+    "INSP",
+    "VVX",
+    "FANG",
+    "OKE",
+    "WMB",
+    "BWXT",
+    "DD",
+    "SNAP",
+    "ADM",
+    "WGS",
+    "CRSP",
+    "VRTX",
+    "INCY",
+    "EXPE",
+    "BKNG",
+    "ABNB",
+    "ET",
+    "MPC",
+    "MPLX",
+    "HSIC",
+    "SIBN",
+    "VGNT",
+    "RYTM",
+    "IDYA",
+    "ZBRA",
+    "SPOT",
+    "OPLN",
+    "BLZE",
+    "RKLB",
+    "SHOP",
+    "UBER",
+    "MCK",
+    "PSX",
+    "DT",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "RSP",
+    "MAGS",
+    "SMH",
+    "IGV",
+    "HACK",
+    "QQQE",
+    "SSO",
+    "TNX",
+    "USO"
+  ],
+  "ticker_details": {
+    "DDOG": {
+      "actionability": "Actionable",
+      "technical_action": "Cup-with-handle breakout. 5% ATR. Use 7-8% stop. Hatman notes 35-36% CAGR history.",
+      "story": "AI-powered cloud monitoring. Strong long-term leader."
+    },
+    "CRWD": {
+      "actionability": "Hold / Extended",
+      "technical_action": "Undercut a prior base, held 50-day, then broke out. David Ryan accumulated over 5 days. Now extended.",
+      "story": "Cybersecurity leader. Bots escaping and attacking other companies is a catalyst."
+    },
+    "PANW": {
+      "actionability": "Actionable",
+      "technical_action": "Held 50-day, inside day, then moved up. Ryan bought it.",
+      "story": "Cybersecurity. A strong peer in the same group."
+    },
+    "FTNT": {
+      "actionability": "Avoid",
+      "technical_action": "Huge post-earnings reversal and failure. Fallen below key levels.",
+      "story": "Cybersecurity. The former leader of the group has broken down."
+    },
+    "AIR": {
+      "actionability": "Actionable (small size)",
+      "technical_action": "Bounce off 50-day, Chris building a small position. Low volume/gappy.",
+      "story": "Aerospace parts/services. Solid numbers, sector tailwind."
+    },
+    "GE": {
+      "actionability": "Watchlist (or buy on early entry)",
+      "technical_action": "Approaching cup-with-handle buy point. Early entry was yesterday.",
+      "story": "Aerospace giant. Post-breakup value unlock, strong sector."
+    },
+    "GOOGL": {
+      "actionability": "Actionable",
+      "technical_action": "Double-bottom breakout, reclaiming 50-day. Leaderboard added at 373.75.",
+      "story": "AI/Cloud mega-cap. Sentiment shift back to favoring AI spending."
+    },
+    "AMZN": {
+      "actionability": "Watchlist (wait for base/handle)",
+      "technical_action": "Huge post-earnings gap-up, now pausing at the top of a base. Extended from pivot.",
+      "story": "Mega-cap e-commerce/AWS. Market now rewarding CapEx again."
+    },
+    "HNGE": {
+      "actionability": "Hold / Hedged",
+      "technical_action": "Pulled back to 50-day, retook 21-day. Earnings after the close.",
+      "story": "Hinge Health. Chris is holding through earnings with a half-hedge."
+    },
+    "TWST": {
+      "actionability": "Watchlist",
+      "technical_action": "Huge upside reversal on earnings, challenging $100 resistance.",
+      "story": "DNA on silicon chips. Emerging leader. Wait for a pullback or break above $100."
+    },
+    "NBIS": {
+      "actionability": "Watchlist (Short if fails)",
+      "technical_action": "Rallying into the 50-day moving average. David Ryan shorted a very small amount.",
+      "story": "Neocloud/AI compute. If it fails at the 50-day, it's a short. If it clears, cover."
+    },
+    "AMD": {
+      "actionability": "Watchlist (earnings)",
+      "technical_action": "At the 50-day line, reporting earnings after close.",
+      "story": "Chip designer. Wait for the news to digest. A trendline break could be an early entry."
+    },
+    "PLTR": {
+      "actionability": "Watchlist",
+      "technical_action": "Retaking the 200-day line. RS line is very low (18). Chris would wait for a base.",
+      "story": "Data analytics/AI. Earnings line accelerating, but the chart needs repair."
+    },
+    "NTAP": {
+      "actionability": "Watchlist",
+      "technical_action": "Blue dot breakout, hitting new highs. Chris missed the early entry; wait for a handle.",
+      "story": "Data storage. Acts well, but chasing a cup breakout is risky."
+    },
+    "HPE": {
+      "actionability": "Actionable (on reversal)",
+      "technical_action": "Holding support above 50-day, weekly blue dot. Chris may buy shares if it reverses.",
+      "story": "AI server/edge. A relatively strong AI play in a messy sector."
+    },
+    "LLY": {
+      "actionability": "Hold (reduced)",
+      "technical_action": "Slipped below the 50-day ahead of earnings tomorrow. David Ryan cut back.",
+      "story": "Weight-loss drug giant. The pullback is disappointing; holding a smaller position."
+    },
+    "MU": {
+      "actionability": "Hold / Hedged",
+      "technical_action": "Chris is actively hedging with puts. Still holding a core.",
+      "story": "Memory/AI leader. Needs to reclaim the 50-day."
+    },
+    "STX": {
+      "actionability": "Avoid / Watch for short",
+      "technical_action": "Rallied into moving averages, but closing near lows. David Ryan watching to short.",
+      "story": "Memory/storage. A poster child for the AI top; selling into strength."
+    },
+    "FIX": {
+      "actionability": "Avoid / Short candidate",
+      "technical_action": "Earnings gap-up, ran straight into the 50-day and reversed hard.",
+      "story": "HVAC/data center services. A classic short setup on the rejection of the 50-day."
+    },
+    "VIK": {
+      "actionability": "Actionable",
+      "technical_action": "Breaking out of a cup-with-handle. David Ryan bought a few days ago.",
+      "story": "Cruise line leader. Dominant in river cruising, strong demographics."
+    },
+    "SEZL": {
+      "actionability": "Actionable (small size)",
+      "technical_action": "Bounce off the 50-day, Ryan bought. Earnings in a few days, so small position.",
+      "story": "Fintech/Buy Now Pay Later. Strong chart, but earnings risk."
+    },
+    "NUE": {
+      "actionability": "Watchlist (handle breakout)",
+      "technical_action": "Forming a handle after a strong move. Ryan has a small position.",
+      "story": "Steel. Benefiting from data center buildout and trade policy."
+    },
+    "CAT": {
+      "actionability": "Avoid",
+      "technical_action": "Strong earnings beat, but stuck below moving averages. Ryan won't buy until above them.",
+      "story": "Industrial/data center power. \"No man's land.\""
+    },
+    "TER": {
+      "actionability": "Avoid",
+      "technical_action": "Very volatile, 9% ATR, all over the place. Chris not eager.",
+      "story": "Chip testing. Too messy."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": []
+}

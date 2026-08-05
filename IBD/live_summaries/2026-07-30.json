@@ -1,23 +1,283 @@
 {
   "date": "2026-07-30",
   "source_file": "/Users/sw/Documents/Zoom/2026-07-30 10.18.28 IBD Live/IBD Live transcript_2026-07-30_11.14.44.txt",
-  "market_summary": "Day 1 rally attempt. Nasdaq +3% but equal-weight RSP DOWN ~1% — lopsided short-covering bounce. Aschenbrenner's Situational Awareness LP liquidated at 4x leverage, prime brokers dumping AI longs (NBIS, CRWV, MU, SNDK, BE, AMD, ORCL) and short options vs NVDA/SMH. Webster: 'Stay in first/second gear — this is a scary market.' 10yr at 4.66%. Equal-weight indexes (RSP, QQQE) holding above 21-day. Study 1999 bar-by-bar.",
-  "tickers": ["FTNT", "TENB", "QCOM", "LRCX", "ARM", "SIMO", "ALGM", "DDOG", "SNOW", "SNDK", "MSFT", "AMZN", "AAPL", "SBUX", "YUM", "CMG", "VLO", "PBF", "SHEL", "JMKE", "BMY", "MA", "CVNA", "NBIS", "CRWV", "BE", "AMD", "ORCL", "MU", "NVDA", "SMH", "CRS", "HOOD", "GVA", "PWR", "WWD", "RSP", "QQQE"],
+  "market_summary": "Day 1 rally attempt. Nasdaq +3% but equal-weight RSP DOWN ~1% \u2014 lopsided short-covering bounce. Aschenbrenner's Situational Awareness LP liquidated at 4x leverage, prime brokers dumping AI longs (NBIS, CRWV, MU, SNDK, BE, AMD, ORCL) and short options vs NVDA/SMH. Webster: 'Stay in first/second gear \u2014 this is a scary market.' 10yr at 4.66%. Equal-weight indexes (RSP, QQQE) holding above 21-day. Study 1999 bar-by-bar.",
+  "tickers": [
+    "FTNT",
+    "TENB",
+    "QCOM",
+    "LRCX",
+    "ARM",
+    "SIMO",
+    "ALGM",
+    "DDOG",
+    "SNOW",
+    "SNDK",
+    "MSFT",
+    "AMZN",
+    "AAPL",
+    "SBUX",
+    "YUM",
+    "CMG",
+    "VLO",
+    "PBF",
+    "SHEL",
+    "JMKE",
+    "BMY",
+    "MA",
+    "CVNA",
+    "NBIS",
+    "CRWV",
+    "BE",
+    "AMD",
+    "ORCL",
+    "MU",
+    "NVDA",
+    "SMH",
+    "CRS",
+    "HOOD",
+    "GVA",
+    "PWR",
+    "WWD",
+    "EPD",
+    "ICLR",
+    "FTAI",
+    "FFIV",
+    "CHRW",
+    "CVLG",
+    "RSI",
+    "MGM",
+    "TEX",
+    "MOD",
+    "BCL",
+    "CI",
+    "FTI",
+    "STNG",
+    "CROX",
+    "NCLH",
+    "SPHR",
+    "NBIX",
+    "NPWR",
+    "GH",
+    "ILMN",
+    "VCYT",
+    "NTRA",
+    "TEM",
+    "COIN",
+    "MSTR",
+    "RSP",
+    "QQQE",
+    "QQEW",
+    "EBAY",
+    "HPE",
+    "LLY",
+    "XBI",
+    "BTSG",
+    "GLW",
+    "VXSY",
+    "CAKE",
+    "RIOT",
+    "CLSK",
+    "CORZ",
+    "ADBE"
+  ],
   "ticker_details": {
-    "FTNT": {"actionability": "Watchlist", "technical_action": "Surging off earnings, faded from gap", "story": "Beat EPS, 26% revenue gain. Cybersecurity strength."},
-    "LRCX": {"actionability": "Actionable", "technical_action": "Strong momentum above 50-day", "story": "Beat EPS, +30% revenue. Semi-equipment leader."},
-    "DDOG": {"actionability": "Actionable", "technical_action": "Cup-with-handle, RSI blue dot, RS holding up", "story": "Datadog: Arnie's A+ setup ahead of earnings in 7 days."},
-    "SNDK": {"actionability": "Watchlist", "technical_action": "Liquidation crossfire despite +127% revenue", "story": "SanDisk/NAND: forced selling from Aschenbrenner unwind."},
-    "MSFT": {"actionability": "Watchlist", "technical_action": "Gapped above 200-day, index support", "story": "Panel sees potential liquidity event — institutions selling into strength vs clean breakout."},
-    "SBUX": {"actionability": "Watchlist", "technical_action": "Q3 EPS beat, revenue -1.5%, raised guidance", "story": "Starbucks turnaround narrative gaining traction."},
-    "NBIS": {"actionability": "Watchlist", "technical_action": "Forced liquidation victim", "story": "Nebius: AI infra in Aschenbrenner basket. Track for bounce."},
-    "CRWV": {"actionability": "Watchlist", "technical_action": "Forced liquidation", "story": "CoreWeave: AI compute in hedge fund unwind."},
-    "BE": {"actionability": "Watchlist", "technical_action": "40-50% correction, liquidation victim", "story": "Bloom Energy: AI-energy caught in unwind. Historic correction pattern."},
-    "NVDA": {"actionability": "Watchlist", "technical_action": "Short-option liquidation crossfire", "story": "Nvidia: options market impact from fund unwind."},
-    "SMH": {"actionability": "Watchlist", "technical_action": "-29% correction", "story": "Semiconductor ETF under severe pressure."},
-    "RSP": {"actionability": "Actionable", "technical_action": "Holding above 21-day", "story": "Equal-weight S&P rotational leadership."},
-    "QQQE": {"actionability": "Actionable", "technical_action": "Holding above 21-day", "story": "Equal-weight Nasdaq confirming two-tier market."}
+    "FTNT": {
+      "actionability": "Watchlist",
+      "technical_action": "Surging off earnings, faded from morning gap",
+      "story": "Fortinet: beat EPS views, 26% revenue gain. Strong cybersecurity demand."
+    },
+    "TENB": {
+      "actionability": "Watchlist",
+      "technical_action": "Tumbling post-earnings despite beat",
+      "story": "Tenable: beat slightly on EPS/revenue, guided in line. Good news sold aggressively."
+    },
+    "QCOM": {
+      "actionability": "Watchlist",
+      "technical_action": "Down 4% despite guidance raise",
+      "story": "Qualcomm: just missed EPS, beat on revenue, guided up Q4 revenue at midpoint."
+    },
+    "LRCX": {
+      "actionability": "Actionable",
+      "technical_action": "Strong upside momentum above 50-day line",
+      "story": "Lam Research: beat EPS, slightly beat revenue (+30%). Semi-equipment strength."
+    },
+    "ARM": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat, +23% revenue; phone weakness offset by data center strength",
+      "story": "ARM Holdings: guided slightly higher on Q2. Data center demand the driver."
+    },
+    "SIMO": {
+      "actionability": "Watchlist",
+      "technical_action": "Easily beat with +127% revenue, guided up Q3",
+      "story": "Silicon Motion: NAND flash controller maker explosive quarter."
+    },
+    "DDOG": {
+      "actionability": "Actionable",
+      "technical_action": "Cup-with-handle setup, RSI blue dot, RS strong",
+      "story": "Datadog (Arnie's highlight): bullish momentum ahead of earnings in 7 days. Classic technical setup with relative strength holding up."
+    },
+    "SNOW": {
+      "actionability": "Watchlist",
+      "technical_action": "Caution on sustainability of tech momentum",
+      "story": "Snowflake: Webster questions whether tech names can sustain moves given \"chop and slop\" volatility."
+    },
+    "SNDK": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in liquidation crossfire; +127% revenue",
+      "story": "SanDisk: explosive quarter but forced selling from Aschenbrenner fund liquidation."
+    },
+    "MSFT": {
+      "actionability": "Watchlist",
+      "technical_action": "Gapped above 200-day, provided key support for indexes",
+      "story": "Microsoft: massive market cap \u2014 panel saw move as potential liquidity event (institutions selling into strength) rather than clean breakout."
+    },
+    "AMZN": {
+      "actionability": "Watchlist",
+      "technical_action": "Reporting after the close",
+      "story": "Amazon: mega-cap earnings on deck."
+    },
+    "AAPL": {
+      "actionability": "Watchlist",
+      "technical_action": "Reporting after the close",
+      "story": "Apple: mega-cap earnings on deck."
+    },
+    "SBUX": {
+      "actionability": "Watchlist",
+      "technical_action": "Q3 EPS beat, slight revenue decline, traded strongly on raised guidance",
+      "story": "Starbucks: turnaround narrative gaining traction. Guidance raise the key."
+    },
+    "YUM": {
+      "actionability": "Watchlist",
+      "technical_action": "Slightly beat EPS, missed revenue on cyclospora outbreak at Taco Bell",
+      "story": "Yum! Brands: temporary headwind already improving."
+    },
+    "CMG": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat EPS, slightly missed revenue (9%); fresh lettuce fears",
+      "story": "Chipotle: temporary fears hurt late July sales. Gapping up slightly on reassurance."
+    },
+    "VLO": {
+      "actionability": "Watchlist",
+      "technical_action": "Easily beat views",
+      "story": "Valero: refining strength continues."
+    },
+    "PBF": {
+      "actionability": "Watchlist",
+      "technical_action": "Easily beat views",
+      "story": "PBF Energy: refining sector outperforming."
+    },
+    "SHEL": {
+      "actionability": "Watchlist",
+      "technical_action": "Strong earnings beat + new buybacks",
+      "story": "Shell: energy major returning capital to shareholders."
+    },
+    "JMKE": {
+      "actionability": "Watchlist",
+      "technical_action": "Priced IPO at $23 (mid-range), raised $1B",
+      "story": "Jersey Mike's: strong IPO debut."
+    },
+    "BMY": {
+      "actionability": "Watchlist",
+      "technical_action": "Solid beat and guidance raise",
+      "story": "Bristol Myers: pharma strength."
+    },
+    "MA": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat EPS with +15% revenue gain",
+      "story": "Mastercard: consumer spending resilience."
+    },
+    "CVNA": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat EPS, +52.5% revenue, softer 2026 guidance",
+      "story": "Carvana: strong growth but guidance weighs."
+    },
+    "NBIS": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in forced liquidation",
+      "story": "Nebius: AI infrastructure name in Aschenbrenner liquidation basket. Track for bounce once selling clears."
+    },
+    "CRWV": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in forced liquidation",
+      "story": "CoreWeave: AI compute name in hedge fund unwind."
+    },
+    "BE": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in forced liquidation; deep 40-50% correction",
+      "story": "Bloom Energy: AI-adjacent clean energy. Correction similar to historical leader patterns. Hatman Dave discussed covered calls."
+    },
+    "AMD": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in forced liquidation",
+      "story": "AMD: AI chip name in forced deleveraging basket."
+    },
+    "ORCL": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in forced liquidation",
+      "story": "Oracle: AI infrastructure name in liquidation basket."
+    },
+    "MU": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in forced liquidation; SMH -29% correction",
+      "story": "Micron: both liquidation victim and name to watch for recovery. Memory sector under severe pressure."
+    },
+    "NVDA": {
+      "actionability": "Watchlist",
+      "technical_action": "Caught in short-option liquidation crossfire",
+      "story": "Nvidia: options market impact from fund unwind."
+    },
+    "SMH": {
+      "actionability": "Watchlist",
+      "technical_action": "-29% correction",
+      "story": "Semiconductor ETF: severe drawdown in chips."
+    },
+    "CRS": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat EPS, slightly missed revenue (+13%); severe pullback on CEO passing",
+      "story": "Carpenter Technology: unexpected passing of CEO last Friday. Hatman Dave discussed covered calls/hedges."
+    },
+    "HOOD": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat EPS (one-time boost), slightly beat revenue",
+      "story": "Robinhood: prediction markets up, crypto down."
+    },
+    "GVA": {
+      "actionability": "Watchlist",
+      "technical_action": "AI build-out construction play spiking",
+      "story": "Power/heavy construction: accelerating growth and strong order book."
+    },
+    "PWR": {
+      "actionability": "Watchlist",
+      "technical_action": "AI construction spike",
+      "story": "Quanta Services: infra build-out beneficiary."
+    },
+    "WWD": {
+      "actionability": "Watchlist",
+      "technical_action": "Beat EPS, in-line revenue, narrowed guidance",
+      "story": "Woodward: industrial."
+    },
+    "RSP": {
+      "actionability": "Actionable",
+      "technical_action": "Holding above 21-day",
+      "story": "Equal-weight S&P: rotational leadership."
+    },
+    "QQQE": {
+      "actionability": "Actionable",
+      "technical_action": "Holding above 21-day",
+      "story": "Equal-weight Nasdaq: same signal as RSP."
+    }
   },
-  "sector_leaders": ["Equal-weighted indexes", "Medical products/biotech", "Defense/Space Force", "Refining", "AI construction"],
-  "sector_laggards": ["Cap-weighted tech chips", "Memory/semis (SMH -29%)", "AI infrastructure (liquidation victims)"]
+  "sector_leaders": [
+    "Equal-weighted indexes",
+    "Medical products/biotech",
+    "Defense/Space Force",
+    "Refining",
+    "AI construction"
+  ],
+  "sector_laggards": [
+    "Cap-weighted tech chips",
+    "Memory/semis (SMH -29%)",
+    "AI infrastructure (liquidation victims)"
+  ]
 }

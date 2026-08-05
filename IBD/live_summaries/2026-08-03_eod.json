@@ -1,9 +1,75 @@
 {
   "date": "2026-08-03",
   "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-03_eod.md",
-  "market_summary": "",
-  "tickers": [],
-  "ticker_details": {},
+  "market_summary": "Overall Sentiment: Cautiously optimistic. Today's action was a stark contrast to the prior Monday's failed gap-up. \"The reaction this Monday was a big stark contrast to the reaction we had last Monday.\" The indexes are attempting to emerge from a correction, but the NASDAQ has yet to break through the 50-day line, the downtrend, and the 26,000 level. Justin emphasized that the key now is follow-through and holding above key moving averages.",
+  "tickers": [
+    "VIK",
+    "GE",
+    "PSMT",
+    "MAGS",
+    "CIBR",
+    "HACK",
+    "BUG",
+    "JETS",
+    "XLE",
+    "CRAK",
+    "DRAM",
+    "RSP",
+    "IWM",
+    "DIA",
+    "SPY",
+    "QQQ",
+    "AAPL",
+    "AVGO",
+    "CSCO",
+    "CRWD",
+    "FTNT",
+    "PANW",
+    "OKTA",
+    "HWM",
+    "TDY",
+    "LMT",
+    "NOC",
+    "RCL",
+    "NCLH"
+  ],
+  "ticker_details": {
+    "VIK": {
+      "actionability": "Actionable (breakout)",
+      "technical_action": "Getting above $105.76 level. Held the 21-day and 10-week lines flawlessly despite oil spike. RS rating 95, Composite 90.",
+      "story": "Cruise line leader. Showed tremendous relative strength by not breaking down when oil surged. Earnings growth is strong."
+    },
+    "GE": {
+      "actionability": "Actionable (early entry on 50-day bounce)",
+      "technical_action": "Broke out previously, gained 20%, then pulled back to the 50-day. Now clearing another resistance area. RS line near new highs.",
+      "story": "Aerospace giant. Benefiting from the post-breakup value unlock. Strong, stable earnings growth."
+    },
+    "PSMT": {
+      "actionability": "Watchlist (above $200)",
+      "technical_action": "Pulled back to 50-day after a brief breakout to a new high. Bouncing, approaching the $200 round number and $199.84 pivot.",
+      "story": "Retail (Price Smart). Less exciting fundamentals (low double-digit growth), but chart held up well and is part of the \"held up best\" crop."
+    },
+    "MAGS": {
+      "actionability": "Actionable",
+      "technical_action": "Clear move above the 50-day and 21-day lines. Low cleared the 21-day.",
+      "story": "Magnificent Seven ETF. Strong tailwind for the indexes as the trillion-dollar club recovers."
+    },
+    "CIBR": {
+      "actionability": "Actionable (preferred over HACK)",
+      "technical_action": "Strong bounce off the 50-day, approaching key resistance. Justin prefers it over HACK because its top holdings (CRWD, FTNT, PANW) have stronger charts than HACK's (AVGO, CSCO).",
+      "story": "Cybersecurity ETF. A relative strength leader in tech."
+    },
+    "JETS": {
+      "actionability": "Watchlist (in buy zone)",
+      "technical_action": "Breakout that failed, went below the 50-day briefly, then recovered. Nice close off lows and back above the 50-day.",
+      "story": "Airline ETF. Benefiting from falling oil prices. A tricky hold, but the recovery is constructive."
+    },
+    "DRAM": {
+      "actionability": "Avoid",
+      "technical_action": "Bouncing but still down 37% from highs.",
+      "story": "Memory chip ETF. Former leader that has been clobbered; not yet in buyable shape."
+    }
+  },
   "sector_leaders": [],
   "sector_laggards": []
 }

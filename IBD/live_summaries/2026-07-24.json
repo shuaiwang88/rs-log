@@ -1,1 +1,199 @@
-{"date":"2026-07-24","source_file":"/Users/sw/Documents/Zoom/2026-07-24 10.40.08 IBD Live/IBD Live transcript_2026-07-24_11.10.47.txt","market_summary":"IBD exposure cut to 20-40%, buy switches off. Tkaczuk scaled to fully invested then cut 40% intraday: 'Gaps down after 2-3 weeks of work — wiped out in one day.' Defense surging: LMT +11% (Q2 profit +700%, backlog $230.4B), RTX $289B. 10yr at 4.68% (18mo high). New tariffs 10-12.5%. Nielsen: 'Rather than pick up pennies in front of a steamroller, wait for easy dollars.'","tickers":["LMT","RTX","AMD","THC","MU","NVDA","DELL","STX","DDOG","SNOW","NET","PANW","FTNT","CRWD","INTC","ORCL","AMKR","SLB","SAP","AXP","VZ","MXL","MRVL","JNJ","ASND","ENVA","MTCH","ANET","FTI","INSW"],"ticker_details":{"LMT":{"actionability":"Actionable","technical_action":"+11% triple volume, 3-month high","story":"Q2 profit +700%, backlog +38% to $230.4B. $1.5T defense budget."},"RTX":{"actionability":"Actionable","technical_action":"Breaking out, backlog +22% to $289B","story":"Raytheon: massive secular defense demand."},"AMD":{"actionability":"Actionable","technical_action":"Held above 50-day near $500","story":"RS anomaly holding. Tkaczuk: 'Still in play if holding key support.'"},"THC":{"actionability":"Watchlist","technical_action":"+16% on $6.12 vs $4.26 earnings crush","story":"Tenet Healthcare: hospital operator group strength."},"MU":{"actionability":"Watchlist","technical_action":"Crossed $1T valuation, testing $1,000","story":"Tkaczuk's top trade of year. Trimmed due to chop."},"DELL":{"actionability":"Watchlist","technical_action":"Holding up better than broader index","story":"Tkaczuk RS highlight."},"STX":{"actionability":"Watchlist","technical_action":"RS in memory, holding 21-day","story":"Seagate: volume pickup from Friday lows."},"SNOW":{"actionability":"Watchlist","technical_action":"Setting up near $284.99 pivot, $100B valuation","story":"Strong relative action. Constructive base."},"INTC":{"actionability":"Watchlist","technical_action":"$16.1B revenue, cooled to +2-3% after hours","story":"Well below 50-day — not currently a buy per Saito Chung."},"ORCL":{"actionability":"Watchlist","technical_action":"+3% on 10-year Pentagon contract","story":"Defense IT deal."},"AMKR":{"actionability":"Watchlist","technical_action":"+11% pre-market on $1.5B NVDA packaging deal","story":"Multi-year advanced packaging/testing."}},"sector_leaders":["Defense/aerospace","Biotech/medical","Banks","Energy services","Cybersecurity","Select software"],"sector_laggards":["High-flying tech","Semiconductors","Failed breakouts"]}
+{
+  "date": "2026-07-24",
+  "source_file": "/Users/sw/Documents/Zoom/2026-07-24 10.40.08 IBD Live/IBD Live transcript_2026-07-24_11.10.47.txt",
+  "market_summary": "IBD exposure cut to 20-40%, buy switches off. Tkaczuk scaled to fully invested then cut 40% intraday: 'Gaps down after 2-3 weeks of work \u2014 wiped out in one day.' Defense surging: LMT +11% (Q2 profit +700%, backlog $230.4B), RTX $289B. 10yr at 4.68% (18mo high). New tariffs 10-12.5%. Nielsen: 'Rather than pick up pennies in front of a steamroller, wait for easy dollars.'",
+  "tickers": [
+    "LMT",
+    "RTX",
+    "AMD",
+    "THC",
+    "MU",
+    "NVDA",
+    "DELL",
+    "STX",
+    "DDOG",
+    "SNOW",
+    "NET",
+    "PANW",
+    "FTNT",
+    "CRWD",
+    "INTC",
+    "ORCL",
+    "AMKR",
+    "SLB",
+    "SAP",
+    "AXP",
+    "VZ",
+    "MXL",
+    "MRVL",
+    "JNJ",
+    "ASND",
+    "ENVA",
+    "MTCH",
+    "ANET",
+    "FTI",
+    "INSW",
+    "SMH",
+    "SOXX"
+  ],
+  "ticker_details": {
+    "LMT": {
+      "actionability": "Actionable",
+      "technical_action": "+11% on triple average volume to 3-month high",
+      "story": "Lockheed Martin: Q2 profit +700%, total backlog +38% YoY to $230.4B. 2026 revenue guided at $80.75B midpoint. Defense budgets surging ($1.5T proposed military budget, $1.15T House passed)."
+    },
+    "RTX": {
+      "actionability": "Actionable",
+      "technical_action": "Breaking out, order backlog +22% YoY to $289B",
+      "story": "Raytheon: massive secular aerospace/defense demand."
+    },
+    "AMD": {
+      "actionability": "Actionable",
+      "technical_action": "Held above 50-day near $500 \u2014 \"still in play if holding key support\"",
+      "story": "Discussed by Tkaczuk and Ali. Historical tendency to collapse off highs, but current RS anomaly holding. Helios AI system launch."
+    },
+    "THC": {
+      "actionability": "Watchlist",
+      "technical_action": "+16% on earnings crush ($6.12 vs $4.26)",
+      "story": "Tenet Healthcare: revenue topped estimates. Hospital operator group."
+    },
+    "MU": {
+      "actionability": "Watchlist",
+      "technical_action": "Crossed $1T valuation ($900), testing $1,000",
+      "story": "Tkaczuk's top-performing trade of the year. Added on breakout/milestones, trimmed due to chop."
+    },
+    "NVDA": {
+      "actionability": "Watchlist",
+      "technical_action": "Amkor $1.5B multi-year testing/packaging deal",
+      "story": "Nvidia: supplier deal momentum."
+    },
+    "DELL": {
+      "actionability": "Watchlist",
+      "technical_action": "Holding up better than broader index",
+      "story": "Tkaczuk highlight \u2014 tech stock showing relative resilience."
+    },
+    "STX": {
+      "actionability": "Watchlist",
+      "technical_action": "Showing RS in memory with volume pickup post-Friday lows, holding 21-day",
+      "story": "Seagate: memory sector relative strength leader."
+    },
+    "DDOG": {
+      "actionability": "Watchlist",
+      "technical_action": "Downside reversal on breakout, fell back toward 50-day",
+      "story": "Datadog: breakout failure \u2014 needs to repair."
+    },
+    "SNOW": {
+      "actionability": "Watchlist",
+      "technical_action": "Setting up near $284.99 pivot, $100B valuation",
+      "story": "Snowflake: strong relative action, constructive base. Tkaczuk watching."
+    },
+    "NET": {
+      "actionability": "Watchlist",
+      "technical_action": "Near breakout levels in software, showing RS",
+      "story": "Cloudflare: software group relative strength leader."
+    },
+    "PANW": {
+      "actionability": "Watchlist",
+      "technical_action": "Cybersecurity strength",
+      "story": "Palo Alto Networks: sector rotation into security."
+    },
+    "FTNT": {
+      "actionability": "Watchlist",
+      "technical_action": "Showing RS in cybersecurity group",
+      "story": "Fortinet: cyber strength."
+    },
+    "CRWD": {
+      "actionability": "Watchlist",
+      "technical_action": "Wild action",
+      "story": "CrowdStrike: volatile."
+    },
+    "INTC": {
+      "actionability": "Watchlist",
+      "technical_action": "Gained after-hours on strong CPU demand ($16.1B revenue since Q1 2022 high), but gains cooled to 2-3%",
+      "story": "Intel: well below 50-day \u2014 \"not currently a buy\" per Saito Chung."
+    },
+    "ORCL": {
+      "actionability": "Watchlist",
+      "technical_action": "+3% pre-market on 10-year software contract with Pentagon",
+      "story": "Oracle: defense IT deal."
+    },
+    "AMKR": {
+      "actionability": "Watchlist",
+      "technical_action": "+11% pre-market on $1.5B Nvidia packaging deal",
+      "story": "Amkor Technology: multi-year advanced packaging and testing for NVDA."
+    },
+    "SLB": {
+      "actionability": "Watchlist",
+      "technical_action": "Gapped past 50-day on offshore drilling + data center demand",
+      "story": "Schlumberger: EPS $0.55 on $8.97B revenue."
+    },
+    "SAP": {
+      "actionability": "Watchlist",
+      "technical_action": "+5% pre-market on +27% cloud backlog",
+      "story": "SAP: enterprise cloud momentum."
+    },
+    "AXP": {
+      "actionability": "Watchlist",
+      "technical_action": "-0.8% for week; Q2 revenue slightly missed ($19.64B vs $19.7B)",
+      "story": "American Express: +10% YoY revenue but small miss."
+    },
+    "VZ": {
+      "actionability": "Watchlist",
+      "technical_action": "Up, challenging 50-day resistance; EPS missed ($0.92 vs $1.28) but rewarded on +1.8% wireless growth",
+      "story": "Verizon: market rewarding subscriber growth over EPS."
+    },
+    "MXL": {
+      "actionability": "Watchlist",
+      "technical_action": "-9% after-hours despite beat-and-raise",
+      "story": "MaxLinear: double-digit growth ignored \u2014 new sell regime confirmed."
+    },
+    "MRVL": {
+      "actionability": "Watchlist",
+      "technical_action": "Memory/semi volatility",
+      "story": "Marvell: sector pressure."
+    },
+    "JNJ": {
+      "actionability": "Watchlist",
+      "technical_action": "Defensive medical/pharma with RS",
+      "story": "Johnson & Johnson: Justin's defensive rotation pick."
+    },
+    "ASND": {
+      "actionability": "Watchlist",
+      "technical_action": "Medical/biotech rotation strength",
+      "story": "Ascendis Pharma: Tkaczuk noted as part of biotech group strength."
+    },
+    "MTCH": {
+      "actionability": "Watchlist",
+      "technical_action": "Bouncing off 50-day",
+      "story": "Match Group: Justin's rotation play."
+    },
+    "ANET": {
+      "actionability": "Watchlist",
+      "technical_action": "Classic failed breakout past 177, pulled back to test breakout levels",
+      "story": "Arista Networks: Tkaczuk example of failed breakout."
+    },
+    "FTI": {
+      "actionability": "Watchlist",
+      "technical_action": "Near traditional cup buy point ahead of earnings",
+      "story": "TechnipFMC: LNG export infrastructure play. Saito Chung highlight."
+    },
+    "INSW": {
+      "actionability": "Watchlist",
+      "technical_action": "Double-bottom base tied to LNG shipping shift",
+      "story": "International Seaways: structural shift in LNG flows heading south for export."
+    }
+  },
+  "sector_leaders": [
+    "Defense/aerospace",
+    "Biotech/medical",
+    "Banks",
+    "Energy services",
+    "Cybersecurity",
+    "Select software"
+  ],
+  "sector_laggards": [
+    "High-flying tech",
+    "Semiconductors",
+    "Failed breakouts"
+  ]
+}

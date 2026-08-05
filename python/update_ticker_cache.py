@@ -492,15 +492,60 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
     elapsed = time.time() - start_time
     print(f"✅ Ticker cache update finished in {elapsed:.2f} seconds.")
 
+def update_fundamentals_cache(tickers, max_age_days=7, delay=1.0):
+    """Fetch and cache EPS/ROE fundamentals from yfinance for the given tickers.
+
+    Called after the OHLCV update so fresh price data and fresh fundamentals land
+    together. Uses fetch_fundamentals.batch_fetch_fundamentals for the actual work;
+    each ticker result is cached to `fundamentals_cache/<TICKER>.json` independently.
+
+    Benchmarks and sector ETFs (ALWAYS_KEEP) are skipped — yfinance has no meaningful
+    EPS/ROE for them.
+    """
+    try:
+        from fetch_fundamentals import batch_fetch_fundamentals
+    except ImportError:
+        print("⚠ fundamentals: fetch_fundamentals module not found — skipping.")
+        return
+
+    if not tickers:
+        return
+
+    # Skip benchmarks and sector ETFs — fundamentals data makes no sense for them
+    tickers = [t for t in tickers if str(t).strip() not in ALWAYS_KEEP]
+    if not tickers:
+        print("⚠ fundamentals: no stock tickers to fetch (all are benchmarks/ETFs).")
+        return
+
+    print(f"📊 Fetching fundamentals (EPS/ROE) for {len(tickers):,} tickers "
+          f"(cached if < {max_age_days}d old)...")
+    start = time.time()
+    results = batch_fetch_fundamentals(tickers, max_age_days=max_age_days,
+                                        delay=delay, verbose=True)
+    n_ok = sum(1 for v in results.values() if not v.get('error'))
+    n_err = sum(1 for v in results.values() if v.get('error'))
+    print(f"  fundamentals: {n_ok:,} ok, {n_err} errors "
+          f"in {time.time() - start:.1f}s")
+    yfrl.report()
+
 if __name__ == "__main__":
     # --prune / --prune-dry-run maintain the universe without refetching anything.
     if "--prune-dry-run" in sys.argv:
         prune_cache(dry_run=True)
     elif "--prune" in sys.argv:
         prune_cache()
+    elif "--fundamentals-only" in sys.argv:
+        # Refresh only the EPS/ROE fundamentals cache; skip the OHLCV price pass
+        # (useful as a fast daily refresh once prices are up to date).
+        tickers = get_target_tickers()
+        update_fundamentals_cache(tickers=tickers)
     else:
-        update_ticker_cache_batch()
+        with_fundamentals = "--with-fundamentals" in sys.argv
+        tickers = get_target_tickers()
+        update_ticker_cache_batch(tickers=tickers)
         # Names that drifted under the thresholds leave on the same run that refreshed them,
         # so the cache tracks the universe instead of accumulating everything ever fetched.
         prune_cache()
+        if with_fundamentals:
+            update_fundamentals_cache(tickers=tickers)
 

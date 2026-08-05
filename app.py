@@ -242,6 +242,25 @@ def load_ibd_live_combined_sidecar(date_str):
             combined["market_summary"] = eod_sidecar["market_summary"]
     return md_text, combined, eod_md, eod_sidecar
 
+def focus_ibd_live_date(date_str):
+    """Point the whole IBD Live tab at date_str — calendar month, selected day, ticker
+    list, chart and the comments panel — so a freshly ingested summary lands fully
+    loaded instead of leaving the old day's tickers on screen."""
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        return
+    st.session_state.ibd_live_selected_date = date_str
+    st.session_state.ibd_live_cal_month = (dt.year, dt.month)
+    st.session_state.ibd_live_list_date = None  # re-seeds the ticker list on next render
+    st.session_state.ibd_live_ticker_idx = 0
+    _, combined, _, _ = load_ibd_live_combined_sidecar(date_str)
+    tickers = (combined or {}).get("tickers") or []
+    if tickers:
+        st.session_state.ibd_live_active_ticker = tickers[0]
+        st.session_state.ibd_live_comment_ticker_select = tickers[0]
+        st.session_state._ibd_live_comment_synced_to = tickers[0]
+
 # ---------------------- IBD Live Ticker Comments Persistence ----------------------
 IBD_COMMENTS_PATH = Path(__file__).resolve().parent / "IBD" / "comments.json"
 
@@ -303,6 +322,7 @@ def is_boilerplate_mention(entry):
     ]
     return sum(1 for m in markers if m in blob) >= 2
 
+@st.cache_data(ttl=300, show_spinner=False)
 def get_ticker_comment_timeline(ticker):
     """Merge transcript mentions + user comments for ticker into one newest-first timeline."""
     ticker = (ticker or "").strip().upper()
@@ -449,10 +469,15 @@ def format_report_date(date_str):
     except Exception:
         return date_str
 
+@st.cache_data(ttl=28800, show_spinner=False)
 def render_ibd_live_report(md_text, date_str="", market_summary="", report_title="DAILY MARKET REPORT"):
     """Render an IBD Live markdown summary as a styled, IBD-report-style HTML card."""
     if not md_text:
         return ""
+    # Pasted summaries head their sections with '###' where Zoom-synced ones use '##'.
+    # Promote them so both get the same styled section headers instead of small h3s.
+    if not re.search(r"(?m)^##\s", md_text) and re.search(r"(?m)^###\s", md_text):
+        md_text = re.sub(r"(?m)^#(#{2,5}\s)", r"\1", md_text)
     try:
         body_html = md_lib.markdown(md_text, extensions=["tables", "fenced_code", "sane_lists"])
     except Exception:
@@ -587,8 +612,62 @@ def render_ibd_live_report(md_text, date_str="", market_summary="", report_title
     """
 
 # ---------------------- IBD Live SPY Day-Picker Chart ----------------------
+IBD_BAR_UP_COLOR = "#2736e9"
+IBD_BAR_DOWN_COLOR = "#de32ae"
+IBD_BAR_NEUTRAL_COLOR = "#787b86"
+
+def make_ibd_ohlc_traces(x, open_values, high_values, low_values, close_values,
+                         name="Price", showlegend=False, customdata=None):
+    """Build OHLC traces colored by close versus the previous close.
+
+    Plotly's OHLC trace colors bars by close versus open. Splitting the data into
+    colored traces lets these charts use the IBD rule instead: blue when the close
+    is at/above the previous close, magenta otherwise, and neutral for the first
+    bar where no previous close exists.
+    """
+    x_values = list(x)
+    opens = list(open_values)
+    highs = list(high_values)
+    lows = list(low_values)
+    closes = list(close_values)
+    custom_values = list(customdata) if customdata is not None else None
+    directions = [
+        0 if (
+            i == 0
+            or pd.isna(closes[i])
+            or pd.isna(closes[i - 1])
+        ) else 1 if closes[i] >= closes[i - 1] else -1
+        for i in range(len(closes))
+    ]
+    traces = []
+
+    for direction, color, legend in (
+        (0, IBD_BAR_NEUTRAL_COLOR, False),
+        (1, IBD_BAR_UP_COLOR, showlegend),
+        (-1, IBD_BAR_DOWN_COLOR, False),
+    ):
+        indices = [i for i, value in enumerate(directions) if value == direction]
+        if not indices:
+            continue
+        kwargs = dict(
+            x=[x_values[i] for i in indices],
+            open=[opens[i] for i in indices],
+            high=[highs[i] for i in indices],
+            low=[lows[i] for i in indices],
+            close=[closes[i] for i in indices],
+            name=name,
+            showlegend=legend,
+            increasing_line_color=color,
+            decreasing_line_color=color,
+        )
+        if custom_values is not None:
+            kwargs["customdata"] = [custom_values[i] for i in indices]
+        traces.append(go.Ohlc(**kwargs))
+    return traces
+
+@st.cache_data(ttl=28800, show_spinner=False)
 def build_spy_summary_chart(summary_dates, selected_date="", height=520):
-    """SPY daily candlestick + volume chart. Black dots sit on top of candles whose day
+    """SPY daily OHLC bars + volume chart. Black dots sit on top of bars whose day
     has an IBD Live summary. Every bar carries customdata=[date_str] so clicking/selecting
     a bar can be mapped back to that day's summary."""
     df = load_or_fetch_ticker("SPY", interval="1d", period="1y")
@@ -630,11 +709,11 @@ def build_spy_summary_chart(summary_dates, selected_date="", height=520):
         subplot_titles=("SPY Daily — click a bar to open that day's summary", "Volume"),
         row_heights=[0.72, 0.28],
     )
-    fig.add_trace(go.Candlestick(
-        x=sub.index, open=sub['Open'], high=sub['High'], low=sub['Low'], close=sub['Close'],
-        name='SPY', showlegend=False,
-        customdata=[[d] for d in dates],
-    ), row=1, col=1)
+    for trace in make_ibd_ohlc_traces(
+        sub.index, sub['Open'], sub['High'], sub['Low'], sub['Close'],
+        name='SPY', showlegend=False, customdata=[[d] for d in dates],
+    ):
+        fig.add_trace(trace, row=1, col=1)
 
     hi = sub['High']
     dot_offset = float(hi.max() - hi.min()) * 0.02 if len(hi) > 1 else 0.5
@@ -652,8 +731,13 @@ def build_spy_summary_chart(summary_dates, selected_date="", height=520):
             customdata=[[d] for d in dot_x],
         ), row=1, col=1)
 
-    up = (sub['Close'] >= sub['Open']).astype(bool)
-    vol_colors = ['#26a69a' if u else '#ef5350' for u in up]
+    previous_close = sub['Close'].shift(1)
+    vol_colors = [
+        IBD_BAR_NEUTRAL_COLOR if pd.isna(previous_close.iloc[i])
+        else IBD_BAR_UP_COLOR if sub['Close'].iloc[i] >= previous_close.iloc[i]
+        else IBD_BAR_DOWN_COLOR
+        for i in range(len(sub))
+    ]
     fig.add_trace(go.Bar(
         x=sub.index, y=sub['Volume'], marker=dict(color=vol_colors),
         name='Volume', showlegend=False,
@@ -800,18 +884,22 @@ def generate_ticker_png_chart(ticker: str, date_str: str) -> str:
         ax.grid(True, color='#2a2e39', linestyle='--', alpha=0.5)
 
     dates = sub.index
-    up_mask = sub['Close'] >= sub['Open']
-    down_mask = sub['Close'] < sub['Open']
+    previous_close = sub['Close'].shift(1)
+    neutral_mask = previous_close.isna()
+    up_mask = previous_close.notna() & (sub['Close'] >= previous_close)
+    down_mask = previous_close.notna() & (sub['Close'] < previous_close)
     
-    ax_price.vlines(dates[up_mask], sub['Low'][up_mask], sub['High'][up_mask], color='#26a69a', linewidth=1)
-    ax_price.vlines(dates[down_mask], sub['Low'][down_mask], sub['High'][down_mask], color='#ef5350', linewidth=1)
+    ax_price.vlines(dates[neutral_mask], sub['Low'][neutral_mask], sub['High'][neutral_mask], color=IBD_BAR_NEUTRAL_COLOR, linewidth=1)
+    ax_price.vlines(dates[up_mask], sub['Low'][up_mask], sub['High'][up_mask], color=IBD_BAR_UP_COLOR, linewidth=1)
+    ax_price.vlines(dates[down_mask], sub['Low'][down_mask], sub['High'][down_mask], color=IBD_BAR_DOWN_COLOR, linewidth=1)
     
-    body_bottom = np.where(up_mask, sub['Open'], sub['Close'])
+    body_bottom = np.minimum(sub['Open'], sub['Close'])
     body_height = np.abs(sub['Close'] - sub['Open'])
     body_height = np.where(body_height == 0, 0.01, body_height)
     
-    ax_price.bar(dates[up_mask], body_height[up_mask], bottom=body_bottom[up_mask], color='#26a69a', width=0.6, align='center')
-    ax_price.bar(dates[down_mask], body_height[down_mask], bottom=body_bottom[down_mask], color='#ef5350', width=0.6, align='center')
+    ax_price.bar(dates[neutral_mask], body_height[neutral_mask], bottom=body_bottom[neutral_mask], color=IBD_BAR_NEUTRAL_COLOR, width=0.6, align='center')
+    ax_price.bar(dates[up_mask], body_height[up_mask], bottom=body_bottom[up_mask], color=IBD_BAR_UP_COLOR, width=0.6, align='center')
+    ax_price.bar(dates[down_mask], body_height[down_mask], bottom=body_bottom[down_mask], color=IBD_BAR_DOWN_COLOR, width=0.6, align='center')
     
     ax_price.plot(dates, sub['EMA10'], color='#FF9800', label='EMA 10', linewidth=1.5)
     ax_price.plot(dates, sub['EMA21'], color='#2196F3', label='EMA 21', linewidth=1.5)
@@ -821,8 +909,9 @@ def generate_ticker_png_chart(ticker: str, date_str: str) -> str:
     ax_price.set_title(f"{ticker} Daily Chart - ${latest_close:.2f}", color='#ffffff', fontsize=13, fontweight='bold', pad=8)
     ax_price.legend(loc='upper left', facecolor='#2a2e39', edgecolor='none', labelcolor='#ffffff', fontsize=8)
     
-    ax_vol.bar(dates[up_mask], sub['Volume'][up_mask], color='#26a69a', alpha=0.7, width=0.6)
-    ax_vol.bar(dates[down_mask], sub['Volume'][down_mask], color='#ef5350', alpha=0.7, width=0.6)
+    ax_vol.bar(dates[neutral_mask], sub['Volume'][neutral_mask], color=IBD_BAR_NEUTRAL_COLOR, alpha=0.7, width=0.6)
+    ax_vol.bar(dates[up_mask], sub['Volume'][up_mask], color=IBD_BAR_UP_COLOR, alpha=0.7, width=0.6)
+    ax_vol.bar(dates[down_mask], sub['Volume'][down_mask], color=IBD_BAR_DOWN_COLOR, alpha=0.7, width=0.6)
     ax_vol.plot(dates, sub['Vol_SMA50'], color='#FF9800', label='Vol SMA 50', linewidth=1.2)
     ax_vol.set_ylabel('Volume', color='#d1d4dc', fontsize=8)
     
@@ -894,7 +983,15 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
             ibd_comp = str(int(ibd_info['IBD Comp. Rating']))
         if pd.notna(ibd_info.get('RS Rating')):
             ibd_rs = str(int(ibd_info['RS Rating']))
-        if pd.notna(ibd_info.get('Industry Group Rank')):
+        # Ind Group Rank is CALCULATED live by the daily screener (1 = best industry
+        # by mean RS); only fall back to IBD Data Tables when the ticker is absent
+        # from the screener snapshot.
+        _calc_map = load_calculated_group_map()
+        _calc_grp = _calc_map.get(tk) or _calc_map.get(tk_norm) or {}
+        _calc_rank = _calc_grp.get('Ind Group Rank')
+        if _calc_rank is not None:
+            ibd_ind_rank = str(int(_calc_rank))
+        elif pd.notna(ibd_info.get('Industry Group Rank')):
             ibd_ind_rank = str(int(ibd_info['Industry Group Rank']))
         if pd.notna(ibd_info.get('EPS Rating')):
             ibd_eps_rating = str(int(ibd_info['EPS Rating']))
@@ -992,12 +1089,12 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
         row_heights=[0.5, 0.2, 0.3]
     )
 
-    # Row 1: Price Candlesticks & Moving Averages
-    fig.add_trace(go.Candlestick(
-        x=df_daily.index, open=df_daily['Open'], high=df_daily['High'],
-        low=df_daily['Low'], close=df_daily['Close'],
-        name='Price', showlegend=False
-    ), row=1, col=1)
+    # Row 1: IBD OHLC Bars & Moving Averages
+    for trace in make_ibd_ohlc_traces(
+        df_daily.index, df_daily['Open'], df_daily['High'], df_daily['Low'], df_daily['Close'],
+        name='Price', showlegend=False,
+    ):
+        fig.add_trace(trace, row=1, col=1)
 
     fig.add_trace(go.Scatter(x=df_daily.index, y=ema10, mode='lines', name='EMA(10)', line=dict(color='#FF9800', width=1.5)), row=1, col=1)
     fig.add_trace(go.Scatter(x=df_daily.index, y=ema21, mode='lines', name='EMA(21)', line=dict(color='#2196F3', width=1.5)), row=1, col=1)
@@ -1182,7 +1279,7 @@ def get_all_drc_tags_and_entries():
 
 
 # ---------------------- Lightweight Charts Helper (3 panes) ----------------------
-def create_lightweight_candlestick_html(df, title="", height=600, markers=None, rs_label=None,
+def create_lightweight_ohlc_html(df, title="", height=600, markers=None, rs_label=None,
                                         rs_raw=None, rs_quick=None, rs_quicksand=None, rs_gd=None,
                                         volume_data=None, volume_sma50=None,
                                         pp10_dates=None, pp5_dates=None,
@@ -1192,16 +1289,20 @@ def create_lightweight_candlestick_html(df, title="", height=600, markers=None, 
         return "<div style='padding:20px; color:#999;'>No data available</div>"
 
     candles = []
+    previous_close = None
     for idx, row in df.iterrows():
         try:
             ts = int(idx.timestamp())
+            close_value = float(row['Close'])
             candles.append({
                 'time': ts,
                 'open': float(row['Open']),
                 'high': float(row['High']),
                 'low': float(row['Low']),
-                'close': float(row['Close'])
+                'close': close_value,
+                'color': IBD_BAR_NEUTRAL_COLOR if previous_close is None else IBD_BAR_UP_COLOR if close_value >= previous_close else IBD_BAR_DOWN_COLOR,
             })
+            previous_close = close_value
         except Exception:
             continue
 
@@ -1299,12 +1400,12 @@ def create_lightweight_candlestick_html(df, title="", height=600, markers=None, 
             rsChart.timeScale().setVisibleLogicalRange(r);
         }});
 
-        // Candlesticks
-        const candleSeries = priceChart.addCandlestickSeries({{
-            upColor: '#26a69a', downColor: '#ef5350', borderVisible: false,
-            wickUpColor: '#26a69a', wickDownColor: '#ef5350'
+        // IBD-style OHLC bars: color each bar by close versus the previous close.
+        const barSeries = priceChart.addBarSeries({{
+            upColor: '{IBD_BAR_UP_COLOR}', downColor: '{IBD_BAR_DOWN_COLOR}',
+            openVisible: true, thinBars: false
         }});
-        candleSeries.setData({json.dumps(candles)});
+        barSeries.setData({json.dumps(candles)});
 
         // Moving Averages
         const ma10 = priceChart.addLineSeries({{ color: '#FF9800', lineWidth: 2, title: 'MA10',
@@ -1329,7 +1430,7 @@ def create_lightweight_candlestick_html(df, title="", height=600, markers=None, 
                 color: m.color, shape: m.shape || 'circle', text: m.text || '', size: m.size || 1
             }}));
             all.sort((a, b) => a.time - b.time);
-            if (all.length) candleSeries.setMarkers(all);
+            if (all.length) barSeries.setMarkers(all);
         }})();
 
         // Volume
@@ -1388,7 +1489,7 @@ def create_lightweight_candlestick_html(df, title="", height=600, markers=None, 
         priceDiv.parentElement.appendChild(tooltip);
         priceChart.subscribeCrosshairMove(function(param) {{
             if (!param.time || !param.point) {{ tooltip.style.display = 'none'; return; }}
-            const data = param.seriesData.get(candleSeries);
+            const data = param.seriesData.get(barSeries);
             if (data && data.open !== undefined) {{
                 tooltip.innerHTML = '<b>OHLC</b><br>O: $' + data.open.toFixed(2) + '<br>H: $' + data.high.toFixed(2) + '<br>L: $' + data.low.toFixed(2) + '<br>C: $' + data.close.toFixed(2);
                 tooltip.style.display = 'block';
@@ -1508,8 +1609,14 @@ def create_equicharts_html(df, height=650, title="", ticker="", rs_label=None):
                 const xStart = currentX;
                 const xEnd = currentX + width;
                 const xCenter = (xStart + xEnd) / 2;
+                const previousClose = i > 0 ? rawBars[i - 1].close : null;
+                const ibdColor = previousClose === null
+                    || !Number.isFinite(b.close)
+                    || !Number.isFinite(previousClose)
+                    ? '#787b86'
+                    : b.close >= previousClose ? '#2736e9' : '#de32ae';
                 currentX += width + 3;
-                layoutBars.push({{ ...b, xStart, xEnd, xCenter, width }});
+                layoutBars.push({{ ...b, xStart, xEnd, xCenter, width, previousClose, ibdColor }});
             }}
             return layoutBars;
         }}
@@ -1598,9 +1705,12 @@ def create_equicharts_html(df, height=650, title="", ticker="", rs_label=None):
             layoutBars.forEach((b) => {{
                 if (b.xEnd < -50 || b.xStart > width + 50) return;
 
-                const isUp = b.close >= b.open;
-                const strokeColor = isUp ? '#26a69a' : '#ef5350';
-                const fillColor   = isUp ? 'rgba(38, 166, 154, 0.35)' : 'rgba(239, 83, 80, 0.35)';
+                const strokeColor = b.ibdColor;
+                const fillColor = b.ibdColor === '#2736e9'
+                    ? 'rgba(39, 54, 233, 0.35)'
+                    : b.ibdColor === '#de32ae'
+                        ? 'rgba(222, 50, 174, 0.35)'
+                        : 'rgba(120, 123, 134, 0.35)';
 
                 const yHigh = getYPrice(b.high);
                 const yLow  = getYPrice(b.low);
@@ -1692,14 +1802,15 @@ def create_equicharts_html(df, height=650, title="", ticker="", rs_label=None):
                 ctx.setLineDash([]);
 
                 const volPct = hb.avg_vol > 0 ? ((hb.volume / hb.avg_vol) * 100).toFixed(0) : 100;
-                const changePct = (((hb.close - hb.open) / hb.open) * 100).toFixed(2);
+                const changeBase = hb.previousClose === null ? hb.open : hb.previousClose;
+                const changePct = (((hb.close - changeBase) / changeBase) * 100).toFixed(2);
                 const sign = changePct >= 0 ? '+' : '';
 
                 tooltip.style.display = 'block';
                 tooltip.innerHTML = `
                     <div style="font-weight:bold; color:#fff; margin-bottom:4px;">${{hb.date}}</div>
-                    <div style="color:${{hb.close >= hb.open ? '#26a69a' : '#ef5350'}};">Open: $${{hb.open.toFixed(2)}} | High: $${{hb.high.toFixed(2)}}</div>
-                    <div style="color:${{hb.close >= hb.open ? '#26a69a' : '#ef5350'}};">Low: $${{hb.low.toFixed(2)}} | Close: $${{hb.close.toFixed(2)}} (${{sign}}${{changePct}}%)</div>
+                    <div style="color:${{hb.ibdColor}};">Open: $${{hb.open.toFixed(2)}} | High: $${{hb.high.toFixed(2)}}</div>
+                    <div style="color:${{hb.ibdColor}};">Low: $${{hb.low.toFixed(2)}} | Close: $${{hb.close.toFixed(2)}} (${{sign}}${{changePct}}%)</div>
                     <div style="color:#e0e0e0; margin-top:2px;">Volume: ${{hb.volume.toLocaleString()}} (${{volPct}}% of 50d avg)</div>
                     ${{hb.ma10 ? `<div style="color:#FF9800;">MA(10): $${{hb.ma10.toFixed(2)}} | MA(21): $${{hb.ma21 ? hb.ma21.toFixed(2) : 'N/A'}} | MA(50): $${{hb.ma50 ? hb.ma50.toFixed(2) : 'N/A'}}</div>` : ''}}
                 `;
@@ -1792,19 +1903,35 @@ def is_ticker_cache_updater_running():
     except Exception:
         return []
 
-def start_ticker_cache_update():
-    """Launch update_ticker_cache.py in the background. Returns (ok, message)."""
+def start_ticker_cache_update(mode="price"):
+    """Launch update_ticker_cache.py in the background. Returns (ok, message).
+
+    mode: "price"         — OHLCV price bars only
+          "price+fund"    — OHLCV bars + EPS/ROE fundamentals (CLI-only now;
+                            no UI button uses it since the two are separate buttons)
+          "fundamentals"  — EPS/ROE fundamentals only (fast, skips the price pass)
+    """
     pids = is_ticker_cache_updater_running()
     if pids:
         return False, f"Update already running (pid {', '.join(pids)})."
     try:
         TICKER_CACHE_UPDATE_LOG.parent.mkdir(parents=True, exist_ok=True)
+        cmd = [sys.executable, str(TICKER_CACHE_UPDATE_SCRIPT)]
+        if mode == "price+fund":
+            cmd.append("--with-fundamentals")
+        elif mode == "fundamentals":
+            cmd.append("--fundamentals-only")
+        labels = {"price": "[OHLCV only]",
+                  "price+fund": "[OHLCV + fundamentals]",
+                  "fundamentals": "[fundamentals only]"}
+        label = labels.get(mode, "[OHLCV only]")
         with open(TICKER_CACHE_UPDATE_LOG, "a", encoding="utf-8") as lf:
+            lf.write(f"\n{'='*60}\n{datetime.now().isoformat()} {label}\n")
             proc = subprocess.Popen(
-                [sys.executable, str(TICKER_CACHE_UPDATE_SCRIPT)],
+                cmd,
                 cwd=str(Path(__file__).resolve().parent),
                 stdout=lf, stderr=lf, start_new_session=True)
-        return True, f"Started ticker cache update (pid {proc.pid})."
+        return True, f"Started ticker cache update {label} (pid {proc.pid})."
     except Exception as e:
         return False, f"Failed to start update: {e}"
 
@@ -1849,7 +1976,7 @@ with col3:
     _tc_pids = is_ticker_cache_updater_running()
     if _tc_pids:
         st.warning(f"⚠️ Updating tickers… ({len(_tc_pids)} process running). "
-                   f"Price charts may show stale data until it finishes.")
+                   f"Data may be stale until it finishes.")
         if st.button("🛑 Stop Update", key="stop_ticker_cache_update",
                      help="Kill the running update_ticker_cache.py process"):
             for p in _tc_pids:
@@ -1859,15 +1986,26 @@ with col3:
                     pass
             rerun_app()
     else:
-        st.caption("Ticker price cache is idle.")
-    if st.button("▶️ Update Ticker Cache", key="run_ticker_cache_update",
-                 help="Fetch the latest daily bars for every ticker in ticker_cache/ (yfinance)"):
-        ok, msg = start_ticker_cache_update()
-        if ok:
-            st.success(msg)
-            rerun_app()
-        else:
-            st.warning(msg)
+        st.caption("Ticker cache is idle.")
+    b1, b2 = st.columns(2)
+    with b1:
+        if st.button("▶️ Price Cache", key="run_ticker_cache_update",
+                     help="Fetch the latest daily OHLCV bars for every ticker (yfinance)"):
+            ok, msg = start_ticker_cache_update(mode="price")
+            if ok:
+                st.success(msg)
+                rerun_app()
+            else:
+                st.warning(msg)
+    with b2:
+        if st.button("📊 Fundamentals", key="run_fundamentals_update",
+                     help="Fetch EPS/ROE fundamentals for every ticker (yfinance)"):
+            ok, msg = start_ticker_cache_update(mode="fundamentals")
+            if ok:
+                st.success(msg)
+                rerun_app()
+            else:
+                st.warning(msg)
 
 # ---------------------- Data loading functions ----------------------
 def compute_output_signature():
@@ -2002,6 +2140,59 @@ def load_ibd_data_tables_full():
     except Exception as e:
         print(f"Error loading IBD Data Tables full: {e}")
     return {}
+
+
+@st.cache_data
+def _grade_to_num(val):
+    """IBD letter grade (A+, A, A-, ..., E) -> 1-99 numeric, else None.
+    Used only as a last-resort fallback when a ticker is not in the daily
+    screener snapshot."""
+    if val is None:
+        return None
+    s = str(val).strip().upper()
+    if not s:
+        return None
+    base = {'A': 95, 'B': 80, 'C': 60, 'D': 40, 'E': 20}.get(s[0])
+    if base is None:
+        return None
+    if len(s) > 1 and s[1] == '+':
+        return base + 4
+    if len(s) > 1 and s[1] == '-':
+        return base - 4
+    return base
+
+
+@st.cache_data
+def load_calculated_group_map():
+    """Map symbol -> {'Ind Group Rank': float, 'Ind Group RS': float} from the
+    daily screener output (CALCULATED live from RS ratings - NOT IBD letter
+    grades).  Falls back to the raw IBD letter grades only when a ticker is not
+    in the screener snapshot."""
+    sc_path = Path(__file__).resolve().parent / "output" / "daily_screener.csv"
+    if not sc_path.exists():
+        return {}
+    try:
+        df = pd.read_csv(sc_path, low_memory=False)
+        if 'Symbol' not in df.columns or 'Ind Group Rank' not in df.columns:
+            return {}
+        out = {}
+        for _, r in df.iterrows():
+            sym = str(r['Symbol']).strip().upper()
+            grp = r.get('Ind Group Rank')
+            grs = r.get('Ind Group RS')
+            entry = {
+                'Ind Group Rank': float(grp) if pd.notna(grp) else None,
+                'Ind Group RS': float(grs) if pd.notna(grs) else None,
+            }
+            out[sym] = entry
+            # normalized variant (same convention as load_ibd_data_tables_full) so
+            # pattern tickers like "BRK-B" hit the screener's "BRK.B" entry
+            norm = sym.replace(".", "").replace("-", "").replace("/", "").replace(" ", "")
+            out[norm] = entry
+        return out
+    except Exception as e:
+        print(f"Error loading calculated group map: {e}")
+        return {}
 
 
 @st.cache_data
@@ -2233,13 +2424,13 @@ def leader_score(row):
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16 = st.tabs(
         ["📈 Overview", "🎯 Top Performers",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern", "📊 Ratings Scanner", "📋 Daily Screener"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern", "📊 Ratings Scanner", "📋 Daily Screener"])
 
 tab_ibd_pattern = tab8
 tab_tv_pattern = tab14
@@ -2248,6 +2439,8 @@ tab_backtests = tab12
 tab_scans = tab13
 tab_ms = tab10
 tab_ibd_live = tab11
+tab_ratings = tab15
+tab_screener = tab16
 
 
 # ---------- TAB 1: Overview ----------
@@ -2325,10 +2518,11 @@ with tab1:
                           'Market in correction': '#d33'}.get(_status, '#888')
 
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02, row_heights=[0.75, 0.25])
-        fig.add_trace(go.Candlestick(x=_spy.index, open=_spy['Open'], high=_spy['High'],
-                                     low=_spy['Low'], close=_cl, name='SPY',
-                                     increasing_line_color='#2a6bd8', increasing_fillcolor='#2a6bd8',
-                                     decreasing_line_color='#e3548b', decreasing_fillcolor='#e3548b'), row=1, col=1)
+        for trace in make_ibd_ohlc_traces(
+            _spy.index, _spy['Open'], _spy['High'], _spy['Low'], _cl,
+            name='SPY', showlegend=True,
+        ):
+            fig.add_trace(trace, row=1, col=1)
         _spy['EMA21'] = _cl.ewm(span=21, adjust=False).mean()
         fig.add_trace(go.Scatter(x=_spy.index, y=_spy['EMA21'], name='21 EMA', line=dict(width=1, color='#26a69a')), row=1, col=1)
         fig.add_trace(go.Scatter(x=_spy.index, y=_spy['MA50'], name='50 MA', line=dict(width=1, color='red')), row=1, col=1)
@@ -2994,6 +3188,36 @@ def load_or_fetch_ticker(ticker, interval="1d", period="2y"):
 def load_or_fetch_weekly(ticker):
     return load_or_fetch_ticker(ticker, interval="1wk", period="3y")
 
+@st.cache_data(ttl=28800, show_spinner=False)
+def load_ticker_daily_cached(ticker: str):
+    """Cache-load a ticker's 2y daily frame so switching tickers doesn't hit the
+    parquet (or yfinance) on every rerun."""
+    ticker = (ticker or "").strip().upper()
+    df = load_or_fetch_ticker(ticker, interval="1d", period="2y")
+    if df is not None and not df.empty and getattr(df.index, 'tz', None) is not None:
+        df = df.copy()
+        df.index = df.index.tz_localize(None)
+    return df
+
+@st.cache_data(ttl=28800, show_spinner=False)
+def load_spx_index_daily():
+    """S&P 500 index history for RS signals — network-fetched at most once per TTL.
+    The per-ticker chart used to hit yfinance for ^GSPC on every single rerun."""
+    df = load_or_fetch_ticker("^GSPC", interval="1d", period="2y")
+    if df is not None and not df.empty and getattr(df.index, 'tz', None) is not None:
+        df = df.copy()
+        df.index = df.index.tz_localize(None)
+    return df
+
+@st.cache_data(ttl=28800, show_spinner=False)
+def load_spx_index_weekly():
+    """Weekly S&P 500 index history for the Company Details weekly RS pane."""
+    df = load_or_fetch_ticker("^GSPC", interval="1wk", period="3y")
+    if df is not None and not df.empty and getattr(df.index, 'tz', None) is not None:
+        df = df.copy()
+        df.index = df.index.tz_localize(None)
+    return df
+
 # ---------------------- RS Signal Detection ----------------------
 def compute_rs_signals(df, spy_series, scaling_factor=7.0):
     rs_raw            = df['Close'] * scaling_factor * 1000 / spy_series
@@ -3039,11 +3263,15 @@ def compute_rs_signals(df, spy_series, scaling_factor=7.0):
     })
 
 # ---------------------- Shared Ticker Plotly Chart (Company Details style) ----------------------
-def build_ticker_price_chart(ticker, filtered_df=None, height=800):
+@st.cache_data(ttl=3600, show_spinner=False)
+def build_ticker_price_chart(ticker, percentile=None, height=800):
     """
-    Build the same 'Plotly (Advanced)' daily candlestick + pattern + volume + RS chart used in
+    Build the same 'Plotly (Advanced)' daily OHLC-bar + pattern + volume + RS chart used in
     the Company Details tab, for an arbitrary ticker. Self-contained (no markers/weekly/chart-type
     UI) so it can be reused from other tabs (e.g. IBD Live) without touching Company Details' logic.
+
+    Cached per (ticker, percentile, height) — the figure only changes when the price data
+    changes, so clicking Next/Prev Ticker is instant once a ticker has been built.
 
     Returns (fig, error_message). fig is None if data could not be fetched/plotted.
     """
@@ -3051,16 +3279,13 @@ def build_ticker_price_chart(ticker, filtered_df=None, height=800):
     if not ticker:
         return None, "No ticker specified."
     try:
-        df_daily_full = load_or_fetch_ticker(ticker, interval="1d", period="2y")
+        df_daily_full = load_ticker_daily_cached(ticker)
         if df_daily_full.empty:
             return None, f"No daily data available for {ticker}. Please check the ticker symbol."
         df_daily = df_daily_full.iloc[-504:] if len(df_daily_full) > 504 else df_daily_full
 
-        spy = yf.Ticker("^GSPC")
         try:
-            spy_daily_full = spy.history(period="2y", interval="1d")
-            if not spy_daily_full.empty and getattr(spy_daily_full.index, 'tz', None) is not None:
-                spy_daily_full.index = spy_daily_full.index.tz_localize(None)
+            spy_daily_full = load_spx_index_daily()
             spy_daily = spy_daily_full.iloc[-504:] if len(spy_daily_full) > 504 else spy_daily_full
         except Exception:
             spy_daily = pd.DataFrame()
@@ -3118,12 +3343,7 @@ def build_ticker_price_chart(ticker, filtered_df=None, height=800):
         ll3_signal = (ll3 & ll3.shift(1) & ll3.shift(2)).astype(bool)
         marker_y = vol * 1.05
 
-        percentile = None
-        if filtered_df is not None and 'Ticker' in filtered_df.columns:
-            trows = filtered_df[filtered_df['Ticker'] == ticker]
-            if not trows.empty:
-                trow = trows.sort_values('date').iloc[-1] if 'date' in trows.columns else trows.iloc[0]
-                percentile = trow.get('Percentile')
+        percentile = float(percentile) if percentile is not None and not pd.isna(percentile) else None
 
         snapshot_text = f"<b>{ticker}</b>"
         if percentile is not None and not pd.isna(percentile):
@@ -3134,9 +3354,11 @@ def build_ticker_price_chart(ticker, filtered_df=None, height=800):
         fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.04,
                             subplot_titles=(f"{ticker} Daily", 'Volume with Indicators', 'Raw RS & QGDRS EMAs'),
                             row_heights=[0.5, 0.2, 0.3])
-        fig.add_trace(go.Candlestick(x=df_daily.index, open=df_daily['Open'], high=df_daily['High'],
-                                     low=df_daily['Low'], close=df_daily['Close'],
-                                     name='Price', showlegend=False), row=1, col=1)
+        for trace in make_ibd_ohlc_traces(
+            df_daily.index, df_daily['Open'], df_daily['High'], df_daily['Low'], df_daily['Close'],
+            name='Price', showlegend=False,
+        ):
+            fig.add_trace(trace, row=1, col=1)
         fig.add_trace(go.Scatter(x=df_daily.index, y=ema10, mode='lines', name='EMA(10)',
                                  line=dict(color='#FF9800', width=2)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_daily.index, y=ema21, mode='lines', name='EMA(21)',
@@ -3349,11 +3571,8 @@ with tab5:
                         else:
                             df_daily = df_daily_full.iloc[-504:] if len(df_daily_full) > 504 else df_daily_full
 
-                            spy = yf.Ticker("^GSPC")
                             try:
-                                spy_daily_full = spy.history(period="2y", interval="1d")
-                                if not spy_daily_full.empty and getattr(spy_daily_full.index, 'tz', None) is not None:
-                                    spy_daily_full.index = spy_daily_full.index.tz_localize(None)
+                                spy_daily_full = load_spx_index_daily()
                                 if spy_daily_full.empty:
                                     st.warning("Unable to fetch S&P 500 data. RS calculations may be affected.")
                                     spy_daily = pd.DataFrame()
@@ -3362,7 +3581,7 @@ with tab5:
                             except Exception as e:
                                 st.warning(f"Error fetching SPY data: {e}")
                                 spy_daily = pd.DataFrame()
-                            spy_weekly = spy.history(period="3y", interval="1wk")
+                            spy_weekly = load_spx_index_weekly()
                             if not spy_weekly.empty and getattr(spy_weekly.index, 'tz', None) is not None:
                                 spy_weekly.index = spy_weekly.index.tz_localize(None)
 
@@ -3496,7 +3715,7 @@ with tab5:
                                 lw_pattern_data = daily_painter.get_lightweight_data()
                                 patt_js = build_lw_pattern_js(lw_pattern_data, chart_var="priceChart")
 
-                                st_html(create_lightweight_candlestick_html(
+                                st_html(create_lightweight_ohlc_html(
                                     df_daily, height=600,
                                     markers=st.session_state.get(session_key, []),
                                     rs_label=rs_label,
@@ -3518,9 +3737,11 @@ with tab5:
                                 fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.04,
                                                     subplot_titles=(f"{selected_ticker_company} Daily", 'Volume with Indicators', 'Raw RS & QGDRS EMAs'),
                                                     row_heights=[0.5, 0.2, 0.3])
-                                fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'],
-                                                             low=df['Low'], close=df['Close'],
-                                                             name='Price', showlegend=False), row=1, col=1)
+                                for trace in make_ibd_ohlc_traces(
+                                    df.index, df['Open'], df['High'], df['Low'], df['Close'],
+                                    name='Price', showlegend=False,
+                                ):
+                                    fig.add_trace(trace, row=1, col=1)
                                 fig.add_trace(go.Scatter(x=df.index, y=ema10, mode='lines', name='EMA(10)',
                                                          line=dict(color='#FF9800', width=2)), row=1, col=1)
                                 fig.add_trace(go.Scatter(x=df.index, y=ema21, mode='lines', name='EMA(21)',
@@ -3662,7 +3883,7 @@ with tab5:
                                 lw_pattern_data = daily_painter.get_lightweight_data()
                                 patt_js = build_lw_pattern_js(lw_pattern_data, chart_var="priceChart")
 
-                                st_html(create_lightweight_candlestick_html(
+                                st_html(create_lightweight_ohlc_html(
                                     df_daily, height=600,
                                     markers=st.session_state.get(session_key, []),
                                     rs_label=rs_label,
@@ -3749,9 +3970,12 @@ with tab5:
                                 fig_w = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.04,
                                                       subplot_titles=(f"{selected_ticker_company} Weekly", 'Volume', 'Raw RS & QGDRS EMAs'),
                                                       row_heights=[0.5, 0.2, 0.3])
-                                fig_w.add_trace(go.Candlestick(x=df_weekly.index, open=df_weekly['Open'], high=df_weekly['High'],
-                                                               low=df_weekly['Low'], close=df_weekly['Close'],
-                                                               name='Price', showlegend=False), row=1, col=1)
+                                for trace in make_ibd_ohlc_traces(
+                                    df_weekly.index, df_weekly['Open'], df_weekly['High'],
+                                    df_weekly['Low'], df_weekly['Close'],
+                                    name='Price', showlegend=False,
+                                ):
+                                    fig_w.add_trace(trace, row=1, col=1)
                                 for tr in weekly_painter.get_plotly_traces():
                                     fig_w.add_trace(tr, row=1, col=1)
                                 w_annotations = weekly_painter.get_pending_annotations()
@@ -3834,7 +4058,7 @@ with tab5:
                                 lw_w_data = weekly_painter.get_lightweight_data()
                                 patt_js_w = build_lw_pattern_js(lw_w_data, chart_var="priceChart")
 
-                                st_html(create_lightweight_candlestick_html(
+                                st_html(create_lightweight_ohlc_html(
                                     df_weekly, height=450,
                                     markers=st.session_state.get(session_key_w, []),
                                     rs_raw=df_weekly['rs_raw'],
@@ -4158,8 +4382,11 @@ with tab7:
             with open(patterns_json_path, 'r', encoding='utf-8') as f:
                 pattern_data = json.load(f)
             
-            # Load IBD Data Tables full map for Composite Rating lookup & filtering
+            # Load IBD Data Tables full map for Composite Rating lookup & filtering,
+            # plus the CALCULATED group rank/RS map from the daily screener (these
+            # replace IBD's letter-grade Ind Grp RS and Industry Group Rank).
             ibd_full_map = load_ibd_data_tables_full()
+            calc_group_map = load_calculated_group_map()
             
             # Expander for IBD Column Filters
             with st.expander("🎛️ Filter Patterns by IBD Data Columns", expanded=False):
@@ -4169,23 +4396,48 @@ with tab7:
                     pf_min_eps  = st.slider("Min EPS Rating", 0, 99, 0, key="pf_min_eps")
                     pf_min_rs   = st.slider("Min RS Rating", 0, 99, 0, key="pf_min_rs")
                 with f_col2:
-                    pf_max_ind_rank = st.slider("Max Industry Group Rank", 1, 197, 197, key="pf_max_ind_rank")
+                    pf_max_ind_rank = st.slider("Max Industry Group Rank (Calc)", 1, 200, 200, key="pf_max_ind_rank")
+                    pf_min_ind_rs   = st.slider("Min Ind Group RS (Calc)", 1, 99, 1, key="pf_min_ind_rs")
                     pf_min_vol_chg  = st.number_input("Min Vol % Change", value=-999.0, key="pf_min_vol_chg")
-                    pf_min_price_chg = st.number_input("Min Price % Change", value=-999.0, key="pf_min_price_chg")
                 with f_col3:
+                    pf_min_price_chg = st.number_input("Min Price % Change", value=-999.0, key="pf_min_price_chg")
                     pf_min_lq_eps   = st.number_input("Min Last Qtr EPS % Chg", value=-999.0, key="pf_min_lq_eps")
                     pf_min_lq_sales = st.number_input("Min Last Qtr Sales % Chg", value=-999.0, key="pf_min_lq_sales")
-                    pf_min_cy_eps   = st.number_input("Min Curr Yr EPS Est % Chg", value=-999.0, key="pf_min_cy_eps")
                 with f_col4:
+                    pf_min_cy_eps   = st.number_input("Min Curr Yr EPS Est % Chg", value=-999.0, key="pf_min_cy_eps")
                     pf_acc_dis = st.multiselect("Acc/Dis Rating", ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E"], default=[], key="pf_acc_dis")
                     pf_smr     = st.multiselect("SMR Rating", ["A", "B", "C", "D", "E"], default=[], key="pf_smr")
-                    pf_ind_rs  = st.multiselect("Ind Grp RS", ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E"], default=[], key="pf_ind_rs")
 
             def passes_ibd_filter(t_sym):
-                if not isinstance(ibd_full_map, dict): return True
-                t_info = ibd_full_map.get(t_sym, {})
+                if not isinstance(ibd_full_map, dict) and not calc_group_map:
+                    return True
+                t_sym_up = t_sym.strip().upper()
+                t_sym_norm = t_sym_up.replace(".", "").replace("-", "").replace("/", "").replace(" ", "")
+                # Calculated live group rank/RS from the daily screener, falling back
+                # to IBD Data Tables only when the ticker is absent from the snapshot.
+                t_calc = (calc_group_map.get(t_sym_up) or calc_group_map.get(t_sym_norm) or {}) if calc_group_map else {}
+                t_info = ibd_full_map.get(t_sym, {}) if isinstance(ibd_full_map, dict) else {}
+                
+                # Only enforce the group rank/RS filters when the ticker actually
+                # has group data; tickers absent from both maps pass the group
+                # filters (other filters below still apply).
+                if t_calc or t_info:
+                    ind_rank = t_calc.get('Ind Group Rank')
+                    if ind_rank is None:
+                        ind_rank = t_info.get('Industry Group Rank', 999)
+                        if pd.isna(ind_rank):
+                            ind_rank = 999
+                    if ind_rank > pf_max_ind_rank: return False
+                    
+                    ind_rs = t_calc.get('Ind Group RS')
+                    if ind_rs is None:
+                        # no calculated value -> letter grade from IBD as last resort
+                        gr = str(t_info.get('Ind Grp RS', '')).strip()
+                        ind_rs = _grade_to_num(gr) if gr else None
+                    if ind_rs is not None and ind_rs < pf_min_ind_rs: return False
+                
                 if not t_info:
-                    if pf_min_comp > 0 or pf_min_eps > 0 or pf_min_rs > 0 or pf_max_ind_rank < 197 or pf_acc_dis or pf_smr or pf_ind_rs:
+                    if pf_min_comp > 0 or pf_min_eps > 0 or pf_min_rs > 0 or pf_acc_dis or pf_smr:
                         return False
                     return True
                 
@@ -4200,10 +4452,6 @@ with tab7:
                 rs = t_info.get('RS Rating', 0)
                 if pd.isna(rs): rs = 0
                 if rs < pf_min_rs: return False
-                
-                ind_rank = t_info.get('Industry Group Rank', 197)
-                if pd.isna(ind_rank): ind_rank = 197
-                if ind_rank > pf_max_ind_rank: return False
                 
                 if pf_min_vol_chg > -999.0:
                     v_chg = t_info.get('Vol. % Change', -999.0)
@@ -4233,13 +4481,10 @@ with tab7:
                     smr = str(t_info.get('SMR Rating', '')).strip()
                     if smr not in pf_smr: return False
 
-                if pf_ind_rs:
-                    ind_r = str(t_info.get('Ind Grp RS', '')).strip()
-                    if ind_r not in pf_ind_rs: return False
-
                 return True
 
-            # Process patterns and sort tickers by Industry Group Rank (asc) then IBD Comp Rating (desc)
+            # Process patterns and sort tickers by CALCULATED Industry Group Rank
+            # (asc) then IBD Comp Rating (desc)
             processed_patterns = []
             total_headers = 0
             
@@ -4250,13 +4495,18 @@ with tab7:
                         section_title = p_name.replace('-', ' ').title()
                         scored_tickers = []
                         for t in filtered_tickers:
+                            t_up = t.strip().upper()
+                            t_norm = t_up.replace(".", "").replace("-", "").replace("/", "").replace(" ", "")
+                            t_calc = (calc_group_map.get(t_up) or calc_group_map.get(t_norm) or {}) if calc_group_map else {}
                             t_info = ibd_full_map.get(t, {}) if isinstance(ibd_full_map, dict) else {}
                             comp_val = t_info.get('IBD Comp. Rating', 0)
                             if pd.isna(comp_val):
                                 comp_val = 0
-                            ind_rank = t_info.get('Industry Group Rank', 999)
-                            if pd.isna(ind_rank):
-                                ind_rank = 999
+                            ind_rank = t_calc.get('Ind Group Rank')
+                            if ind_rank is None:
+                                ind_rank = t_info.get('Industry Group Rank', 999)
+                                if pd.isna(ind_rank):
+                                    ind_rank = 999
                             scored_tickers.append((t, float(ind_rank), float(comp_val)))
                         
                         # Sort tickers within pattern: Industry Group Rank (asc), then Comp Rating (desc)
@@ -4443,9 +4693,66 @@ def _ibd_trend_metrics(tickers: tuple):
     return have.dropna(subset=["sma50"], how="all") if not have.empty else have
 
 
+# --- Shared column formatting for the IBD pattern tables --------------------------------
+# Both the per-pattern mini tables and the detailed table render through this, so a column
+# means the same thing and is formatted the same way in both rather than drifting apart.
+#
+# The six sub-signals are what the two scores are BUILT from - before_bo_score is how many of
+# them fired while in the base and within 15% of the pivot, post_bo_score how many fired in
+# the 15 bars after the breakout - so showing the individual ticks next to the score says
+# WHICH ones, not just how many.
+IBD_SIGNAL_COLS = {
+    'vol_dry_up': 'VDU', 'pocket_pivot': 'PP', 'touched_ma': 'MA Touch',
+    'shakeout_entry': 'Shakeout', 'upside_reversal': 'UpRev', 'rs_nh': 'RS NH',
+    'is_double_bottom': 'Dbl Btm',
+}
+# Percentages to one decimal. Rounded rather than string-formatted so the columns stay
+# numeric and the table still sorts by value.
+IBD_ROUND1_COLS = ('dist_pct', 'pct_off_52w_high', 'conservative_dist_pct')
+IBD_RENAME = {
+    'ticker': 'Ticker', 'pattern_name': 'Pattern', 'status': 'Status',
+    'Percentile': 'RS Rating', 'close': 'Close ($)', 'AvgVol30': '30D Avg Vol',
+    'pivot': 'Buy Point', 'dist_pct': 'Pivot Dist %',
+    'pct_off_52w_high': '% Off 52W High', 'composite_score': 'Comp Score',
+    'before_bo_score': 'Pre Score', 'post_bo_score': 'Post Score',
+    'rs_nh_count': 'RS NH Count', 'days_in_base': 'Days in Base',
+    'bars_sbo': 'Bars Post-BO', **IBD_SIGNAL_COLS,
+}
+
+
+def _fmt_ibd_table(df, cols):
+    """Select `cols` that exist, round the percentages, tick the booleans, rename."""
+    cols = [c for c in cols if c in df.columns]
+    out = df[cols].copy()
+    for c in IBD_ROUND1_COLS:
+        if c in out.columns:
+            out[c] = pd.to_numeric(out[c], errors='coerce').round(1)
+    if 'pivot' in out.columns:
+        out['pivot'] = pd.to_numeric(out['pivot'], errors='coerce').round(2)
+    for c in IBD_SIGNAL_COLS:
+        if c in out.columns:
+            # '·' rather than blank for a miss, so an empty cell reads as "signal absent"
+            # instead of "column not populated".
+            out[c] = out[c].fillna(False).astype(bool).map({True: '✓', False: '·'})
+    return out.rename(columns=IBD_RENAME)
+
+
+# Column order shared by both tables. The mini table drops Sector/Industry for width.
+IBD_TABLE_COLS = ['ticker', 'pattern_name', 'status', 'Percentile', 'close', 'AvgVol30',
+                  'pivot', 'dist_pct', 'pct_off_52w_high',
+                  'before_bo_score', 'post_bo_score', 'composite_score',
+                  'vol_dry_up', 'pocket_pivot', 'touched_ma', 'shakeout_entry',
+                  'upside_reversal', 'rs_nh', 'is_double_bottom',
+                  'rs_nh_count', 'days_in_base', 'bars_sbo']
+
+
 with tab_ibd_pattern:
     st.subheader("🏆 IBD Pattern Scanner")
-    st.markdown("Automated MarketSmith / IBD pattern scanner logic (`drw_pattern_scanner.pine`). Categorizes active base patterns (Cup+Handle, Cup, Double Bottom, High Tight Flag, Flat Base, 6-Wk Flat, Base) from `ticker_cache` data.")
+    st.markdown("Automated MarketSmith / IBD pattern scanner logic (`drw_pattern_scanner.pine`). "
+                "Categorizes active bases into four patterns — **Cup+Handle, Cup, Flat Base, Consolidation** — "
+                "from `ticker_cache` data. **Double Bottom** is detected separately and can occur inside any "
+                "of them, so it has its own category that overlaps the four (and its own Sub-signals filter). "
+                "High Tight Flag is reported as enclosing context.")
     
     col_scan1, col_scan2 = st.columns([4, 6])
     with col_scan1:
@@ -4556,7 +4863,7 @@ with tab_ibd_pattern:
                     with f_col4:
                         max_dist_pivot = st.number_input("Max Distance to Pivot %", value=100.0, key="ibd_max_dist")
                         max_off_52w    = st.number_input("Max % Off 52W High", value=100.0, key="ibd_max_52w")
-                        sub_filter     = st.multiselect("Require Sub-signals", ["Volume Dry-Up", "Pocket Pivot", "Touched MA", "Shakeout Entry", "Upside Reversal", "RS New High"], default=[], key="ibd_sub_sig")
+                        sub_filter     = st.multiselect("Require Sub-signals", ["Volume Dry-Up", "Pocket Pivot", "Touched MA", "Shakeout Entry", "Upside Reversal", "RS New High", "Double Bottom"], default=[], key="ibd_sub_sig")
                         _has_trend = {'sma50', 'sma200'} <= set(df_ibd_patterns.columns)
                         req_above_200 = st.checkbox("Price > 200D SMA", value=True,
                                                     disabled=not _has_trend, key="ibd_above_200")
@@ -4615,6 +4922,10 @@ with tab_ibd_pattern:
                 if "Shakeout Entry" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['shakeout_entry']]
                 if "Upside Reversal" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['upside_reversal']]
                 if "RS New High" in sub_filter: filtered_ibd = filtered_ibd[filtered_ibd['rs_nh']]
+                # Double Bottom is a sub-pattern, so it filters here rather than appearing as
+                # its own bucket. `.get` guards a results file written before the field existed.
+                if "Double Bottom" in sub_filter and 'is_double_bottom' in filtered_ibd.columns:
+                    filtered_ibd = filtered_ibd[filtered_ibd['is_double_bottom'].fillna(False)]
 
                 # Output Views: Tabs for "Category View", "Data Table", and "Watchlist Export"
                 sub_chart, sub_tab1, sub_tab2, sub_tab3 = st.tabs(
@@ -4669,64 +4980,112 @@ with tab_ibd_pattern:
                             st.error(f"Could not draw the chart: {_ce}")
 
                 
-                # --- Sub-tab 1: Categorized View ---
+                # --- Sub-tab 1: by pattern, table beside the chart (as the TV tab does) ---
                 with sub_tab1:
-                    pattern_order = ["Cup+Handle", "Cup", "Dbl Bottom", "HTF", "6-Wk Flat", "Flat Base", "Base"]
-                    for pat in pattern_order:
-                        pat_df = filtered_ibd[filtered_ibd['pattern_name'] == pat]
-                        count_p = len(pat_df)
-                        
-                        with st.expander(f"📌 {pat} ({count_p} tickers)", expanded=(count_p > 0 and count_p < 50)):
-                            if count_p > 0:
-                                t_list = pat_df['ticker'].tolist()
-                                t_str = ",".join(t_list)
-                                col_t1, col_t2 = st.columns([8, 2])
-                                with col_t1:
-                                    st.code(t_str, language="text")
-                                with col_t2:
-                                    st.download_button(f"Download {pat}", t_str, f"{pat.replace('+', 'Plus').replace(' ', '_')}_tickers.txt", "text/plain", key=f"dl_{pat}")
-                                
-                                # Show summary table inside expander
-                                mini_cols = ['ticker', 'status', 'Percentile', 'close', 'AvgVol30', 'dist_pct', 'pct_off_52w_high', 'composite_score', 'before_bo_score', 'post_bo_score', 'rs_nh_count']
-                                mini_avail = [c for c in mini_cols if c in pat_df.columns]
-                                display_mini = pat_df[mini_avail].copy()
-                                display_mini = display_mini.rename(columns={'Percentile': 'RS Rating', 'close': 'Price ($)', 'AvgVol30': '30D Avg Vol'})
-                                st.dataframe(display_mini, hide_index=True, use_container_width=True)
-                            else:
-                                st.info(f"No tickers found matching filters for {pat}.")
+                    # The state machine settles on one of four names. "Double Bottom" is a
+                    # FIFTH category here and deliberately OVERLAPS them: it is detected
+                    # independently and can occur inside any of the four, so a base that is a
+                    # Cup and also a double bottom is listed under both. That is the whole
+                    # point of holding it separately rather than making it compete for the
+                    # label - it stopped setting the buy point, it did not stop existing.
+                    # "HTF" is enclosing context (in_htf_flag / htf_context); "6-Wk Flat",
+                    # "Ascending Base" and "Base" are retired and were permanently empty.
+                    pattern_order = ["Cup+Handle", "Cup", "Flat Base", "Consolidation"]
+                    _has_db = ('is_double_bottom' in filtered_ibd.columns
+                               and bool(filtered_ibd['is_double_bottom'].fillna(False).any()))
+
+                    def _cat_slice(_name):
+                        if _name == "Double Bottom":
+                            return filtered_ibd[filtered_ibd['is_double_bottom'].fillna(False)]
+                        return filtered_ibd[filtered_ibd['pattern_name'] == _name]
+
+                    _cats = [p for p in pattern_order if not _cat_slice(p).empty]
+                    if _has_db:
+                        _cats.append("Double Bottom")
+
+                    if not _cats:
+                        st.info("No tickers match the current filters.")
+                    else:
+                        cat_pat = st.radio(
+                            "Pattern", _cats, horizontal=True, key="ibd_cat_pat",
+                            format_func=lambda p: f"{p} ({len(_cat_slice(p))})")
+                        pat_df = _cat_slice(cat_pat).sort_values(
+                            'dist_pct', key=lambda s: s.abs()).reset_index(drop=True)
+                        _tick = pat_df['ticker'].tolist()
+                        if cat_pat == "Double Bottom":
+                            st.caption("A double bottom forms *inside* a base, so these tickers "
+                                       "also appear under their own pattern above. The buy point "
+                                       "shown is that base's — the W's middle peak is reported as "
+                                       "`db_middle_peak` but is not quoted as a buy point.")
+
+                        # Cursor kept per pattern so switching away and back does not lose your
+                        # place, and clamped rather than reset when a filter shrinks the list.
+                        _ick = f"ibd_cat_i_{cat_pat}"
+                        i = min(st.session_state.get(_ick, 0), len(_tick) - 1)
+                        n1, n2, n3 = st.columns([1, 1, 6])
+                        with n1:
+                            if st.button("◀ Prev", key="ibd_cat_prev", use_container_width=True):
+                                i = (i - 1) % len(_tick)
+                        with n2:
+                            if st.button("Next ▶", key="ibd_cat_next", use_container_width=True):
+                                i = (i + 1) % len(_tick)
+                        st.session_state[_ick] = i
+                        cur = _tick[i]
+                        with n3:
+                            st.caption(f"**{cur}** — {i + 1} of {len(_tick)}")
+
+                        lc, rc = st.columns([2, 3])
+                        with lc:
+                            _sel = st.dataframe(
+                                _fmt_ibd_table(pat_df, [c for c in IBD_TABLE_COLS
+                                                        if c != 'pattern_name']),
+                                hide_index=True, use_container_width=True, height=470,
+                                on_select="rerun", selection_mode="single-row",
+                                key=f"ibd_cat_tbl_{cat_pat}")
+                            # Only a NEW click moves the cursor. Streamlit keeps the selected
+                            # row across reruns, so comparing it to `i` instead would make the
+                            # last-clicked row fight every press of Next.
+                            _rows = (_sel.get("selection") or {}).get("rows") or []
+                            _seen = f"{_ick}_seen"
+                            _clicked = _rows[0] if _rows else None
+                            if _clicked is not None and _clicked != st.session_state.get(_seen):
+                                st.session_state[_seen] = _clicked
+                                st.session_state[_ick] = _clicked
+                                st.rerun()
+                            st.session_state[_seen] = _clicked
+                            t_str = ",".join(_tick)
+                            st.download_button(
+                                f"Download {cat_pat} ({len(_tick)})", t_str,
+                                f"{cat_pat.replace('+', 'Plus').replace(' ', '_')}_tickers.txt",
+                                "text/plain", key=f"dl_{cat_pat}", use_container_width=True)
+                        with rc:
+                            try:
+                                _cdf2, _cres2 = _ibd_chart_payload(cur, 300)
+                                if _cdf2 is None or _cres2 is None:
+                                    st.warning(f"No cached price data for {cur}.")
+                                else:
+                                    sys.path.insert(0, str(Path(__file__).resolve().parent / "python"))
+                                    from pattern_chart import build_pattern_figure
+                                    st.plotly_chart(
+                                        build_pattern_figure(cur, _cdf2, _cres2,
+                                                             bars=300, height=560),
+                                        use_container_width=True,
+                                        key=f"ibd_cat_fig_{cat_pat}")
+                            except Exception as _ce:
+                                st.error(f"Could not draw the chart: {_ce}")
 
                 # --- Sub-tab 2: Full Data Table ---
                 with sub_tab2:
                     st.markdown(f"Showing **{len(filtered_ibd)}** pattern signals matching filters.")
                     
-                    # Columns ordering
-                    table_cols = ['ticker', 'pattern_name', 'status', 'Percentile', 'close', 'AvgVol30', 'dist_pct', 'pct_off_52w_high', 'composite_score', 'before_bo_score', 'post_bo_score', 'rs_nh_count', 'days_in_base', 'bars_sbo', 'Sector', 'Industry', 'vol_dry_up', 'pocket_pivot', 'touched_ma', 'shakeout_entry', 'upside_reversal', 'rs_nh']
-                    table_cols = [c for c in table_cols if c in filtered_ibd.columns]
-                    
-                    renamed_cols = {
-                        'ticker': 'Ticker',
-                        'pattern_name': 'Pattern',
-                        'status': 'Status',
-                        'Percentile': 'RS Rating',
-                        'close': 'Close ($)',
-                        'AvgVol30': '30D Avg Vol',
-                        'dist_pct': 'Pivot Dist %',
-                        'pct_off_52w_high': '% Off 52W High',
-                        'composite_score': 'Comp Score',
-                        'before_bo_score': 'Pre Score',
-                        'post_bo_score': 'Post Score',
-                        'rs_nh_count': 'RS NH Count',
-                        'days_in_base': 'Days in Base',
-                        'bars_sbo': 'Bars Post-BO',
-                        'vol_dry_up': 'VDU',
-                        'pocket_pivot': 'PP',
-                        'touched_ma': 'MA Touch',
-                        'shakeout_entry': 'Shakeout',
-                        'upside_reversal': 'UpRev',
-                        'rs_nh': 'RS NH'
-                    }
-                    disp_df = filtered_ibd[table_cols].rename(columns=renamed_cols)
-                    st.dataframe(disp_df, hide_index=True, use_container_width=True)
+                    # Same column set and formatting as the per-pattern mini tables, plus
+                    # Sector/Industry which only this wider table has room for.
+                    st.dataframe(
+                        _fmt_ibd_table(filtered_ibd, IBD_TABLE_COLS + ['Sector', 'Industry']),
+                        hide_index=True, use_container_width=True)
+                    st.caption("✓ = signal fired · Pre/Post Score count how many of the six "
+                               "sub-signals fired before and after the breakout · Pivot Dist % "
+                               "is negative below the buy point.")
 
                 # --- Sub-tab 3: Export Watchlists ---
                 with sub_tab3:
@@ -4738,13 +5097,24 @@ with tab_ibd_pattern:
                     # TradingView format with section headers
                     tv_lines = []
                     ibkr_lines = []
-                    for pat in pattern_order:
-                        p_df = filtered_ibd[filtered_ibd['pattern_name'] == pat]
+                    # Double Bottom gets its own ###section, same as the four primary names.
+                    # Its tickers also appear under their own pattern - the sections overlap
+                    # because the pattern does, and TradingView is happy with a repeat.
+                    # IBKR lines are de-duplicated, since importing a symbol twice is an error
+                    # there rather than a second row.
+                    _export_cats = list(pattern_order) + (["Double Bottom"] if _has_db else [])
+                    _ibkr_seen = set()
+                    for pat in _export_cats:
+                        p_df = (filtered_ibd[filtered_ibd['is_double_bottom'].fillna(False)]
+                                if pat == "Double Bottom"
+                                else filtered_ibd[filtered_ibd['pattern_name'] == pat])
                         if not p_df.empty:
                             tv_lines.append(f"###{pat}")
                             for t in p_df['ticker']:
                                 tv_lines.append(t)
-                                ibkr_lines.append(f"SYM, {t.upper()}, SMART/ARCA")
+                                if t not in _ibkr_seen:
+                                    _ibkr_seen.add(t)
+                                    ibkr_lines.append(f"SYM, {t.upper()}, SMART/ARCA")
                                 
                     tv_export_str = "\n".join(tv_lines)
                     ibkr_export_str = "\n".join(ibkr_lines)
@@ -4779,7 +5149,7 @@ TV_PATTERN_ORDER = ["Cup+Handle", "Cup", "HTF", "Base"]
 TV_SHAPE_ORDER = ["Flat Base", "Consolidation"]
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=28800, show_spinner=False)
 def _tv_load_results(mtime: float):
     """Results keyed on the file's mtime, so a rerun of the scanner invalidates the cache."""
     with open(Path(__file__).resolve().parent / "python" / "tv_pattern_results.json",
@@ -4787,7 +5157,7 @@ def _tv_load_results(mtime: float):
         return json.load(f)
 
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=28800, show_spinner=False)
 def _tv_load_history(mtime: float):
     """Every base the scanner has ever seen, ~36k rows / 17MB — loaded only when asked for."""
     fp = Path(__file__).resolve().parent / "python" / "tv_pattern_history.json"
@@ -4860,7 +5230,7 @@ def _tv_chart_bars(ticker: str):
 
     Unlike the IBD tab this does NOT rescan the ticker: tv_pattern_scanner writes the drawing
     anchors (cup arcs, base channel, handle box, flag pole, trade boxes) into each record, so
-    the chart only needs candles.
+    the chart only needs OHLC bars.
     """
     fp = (Path(__file__).resolve().parent / "ticker_cache"
           / f"{str(ticker).strip().replace('.', '-')}_1d.parquet")
@@ -5985,6 +6355,10 @@ with tab_ms:
 with tab_ibd_live:
     st.header("🎙️ IBD Live Summary")
 
+    ingest_msg = st.session_state.pop("ibd_live_ingest_msg", None)
+    if ingest_msg:
+        {"success": st.success, "warning": st.warning, "error": st.error}[ingest_msg[0]](ingest_msg[1])
+
     # ---- Create / Ingest Summary ----
     st.subheader("✍️ Create / Ingest Summary")
     with st.expander("📝 Paste an IBD Live markdown summary to reformat & save", expanded=False):
@@ -6003,11 +6377,17 @@ with tab_ibd_live:
         if st.button("💾 Save & Reformat", type="primary", key="ibd_live_ingest_save"):
             date_str = ingest_date.isoformat()
             suffix = "_eod" if ingest_kind == "End of Day" else ""
-            ok, msg, _sc = save_ibd_live_summary_from_text(date_str, ingest_text, suffix=suffix)
+            ok, msg, sc = save_ibd_live_summary_from_text(date_str, ingest_text, suffix=suffix)
             if ok:
-                st.success(msg)
-                st.session_state.ibd_live_selected_date = date_str
-                st.session_state.ibd_live_list_date = None
+                focus_ibd_live_date(date_str)
+                n_tickers = len((sc or {}).get("tickers") or [])
+                # The message has to survive the rerun that repaints the tab below.
+                st.session_state.ibd_live_ingest_msg = (
+                    ("success", msg) if n_tickers else
+                    ("warning", msg + " No tickers were parsed — check that the summary has a "
+                                      "'2. Top Tickers & Technical Setups' table and a "
+                                      "'7. … Ticker List' section (any heading level works).")
+                )
                 rerun_app()
             else:
                 st.error(msg)
@@ -6199,7 +6579,15 @@ with tab_ibd_live:
                             unsafe_allow_html=True,
                         )
                     with st.spinner(f"Loading chart for {active_ticker}..."):
-                        fig, err = build_ticker_price_chart(active_ticker, filtered_df)
+                        percentile = None
+                        if 'Ticker' in filtered_df.columns:
+                            trows = filtered_df[filtered_df['Ticker'] == active_ticker]
+                            if not trows.empty:
+                                trow = trows.sort_values('date').iloc[-1] if 'date' in trows.columns else trows.iloc[0]
+                                pctl = trow.get('Percentile')
+                                if pctl is not None and not pd.isna(pctl):
+                                    percentile = float(pctl)
+                        fig, err = build_ticker_price_chart(active_ticker, percentile=percentile)
                     if err:
                         st.warning(err)
                     elif fig:
@@ -6210,14 +6598,26 @@ with tab_ibd_live:
             st.subheader("💬 Ticker Comments")
             all_known_tickers = get_all_commented_or_mentioned_tickers()
             if all_known_tickers:
-                default_ticker = st.session_state.get("ibd_live_active_ticker", all_known_tickers[0])
-                default_idx = all_known_tickers.index(default_ticker) if default_ticker in all_known_tickers else 0
+                # Follow the chart's ticker. A widget key outranks index= on every rerun,
+                # so the value has to be written here, before the selectbox is created —
+                # and only when the active ticker actually changed, or picking a ticker
+                # from this dropdown would be yanked straight back to the chart's.
+                active_tk = st.session_state.get("ibd_live_active_ticker")
+                if active_tk in all_known_tickers and active_tk != st.session_state.get("_ibd_live_comment_synced_to"):
+                    st.session_state.ibd_live_comment_ticker_select = active_tk
+                    st.session_state._ibd_live_comment_synced_to = active_tk
+                elif st.session_state.get("ibd_live_comment_ticker_select") not in all_known_tickers:
+                    st.session_state.pop("ibd_live_comment_ticker_select", None)
+
+                default_ticker = active_tk if active_tk in all_known_tickers else all_known_tickers[0]
+                default_idx = all_known_tickers.index(default_ticker)
                 comment_ticker = st.selectbox("Select a ticker",
                                               all_known_tickers, index=default_idx,
                                               key="ibd_live_comment_ticker_select",
                                               help="Every ticker you commented on or the show mentioned.")
                 if comment_ticker != st.session_state.get("ibd_live_active_ticker"):
                     st.session_state.ibd_live_active_ticker = comment_ticker
+                    st.session_state._ibd_live_comment_synced_to = comment_ticker
 
                 timeline = get_ticker_comment_timeline(comment_ticker)
                 summary_dates = load_ibd_live_summary_dates()
@@ -6247,6 +6647,7 @@ with tab_ibd_live:
                     if st.form_submit_button("💾 Save Comment"):
                         if comment_text.strip():
                             save_ticker_comment(comment_ticker, comment_date.isoformat(), comment_text)
+                            get_ticker_comment_timeline.clear()
                             st.success(f"Saved comment for {comment_ticker}.")
                             rerun_app()
                         else:
@@ -6520,6 +6921,414 @@ with tab_scans:
                         st.caption(f"Showing top 40 of {len(pdf):,} rows — sorted by {sort_label}")
                 except Exception as e:
                     st.error(f"Failed to load: {e}")
+
+# ---------- TAB 15: Ratings Scanner ----------
+with tab15:
+    st.subheader("📊 IBD-Style Ratings Scanner")
+    st.markdown("Computes **RS Rating, EPS Rating, A/D Rating, SMR Rating, Composite Rating, % Off 52W High** using the same formulas as the TradingView `Ratings Scanner` indicator.")
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "python"))
+    from calc_ibd_ratings import (
+        calc_rs_rating_snapshot, calc_ad_rating_snapshot,
+        calc_pct_off_52w_high_snapshot, calc_eps_rating,
+        calc_smr_rating, calc_composite_rating, _f_sigmoid
+    )
+    from fetch_fundamentals import get_cached_fundamentals, fetch_and_cache_fundamentals
+
+    CACHE_DIR = Path(__file__).resolve().parent / "ticker_cache"
+
+    # ── Mode selection ──
+    mode = st.radio("Scope", ["Quick Scan (OHLCV-only ratings)", "Full Scan (incl. fundamentals)"],
+                    horizontal=True, index=0,
+                    help="Quick Scan computes RS, A/D, and % off 52W High from cached price data. Full Scan also fetches EPS/ROE from yfinance for EPS, SMR, and Composite ratings.")
+
+    # ── Button to run scan ──
+    col_btn, col_count = st.columns([2, 3])
+    with col_btn:
+        if st.button(f"🔍 Run {'Full' if 'Full' in mode else 'Quick'} Scan", type="primary", key="run_ratings_scan"):
+            with st.spinner("Scanning tickers..." if "Quick" in mode else "Fetching fundamentals & scanning..."):
+                results = []
+                ticker_files = sorted(CACHE_DIR.glob("*_1d.parquet"))
+                total = len(ticker_files)
+                progress = st.progress(0, text="Loading SPY...")
+
+                # Load SPY once
+                spy_path = CACHE_DIR / "SPY_1d.parquet"
+                if not spy_path.exists():
+                    st.error("SPY cache not found. Run update_ticker_cache.py first.")
+                    st.stop()
+                spy_df = pd.read_parquet(spy_path)
+                if isinstance(spy_df.columns, pd.MultiIndex):
+                    spy_df.columns = spy_df.columns.get_level_values(0)
+                spy_df.index = pd.to_datetime(spy_df.index)
+                if spy_df.index.tz is not None:
+                    spy_df.index = spy_df.index.tz_localize(None)
+
+                # Track fundamentals fetch stats
+                n_fundamental_fetched = 0
+
+                for i, fp in enumerate(ticker_files):
+                    ticker = fp.stem.replace("_1d", "")
+                    if ticker in ("SPY", "QQQ", "IWM", "DIA", "VTI"):
+                        continue
+
+                    try:
+                        df = pd.read_parquet(fp)
+                        if isinstance(df.columns, pd.MultiIndex):
+                            df.columns = df.columns.get_level_values(0)
+                        df.index = pd.to_datetime(df.index)
+                        if df.index.tz is not None:
+                            df.index = df.index.tz_localize(None)
+
+                        if df.empty or len(df) < 65 or 'Close' not in df.columns:
+                            continue
+
+                        # Align SPY to this ticker's index
+                        spy_aligned = spy_df.reindex(df.index).ffill().bfill()
+
+                        # RS Rating
+                        rs_val = calc_rs_rating_snapshot(df['Close'], spy_aligned['Close'])
+                        # RS 3M / 6M
+                        close_arr = df['Close'].values.astype(float)
+                        spy_arr = spy_aligned['Close'].values.astype(float)
+                        n = len(close_arr)
+                        if n > 63:
+                            score_3m = ((close_arr[-1] / close_arr[-(63 + 1)]) /
+                                        (spy_arr[-1] / spy_arr[-(63 + 1)]) * 100.0
+                                        if spy_arr[-(63 + 1)] > 0 else 100.0)
+                            rs_3m = _f_sigmoid(score_3m)
+                        else:
+                            rs_3m = np.nan
+                        if n > 126:
+                            score_6m = ((close_arr[-1] / close_arr[-(126 + 1)]) /
+                                        (spy_arr[-1] / spy_arr[-(126 + 1)]) * 100.0
+                                        if spy_arr[-(126 + 1)] > 0 else 100.0)
+                            rs_6m = _f_sigmoid(score_6m)
+                        else:
+                            rs_6m = np.nan
+
+                        # A/D Rating
+                        ad_val = calc_ad_rating_snapshot(df)
+
+                        # % Off 52W High
+                        pct_off = calc_pct_off_52w_high_snapshot(df)
+
+                        # Latest price
+                        latest = float(df['Close'].iloc[-1])
+
+                        # Fundamentals (Full Scan only)
+                        eps_rating = None
+                        smr_score = None
+                        smr_grade = None
+                        comp_rating = None
+
+                        if "Full" in mode:
+                            fund = fetch_and_cache_fundamentals(ticker, max_age_days=30, delay=0.15)
+                            if fund and not fund.get('error'):
+                                fy_eps = fund.get('fy_eps')
+                                fq_eps = fund.get('fq_eps')
+                                roe_val = fund.get('roe')
+                                n_fundamental_fetched += 1
+
+                                if fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5:
+                                    eps_rating = calc_eps_rating(fy_eps, fq_eps, roe_val)
+                                if roe_val is not None:
+                                    smr_score, smr_grade = calc_smr_rating(roe_val)
+
+                            if eps_rating is not None and smr_score is not None and not np.isnan(rs_val) and not np.isnan(ad_val):
+                                comp_rating = calc_composite_rating(rs_val, eps_rating, smr_score, ad_val)
+
+                        results.append({
+                            'Ticker': ticker,
+                            'Close': round(latest, 2),
+                            'RS Rating': round(rs_val, 1) if not np.isnan(rs_val) else None,
+                            'RS 3M': round(rs_3m, 1) if not np.isnan(rs_3m) else None,
+                            'RS 6M': round(rs_6m, 1) if not np.isnan(rs_6m) else None,
+                            '% Off 52W High': round(pct_off, 2) if not np.isnan(pct_off) else None,
+                            'A/D Rating': round(ad_val, 1) if not np.isnan(ad_val) else None,
+                            'EPS Rating': eps_rating,
+                            'SMR Score': round(smr_score, 1) if smr_score is not None else None,
+                            'SMR Grade': smr_grade,
+                            'Comp Rating': comp_rating,
+                        })
+                    except Exception:
+                        pass
+
+                    if (i + 1) % 100 == 0 or i == total - 1:
+                        progress.progress((i + 1) / total,
+                                          text=f"Scanned {i + 1}/{total} tickers...")
+
+                progress.empty()
+
+                if results:
+                    result_df = pd.DataFrame(results)
+                    st.session_state.ratings_df = result_df
+                    st.session_state.ratings_mode = mode
+                    st.session_state.ratings_scanned = True
+                    st.success(f"✅ Scanned {len(result_df):,} tickers" +
+                               (f" (fetched fundamentals for {n_fundamental_fetched})" if "Full" in mode else ""))
+                else:
+                    st.warning("No results. Check that ticker_cache has data.")
+
+    # ── Display results if available ──
+    if st.session_state.get("ratings_scanned") and st.session_state.get("ratings_df") is not None:
+        result_df = st.session_state.ratings_df
+        mode = st.session_state.get("ratings_mode", "Quick")
+        st.divider()
+
+        # Filters
+        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+        with col_f1:
+            min_rs = st.slider("Min RS Rating", 0, 99, 0, key="rs_min_filter")
+        with col_f2:
+            min_ad = st.slider("Min A/D Rating", 0, 99, 0, key="ad_min_filter")
+        with col_f3:
+            max_pct_off = st.slider("Max % Off 52W High", 0.0, 100.0, 100.0, key="pct_off_filter")
+        with col_f4:
+            search_ticker = st.text_input("Search Ticker", "", key="rating_search").strip().upper()
+
+        filtered = result_df.copy()
+        if min_rs > 0:
+            filtered = filtered[filtered['RS Rating'].notna() & (filtered['RS Rating'] >= min_rs)]
+        if min_ad > 0:
+            filtered = filtered[filtered['A/D Rating'].notna() & (filtered['A/D Rating'] >= min_ad)]
+        if max_pct_off < 100:
+            filtered = filtered[filtered['% Off 52W High'].notna() & (filtered['% Off 52W High'] <= max_pct_off)]
+        if search_ticker:
+            filtered = filtered[filtered['Ticker'].str.upper().str.contains(search_ticker)]
+
+        # Sort by Comp Rating (if available) then RS Rating
+        if 'Comp Rating' in filtered.columns and filtered['Comp Rating'].notna().any():
+            filtered = filtered.sort_values('Comp Rating', ascending=False, na_position='last')
+        else:
+            filtered = filtered.sort_values('RS Rating', ascending=False, na_position='last')
+
+        st.metric("Matching", f"{len(filtered):,} / {len(result_df):,}")
+
+        # Color-scale RS and Comp Rating columns
+        def color_rating(val):
+            if pd.isna(val):
+                return ''
+            val = float(val)
+            if val >= 90:
+                return 'background-color: #14532d; color: #4ade80'
+            elif val >= 80:
+                return 'background-color: #1a3a1a; color: #86efac'
+            elif val >= 70:
+                return 'background-color: #1c3a1c; color: #bbf7d0'
+            elif val < 30:
+                return 'background-color: #450a0a; color: #fca5a5'
+            return ''
+
+        def color_pct_off(val):
+            if pd.isna(val):
+                return ''
+            val = float(val)
+            if val <= 3:
+                return 'background-color: #14532d; color: #4ade80'
+            elif val <= 10:
+                return 'background-color: #1a3a1a; color: #86efac'
+            elif val >= 30:
+                return 'background-color: #450a0a; color: #fca5a5'
+            return ''
+
+        styled = filtered.style.map(color_rating, subset=['RS Rating', 'RS 3M', 'RS 6M', 'A/D Rating'])
+        if 'Comp Rating' in filtered.columns:
+            styled = styled.map(color_rating, subset=['Comp Rating'])
+        if 'EPS Rating' in filtered.columns:
+            styled = styled.map(color_rating, subset=['EPS Rating'])
+        if 'SMR Score' in filtered.columns:
+            styled = styled.map(color_rating, subset=['SMR Score'])
+        styled = styled.map(color_pct_off, subset=['% Off 52W High'])
+
+        st.dataframe(styled, use_container_width=True, height=600,
+                     column_config={
+                         'Ticker': st.column_config.TextColumn('Ticker', width='small'),
+                         'Close': st.column_config.NumberColumn('Close', format='$%.2f'),
+                         'RS Rating': st.column_config.NumberColumn('RS Rating', format='%.1f'),
+                     })
+
+        # Export option
+        csv = filtered.to_csv(index=False)
+        st.download_button("📥 Download CSV", csv, f"ratings_scan_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
+
+
+# ---------- TAB 16: Daily Screener ----------
+with tab16:
+    st.subheader("📋 Daily Screener")
+    st.markdown(
+        "MarketSurge-style snapshot (158 columns + ~60 extras) computed from **ticker_cache** "
+        "price/volume + fundamentals, with all ratings from `calc_ibd_ratings.py`, industry/company "
+        "info from `IBD_data.txt`, and group ranks computed across the whole universe. "
+        "Rebuild runs `python/build_daily_screener.py` (~20s) whenever the cache updates."
+    )
+
+    SCREENER_PATH = Path(__file__).resolve().parent / "output" / "daily_screener.csv"
+
+    col_btn, col_info = st.columns([2, 3])
+    with col_btn:
+        if st.button("🔄 Rebuild Screener", type="primary", key="run_daily_screener"):
+            with st.spinner("Rebuilding daily screener from ticker_cache (~15s)..."):
+                script_path = Path(__file__).resolve().parent / "python" / "build_daily_screener.py"
+                try:
+                    result = subprocess.run([sys.executable, str(script_path)],
+                                            cwd=str(Path(__file__).resolve().parent),
+                                            capture_output=True, text=True, timeout=600)
+                    if result.returncode == 0:
+                        st.success("✅ Screener rebuilt from ticker_cache.")
+                        st.cache_data.clear()
+                        rerun_app()
+                    else:
+                        st.error(f"Rebuild failed:\n{result.stderr[-2000:]}")
+                except subprocess.TimeoutExpired:
+                    st.error("Rebuild timed out after 10 minutes — check python/build_daily_screener.py.")
+                except Exception as e:
+                    st.error(f"Rebuild failed: {e}")
+    with col_info:
+        if SCREENER_PATH.exists():
+            _st_mtime = datetime.fromtimestamp(SCREENER_PATH.stat().st_mtime)
+            st.caption(f"📄 `output/daily_screener.csv` • {SCREENER_PATH.stat().st_size / 1e6:.1f} MB • "
+                       f"built {_st_mtime:%Y-%m-%d %H:%M}")
+        else:
+            st.caption("No snapshot yet — click **Rebuild Screener** to generate it.")
+
+    @st.cache_data(ttl=600, show_spinner=False)
+    def load_daily_screener():
+        return pd.read_csv(SCREENER_PATH, low_memory=False)
+
+    if not SCREENER_PATH.exists():
+        st.info("Snapshots land in `output/daily_screener_<date>.csv` and `output/daily_screener.csv`.")
+    else:
+        sdf = load_daily_screener()
+        # Streamlit runs every tab block on each rerun, so a stale/missing column in the
+        # screener CSV must never raise and take down the whole app.
+        _need_cols = ['Symbol', 'Name', 'Current Price', 'RS Rating', 'EPS Rating', 'Comp Rating',
+                      '% Off High', 'Price vs 50-Day', 'Market Cap (mil)', 'RS Line New High',
+                      'Price % Chg', 'Volume (1000s)']
+        _missing_cols = [c for c in _need_cols if c not in sdf.columns]
+        if _missing_cols:
+            st.warning(f"`daily_screener.csv` is missing columns {_missing_cols}. "
+                       "Click **🔄 Rebuild Screener** to regenerate it from the current schema.")
+            st.stop()
+        n_total = len(sdf)
+        n_price = int(sdf['Current Price'].notna().sum())
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Tickers", f"{n_total:,}")
+        c2.metric("With Price Data", f"{n_price:,}")
+        c3.metric("RS Rating ≥ 80", int((sdf['RS Rating'] >= 80).sum()))
+        c4.metric("Comp Rating ≥ 80", int((sdf['Comp Rating'] >= 80).sum()))
+
+        st.divider()
+        st.markdown("**Filters**")
+        col_p, col_t, col_s = st.columns(3)
+        with col_p:
+            preset = st.selectbox("Quick preset", [
+                "Custom",
+                "🏆 Top Leaders (RS ≥ 80)",
+                "💪 Strong (RS ≥ 65)",
+                "🎯 In Buy Zone (RS ≥ 65, ≤10% off high, >50-day)",
+                "🚀 New RS Highs",
+                "💰 Full Fundamentals (EPS ≥ 60)",
+                "🔻 Near Highs (≤5% off high)",
+            ], key="scr_preset")
+        with col_t:
+            search = st.text_input("Search ticker / name", "", key="scr_search").strip().upper()
+        with col_s:
+            sort_col = st.selectbox("Sort by", [
+                "Comp Rating", "RS Rating", "RS 6-Month Rating", "% Chg 12 Months",
+                "% Off High", "Price % Chg", "Market Cap (mil)",
+            ], key="scr_sort")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            min_rs = st.slider("Min RS Rating", 1, 99, 1, key="scr_min_rs")
+            min_eps = st.slider("Min EPS Rating", 1, 99, 1, key="scr_min_eps")
+        with col2:
+            min_comp = st.slider("Min Comp Rating", 1, 99, 1, key="scr_min_comp")
+            max_off = st.slider("Max % Off High", 0, 100, 100, key="scr_max_off")
+        with col3:
+            min_p50 = st.slider("Min Price vs 50-Day (%)", -100, 100, -100, key="scr_min_p50")
+            min_mcap = st.slider("Min Market Cap ($B)", 0, 500, 0, key="scr_min_mcap")
+
+        f = sdf.copy()
+        if "Top Leaders" in preset:
+            min_rs = max(min_rs, 80)
+        if "Strong" in preset:
+            min_rs = max(min_rs, 65)
+        if "In Buy Zone" in preset:
+            min_rs = max(min_rs, 65)
+            max_off = min(max_off, 10)
+            min_p50 = max(min_p50, 0)
+        if "Near Highs" in preset:
+            max_off = min(max_off, 5)
+        if "Full Fundamentals" in preset:
+            min_eps = max(min_eps, 60)
+        if "New RS Highs" in preset:
+            f = f[f['RS Line New High'] == 'Yes']
+
+        if min_rs > 1:
+            f = f[f['RS Rating'].notna() & (f['RS Rating'] >= min_rs)]
+        if min_eps > 1:
+            f = f[f['EPS Rating'].notna() & (f['EPS Rating'] >= min_eps)]
+        if min_comp > 1:
+            f = f[f['Comp Rating'].notna() & (f['Comp Rating'] >= min_comp)]
+        if max_off < 100:
+            f = f[f['% Off High'].notna() & (f['% Off High'] <= max_off)]
+        if min_p50 > -100:
+            f = f[f['Price vs 50-Day'].notna() & (f['Price vs 50-Day'] >= min_p50)]
+        if min_mcap > 0:
+            f = f[f['Market Cap (mil)'].notna() & (f['Market Cap (mil)'] >= min_mcap * 1000)]
+        if search:
+            f = f[f['Symbol'].str.upper().str.contains(search, na=False) |
+                  f['Name'].astype(str).str.upper().str.contains(search, na=False)]
+
+        if sort_col and sort_col in f.columns:
+            f = f.sort_values(sort_col, ascending=False, na_position='last')
+
+        default_cols = ['Symbol', 'Name', 'Industry Name', 'Ind Group Rank', 'Ind Group RS',
+                        'Current Price', 'Price % Chg',
+                        'RS Rating', 'EPS Rating', 'SMR Rating', 'A/D Rating', 'Comp Rating',
+                        '% Off High', 'Price vs 50-Day', '% Chg 3 Months', '% Chg 12 Months',
+                        '50-Day > 150-Day > 200-Day', 'Vol % Chg vs 50-Day', 'Volume (1000s)',
+                        'Market Cap (mil)', 'EPS Due Date', 'Analyst Target Mean', '% Upside to Target']
+        avail_cols = [c for c in default_cols if c in f.columns]
+        _col_options = sorted(c for c in f.columns if c != "#")
+        show_cols = st.multiselect("Columns", _col_options, default=avail_cols, key="scr_cols")
+        if show_cols:
+            show = f[show_cols]
+        else:
+            st.caption("No columns selected — showing Symbol / Name only.")
+            show = f[['Symbol', 'Name']] if {'Symbol', 'Name'} <= set(f.columns) else f.iloc[:, :2]
+
+        st.markdown(f"**{len(f):,} of {n_total:,} tickers match**")
+
+        def _rate_style(val):
+            if pd.isna(val):
+                return ''
+            try:
+                v = float(val)
+            except (TypeError, ValueError):
+                return ''
+            if v >= 90:
+                return 'background-color: #14532d; color: #4ade80'
+            if v >= 80:
+                return 'background-color: #1a3a1a; color: #86efac'
+            if v >= 70:
+                return 'background-color: #1c3a1c; color: #bbf7d0'
+            if v < 30:
+                return 'background-color: #450a0a; color: #fca5a5'
+            return ''
+
+        styled = show.style.map(
+            _rate_style,
+            subset=[c for c in ['RS Rating', 'EPS Rating', 'Comp Rating',
+                                'RS 3-Month Rating', 'RS 6-Month Rating'] if c in show.columns])
+        st.dataframe(styled, use_container_width=True, height=620,
+                     column_config={'Current Price': st.column_config.NumberColumn('Current Price', format='$%.2f')})
+        st.download_button("📥 Download filtered CSV", show.to_csv(index=False),
+                           f"daily_screener_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
+
 
 # Footer
 st.divider()
