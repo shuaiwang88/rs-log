@@ -145,7 +145,8 @@ def _window_ad_stats(prices, vols, highs, lows, w):
     dn = p_rets < 0
     up_vol = np.sum(vtail[up])
     dn_vol = np.sum(vtail[dn])
-    updn_ratio = up_vol / max(1.0, dn_vol)
+    # capped at 20 - see matching comment in calc_ibd_ratings.py._window_ad_features
+    updn_ratio = min(20.0, up_vol / max(1.0, dn_vol))
 
     heavy_up = up & (vratio > 1.2)
     heavy_dn = dn & (vratio > 1.2)
@@ -532,6 +533,76 @@ def extract_fund_features(ticker):
         px = _info_num("regularMarketPrice")
     tgt = _info_num("targetMeanPrice")
     rec["Info_TargetUpside"] = ((tgt / px - 1.0) * 100.0) if (px and px > 0 and np.isfinite(tgt)) else np.nan
+
+    # ── GLM "research round 2/4" features: gross margin level+trend, forward revenue
+    # estimate growth, analyst recommendation consensus, Sloan accruals, OCF/NI ──
+    gp_q = _series_from_label(fund.get("income_q"), ["Gross Profit"])
+    gm_now = gm_trend = np.nan
+    if gp_q and rev_q:
+        gdates, gvals = gp_q
+        gmap = dict(zip(gdates, gvals))
+        rmap2 = dict(zip(*rev_q))
+        gms = [gmap[d] / rmap2[d] * 100.0 for d in gdates
+               if d in rmap2 and abs(rmap2[d]) > 1e-6 and abs(gmap[d]) > 1e-6]
+        if gms:
+            gm_now = gms[0]
+            if len(gms) >= 3:
+                gm_trend = float(np.mean(gms[:2]) - np.mean(gms[-2:]))
+    rec["GrossMargin_Now"] = gm_now
+    rec["GrossMargin_Trend"] = gm_trend
+
+    re = fund.get("revenue_estimate")
+    for _k, out_k in (("0q", "RevEstGrowth_Q"), ("0y", "RevEstGrowth_Y")):
+        gv = np.nan
+        if isinstance(re, dict) and isinstance(re.get(_k), dict):
+            g = re[_k].get("growth")
+            if g is not None:
+                try:
+                    gv = float(g) * 100.0
+                except (TypeError, ValueError):
+                    pass
+        rec[out_k] = gv
+
+    rc = fund.get("recommendations")
+    rec_score = np.nan
+    if isinstance(rc, dict):
+        for _k in sorted(rc.keys()):
+            if _k.startswith("_"):
+                continue
+            v = rc[_k]
+            if isinstance(v, dict) and v.get("strongBuy") is not None:
+                sb = float(v["strongBuy"]); b = float(v.get("buy", 0) or 0)
+                h = float(v.get("hold", 0) or 0); s = float(v.get("sell", 0) or 0)
+                ss = float(v.get("strongSell", 0) or 0)
+                tot = sb + b + h + s + ss
+                if tot > 0:
+                    rec_score = (2 * sb + b - s - 2 * ss) / tot
+                break
+    rec["RecScore"] = rec_score
+
+    def _latest_q(section, labels):
+        blk = fund.get(section)
+        if not isinstance(blk, dict):
+            return {}
+        for lbl in labels:
+            col = blk.get(lbl)
+            if isinstance(col, dict) and col:
+                return {d: v for d, v in col.items() if v is not None}
+        return {}
+
+    ta_q = _latest_q("balance_q", ["Total Assets"])
+    ni_q2 = _latest_q("income_q", ["Net Income"])
+    ocf_q = _latest_q("cashflow_q", ["Operating Cash Flow"])
+    accrual_q = ocf_ni = np.nan
+    common_dates = sorted(set(ta_q) & set(ni_q2) & set(ocf_q), reverse=True)
+    if common_dates:
+        d0 = common_dates[0]
+        ta0, ni0, ocf0 = ta_q[d0], ni_q2[d0], ocf_q[d0]
+        if abs(ta0 or 0) > 1e-6 and ni0 is not None and ocf0 is not None:
+            accrual_q = (float(ni0) - float(ocf0)) / float(ta0) * 100.0
+            ocf_ni = float(ocf0) / float(ni0) if abs(ni0) > 1e-6 else np.nan
+    rec["Accrual_Q"] = accrual_q
+    rec["OCF_NI"] = ocf_ni
 
     rec["Industry"] = info.get("industry")
     return rec

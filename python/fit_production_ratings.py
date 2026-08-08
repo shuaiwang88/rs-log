@@ -162,19 +162,33 @@ def _window_ad_stats(prices, vols, highs, lows, w):
     heavy_net_ratio = h_up_vol / max(1.0, h_up_vol + h_dn_vol)
     net_heavy_intensity = (np.sum(p_rets[heavy_up] * vratio[heavy_up]) -
                             np.sum(np.abs(p_rets[heavy_dn]) * vratio[heavy_dn]))
+    # NetHeavyDays: count-based analog of NetHeavyIntensity (# heavy-up days minus
+    # # heavy-down days, unweighted by move size) - ported from IBD_rating_glm.
+    net_heavy_days = int(np.sum(heavy_up)) - int(np.sum(heavy_dn))
     up_vol, dn_vol = np.sum(vtail[up]), np.sum(vtail[dn])
+    # capped at 20 - see matching comment in calc_ibd_ratings.py._window_ad_features
     rng = np.maximum(1e-6, wh - wl)
     cls_rng = (wp - wl) / rng * 100.0
     vw_cls_rng = np.sum(cls_rng * wv) / max(1.0, np.sum(wv))
+    # AvgClsRange: unweighted mean closing range (VWClsRange's volume-weighted cousin) -
+    # ported from IBD_rating_glm.
+    avg_cls_rng = float(np.mean(cls_rng))
     mf_mult = ((wp - wl) - (wh - wp)) / rng
     cmf = np.sum(mf_mult * wv) / max(1.0, np.sum(wv))
+    # PriceChg: raw window price change (%) - ported from IBD_rating_glm. Distinct from
+    # Dist_XMA (distance from a moving average) and AbsRet_* (RS's own window returns);
+    # this is the A/D-window-aligned version.
+    price_chg = (wp[-1] / wp[0] - 1) * 100.0 if wp[0] > 0 else 0.0
     tag = f"{w}D"
     return {
-        f"UpDnVol_{tag}": up_vol / max(1.0, dn_vol),
+        f"UpDnVol_{tag}": min(20.0, up_vol / max(1.0, dn_vol)),
         f"HeavyNetRatio_{tag}": heavy_net_ratio,
+        f"NetHeavyDays_{tag}": net_heavy_days,
         f"NetHeavyIntensity_{tag}": net_heavy_intensity,
+        f"AvgClsRange_{tag}": avg_cls_rng,
         f"VWClsRange_{tag}": vw_cls_rng,
         f"CMF_{tag}": cmf,
+        f"PriceChg_{tag}": price_chg,
     }
 
 
@@ -416,6 +430,91 @@ def main():
                      "train_metric": score_report("train", y_tr, pct_tr),
                      "test_metric": score_report("test", y_te, pct_te)}
 
+    # ── CANDIDATE: dual-momentum SIGMOID (relative-to-SPY, fixed monotone map,
+    # no percentile rank) — ported from IBD_rating_glm's RS update, which reported
+    # forward R^2 0.834->0.912 with this exact construction, far more than the
+    # ~flat-R2/better-MAE gain Dist_200MA gave our linear-blend+percentile approach
+    # above. Tests here on OUR OWN walk-forward split before deciding whether it's
+    # worth replacing the production RS methodology (a bigger architectural change
+    # than anything else in this file - RS would become a fixed transform, not a
+    # live percentile rank, which needs its own case since A/D and SMR still are).
+    print("\n" + "-" * 80)
+    print("RS — candidate: dual-momentum sigmoid (relative-to-SPY, no percentile rank)")
+    print("-" * 80)
+
+    def _spy_perf_asof(asof):
+        p = resolve_cache_file("SPY", "_1d.parquet")
+        sc = pd.read_parquet(p, columns=["Close"])
+        idx = pd.to_datetime(sc.index)
+        sc = sc[idx <= pd.Timestamp(asof)]
+        close = pd.to_numeric(sc["Close"], errors="coerce").dropna()
+        close = close[close > 0].values
+        latest = float(close[-1])
+        return {label: (latest / close[-(days + 1)] if len(close) > days else 1.0)
+                for label, days in RS_WINDOWS.items()}
+
+    spy_perf_tr = _spy_perf_asof(train_asof)
+    spy_perf_te = _spy_perf_asof(test_asof)
+    rel_labels = list(RS_WINDOWS.keys())
+
+    def _sigmoid(score):
+        z = score - 100.0
+        return np.clip(50.0 + 49.0 * (z / (np.abs(z) + 22.0)), 1, 99)
+
+    def _rel_matrix(d, spy_perf):
+        # RelPerf_W = stock growth factor / SPY growth factor, derived from the
+        # already-computed AbsRet_W (= (growth factor - 1) * 100) - no new file I/O.
+        return np.column_stack([(1.0 + d[f"AbsRet_{lbl}"].values / 100.0) / spy_perf[lbl]
+                                 for lbl in rel_labels])
+
+    dm = tr.dropna(subset=["Dist_200MA"]).copy()
+    dm_te = te.dropna(subset=["Dist_200MA"]).copy()
+    print(f"dual-momentum train n={len(dm):,}, test n={len(dm_te):,}")
+    X_rel_tr = _rel_matrix(dm, spy_perf_tr)
+    d200_tr = dm["Dist_200MA"].values.astype(float)
+    y_dm_tr = dm["RS Rating"].values
+
+    def _dm_score(Xv, d200v, w, k):
+        raw = Xv @ w * 100.0
+        return _sigmoid(raw + k * d200v / 100.0)
+
+    def _dm_obj(p):
+        w = np.abs(p[:5])
+        w = w / w.sum()
+        k = p[5]
+        return np.mean(np.abs(y_dm_tr - _dm_score(X_rel_tr, d200_tr, w, k)))
+
+    dm_starts = [
+        np.array([0.067, 0.557, 0.027, 0.136, 0.214, 91.0]),  # GLM's reported dual-momentum fit
+        np.array([0.15, 0.10, 0.08, 0.05, 0.02, 80.0]),
+        np.array([0.2, 0.2, 0.2, 0.2, 0.2, 50.0]),
+    ]
+    best_dm, best_dm_val = None, np.inf
+    for x0 in dm_starts:
+        r = minimize(_dm_obj, x0, method="Nelder-Mead",
+                     options={"maxiter": 8000, "xatol": 1e-8, "fatol": 1e-8})
+        if r.fun < best_dm_val:
+            best_dm_val, best_dm = r.fun, r
+    w_dm = np.abs(best_dm.x[:5])
+    w_dm = w_dm / w_dm.sum()
+    k_dm = float(best_dm.x[5])
+    print("dual-momentum weights:", dict(zip(rel_labels, np.round(w_dm, 4))), "| k:", round(k_dm, 2))
+
+    pred_dm_tr = _dm_score(X_rel_tr, d200_tr, w_dm, k_dm)
+    print("TRAIN:", score_report("RS dual-momentum in-sample", y_dm_tr, pred_dm_tr))
+
+    X_rel_te = _rel_matrix(dm_te, spy_perf_te)
+    d200_te = dm_te["Dist_200MA"].values.astype(float)
+    y_dm_te = dm_te["RS Rating"].values
+    pred_dm_te = _dm_score(X_rel_te, d200_te, w_dm, k_dm)
+    print("TEST (forward, no retrain):", score_report("RS dual-momentum out-of-sample", y_dm_te, pred_dm_te))
+
+    report["rs_dual_momentum_sigmoid"] = {
+        "weights": dict(zip(rel_labels, w_dm.tolist())), "k": k_dm,
+        "train_metric": score_report("train", y_dm_tr, pred_dm_tr),
+        "test_metric": score_report("test", y_dm_te, pred_dm_te),
+    }
+
     # ════════════════════════════════════════════════════════════════════
     # A/D RATING — OLS multi-window blend, percentile rank -> letter
     # ════════════════════════════════════════════════════════════════════
@@ -434,14 +533,32 @@ def main():
     # real independent signal - confirmed diagnosing the LLY case, where high NetHeavyIntensity/
     # HeavyNetRatio was being dragged down by CMF_130D's negative coefficient). Dist_10MA/21MA
     # added (short-horizon price position, analogous to the 5D/10D volume windows).
-    ad_cols = ["UpDnVol_65D", "HeavyNetRatio_65D", "NetHeavyIntensity_65D", "CMF_65D",
+    ad_cols_base = ["UpDnVol_65D", "HeavyNetRatio_65D", "NetHeavyIntensity_65D", "CMF_65D",
                "UpDnVol_130D", "NetHeavyIntensity_130D", "UpDnVol_30D", "NetHeavyIntensity_30D",
                "Dist_10MA", "Dist_21MA", "Dist_50MA", "Dist_150MA", "Dist_200MA", "PctOff52WHigh",
                "UpDnVol_5D", "HeavyNetRatio_5D", "NetHeavyIntensity_5D", "CMF_5D",
                "UpDnVol_10D", "HeavyNetRatio_10D", "NetHeavyIntensity_10D", "CMF_10D"]
+    # Candidate features ported from IBD_rating_glm's later A/D update, not yet tested against
+    # our own ridge-regularized pipeline: NetHeavyDays (count-based analog of
+    # NetHeavyIntensity), AvgClsRange (unweighted closing-range mean), PriceChg (raw window
+    # price change) at every window, plus 250D extensions of our existing metrics and the
+    # 30D/250D HeavyNetRatio windows we don't have yet. VWClsRange deliberately excluded at
+    # every window (not just 65D) - it's the same OHLCV-derived formula shape as CMF, and
+    # 65D already showed near-total collinearity (corr 0.98) with CMF_65D; ridge alone
+    # wasn't enough to make that pairing useful, so the same redundancy is assumed to hold
+    # at other windows rather than re-proving it window by window.
+    ad_cols_candidate = ["NetHeavyDays_5D", "NetHeavyDays_10D", "NetHeavyDays_30D",
+                          "NetHeavyDays_65D", "NetHeavyDays_130D", "NetHeavyDays_250D",
+                          "AvgClsRange_5D", "AvgClsRange_10D", "AvgClsRange_30D",
+                          "AvgClsRange_65D", "AvgClsRange_130D", "AvgClsRange_250D",
+                          "PriceChg_5D", "PriceChg_10D", "PriceChg_30D",
+                          "PriceChg_65D", "PriceChg_130D", "PriceChg_250D",
+                          "UpDnVol_250D", "HeavyNetRatio_30D", "HeavyNetRatio_250D",
+                          "NetHeavyIntensity_250D", "CMF_250D"]
+    ad_cols = ad_cols_base + ad_cols_candidate
     tr_ad = train.dropna(subset=ad_cols + ["AD_Num", "AD_Letter"])
     te_ad = test.dropna(subset=ad_cols + ["AD_Num", "AD_Letter"])
-    print(f"train n={len(tr_ad):,}, test n={len(te_ad):,}")
+    print(f"train n={len(tr_ad):,}, test n={len(te_ad):,}  ({len(ad_cols)} candidate features)")
 
     X_tr = tr_ad[ad_cols].values
     y_tr_ad = tr_ad["AD_Num"].values
@@ -493,11 +610,17 @@ def main():
                       "Info_ProfitMargin", "Info_FCFYield", "Info_OCFYield", "Info_DebtEquity",
                       "Info_CurrentRatio", "Info_TotalCashPS", "Info_TargetUpside",
                       "Info_NumAnalysts", "Info_FwdPE"]
+    # GLM "research round 2/4": gross-margin level+trend from the income statement (distinct
+    # from Info_GrossMargin, which is a single yfinance info-dict snapshot, not a computed
+    # multi-quarter series), forward revenue-estimate growth, and analyst recommendation
+    # consensus - all found to improve both weeks' holdout in GLM's own ablation.
+    eps_round4_cols = ["GrossMargin_Now", "GrossMargin_Trend", "RevEstGrowth_Q",
+                        "RevEstGrowth_Y", "RecScore"]
     eps_raw_cols = ["EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio", "ROE",
                      "EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
-                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"] + eps_info_cols
-    eps_log_cols = ["EPS_Q0_YoY", "EPS_LT_Growth", "ROE", "EpsSurpriseMean", "EpsRevTrend",
-                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"] + eps_info_cols
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"] + eps_info_cols + eps_round4_cols
+    eps_log_cols = (["EPS_Q0_YoY", "EPS_LT_Growth", "ROE", "EpsSurpriseMean", "EpsRevTrend",
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"] + eps_info_cols + eps_round4_cols)
     eps_clip = {"EPS_Q0_YoY": (-300, 300), "EPS_LT_Growth": (-300, 300),
                 "EpsSurpriseMean": (-300, 300), "EpsRevTrend": (-300, 300),
                 "EstEPSGrowth_Q": (-300, 300), "EstEPSGrowth_Y": (-300, 300),
@@ -553,8 +676,12 @@ def main():
                       "Info_OpMargin", "Info_FCFYield", "Info_OCFYield", "Info_DebtEquity",
                       "Info_CurrentRatio", "Info_QuickRatio", "Info_EarningsGrowth",
                       "Info_EPSQGrowth", "Info_PriceBook"]
+    # GLM "research round 4": Sloan (1996) accruals (NI-OCF)/TotalAssets - negative accruals
+    # signal higher earnings quality - and the OCF/NI cash-conversion ratio, both computed
+    # from the statements (not info.*). Raised GLM's own forward exact-letter 62.1%->62.3%.
+    smr_round4_cols = ["Accrual_Q", "OCF_NI"]
     smr_core_cols = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE"]
-    smr_raw_cols = smr_core_cols + smr_info_cols
+    smr_raw_cols = smr_core_cols + smr_info_cols + smr_round4_cols
     for d in (train, test):
         for c in smr_raw_cols:
             d[c] = pd.to_numeric(d[c], errors="coerce")
@@ -614,11 +741,20 @@ def main():
     # imputed same as production scoring will do for any ticker missing analyst estimates.
     eps_core_cols = ["EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio", "ROE"]
 
-    def comp_features(df, rs_ref, ad_coefs, ad_ref, eps_coefs, eps_b0, eps_meds,
+    def comp_features(df, spy_perf_snap, ad_coefs, ad_ref, eps_coefs, eps_b0, eps_meds,
                        smr_coefs, smr_b0, smr_meds, smr_ref):
         sub = df.dropna(subset=["Comp Rating"] + rs_cols + ad_cols + eps_core_cols + smr_core_cols).copy()
-        raw_rs = gate_rs_matrix(sub) @ rs_weights
-        rs_pct = pct_from_ref(raw_rs, rs_ref)
+        # RS component is the dual-momentum SIGMOID (already final 1-99, same value the
+        # production pipeline will emit as RS Rating) - not the old percentile-rank path.
+        # Composite must be refit against whatever RS actually looks like, since a sigmoid's
+        # output distribution differs from a percentile rank's (uniform by construction);
+        # reusing coefficients fit on the OLD RS distribution silently miscalibrates
+        # Composite even though RS itself got much more accurate (caught via a full-scale
+        # production validation: RS R2 0.777->0.924, but Comp R2 REGRESSED 0.753->0.702
+        # until this refit).
+        X_rel_sub = _rel_matrix(sub, spy_perf_snap)
+        d200_sub = sub["Dist_200MA"].values.astype(float)
+        rs_pct = _dm_score(X_rel_sub, d200_sub, w_dm, k_dm)
         raw_ad = sub[ad_cols].values @ ad_coefs
         ad_pct = pct_from_ref(raw_ad, ad_ref)
         Xe = np.column_stack([
@@ -630,29 +766,44 @@ def main():
         Xs = np.column_stack([log_compress(sub[c].fillna(smr_meds[c]).values) for c in smr_raw_cols])
         smr_raw = smr_b0 + Xs @ smr_coefs
         smr_pct = pct_from_ref(smr_raw, smr_ref)
-        return sub["Comp Rating"].values, rs_pct, eps_raw, smr_pct, ad_pct
 
-    y_c_tr, rs_c_tr, eps_c_tr, smr_c_tr, ad_c_tr = comp_features(
-        train, rs_score_ref, coefs_ad, ad_score_ref, coefs_eps, b0_eps, eps_medians,
+        # Group RS: industry-mean RS (this SAME dual-momentum-sigmoid rs_pct, grouped by the
+        # real "Industry Name" column the MarketSurge export carries), percentile-ranked
+        # within this population. Ported from IBD_rating_glm, which found it lifted both
+        # weeks' holdout Composite R^2 (their forward number: 0.724->0.736). Unmapped/tiny
+        # groups fall back to the neutral middle (50) rather than dropping the row -
+        # matches GLM's own "group_median ~ 50" fallback and our existing convention of
+        # median-imputing rather than losing universe coverage over one missing input.
+        ind = sub["Industry Name"].astype(str).str.strip().where(sub["Industry Name"].notna())
+        ind = ind.where(ind != "")
+        grp_mean_rs = pd.Series(rs_pct, index=sub.index).groupby(ind).transform("mean")
+        group_rs_pct = grp_mean_rs.rank(pct=True) * 98 + 1
+        group_rs_pct = group_rs_pct.where(ind.notna(), 50.0).fillna(50.0).values
+
+        return sub["Comp Rating"].values, rs_pct, eps_raw, smr_pct, ad_pct, group_rs_pct
+
+    y_c_tr, rs_c_tr, eps_c_tr, smr_c_tr, ad_c_tr, grs_c_tr = comp_features(
+        train, spy_perf_tr, coefs_ad, ad_score_ref, coefs_eps, b0_eps, eps_medians,
         coefs_smr, b0_smr, smr_medians, smr_score_ref)
-    X_comp_tr = np.column_stack([eps_c_tr, rs_c_tr, smr_c_tr, ad_c_tr])
+    X_comp_tr = np.column_stack([eps_c_tr, rs_c_tr, smr_c_tr, ad_c_tr, grs_c_tr])
     b0_comp, coefs_comp, pred_comp_tr = lstsq_fit(X_comp_tr, y_c_tr)
     print(f"train n={len(y_c_tr):,}:", score_report("Comp in-sample", y_c_tr, np.clip(pred_comp_tr, 1, 99)))
 
-    y_c_te, rs_c_te, eps_c_te, smr_c_te, ad_c_te = comp_features(
-        test, rs_score_ref, coefs_ad, ad_score_ref, coefs_eps, b0_eps, eps_medians,
+    y_c_te, rs_c_te, eps_c_te, smr_c_te, ad_c_te, grs_c_te = comp_features(
+        test, spy_perf_te, coefs_ad, ad_score_ref, coefs_eps, b0_eps, eps_medians,
         coefs_smr, b0_smr, smr_medians, smr_score_ref)
-    X_comp_te = np.column_stack([eps_c_te, rs_c_te, smr_c_te, ad_c_te])
+    X_comp_te = np.column_stack([eps_c_te, rs_c_te, smr_c_te, ad_c_te, grs_c_te])
     pred_comp_te = b0_comp + X_comp_te @ coefs_comp
     print(f"test n={len(y_c_te):,} (forward, no retrain):",
           score_report("Comp out-of-sample", y_c_te, np.clip(pred_comp_te, 1, 99)))
 
-    comp_weight_table = pd.DataFrame({"Component": ["EPS", "RS", "SMR", "A/D"], "Coef": np.round(coefs_comp, 4)})
+    comp_weight_table = pd.DataFrame({"Component": ["EPS", "RS", "SMR", "A/D", "GroupRS"], "Coef": np.round(coefs_comp, 4)})
     comp_weight_table["Weight_Pct"] = (comp_weight_table["Coef"].abs() / comp_weight_table["Coef"].abs().sum() * 100).round(1)
     print(f"intercept={b0_comp:.3f}")
     print(comp_weight_table.to_string(index=False))
 
-    report["comp"] = {"coefs": {"EPS": coefs_comp[0], "RS": coefs_comp[1], "SMR": coefs_comp[2], "AD": coefs_comp[3]},
+    report["comp"] = {"coefs": {"EPS": coefs_comp[0], "RS": coefs_comp[1], "SMR": coefs_comp[2],
+                                 "AD": coefs_comp[3], "GroupRS": coefs_comp[4]},
                        "intercept": float(b0_comp),
                        "train_metric": score_report("train", y_c_tr, np.clip(pred_comp_tr, 1, 99)),
                        "test_metric": score_report("test", y_c_te, np.clip(pred_comp_te, 1, 99))}

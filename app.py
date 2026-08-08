@@ -6965,12 +6965,15 @@ with tab15:
     from calc_ibd_ratings import (
         apply_rating_percentiles, calc_ad_raw_score,
         calc_pct_off_52w_high_snapshot, calc_eps_rating, calc_rs_raw_score,
-        calc_rs_sub_raw_score, calc_smr_raw_score,
+        calc_rs_sub_raw_score, calc_smr_raw_score, spy_perf_windows,
         extract_eps_from_fundamentals, extract_smr_inputs_from_fundamentals,
     )
     from fetch_fundamentals import get_cached_fundamentals, fetch_and_cache_fundamentals
 
     CACHE_DIR = Path(__file__).resolve().parent / "ticker_cache"
+    _spy_rs = pd.read_parquet(CACHE_DIR / "SPY_1d.parquet", columns=["Close"])
+    _spy_rs.index = pd.to_datetime(_spy_rs.index)
+    _spy_perf = spy_perf_windows(_spy_rs["Close"].astype(float).sort_index())
 
     # ── Mode selection ──
     mode = st.radio("Scope", ["Quick Scan (OHLCV-only ratings)", "Full Scan (incl. fundamentals)"],
@@ -7006,10 +7009,11 @@ with tab15:
                         if df.empty or len(df) < 65 or 'Close' not in df.columns:
                             continue
 
-                        # RS / A-D RAW scores only - these are percentile-ranked against the
-                        # whole scanned universe by apply_rating_percentiles() after the loop
-                        # (a single ticker can't be percentile-ranked in isolation).
-                        rs_raw = calc_rs_raw_score(df['Close'])
+                        # RS is a dual-momentum sigmoid - already the final 1-99 rating, not a
+                        # raw score. A-D and the RS 3M/6M sub-ratings are still percentile-ranked
+                        # against the whole scanned universe by apply_rating_percentiles() after
+                        # the loop (a single ticker can't be percentile-ranked in isolation).
+                        rs_final = calc_rs_raw_score(df['Close'], _spy_perf)
                         rs3m_raw = calc_rs_sub_raw_score(df['Close'], 63)
                         rs6m_raw = calc_rs_sub_raw_score(df['Close'], 126)
                         ad_raw = calc_ad_raw_score(df)
@@ -7048,7 +7052,7 @@ with tab15:
                             'Current Price': round(latest, 2),
                             'Market Cap (mil)': market_cap_mil,
                             '% Off 52W High': round(pct_off, 2) if not np.isnan(pct_off) else None,
-                            '_rs_raw': rs_raw,
+                            'RS Rating': rs_final,
                             '_rs3m_raw': rs3m_raw,
                             '_rs6m_raw': rs6m_raw,
                             '_ad_raw': ad_raw,

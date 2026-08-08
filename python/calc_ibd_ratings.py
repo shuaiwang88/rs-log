@@ -63,36 +63,45 @@ import pandas as pd
 # ──────────────────────────────────────────────────────────────────────────────
 
 RS_RAW_WINDOWS = {"1M": 21, "3M": 63, "6M": 126, "9M": 188, "12M": 249}
-# Refit with the monotonicity constraint (1M weight >= 3M >= 6M >= 9M >= 12M) removed - that
-# constraint was structurally incapable of representing "3M matters more than 1M", which is
-# exactly the shape both an unconstrained refit AND IBD_rating_glm's independent fit converged
-# on. Found via a head-to-head against GLM's production scorer on a shared ~3,000-ticker
-# population: GLM's weights (3M~0.51, 9M~0.38) beat our old monotonic fit even inside OUR OWN
-# pipeline (R2 0.732->0.746 on that check), which motivated re-deriving our own free-form
-# weights rather than adopting GLM's numbers directly. TEST R2 0.869->0.889, MAE 6.88->6.50.
-# Dist_200MA (the stock's OWN %-distance from its 200-day SMA - an absolute-trend term, no
-# benchmark involved) added as a 6th, ungated term - the "dual momentum" insight (relative
-# strength vs a benchmark PLUS an absolute trend filter beats either alone, popularized by
-# Gary Antonacci / StockCharts' SCTR) that IBD_rating_glm's RS update used to take its own
-# forward R^2 0.834->0.912 via a nonlinear sigmoid. Our architecture is a linear blend +
-# percentile rank (not a sigmoid), so the same idea transfers a smaller but still real gain
-# here: TEST R2 unchanged at 0.889 but MAE 6.50->6.44 and corr 0.961->0.968, Composite R2
-# 0.730->0.751, tail (Comp>=80) MAE 6.15->6.00 - Dist_200MA drew the single largest weight
-# (43%) of any RS term, confirming genuine independent signal despite the flat headline R2.
-RS_RAW_WEIGHTS = {"1M": 0.012309453159623928, "3M": 0.3012155462702567, "6M": 0.04582928001065274,
-                   "9M": 0.13572737721157122, "12M": 0.07276532241440425,
-                   "Dist_200MA": 0.43215302093349117}
-# Trend-confirmation gate: a stock's 9M/12M returns only get full weight when its 3M return is
-# also positive (the longer-term strength is "confirmed" by recent price action). When 3M is
-# negative, 9M/12M are scaled down by this factor before blending. Without this, a stock that
-# rallied hard 9-12 months ago and has since reversed (e.g. down -9%/-17%/-34%/-61% over
-# 1M/3M/6M/9M but still +412% over 12M) reads as falsely strong from the stale 12M number alone
-# (raw percentile ~90 vs a true RS Rating of 22) - while a stock merely pausing after a genuine
-# uptrend (one soft month, but 3M/6M/9M all solidly positive) gets penalized for the SAME reason
-# the crash case needs penalizing. Gating on whether 3M confirms or contradicts the longer trend
-# fixes both simultaneously: TEST R²=0.845->0.869, MAE=7.60->6.88, corr=0.940->0.951, with no
-# metric regressing (see python/fit_production_ratings.py).
-RS_TREND_GATE_REDUCTION = 0.50
+# RS Rating is a DUAL-MOMENTUM SIGMOID, not a percentile rank like A/D and SMR - the one
+# rating in this module where percentile-of-a-linear-blend was tried and clearly lost.
+# History: our own weighted-absolute-return blend (percentile-ranked) reached TEST R2 0.889;
+# adding Dist_200MA to that SAME linear+percentile architecture only nudged MAE/corr, not R2
+# (see git history). IBD_rating_glm's independent effort got to forward R^2 0.912 with a
+# fundamentally different construction: (1) performance RELATIVE TO SPY per window (not
+# absolute), (2) a fixed nonlinear sigmoid squashing the weighted relative-perf sum PLUS a
+# k*Dist_200MA "dual momentum" term straight to the final 1-99 scale - no live percentile
+# rank at all. Re-derived independently on our own walk-forward split (not copied): the
+# optimizer converged to weights within rounding of GLM's own fit (further evidence this is
+# a real, robust optimum, not overfitting) and reached TEST R^2=0.9208, MAE=5.16 - by far the
+# single biggest improvement found in this whole ratings investigation (see
+# python/fit_production_ratings.py's "RS - candidate: dual-momentum sigmoid" section).
+# RS 3-Month/RS 6-Month sub-ratings are NOT changed - they stay on the single-window
+# percentile-rank path (calc_rs_sub_raw_score), a smaller/secondary feature not worth the
+# added complexity of a second sigmoid fit.
+RS_SIGMOID_WEIGHTS = {"1M": 0.06712591568726939, "3M": 0.5565596218865313, "6M": 0.026800953619395013,
+                       "9M": 0.13605021454758013, "12M": 0.21346329425922424}
+RS_SIGMOID_K = 91.11316381977677
+
+
+def _rs_sigmoid(score):
+    """GLM's fixed monotone squash: 50 +/- 49 as z=score-100 -> +/-infinity, shape controlled
+    by the 22 constant (smaller = steeper transition around z=0). Ported as-is (not refit) -
+    it's a fixed transform shape, not a fitted parameter; only the weights/k feeding it were
+    refit on our own data above."""
+    z = np.asarray(score, dtype=float) - 100.0
+    return np.clip(50.0 + 49.0 * (z / (np.abs(z) + 22.0)), 1, 99)
+
+
+def spy_perf_windows(spy_close_series):
+    """SPY's own growth factor (price_now / price_N_days_ago) per RS_RAW_WINDOWS window -
+    computed ONCE per run (not per-ticker) and passed into calc_rs_raw_score()."""
+    close = spy_close_series.values.astype(float) if hasattr(spy_close_series, "values") else np.asarray(spy_close_series, dtype=float)
+    close = close[np.isfinite(close) & (close > 0)]
+    n = len(close)
+    latest = close[-1]
+    return {label: (latest / close[-(days + 1)] if n > days else 1.0)
+            for label, days in RS_RAW_WINDOWS.items()}
 
 AD_RAW_FEATURES = [
     "UpDnVol_65D", "HeavyNetRatio_65D", "NetHeavyIntensity_65D", "CMF_65D",
@@ -100,46 +109,117 @@ AD_RAW_FEATURES = [
     "Dist_10MA", "Dist_21MA", "Dist_50MA", "Dist_150MA", "Dist_200MA", "PctOff52WHigh",
     "UpDnVol_5D", "HeavyNetRatio_5D", "NetHeavyIntensity_5D", "CMF_5D",
     "UpDnVol_10D", "HeavyNetRatio_10D", "NetHeavyIntensity_10D", "CMF_10D",
+    "NetHeavyDays_5D", "NetHeavyDays_10D", "NetHeavyDays_30D", "NetHeavyDays_65D",
+    "NetHeavyDays_130D", "NetHeavyDays_250D",
+    "AvgClsRange_5D", "AvgClsRange_10D", "AvgClsRange_30D", "AvgClsRange_65D",
+    "AvgClsRange_130D", "AvgClsRange_250D",
+    "PriceChg_5D", "PriceChg_10D", "PriceChg_30D", "PriceChg_65D", "PriceChg_130D",
+    "PriceChg_250D",
+    "UpDnVol_250D", "HeavyNetRatio_30D", "HeavyNetRatio_250D", "NetHeavyIntensity_250D",
+    "CMF_250D",
 ]
+# NetHeavyDays/AvgClsRange/PriceChg (every window) + the 250D window itself: ported from
+# IBD_rating_glm's later A/D update, re-derived on our own ridge pipeline (not copied
+# coefficients). TEST exact 36.3%->38.0%, within-1 57.2%->59.8%, beating GLM's own reported
+# 37.4%/58.5%. VWClsRange stays excluded at every window (see calc_ad_raw_score docstring).
 AD_RAW_COEFS = [
-    0.34967480193560485, 2.1897638921253963, -0.06719042537158329, 5.181897158177819,
-    0.27691148574671515, -0.008050180344146483, 0.000403154704968294, -0.3654821919756783,
-    -0.13610908645042324, 0.111329192782794, 0.14673085403905506, 0.2152969282340527,
-    -0.1889154560921097, 0.002750442381063726, -1.942157058715131e-08, 0.010478581415874712,
-    1.573336648964523, 0.3726299491741793, 0.0011519686892018336, 0.5875381980017129,
-    -0.967261206595406, 4.673391221438038,
+    0.25277333960862597, 1.960263329353397, -0.032502233291333435, 3.3046114933248685,
+    0.4411713548539264, -0.027600943380462043, -0.019088787728331114, -0.24555902037253827,
+    0.03654986954087032, 0.13399608927395426, 0.14317843288157744, 0.14863312008355178,
+    -0.13751174136941488, -0.0009331129623431693, -2.1308936230151334e-08, 0.0278096334064309,
+    2.1574663473859874, -1.0542324430216827, 0.0015031422052019375, 0.5564848209580533,
+    -1.080901500215005, 3.1265746148425193,
+    0.02358767673666194, 0.03694339061040645, -0.003473574879546994, -0.001992956982178694,
+    0.013771286333304055, -0.01713031622135956,
+    0.014222861904597045, 0.015045938752217367, 0.13817871225802514, 0.10477531081223604,
+    0.06720556219715584, -0.3229415770605083,
+    -0.04463846378407028, -0.0637123463142196, -0.02915582165832346, 0.005973293405562801,
+    0.0018346442233607176, 0.00043824187104783306,
+    0.11670719698309567, 1.1877134749068827, -3.3722765562842816, -0.0003992982160668205,
+    -4.575455336320584,
 ]
-AD_RAW_INTERCEPT = 3.9244287979135892
+AD_RAW_INTERCEPT = 4.529657930595425
 AD_LETTERS_ORDERED = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E"]
 AD_CUM_TOP = {
-    "A+": 0.0738, "A": 0.1577, "A-": 0.1956, "B+": 0.2494, "B": 0.3391, "B-": 0.3896,
-    "C+": 0.4203, "C": 0.4874, "C-": 0.5291, "D+": 0.5670, "D": 0.6639, "D-": 0.7040, "E": 1.0,
+    "A+": 0.0744, "A": 0.1588, "A-": 0.1970, "B+": 0.2511, "B": 0.3415, "B-": 0.3924,
+    "C+": 0.4234, "C": 0.4902, "C-": 0.5316, "D+": 0.5695, "D": 0.6657, "D-": 0.7055, "E": 1.0,
 }
+# Sorted, ~200-point-thinned sample of the TRAIN population's raw A/D score
+# (calc_ad_raw_score() output, INCLUDING AD_RAW_INTERCEPT - same convention the
+# function actually returns) as of the AD_RAW_COEFS fitting date. AD_CUM_TOP's
+# boundaries were fit against percentiles computed against THIS reference, not
+# against whatever universe happens to be in a given run. apply_rating_percentiles()
+# must rank against this frozen array (via pct_from_ref), not a live self-referential
+# rank: ranking A/D raw scores against each day's current universe instead of this
+# frozen reference was found to cost ~4x the error (true Comp>=70 tail MAE 2.01 vs
+# 1.59, bias -1.33 vs -0.17) - not a staleness problem in practice (validated on data
+# 2 weeks past the reference date), and refreshed automatically whenever
+# AD_RAW_COEFS/AD_CUM_TOP are re-fit. Must include the intercept: an earlier version
+# of this array was built from fit_production_ratings.py's ad_score_ref, which omits
+# the intercept (X_tr @ coefs, no +b0) - ranking calc_ad_raw_score()'s WITH-intercept
+# output against that WITHOUT-intercept array silently shifted every percentile by
+# ~4.5 points and made the live bug's symptom (tail bias +3.7, over-scoring) worse
+# than doing nothing. Caught by end-to-end verification against real ground truth
+# before this shipped - see the ratings-tail-population-trap memory for why that
+# verification step matters.
+AD_SCORE_REF = [
+    -7.0144, -4.2407, -2.9968, -2.2002, -1.7923, -1.3142, -1.0410, -0.7984,
+    -0.4373, -0.1702, 0.0302, 0.1895, 0.3939, 0.5387, 0.7068, 0.8430,
+    0.9957, 1.1292, 1.2602, 1.3755, 1.4969, 1.5977, 1.6860, 1.7812,
+    1.8749, 1.9930, 2.0589, 2.1668, 2.2507, 2.3057, 2.4164, 2.4908,
+    2.5701, 2.6441, 2.6954, 2.7809, 2.8509, 2.9211, 2.9545, 3.0057,
+    3.0649, 3.1114, 3.1843, 3.2244, 3.2848, 3.3455, 3.4070, 3.4803,
+    3.5495, 3.6019, 3.6548, 3.7053, 3.7634, 3.8034, 3.8552, 3.9226,
+    3.9803, 4.0230, 4.0727, 4.1224, 4.1628, 4.1979, 4.2381, 4.2881,
+    4.3320, 4.3697, 4.4044, 4.4615, 4.5134, 4.5440, 4.5926, 4.6398,
+    4.6873, 4.7672, 4.8182, 4.8639, 4.9018, 4.9618, 4.9949, 5.0337,
+    5.0792, 5.1188, 5.1698, 5.2161, 5.2735, 5.3259, 5.3891, 5.4225,
+    5.4564, 5.5123, 5.5415, 5.5868, 5.6216, 5.6386, 5.6726, 5.7191,
+    5.7797, 5.8070, 5.8335, 5.8709, 5.9167, 5.9517, 5.9708, 6.0155,
+    6.0370, 6.0688, 6.1224, 6.1503, 6.1835, 6.2190, 6.2456, 6.2982,
+    6.3378, 6.3898, 6.4123, 6.4466, 6.5052, 6.5499, 6.6016, 6.6492,
+    6.6944, 6.7231, 6.7541, 6.7830, 6.8240, 6.8574, 6.8876, 6.9180,
+    6.9480, 6.9747, 6.9969, 7.0373, 7.0647, 7.1047, 7.1685, 7.2263,
+    7.2612, 7.3034, 7.3183, 7.3629, 7.3824, 7.4235, 7.4699, 7.5101,
+    7.5527, 7.5856, 7.6249, 7.6866, 7.7312, 7.7970, 7.8474, 7.8861,
+    7.9438, 7.9879, 8.0300, 8.0809, 8.1212, 8.1925, 8.2441, 8.2908,
+    8.3368, 8.3596, 8.4061, 8.4614, 8.5096, 8.5890, 8.6624, 8.7119,
+    8.7469, 8.8042, 8.8822, 8.9391, 9.0255, 9.1052, 9.1528, 9.2176,
+    9.2911, 9.3270, 9.3793, 9.4536, 9.5094, 9.5861, 9.6539, 9.7121,
+    9.7544, 9.8439, 9.9566, 10.0320, 10.1883, 10.3076, 10.4310, 10.5512,
+    10.6854, 10.8072, 11.0123, 11.1628, 11.2471, 11.5140, 11.6725, 11.9533,
+    12.2662, 12.6490, 13.1272, 13.9493, 15.5515,
+]
 
 EPS_RAW_FEATURES = ["EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio", "ROE",
                      "EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
                      "EstEPSGrowth_Q", "EstEPSGrowth_Y", "Info_ROA", "Info_EPSQGrowth",
                      "Info_GrossMargin", "Info_OpMargin", "Info_ProfitMargin", "Info_FCFYield",
                      "Info_OCFYield", "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
-                     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE"]
-EPS_RAW_COEFS = [1.5256089887129651, 1.4200972997110517, -0.810940265274701, 0.713897349186385,
-                  -0.4264006361356283, 0.1903165809631391, 21.115249847280854, 0.3033869221204607,
-                  0.7334668161126477, 0.10109630099039753, 2.418774803772509, 0.23949367733631088,
-                  -0.6572739678627285, 0.4345257017423123, 1.5818329549279697, -0.3218147297887479,
-                  -0.6756011537387426, -0.42346128870191446, -0.03961994494691097, 0.6488675372001247,
-                  0.025529491438706964, 0.7455024400479839, 0.7509079099110159]
-EPS_RAW_INTERCEPT = 33.39552477469008
-# EpsBeatRate's coefficient (~21-23) dwarfs the others - a company that consistently beats
+                     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE",
+                     "GrossMargin_Now", "GrossMargin_Trend", "RevEstGrowth_Q", "RevEstGrowth_Y",
+                     "RecScore"]
+EPS_RAW_COEFS = [1.4430034117371948, 1.3531651754756555, -1.162047800702229, 0.6470592206198515,
+                  -0.40345062823051747, 0.14692590697026586, 20.19153893775772, 0.2384789946175763,
+                  0.5147992087408103, -0.0120405310172303, 3.4078304369099945, 0.0993645971035024,
+                  -1.357656105279868, -0.018840445850038506, 1.2706836896547302, -0.2963560542656617,
+                  -0.630722305446072, -0.2323606828006485, -0.10890038634101147, 0.5523784990835927,
+                  -0.5471166569857393, 0.5574820819083941, 0.7148620906580537, 2.2990154409643906,
+                  0.8995265916171405, 0.17205990558273135, 0.7848279747558563, 4.924851626129315]
+EPS_RAW_INTERCEPT = 26.364075527614006
+# EpsBeatRate's coefficient (~20-23) dwarfs the others - a company that consistently beats
 # analyst estimates is a strong, largely independent EPS-Rating signal, found by comparing
 # against IBD_rating_glm's parallel effort and confirmed by our own walk-forward refits:
-# R^2 0.333 (4 fundamentals-only features) -> 0.416 (+6 analyst-history features) -> 0.444
-# (+13 yfinance info-dict features: margins, ROA, FCF/OCF yield, debt/equity, analyst count/
-# target upside, forward P/E), each step validated on the same test population, no regressions.
+# R^2 0.333 (4 fundamentals-only) -> 0.416 (+6 analyst-history) -> 0.444 (+13 yfinance
+# info-dict fields) -> 0.456 (+gross-margin trend, forward revenue-estimate growth, analyst
+# recommendation consensus), each step validated on the same test population, no regressions.
 EPS_LOG_FEATURES = {"EPS_Q0_YoY", "EPS_LT_Growth", "ROE", "EpsSurpriseMean", "EpsRevTrend",
                      "EstEPSGrowth_Q", "EstEPSGrowth_Y", "Info_ROA", "Info_EPSQGrowth",
                      "Info_GrossMargin", "Info_OpMargin", "Info_ProfitMargin", "Info_FCFYield",
                      "Info_OCFYield", "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
-                     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE"}
+                     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE",
+                     "GrossMargin_Now", "GrossMargin_Trend", "RevEstGrowth_Q", "RevEstGrowth_Y",
+                     "RecScore"}
 EPS_CLIP = {
     "EPS_Q0_YoY": (-300, 300), "EPS_LT_Growth": (-300, 300), "EpsSurpriseMean": (-300, 300),
     "EpsRevTrend": (-300, 300), "EstEPSGrowth_Q": (-300, 300), "EstEPSGrowth_Y": (-300, 300),
@@ -156,24 +236,27 @@ EPS_MEDIANS = {
     "Info_FCFYield": 3.3823657765832724, "Info_OCFYield": 6.509364222585143,
     "Info_DebtEquity": 64.3, "Info_CurrentRatio": 1.707, "Info_TotalCashPS": 4.555,
     "Info_TargetUpside": 13.228671837396222, "Info_NumAnalysts": 9.0, "Info_FwdPE": 14.3565285,
+    "GrossMargin_Now": 41.86893712757904, "GrossMargin_Trend": -0.022063950731123327,
+    "RevEstGrowth_Q": 7.29, "RevEstGrowth_Y": 7.91, "RecScore": 0.7777777777777778,
 }
 
 # Same 13 yfinance info-dict fields as EPS_RAW_FEATURES's Info_* group (overlapping but not
 # identical set), ported from IBD_rating_glm - raised its own forward exact-letter accuracy
 # 60.2%->62.1%; our own walk-forward refit went 62.6%->66.1% exact, R^2 0.645->0.698, same
-# test population, no regressions. Every SMR_RAW_FEATURES entry is log-compressed (no
-# exceptions, unlike EPS) - matches the original 5-feature formula's convention.
+# test population, no regressions. Plus Sloan (1996) accruals + OCF/NI cash-conversion ratio
+# (GLM's later update) -> 66.1%->66.3% exact, R^2 0.698->0.701. Every SMR_RAW_FEATURES entry
+# is log-compressed (no exceptions, unlike EPS) - matches the original 5-feature convention.
 SMR_RAW_FEATURES = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE",
                      "Info_ProfitMargin", "Info_RevGrowth", "Info_ROA", "Info_GrossMargin",
                      "Info_OpMargin", "Info_FCFYield", "Info_OCFYield", "Info_DebtEquity",
                      "Info_CurrentRatio", "Info_QuickRatio", "Info_EarningsGrowth",
-                     "Info_EPSQGrowth", "Info_PriceBook"]
-SMR_RAW_COEFS = [0.6780180390408662, 3.779136858292958, 1.4412834082773123, -0.9379056241378534,
-                  2.1300106672997203, 2.9461487536594566, 0.21472465865842366, 1.3314709926584603,
-                  -0.8336381900537227, 0.9520353765354804, -0.6066899048011337, 0.05083409461091817,
-                  -0.9383584146282787, -2.648487315623116, 2.091174440018797, -0.8081785687947829,
-                  0.7188022287773491, 2.7387764981156293]
-SMR_RAW_INTERCEPT = 46.71183495657752
+                     "Info_EPSQGrowth", "Info_PriceBook", "Accrual_Q", "OCF_NI"]
+SMR_RAW_COEFS = [0.7022767039998594, 3.730370704506224, 1.7277394295373407, -0.9097149573267861,
+                  2.1876706404434647, 2.918130687769683, 0.19986478839446659, 1.3247072452669433,
+                  -0.9097611860066741, 0.842554764726071, -0.6734046195914816, -0.07218055273867977,
+                  -0.9413433916673032, -2.0530027952712704, 1.616032292378697, -0.7943103163687157,
+                  0.6889537809805001, 2.7177953094369154, -1.2680066140483437, -0.5238646141710075]
+SMR_RAW_INTERCEPT = 46.73321955393634
 SMR_MEDIANS = {
     "Sales_Q0_YoY": 9.505376828065279, "Sales_LT_Growth": 6.82156508892308,
     "Margin_Now": 9.123252858958068, "Margin_Trend": 0.3618103646649491, "ROE": 10.741,
@@ -183,14 +266,65 @@ SMR_MEDIANS = {
     "Info_DebtEquity": 65.049, "Info_CurrentRatio": 1.699, "Info_QuickRatio": 1.104,
     "Info_EarningsGrowth": 17.45, "Info_EPSQGrowth": 16.900000000000002,
     "Info_PriceBook": 2.3680876499999997,
+    "Accrual_Q": -0.5341737055260303, "OCF_NI": 1.15783621140764,
 }
 SMR_LETTERS_ORDERED = ["A", "B", "C", "D", "E"]
 SMR_CUM_TOP = {"A": 0.3033465275278877, "B": 0.586541921554516, "C": 0.8179201151493343,
                 "D": 0.9701331414177762, "E": 1.0}
+# Frozen TRAIN reference for SMR percentile ranking - see AD_SCORE_REF's comment
+# for why this is needed (Composite's fit assumes SMR's percentile is computed
+# against this same frozen reference, never a live population). Unlike AD_SCORE_REF,
+# this one never had an intercept-omission bug: SMR's fit used lstsq_fit()'s returned
+# `pred` (which folds the intercept in via the ones-column), not a separately
+# recomputed X @ coefs - confirmed by rebuilding this array from calc_smr_raw_score()
+# directly and finding it matches to within thinning noise. Standalone SMR accuracy is
+# also insensitive to this choice either way (5 letter grades is coarse enough that
+# live vs frozen ranking barely moves it) - kept for consistency with A/D and because
+# Composite's own fit assumes it.
+SMR_SCORE_REF = [
+    -16.7911, 1.1311, 9.1094, 12.1888, 14.2092, 17.8770, 19.5393, 21.0959,
+    22.5612, 23.7109, 24.9649, 25.7364, 26.4436, 27.5993, 28.5152, 29.3937,
+    29.9705, 31.1646, 31.6743, 32.7816, 33.5460, 34.5228, 35.4266, 36.0631,
+    36.6611, 37.1729, 37.5127, 38.1872, 38.7518, 39.0222, 39.7958, 40.3978,
+    41.0981, 41.6388, 42.3310, 42.9122, 43.5706, 44.0003, 44.7389, 45.2065,
+    45.7328, 46.3098, 46.8898, 47.2621, 47.6261, 48.1095, 48.6367, 49.0909,
+    49.5692, 49.8987, 50.5947, 50.9804, 51.4462, 51.8848, 52.3864, 52.7191,
+    53.0380, 53.3776, 53.6028, 54.0070, 54.5312, 54.8582, 55.0376, 55.4696,
+    55.8502, 56.1308, 56.5351, 56.7561, 57.0299, 57.4055, 57.7714, 58.1807,
+    58.4580, 58.7181, 59.0486, 59.4969, 59.7460, 59.9729, 60.2001, 60.3949,
+    60.7220, 61.0099, 61.2925, 61.7329, 62.1362, 62.5203, 62.6908, 63.0622,
+    63.2728, 63.6627, 63.8686, 64.2991, 64.6016, 64.8225, 65.0433, 65.2882,
+    65.5346, 65.7758, 65.9766, 66.2366, 66.4724, 66.7504, 67.0376, 67.3626,
+    67.5738, 67.7995, 68.0299, 68.1520, 68.4117, 68.6387, 68.8314, 69.0737,
+    69.3047, 69.5042, 69.7245, 69.9418, 70.1159, 70.3072, 70.5063, 70.7555,
+    70.9897, 71.1878, 71.2990, 71.4289, 71.5739, 71.6220, 71.8279, 71.9795,
+    72.1101, 72.3061, 72.4935, 72.6559, 72.7565, 72.9414, 73.1106, 73.2644,
+    73.3985, 73.5429, 73.6857, 73.9421, 74.1010, 74.3390, 74.4552, 74.5880,
+    74.7260, 74.8842, 75.0434, 75.1550, 75.3795, 75.5495, 75.6466, 75.7783,
+    75.9409, 76.0293, 76.1356, 76.2565, 76.4727, 76.6408, 76.7714, 76.9314,
+    77.1656, 77.2906, 77.4428, 77.6110, 77.7748, 77.9358, 78.0516, 78.2291,
+    78.3249, 78.5407, 78.6858, 78.8672, 79.0071, 79.1510, 79.2879, 79.4676,
+    79.6869, 79.7671, 79.9004, 80.0424, 80.2422, 80.4758, 80.6348, 80.8148,
+    81.1340, 81.3053, 81.4878, 81.7517, 82.0661, 82.2930, 82.6707, 82.8663,
+    83.1314, 83.3759, 83.6791, 84.0671, 84.4023, 84.8127, 85.1874, 85.5544,
+    86.1408, 86.6256, 87.2285, 87.9833, 88.8111, 89.8148, 90.9240, 92.7947,
+    94.7716, 98.0609, 103.8314,
+]
 
-COMPOSITE_COEFS = {"EPS": 0.32922245099195746, "RS": 0.5122822757042118,
-                    "SMR": 0.22275320342583896, "AD": 0.20780758917224953}
-COMPOSITE_INTERCEPT = -3.0859435551104633
+# Refit after RS switched from percentile-rank to the dual-momentum sigmoid (see
+# RS_SIGMOID_WEIGHTS above) - reusing coefficients fit against the OLD RS distribution
+# silently miscalibrated Composite even though RS itself got much more accurate (a sigmoid's
+# output distribution isn't uniform like a percentile rank's): caught via full-scale
+# production validation, Comp R2 regressed 0.753->0.702 until refitting restored it to 0.770.
+# GroupRS (percentile of "Ind Group RS", the industry-mean RS Rating apply_group_columns()
+# computes - see apply_rating_percentiles()) added as a 5th component, ported from
+# IBD_rating_glm (their own forward Composite R^2: 0.724->0.736 from the same addition):
+# our own walk-forward refit went 0.772->0.794, tail (Comp>=80) MAE 6.05->5.65 and
+# scored>=80 75.3%->77.1% - both now beat GLM's own reported 5.99/76.8% on this metric.
+COMPOSITE_COEFS = {"EPS": 0.35016379288315086, "RS": 0.5163478815816657,
+                    "SMR": 0.19376609511257614, "AD": 0.1979711011559106,
+                    "GroupRS": 0.1355923447468574}
+COMPOSITE_INTERCEPT = -12.956721005509605
 
 # IBD-style eligibility filter for the RATING universe (the comparison pool that
 # percentile ranks are computed against). Junk/illiquid/tiny-cap names are excluded
@@ -212,44 +346,46 @@ def _log_compress(x):
 # RS RATING — raw score (per-ticker); apply_rating_percentiles() finishes the job
 # ──────────────────────────────────────────────────────────────────────────────
 
-def calc_rs_raw_score(close_series):
-    """Weighted blend of the stock's own ABSOLUTE trailing returns (1M/3M/6M/9M/12M),
-    with 9M/12M scaled down by RS_TREND_GATE_REDUCTION whenever the 3M return is
-    negative (see RS_TREND_GATE_REDUCTION for why: a stale 12M gain from a rally
-    that's already reversed shouldn't count the same as one still confirmed by
-    recent price action).
+def calc_rs_raw_score(close_series, spy_perf):
+    """Dual-momentum sigmoid RS Rating (already final, 1-99 - despite the name kept for
+    call-site continuity, this is NOT a raw score needing apply_rating_percentiles(); RS
+    Rating is set directly from this, the same way EPS Rating is).
 
-    This is a RAW number, not a 1-99 rating — pass the whole universe's raw scores
-    through apply_rating_percentiles() to get the final RS Rating. Returns NaN if
-    the ticker doesn't have the full 12-month history the blend needs (matches the
-    calibration: partial windows were never validated, so they're not guessed at
-    here either).
+    score = sum_i(w_i * (stock_perf_i / spy_perf_i)) * 100 + k * Dist_200MA / 100, then
+    squashed through _rs_sigmoid(). Returns NaN if the ticker doesn't have the full
+    12-month history the blend needs (matches the calibration: partial windows were never
+    validated, so they're not guessed at here either).
+
+    Parameters
+    ----------
+    close_series : the ticker's own Close price series.
+    spy_perf : dict from spy_perf_windows(SPY's Close series) - SAME dict reused across
+        every ticker in a run (SPY doesn't change per-ticker), computed once by the caller.
     """
     close = close_series.values.astype(float) if hasattr(close_series, "values") else np.asarray(close_series, dtype=float)
     n = len(close)
     if n == 0:
         return np.nan
     latest = close[-1]
-    rets = {}
+    rel = {}
     for label, days in RS_RAW_WINDOWS.items():
         if n <= days:
             return np.nan
         past = close[-(days + 1)]
         if not (past > 0):
             return np.nan
-        rets[label] = (latest / past - 1.0) * 100.0
+        stock_perf = latest / past
+        spy_p = spy_perf.get(label) or 1.0
+        rel[label] = stock_perf / spy_p
 
     # Dist_200MA: absolute-trend term (no benchmark) - n > 249 (checked above via the 12M
     # window) guarantees at least 250 bars, so the 200-day SMA always has a full window.
     ma200 = float(np.mean(close[-200:]))
     dist_200ma = (latest / ma200 - 1.0) * 100.0 if ma200 > 0 else 0.0
 
-    gate = 1.0 if rets["3M"] >= 0 else RS_TREND_GATE_REDUCTION
-    raw = (RS_RAW_WEIGHTS["1M"] * rets["1M"] + RS_RAW_WEIGHTS["3M"] * rets["3M"] +
-           RS_RAW_WEIGHTS["6M"] * rets["6M"] + RS_RAW_WEIGHTS["9M"] * rets["9M"] * gate +
-           RS_RAW_WEIGHTS["12M"] * rets["12M"] * gate +
-           RS_RAW_WEIGHTS["Dist_200MA"] * dist_200ma)
-    return float(raw)
+    score = sum(RS_SIGMOID_WEIGHTS[label] * rel[label] for label in RS_RAW_WINDOWS) * 100.0
+    score += RS_SIGMOID_K * dist_200ma / 100.0
+    return float(_rs_sigmoid(score))
 
 
 def calc_rs_sub_raw_score(close_series, days):
@@ -323,7 +459,13 @@ def _window_ad_features(prices, vols, highs, lows, w):
     dn = p_rets < 0
     up_vol = np.sum(vtail[up])
     dn_vol = np.sum(vtail[dn])
-    updn_ratio = up_vol / max(1.0, dn_vol)
+    # Capped at 20: short windows (5D/10D) routinely have near-zero down-volume,
+    # and up_vol/max(1.0, dn_vol) then explodes into the tens of millions (e.g. a
+    # genuine ratio of ~200M was seen for a 5-day all-up window) - a share-count
+    # artifact of the 1.0 floor, not real signal. 20 sits above every well-behaved
+    # window's natural max (250D's observed max was ~20.6) so real strong-accumulation
+    # readings aren't clipped, only the divide-by-near-zero blowups are.
+    updn_ratio = min(20.0, up_vol / max(1.0, dn_vol))
 
     heavy_up = up & (vratio > 1.2)
     heavy_dn = dn & (vratio > 1.2)
@@ -332,35 +474,54 @@ def _window_ad_features(prices, vols, highs, lows, w):
     heavy_net_ratio = h_up_vol / max(1.0, h_up_vol + h_dn_vol)
     net_heavy_intensity = (np.sum(p_rets[heavy_up] * vratio[heavy_up]) -
                             np.sum(np.abs(p_rets[heavy_dn]) * vratio[heavy_dn]))
+    # NetHeavyDays: count-based analog of NetHeavyIntensity (# heavy-up days minus
+    # # heavy-down days, unweighted by move size) - ported from IBD_rating_glm.
+    net_heavy_days = int(np.sum(heavy_up)) - int(np.sum(heavy_dn))
 
     rng = np.maximum(1e-6, wh - wl)
     cls_rng = (wp - wl) / rng * 100.0
     vw_cls_rng = np.sum(cls_rng * wv) / max(1.0, np.sum(wv))
+    # AvgClsRange: unweighted mean closing range (VWClsRange's volume-weighted cousin) -
+    # ported from IBD_rating_glm. VWClsRange itself stays display-only (not in
+    # AD_RAW_FEATURES): it correlates 0.98 with CMF at the same window (same OHLCV-derived
+    # shape), a redundancy already confirmed at 65D and assumed to hold at every window.
+    avg_cls_rng = float(np.mean(cls_rng))
     mf_mult = ((wp - wl) - (wh - wp)) / rng
     cmf = np.sum(mf_mult * wv) / max(1.0, np.sum(wv))
+    # PriceChg: raw window price change (%) - ported from IBD_rating_glm. Distinct from
+    # Dist_XMA (distance from a moving average) and RS's own AbsRet_* windows.
+    price_chg = (wp[-1] / wp[0] - 1) * 100.0 if wp[0] > 0 else 0.0
 
     return {
         "UpDnVol": updn_ratio,
         "HeavyNetRatio": heavy_net_ratio,
+        "NetHeavyDays": net_heavy_days,
         "NetHeavyIntensity": net_heavy_intensity,
+        "AvgClsRange": avg_cls_rng,
         "VWClsRange": vw_cls_rng,
         "CMF": cmf,
+        "PriceChg": price_chg,
     }
 
 
 def calc_ad_raw_score(df):
-    """Ridge-regularized blend of multi-window (5/10/30/65/130D) Chaikin-money-flow /
+    """Ridge-regularized blend of multi-window (5/10/30/65/130/250D) Chaikin-money-flow /
     heavy-volume-day features plus moving-average-distance and % off 52-week high.
 
     The short 5D/10D windows were added after A/B-testing against GLM's broader
     AD_WINDOWS and confirmed a real out-of-sample win (TEST within-1-grade accuracy
     53.8%->56.7%) — recent accumulation/distribution carries signal the 30D+ windows
-    alone smooth away. CMF_130D and VWClsRange_65D were then dropped (VWClsRange_65D
-    correlates 0.98 with CMF_65D - same signal; CMF_130D correlates 0.75 with CMF_65D,
-    causing the ridge fit to split a large canceling coefficient pair across them - a
-    collinearity artifact, not independent signal) and Dist_10MA/21MA added (short-
-    horizon price position). Net: TEST exact 32.1%->36.3%, within-1 51.5%->57.2%
-    (see python/fit_production_ratings.py).
+    alone smooth away. CMF_130D and VWClsRange (every window) were then dropped
+    (VWClsRange_65D correlates 0.98 with CMF_65D - same OHLCV-derived shape, redundant;
+    CMF_130D correlates 0.75 with CMF_65D, causing the ridge fit to split a large
+    canceling coefficient pair across them - a collinearity artifact, not independent
+    signal) and Dist_10MA/21MA added (short-horizon price position). Net: TEST exact
+    32.1%->36.3%, within-1 51.5%->57.2%. A later GLM update added NetHeavyDays (count-
+    based analog of NetHeavyIntensity), AvgClsRange (unweighted closing-range mean),
+    and PriceChg (raw window return) at every window plus the 250D window itself -
+    re-derived and refit on our own ridge pipeline (not copied): TEST exact 36.3%->38.0%,
+    within-1 57.2%->59.8%, beating GLM's own reported 37.4%/58.5% (see
+    python/fit_production_ratings.py).
 
     RAW number, not a grade — apply_rating_percentiles() percentile-ranks this
     against the eligible universe and converts to an A+..E grade. Returns NaN if
@@ -375,7 +536,7 @@ def calc_ad_raw_score(df):
         return np.nan
 
     feats = {}
-    for w in (5, 10, 30, 65, 130):
+    for w in (5, 10, 30, 65, 130, 250):
         wf = _window_ad_features(close, volume, high, low, w)
         if wf is None:
             return np.nan
@@ -584,6 +745,25 @@ def calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, 
 # UNIVERSE POST-PASS — percentile-ranks raw scores, finalizes RS/A-D/SMR/Composite
 # ──────────────────────────────────────────────────────────────────────────────
 
+def pct_from_ref(raw_vals, score_ref):
+    """1-99 percentile of raw scores against a FROZEN reference distribution
+    (searchsorted/ECDF) - see AD_SCORE_REF's comment for why A/D and SMR must use
+    this instead of ranking against whatever universe happens to be in the current
+    run. Mirrors fit_production_ratings.py's pct_from_ref exactly (that's what
+    AD_CUM_TOP/SMR_CUM_TOP were calibrated against). Vectorized: raw_vals may be a
+    scalar or array-like."""
+    score_ref = np.sort(np.asarray(score_ref, dtype=float))
+    n = len(score_ref)
+    scalar_in = np.isscalar(raw_vals) or (isinstance(raw_vals, np.ndarray) and raw_vals.ndim == 0)
+    raw_vals = np.atleast_1d(np.asarray(raw_vals, dtype=float))
+    out = np.full(len(raw_vals), np.nan)
+    ok = ~np.isnan(raw_vals)
+    if n > 0 and np.any(ok):
+        idx = np.searchsorted(score_ref, raw_vals[ok], side="right")
+        out[ok] = np.clip(idx / n * 99.0, 1, 99)
+    return float(out[0]) if scalar_in else out
+
+
 def letter_from_pct(pct, letters_ordered, cum_top):
     """Assign a letter grade from a 1-99 percentile using train-frozen grade-frequency
     boundaries (cum_top[g] = cumulative population share from the best grade down
@@ -598,24 +778,39 @@ def letter_from_pct(pct, letters_ordered, cum_top):
 
 def apply_rating_percentiles(out, min_price=None, min_mktcap_mil=None):
     """Universe post-pass (same pattern as apply_group_columns): turns the raw
-    per-ticker scores already on `out` into final RS Rating / RS 3-Month Rating /
-    RS 6-Month Rating / A/D Rating / SMR Rating / Composite Rating, percentile-
-    ranked LIVE against the CURRENT eligible universe.
+    per-ticker scores already on `out` into final RS 3-Month Rating / RS 6-Month
+    Rating / A/D Rating / SMR Rating / Composite Rating, percentile-ranked LIVE
+    against the CURRENT eligible universe. RS Rating itself is NOT percentile-ranked
+    here - calc_rs_raw_score() already returns the final 1-99 dual-momentum-sigmoid
+    value (same pattern as EPS Rating), so this just applies the eligibility mask.
 
     Eligibility = price >= min_price AND (market cap unknown OR market cap >=
     min_mktcap_mil) — IBD's own junk/tiny-cap filter. Ineligible tickers get every
     rating left blank (None/NaN), not scored, matching this pipeline's existing
     "leave blank rather than guess" convention.
 
-    Ranking against the LIVE current universe (not a frozen historical reference)
-    is deliberate: percentile rank is supposed to self-normalize to today's overall
-    market dispersion, which a frozen reference would undermine as it goes stale.
-    Both production call sites (build_daily_screener.py, app.py's Ratings Scanner)
-    already loop over the full universe per run, so this is always available.
+    RS 3/6-Month Rating and Group RS rank LIVE against the current eligible universe
+    (both production call sites loop over the full universe per run, so this is
+    always available) - there's no calibration step downstream of them that assumes
+    a particular reference shape, so self-normalizing to today's dispersion is fine.
 
-    Requires hidden per-ticker fields _rs_raw, _rs3m_raw, _rs6m_raw, _ad_raw,
-    _smr_raw, plus 'Current Price', 'Market Cap (mil)', and 'EPS Rating' to
-    already be on `out`.
+    A/D Rating and SMR Rating are different: AD_CUM_TOP/SMR_CUM_TOP were fit against
+    percentiles computed against a FROZEN train-period reference (AD_SCORE_REF/
+    SMR_SCORE_REF), and Composite's own coefficients were fit assuming ad_pct/smr_pct
+    are computed the same way (see fit_production_ratings.py's comp_features()).
+    Ranking them LIVE instead was tried and measurably worse - on the real
+    Comp Rating>=70 tail, A/D's bias went from -0.17 (frozen reference) to -1.20
+    (live), because AD_CUM_TOP's cutoffs no longer matched the shape of whatever
+    population the live rank was computed against. So A/D/SMR use pct_from_ref()
+    against the frozen arrays; only RS3M/RS6M/GroupRS still self-normalize live.
+
+    Requires 'RS Rating' (already final), hidden per-ticker fields _rs3m_raw,
+    _rs6m_raw, _ad_raw, _smr_raw, plus 'Current Price', 'Market Cap (mil)', and
+    'EPS Rating' to already be on `out`. 'Ind Group RS' (from apply_group_columns(),
+    which must run BEFORE this function - see build_daily_screener.py) is optional:
+    if present, its percentile feeds Composite's 5th component; if absent (e.g. a
+    lighter call site with no industry mapping), Group RS falls back to a neutral
+    50 for every row rather than the whole pass failing.
     """
     min_price = RATING_MIN_PRICE if min_price is None else min_price
     min_mktcap_mil = RATING_MIN_MKTCAP_MIL if min_mktcap_mil is None else min_mktcap_mil
@@ -633,28 +828,44 @@ def apply_rating_percentiles(out, min_price=None, min_mktcap_mil=None):
             ranks.loc[pool.index] = np.clip(pool.rank(pct=True, method="average") * 99, 1, 99)
         return ranks
 
-    rs_pct = _pct_rank_99("_rs_raw")
-    out["RS Rating"] = rs_pct.round(1)
+    def _pct_rank_ref(raw_col, score_ref):
+        s = pd.to_numeric(out.get(raw_col), errors="coerce").where(eligible)
+        return pd.Series(pct_from_ref(s.values, score_ref), index=s.index)
+
+    rs_val = pd.to_numeric(out.get("RS Rating"), errors="coerce").where(eligible)
+    out["RS Rating"] = rs_val.round(1)
     out["RS 3-Month Rating"] = _pct_rank_99("_rs3m_raw").round(1)
     out["RS 6-Month Rating"] = _pct_rank_99("_rs6m_raw").round(1)
 
-    ad_pct = _pct_rank_99("_ad_raw")
+    # Group RS: percentile of "Ind Group RS" (the industry-mean RS Rating,
+    # apply_group_columns()'s job) - Composite's 5th component. Neutral 50 fallback
+    # when the column is missing entirely or a specific row has no mapped industry,
+    # so Composite stays computable everywhere rather than losing coverage over one
+    # optional input (matches EPS_MEDIANS/SMR_MEDIANS-style imputation elsewhere).
+    group_rs_pct = _pct_rank_99("Ind Group RS").fillna(50.0) if "Ind Group RS" in out.columns \
+        else pd.Series(50.0, index=out.index)
+
+    ad_pct = _pct_rank_ref("_ad_raw", AD_SCORE_REF)
     out["A/D Score"] = ad_pct.round(1)
     out["A/D Rating"] = [letter_from_pct(p, AD_LETTERS_ORDERED, AD_CUM_TOP) for p in ad_pct]
     if "_ad_prev_raw" in out.columns:
-        ad_prev_pct = _pct_rank_99("_ad_prev_raw")
+        ad_prev_pct = _pct_rank_ref("_ad_prev_raw", AD_SCORE_REF)
         out["A/D Rating - Pr Wk"] = [letter_from_pct(p, AD_LETTERS_ORDERED, AD_CUM_TOP) for p in ad_prev_pct]
 
-    smr_pct = _pct_rank_99("_smr_raw")
+    smr_pct = _pct_rank_ref("_smr_raw", SMR_SCORE_REF)
     out["SMR Score"] = smr_pct.round(1)
     out["SMR Rating"] = [letter_from_pct(p, SMR_LETTERS_ORDERED, SMR_CUM_TOP) for p in smr_pct]
 
     eps = pd.to_numeric(out.get("EPS Rating"), errors="coerce").where(eligible)
     out["EPS Rating"] = eps
 
-    comp_ok = eligible & eps.notna() & rs_pct.notna() & smr_pct.notna() & ad_pct.notna()
-    comp_raw = (COMPOSITE_INTERCEPT + COMPOSITE_COEFS["EPS"] * eps + COMPOSITE_COEFS["RS"] * rs_pct +
-                COMPOSITE_COEFS["SMR"] * smr_pct + COMPOSITE_COEFS["AD"] * ad_pct)
+    # group_rs_pct is never NaN (fillna(50.0) above), so it's deliberately left out of
+    # comp_ok - a missing/unmapped industry shouldn't block Comp Rating from computing off
+    # the other 4 components, it just contributes a neutral offset.
+    comp_ok = eligible & eps.notna() & rs_val.notna() & smr_pct.notna() & ad_pct.notna()
+    comp_raw = (COMPOSITE_INTERCEPT + COMPOSITE_COEFS["EPS"] * eps + COMPOSITE_COEFS["RS"] * rs_val +
+                COMPOSITE_COEFS["SMR"] * smr_pct + COMPOSITE_COEFS["AD"] * ad_pct +
+                COMPOSITE_COEFS["GroupRS"] * group_rs_pct)
     out["Comp Rating"] = comp_raw.where(comp_ok).clip(1, 99).round(0)
 
     return out
@@ -914,6 +1125,93 @@ def extract_info_features(fund):
     px = _info_num(info, "currentPrice") or _info_num(info, "regularMarketPrice")
     tgt = _info_num(info, "targetMeanPrice")
     rec["Info_TargetUpside"] = ((tgt / px - 1.0) * 100.0) if (px and px > 0 and tgt is not None) else None
+    return rec
+
+
+def extract_quality_features(fund):
+    """GLM "research round 2/4" features (ported): gross-margin level+trend from the income
+    statement, forward revenue-estimate growth, analyst recommendation consensus (all 3 for
+    EPS_RAW_FEATURES), plus Sloan (1996) accruals and the OCF/NI cash-conversion ratio (for
+    SMR_RAW_FEATURES) - both weeks improved in GLM's own ablation for each.
+
+    Returns a dict with keys GrossMargin_Now, GrossMargin_Trend, RevEstGrowth_Q, RevEstGrowth_Y,
+    RecScore, Accrual_Q, OCF_NI - any may be None if the underlying fund.json table is missing.
+    """
+    if not fund or fund.get('error'):
+        return {}
+    rec = {}
+
+    rev_q = _series_from_label(fund.get('income_q'), ('Total Revenue',))
+    gp_q = _series_from_label(fund.get('income_q'), ('Gross Profit',))
+    gm_now = gm_trend = None
+    if gp_q and rev_q:
+        gdates, gvals = gp_q
+        rmap = dict(zip(*rev_q))
+        # _series_from_label preserves None at calendar-gap positions (see its docstring) -
+        # both the gross-profit value and the matched revenue value must be real numbers.
+        gms = [gvals[i] / rmap[gdates[i]] * 100.0 for i in range(len(gdates))
+               if gvals[i] is not None and rmap.get(gdates[i]) is not None
+               and abs(rmap[gdates[i]]) > 1e-6 and abs(gvals[i]) > 1e-6]
+        if gms:
+            gm_now = gms[0]
+            if len(gms) >= 3:
+                gm_trend = float(np.mean(gms[:2]) - np.mean(gms[-2:]))
+    rec['GrossMargin_Now'] = gm_now
+    rec['GrossMargin_Trend'] = gm_trend
+
+    re = fund.get('revenue_estimate')
+    for k, out_key in (('0q', 'RevEstGrowth_Q'), ('0y', 'RevEstGrowth_Y')):
+        gv = None
+        if isinstance(re, dict) and isinstance(re.get(k), dict):
+            g = re[k].get('growth')
+            if g is not None:
+                try:
+                    gv = float(g) * 100.0
+                except (TypeError, ValueError):
+                    pass
+        rec[out_key] = gv
+
+    rc = fund.get('recommendations')
+    rec_score = None
+    if isinstance(rc, dict):
+        for k in sorted(rc.keys()):
+            if k.startswith('_'):
+                continue
+            v = rc[k]
+            if isinstance(v, dict) and v.get('strongBuy') is not None:
+                sb, b = float(v['strongBuy']), float(v.get('buy', 0) or 0)
+                h, s = float(v.get('hold', 0) or 0), float(v.get('sell', 0) or 0)
+                ss = float(v.get('strongSell', 0) or 0)
+                tot = sb + b + h + s + ss
+                if tot > 0:
+                    rec_score = (2 * sb + b - s - 2 * ss) / tot
+                break
+    rec['RecScore'] = rec_score
+
+    def _latest_q(section, labels):
+        blk = fund.get(section)
+        if not isinstance(blk, dict):
+            return {}
+        for lbl in labels:
+            col = blk.get(lbl)
+            if isinstance(col, dict) and col:
+                return {d: v for d, v in col.items() if v is not None}
+        return {}
+
+    ta_q = _latest_q('balance_q', ('Total Assets',))
+    ni_q2 = _latest_q('income_q', ('Net Income',))
+    ocf_q = _latest_q('cashflow_q', ('Operating Cash Flow',))
+    accrual_q = ocf_ni = None
+    common_dates = sorted(set(ta_q) & set(ni_q2) & set(ocf_q), reverse=True)
+    if common_dates:
+        d0 = common_dates[0]
+        ta0, ni0, ocf0 = ta_q[d0], ni_q2[d0], ocf_q[d0]
+        if abs(ta0 or 0) > 1e-6 and ni0 is not None and ocf0 is not None:
+            accrual_q = (float(ni0) - float(ocf0)) / float(ta0) * 100.0
+            ocf_ni = float(ocf0) / float(ni0) if abs(ni0) > 1e-6 else None
+    rec['Accrual_Q'] = accrual_q
+    rec['OCF_NI'] = ocf_ni
+
     return rec
 
 

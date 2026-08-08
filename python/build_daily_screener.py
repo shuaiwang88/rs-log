@@ -76,7 +76,9 @@ from calc_ibd_ratings import (
     extract_eps_analyst_features,
     extract_eps_from_fundamentals,
     extract_info_features,
+    extract_quality_features,
     extract_smr_inputs_from_fundamentals,
+    spy_perf_windows,
 )
 
 # extract_eps_analyst_features()'s return-tuple order -> calc_eps_rating()'s extra_features keys
@@ -85,10 +87,19 @@ _EPS_ANALYST_KEYS = ("EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRe
 
 
 def _eps_extra_features(fund):
-    """extra_features dict for calc_eps_rating(): analyst signals + info-dict fields."""
+    """extra_features dict for calc_eps_rating(): analyst signals + info-dict fields +
+    gross-margin trend / forward revenue estimates / recommendation consensus."""
     analyst = dict(zip(_EPS_ANALYST_KEYS, extract_eps_analyst_features(fund))) if fund else {}
     info = extract_info_features(fund) if fund else {}
-    return {**analyst, **info}
+    quality = extract_quality_features(fund) if fund else {}
+    return {**analyst, **info, **quality}
+
+
+def _smr_extra_features(fund):
+    """extra_features dict for calc_smr_raw_score(): info-dict fields + Sloan accruals/OCF-NI."""
+    info = extract_info_features(fund) if fund else {}
+    quality = extract_quality_features(fund) if fund else {}
+    return {**info, **quality}
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -509,13 +520,18 @@ def compute_technical_metrics(df, spy_close):
 
 # ── ratings via calc_ibd_ratings.py ──────────────────────────────────────────
 
-def compute_rating_metrics(df, fund, fy_eps=None, fq_eps=None, roe=None):
-    """Per-ticker RAW scores for RS / A-D / SMR, plus the already-final EPS Rating.
+def compute_rating_metrics(df, fund, spy_perf, fy_eps=None, fq_eps=None, roe=None):
+    """Per-ticker RAW scores for A-D / SMR, plus the already-final RS Rating / EPS Rating.
 
-    RS / A-D / SMR / Comp Rating are inherently universe computations (percentile
-    ranks can't be produced for one ticker in isolation) — apply_rating_percentiles()
+    A-D / SMR / Comp Rating are inherently universe computations (percentile ranks
+    can't be produced for one ticker in isolation) — apply_rating_percentiles()
     finishes the job in a post-pass over the whole assembled `out` DataFrame, the
-    same pattern apply_group_columns() already uses for the group columns.
+    same pattern apply_group_columns() already uses for the group columns. RS Rating
+    is set directly here (calc_rs_raw_score is a dual-momentum sigmoid, already final
+    1-99 - same pattern as EPS Rating below).
+
+    spy_perf: dict from calc_ibd_ratings.spy_perf_windows(SPY's Close series) - computed
+    ONCE per run by the caller and reused across every ticker.
     """
     m = {}
     close = df["Close"].astype(float)
@@ -524,19 +540,20 @@ def compute_rating_metrics(df, fund, fy_eps=None, fq_eps=None, roe=None):
     if not np.isfinite(c) or c <= 0:
         return m
 
-    m["_rs_raw"] = calc_rs_raw_score(close)
+    m["RS Rating"] = calc_rs_raw_score(close, spy_perf)
     m["_rs3m_raw"] = calc_rs_sub_raw_score(close, 63)
     m["_rs6m_raw"] = calc_rs_sub_raw_score(close, 126)
 
-    # Historical RS raw scores used for the group-rank-history columns (Ind Grp Rnk
-    # Last Week / 3 Mo Ago / 6 Mo Ago). These feed apply_group_columns()'s per-industry
-    # MEAN + industry-vs-industry rank, not a per-ticker rating, so a raw (not
-    # independently percentile-ranked) score is a reasonable proxy here — a full
-    # historical universe re-rank at 3 extra cutoff dates would ~4x this pass's
-    # runtime for what is a secondary/display feature, not one of the 5 core ratings.
+    # Historical RS scores used for the group-rank-history columns (Ind Grp Rnk Last
+    # Week / 3 Mo Ago / 6 Mo Ago). These feed apply_group_columns()'s per-industry MEAN
+    # + industry-vs-industry rank, not a per-ticker rating, so reusing TODAY's spy_perf
+    # (not re-deriving SPY's own historical perf at each cutoff) is a reasonable proxy
+    # here — a full historical re-derivation at 3 extra cutoff dates would ~4x this
+    # pass's runtime for what is a secondary/display feature, not one of the 5 core
+    # ratings, and the sigmoid is monotonic so relative group comparisons stay valid.
     for _drop, _key in ((5, "_rs_1w_ago"), (63, "_rs_3m_ago"), (126, "_rs_6m_ago")):
         if n > _drop + 249:
-            m[_key] = calc_rs_raw_score(close.iloc[:-_drop])
+            m[_key] = calc_rs_raw_score(close.iloc[:-_drop], spy_perf)
 
     m["_ad_raw"] = calc_ad_raw_score(df)
     if n >= 66:
@@ -562,7 +579,7 @@ def compute_rating_metrics(df, fund, fy_eps=None, fq_eps=None, roe=None):
     if fund and not fund.get("error"):
         sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = extract_smr_inputs_from_fundamentals(fund)
         m["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe,
-                                            extract_info_features(fund))
+                                            _smr_extra_features(fund))
 
     return m
 
@@ -1071,6 +1088,7 @@ def build_screener(limit=None, with_ratings=True):
     spy = pd.read_parquet(CACHE_DIR / "SPY_1d.parquet")
     spy.index = pd.to_datetime(spy.index)
     spy_close = spy["Close"].astype(float)
+    spy_perf = spy_perf_windows(spy_close)
 
     def cache_path(ticker):
         base = CACHE_DIR / f"{ticker}_1d.parquet"
@@ -1125,7 +1143,7 @@ def build_screener(limit=None, with_ratings=True):
                     tech = compute_technical_metrics(df, spy_al)
                     row.update(tech)
                     if with_ratings:
-                        row.update(compute_rating_metrics(df, fund,
+                        row.update(compute_rating_metrics(df, fund, spy_perf,
                                                           fy_eps=fy_eps, fq_eps=fq_eps, roe=roe))
                     row.update(compute_fundamental_metrics(fund, close_price=tech.get("Current Price"),
                                                            fy_eps=fy_eps, fq_eps=fq_eps, roe=roe))
@@ -1142,7 +1160,8 @@ def build_screener(limit=None, with_ratings=True):
         # hidden per-ticker fields used by the universe passes (apply_rating_percentiles,
         # apply_group_columns). _rs_cur is set from the FINAL RS Rating after
         # apply_rating_percentiles runs (see below) - "RS Rating" doesn't exist yet here.
-        row["_rs_raw"] = row.get("_rs_raw")
+        # RS Rating itself needs no placeholder: compute_rating_metrics() already sets it
+        # directly (dual-momentum sigmoid, not a raw score needing a universe pass).
         row["_rs_1w_ago"] = row.get("_rs_1w_ago")
         row["_rs_3m_ago"] = row.get("_rs_3m_ago")
         row["_rs_6m_ago"] = row.get("_rs_6m_ago")
@@ -1172,25 +1191,29 @@ def build_screener(limit=None, with_ratings=True):
                 row["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, _eps_extra_features(fund))
             sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = extract_smr_inputs_from_fundamentals(fund)
             row["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe,
-                                                  extract_info_features(fund))
+                                                  _smr_extra_features(fund))
 
         rows.append(row)
 
     out = pd.DataFrame(rows, columns=MS_COLUMNS + EXTRA_COLUMNS +
-                       ["_rs_raw", "_rs3m_raw", "_rs6m_raw", "_ad_raw", "_ad_prev_raw", "_smr_raw",
+                       ["_rs3m_raw", "_rs6m_raw", "_ad_raw", "_ad_prev_raw", "_smr_raw",
                         "_rs_cur", "_rs_1w_ago", "_rs_3m_ago", "_rs_6m_ago",
                         "_mcap", "_pe", "_at_margin", "_eps_g5",
                         "_eps_cv", "_nh", "_nl"])
 
-    # RS / A-D / SMR / Composite Rating: percentile-ranked against the current eligible
-    # universe (needs the whole universe, same reason apply_group_columns does).  Must run
-    # BEFORE apply_group_columns, since "Ind Group RS" is the group-mean of the FINAL RS
-    # Rating (_rs_cur), which doesn't exist until this pass fills it in.
-    out = apply_rating_percentiles(out)
+    # RS Rating is ALREADY final here (calc_rs_raw_score's dual-momentum sigmoid needs no
+    # universe pass - see compute_rating_metrics), so apply_group_columns() can run FIRST
+    # to produce "Ind Group RS" (the industry-mean RS Rating), which apply_rating_percentiles()
+    # then needs as Composite's 5th (Group RS) component - this ordering only became possible
+    # once RS stopped being a percentile-rank output itself (which used to create a
+    # chicken-and-egg dependency: RS needed the universe pass, and group stats needed RS).
     out["_rs_cur"] = out["RS Rating"]
-
-    # group-wide / percentile-rank columns (needs the whole universe)
     out = apply_group_columns(out)
+
+    # RS 3M/6M sub-ratings, A-D / SMR / Composite Rating: percentile-ranked against the
+    # current eligible universe (needs the whole universe, same reason apply_group_columns
+    # does; Composite also consumes "Ind Group RS" from the pass above).
+    out = apply_rating_percentiles(out)
 
     # SPY 5-day change: same value for every row ("Index % Chg 5 Days")
     if len(spy_close) > 5 and float(spy_close.iloc[-6]) > 0:

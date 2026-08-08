@@ -9,11 +9,11 @@ Per-rating accuracy, current production formula vs the recommended closed-form r
 | Rating     |   Baseline R2 |   Recommended R2 |   Baseline MAE |   Recommended MAE |   Baseline +/-5 Acc% |   Recommended +/-5 Acc% |
 |:-----------|--------------:|-----------------:|---------------:|------------------:|---------------------:|------------------------:|
 | RS Rating  |        0.7273 |           0.7051 |          10.73 |             11.08 |                 25.6 |                    26.7 |
-| A/D Rating |        0.0485 |           0.1006 |           3.95 |              3.37 |                 60.2 |                    75.1 |
+| A/D Rating |        0.0485 |           0.1371 |           3.95 |              3.29 |                 60.2 |                    76.2 |
 | EPS Rating |       -0.146  |           0.3239 |          22.36 |             17.95 |                 14   |                    15   |
 | SMR Rating |        0.4911 |           0.6809 |          13.09 |             10.25 |                 25.1 |                    30.4 |
 
-**Composite Rating, full self-computed pipeline** (RS/EPS/SMR/AD all recomputed from ticker_cache alone, zero MarketSurge inputs, n=2,480): R²=`0.7029`, MAE=`10.49`, ±5 Acc=`29.6%`, ±10 Acc=`55.2%`. This is the realistic ceiling today for computing Composite Rating without MarketSurge — bottlenecked mainly by A/D and EPS, both capped by real data-availability limits (see below), not by the combining formula.
+**Composite Rating, full self-computed pipeline** (RS/EPS/SMR/AD all recomputed from ticker_cache alone, zero MarketSurge inputs, n=2,480): R²=`0.7035`, MAE=`10.48`, ±5 Acc=`29.8%`, ±10 Acc=`55.2%`. This is the realistic ceiling today for computing Composite Rating without MarketSurge — bottlenecked mainly by A/D and EPS, both capped by real data-availability limits (see below), not by the combining formula.
 
 **What actually changed and why:**
 
@@ -58,25 +58,25 @@ Evaluation universe: **3,568** stocks.
 |:--------------------------------------------------|--------:|------:|-------:|------------:|------------:|-------------:|
 | Current formula (65D CMF, 0-99->1-13 scaled)      |  0.0485 |  3.95 | 0.2732 |        32.1 |        60.2 |        100   |
 | Percentile-rank of same CMF score                 | -0.118  |  3.81 | 0.3194 |        47.1 |        69.3 |         96.7 |
-| OLS-weighted multi-window blend + percentile-rank |  0.1006 |  3.37 | 0.4614 |        53.1 |        75.1 |         98.4 |
-| Direct OLS onto 1-13 scale (diagnostic)           |  0.1844 |  3.57 | 0.4322 |        39   |        75.7 |         99.8 |
+| OLS-weighted multi-window blend + percentile-rank |  0.1371 |  3.29 | 0.485  |        54.1 |        76.2 |         98.5 |
+| Direct OLS onto 1-13 scale (diagnostic)           |  0.1969 |  3.54 | 0.4472 |        39.9 |        76.9 |         99.8 |
 
 **OLS feature weights** (multi-window up/down-volume + heavy-volume intensity + volume-weighted closing range blend):
 
 | Feature                |   OLS_Coef |   Abs_Weight_Pct |
 |:-----------------------|-----------:|-----------------:|
-| CMF_130D               |   -9.28859 |             36.9 |
-| CMF_65D                |    8.15145 |             32.4 |
-| HeavyNetRatio_65D      |    5.67244 |             22.5 |
-| NetHeavyIntensity_30D  |    0.84489 |              3.4 |
-| DnDayVolRatio          |    0.40312 |              1.6 |
-| UpDnVol_130D           |   -0.31994 |              1.3 |
-| NetHeavyIntensity_65D  |   -0.28042 |              1.1 |
-| VWClsRange_65D         |    0.10987 |              0.4 |
-| UpDayVolRatio          |    0.07459 |              0.3 |
-| NetHeavyIntensity_130D |   -0.01631 |              0.1 |
-| UpDnVol_65D            |    0.00073 |              0   |
-| UpDnVol_30D            |   -0       |              0   |
+| CMF_130D               |   -8.84668 |             36.4 |
+| CMF_65D                |    6.95507 |             28.6 |
+| HeavyNetRatio_65D      |    5.8045  |             23.9 |
+| NetHeavyIntensity_30D  |    0.73514 |              3   |
+| DnDayVolRatio          |    0.43964 |              1.8 |
+| UpDnVol_65D            |   -0.35336 |              1.5 |
+| UpDnVol_30D            |    0.36546 |              1.5 |
+| UpDnVol_130D           |   -0.31629 |              1.3 |
+| NetHeavyIntensity_65D  |   -0.23315 |              1   |
+| VWClsRange_65D         |    0.1323  |              0.5 |
+| UpDayVolRatio          |    0.11337 |              0.5 |
+| NetHeavyIntensity_130D |   -0.01664 |              0.1 |
 
 ## 3. EPS Rating
 
@@ -147,8 +147,8 @@ Evaluation universe (true components): **3,165** stocks. All components percenti
 | OLS-weighted percentile ranks (no Group RS)                                | 0.9309 |  5.18 | 0.9652 |        36.7 |        54.5 |         88.4 |
 | Equal-weight avg of percentile ranks (+Group RS)                           | 0.6086 | 13.39 | 0.9487 |        12.1 |        20.8 |         38.6 |
 | OLS-weighted percentile ranks (+Group RS)                                  | 0.9642 |  3.77 | 0.9825 |        48   |        70.4 |         96.4 |
-| Equal-weight avg, FULL SELF-COMPUTED PIPELINE (n=2,480)                    | 0.2857 | 17.14 | 0.7677 |         9.4 |        15.9 |         31.3 |
-| OLS-weighted, FULL SELF-COMPUTED PIPELINE (n=2,480, no MarketSurge inputs) | 0.7029 | 10.49 | 0.8385 |        18.4 |        29.6 |         55.2 |
+| Equal-weight avg, FULL SELF-COMPUTED PIPELINE (n=2,480)                    | 0.286  | 17.15 | 0.7685 |         9.6 |        15.6 |         31.4 |
+| OLS-weighted, FULL SELF-COMPUTED PIPELINE (n=2,480, no MarketSurge inputs) | 0.7035 | 10.48 | 0.8389 |        17.9 |        29.8 |         55.2 |
 
 **Combining weights (no Group RS), intercept=-5.34**:
 
@@ -169,13 +169,13 @@ Evaluation universe (true components): **3,165** stocks. All components percenti
 | AD_pct      |     0.2202 |             15.3 |
 | GroupRS_pct |     0.1593 |             11.1 |
 
-**Full self-computed pipeline combining weights, intercept=9.01**:
+**Full self-computed pipeline combining weights, intercept=8.99**:
 
 | Component   |   OLS_Coef |   Rel_Weight_Pct |
 |:------------|-----------:|-----------------:|
-| EPS_self    |     0.145  |             13.3 |
-| RS_self     |     0.5525 |             50.7 |
-| SMR_self    |     0.2693 |             24.7 |
-| AD_self     |     0.1229 |             11.3 |
+| EPS_self    |     0.144  |             13.2 |
+| RS_self     |     0.5515 |             50.6 |
+| SMR_self    |     0.2699 |             24.8 |
+| AD_self     |     0.1249 |             11.5 |
 
 **This is the number that matters**: the "FULL SELF-COMPUTED PIPELINE" rows show what accuracy is achievable using *only* `ticker_cache` (price/volume + fundamentals json) end to end, with zero MarketSurge-derived inputs — the actual goal of this exercise.
