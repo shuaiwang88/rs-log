@@ -359,7 +359,12 @@ def _window_stats(prices, vols, highs, lows, w):
     dn = p_rets < 0
     up_vol = np.sum(vtail[up])
     dn_vol = np.sum(vtail[dn])
-    updn_ratio = up_vol / max(1.0, dn_vol)
+    # capped at 20 (matches python/calc_ibd_ratings.py._window_ad_features and
+    # the v2 update) — a single-name extreme up/down-volume ratio (e.g. 500x on
+    # a thin tape) would otherwise dominate the A/D OLS blend.  Learned from
+    # reverse_engineer_ratings_v2: both weeks improved (OLD exact 35.7->36.1,
+    # NEW forward 38.3->38.4).
+    updn_ratio = min(20.0, up_vol / max(1.0, dn_vol))
 
     heavy_up = up & (vratio > 1.2)
     heavy_dn = dn & (vratio > 1.2)
@@ -439,6 +444,15 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None, spy_clos
             cdf = cdf[idx <= pd.Timestamp(asof)]
         except Exception:
             return None
+    return extract_price_features_from_df(ticker, cdf, spy_perf, spy_close=spy_close)
+
+
+def extract_price_features_from_df(ticker, cdf, spy_perf, spy_close=None):
+    """RS + A/D feature dict from an ALREADY-LOADED (and already as-of-truncated)
+    OHLCV frame.  Identical logic to extract_price_features() — which is now just
+    a disk-reading wrapper around this — so the weekly backtest can score the same
+    parquet at many historical dates without re-reading disk.
+    """
     if cdf.empty or len(cdf) < 30:
         return None
 
@@ -528,7 +542,7 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None, spy_clos
                 sr = np.diff(sc[-(days + 1):]) / np.where(sc[-(days + 1):-1] == 0, 1.0, sc[-(days + 1):-1])
                 vol_t = float(np.std(tr)) * np.sqrt(252.0) * 100.0
                 vol_s = float(np.std(sr)) * np.sqrt(252.0) * 100.0
-                if vol_s > 1e-6 and np.isfinite(vol_s) and np.isfinite(vol_t):
+                if vol_s > 1e-6 and vol_t > 1e-6 and np.isfinite(vol_s) and np.isfinite(vol_t):
                     relvol = vol_t / vol_s
                     perf_w = latest / prices[-(days + 1)]
                     rec[f"RelVol_{label}"] = relvol
@@ -564,6 +578,46 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None, spy_clos
         else:
             rec["AD_baseline"] = np.nan
 
+    # ---- DIAGNOSTIC ONLY (rejected by round-4 ablation — not in production) ----
+    #      Money Flow Index (MFI-14) — a classic TradingView/thinkorswim
+    #      accumulation/distribution oscillator (0-100).  Uses typical price ×
+    #      volume flows, Wilder-style.  Ablation: gained NEW week but LOST the
+    #      OLD week (not a both-week win); NOT adopted. ----
+    if highs is not None and lows is not None and n >= 16:
+        tp = (highs + lows + prices) / 3.0
+        mf = tp * vols
+        pos_flow = neg_flow = 0.0
+        for i in range(n - 14, n):
+            d = tp[i] - tp[i - 1]
+            if d > 0:
+                pos_flow += mf[i]
+            elif d < 0:
+                neg_flow += mf[i]
+        if neg_flow > 1e-9:
+            rec["MFI_14D"] = 100.0 - 100.0 / (1.0 + pos_flow / neg_flow)
+        else:
+            rec["MFI_14D"] = 100.0 if pos_flow > 1e-9 else 50.0
+
+    # ---- DIAGNOSTIC ONLY (rejected by round-4 ablation — not in production) ----
+    #      A/D line (cumulative money-flow multiplier × volume) slope over
+    #      65/130 days — the thinkorswim Accumulation/Distribution study.  The
+    #      slope is normalized by mean volume so it stays on a comparable scale
+    #      across names of very different liquidity.  Ablation: flat for A/D;
+    #      NOT adopted. ----
+    if highs is not None and lows is not None and n >= 66:
+        hl = highs - lows
+        safe_hl = np.where(hl == 0, 1.0, hl)
+        mf_mult = np.where(hl != 0, ((prices - lows) - (highs - prices)) / safe_hl, 0.0)
+        adl = np.cumsum(mf_mult * vols)
+        for wd, tag in ((65, "65D"), (130, "130D")):
+            if n > wd:
+                seg = adl[-wd:]
+                x = np.arange(wd)
+                slope, intercept = np.polyfit(x, seg, 1)
+                mean_v = max(1.0, float(np.mean(vols[-wd:])))
+                rec[f"ADLineSlope_{tag}"] = float(slope) / mean_v
+                rec[f"ADLineNet_{tag}"] = (float(seg[-1]) - float(seg[0])) / mean_v
+
     # ---- trend / position features ----
     for ma in MA_WINDOWS:
         if n >= ma:
@@ -587,6 +641,15 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None, spy_clos
         rec["DnDayVolRatio"] = float(np.mean(vr[dn])) if np.any(dn) else 1.0
         if np.std(pr) > 0 and np.std(vr) > 0:
             rec["PriceVolCorr"] = float(np.corrcoef(pr, vr)[0, 1])
+
+    # RESEARCH ROUND 7: 5-day volume spike vs 65-day mean — a volume-surge
+    # proxy (accumulation on a volume blast vs quiet drift).  Candidate for the
+    # A/D feature set; ablated before adoption.
+    if n >= 66:
+        v5 = float(np.mean(vols[-5:]))
+        v65 = float(np.mean(vols[-65:]))
+        if v65 > 1e-9:
+            rec["VolSpike_5D"] = v5 / v65
     for k, v in list(rec.items()):
         if isinstance(v, float) and not np.isfinite(v):
             rec[k] = np.nan
@@ -720,6 +783,22 @@ def extract_fund_features(ticker, cache_dir=None):
     rec["EPS_StabilityCV"] = (float(np.std(stab_vals) / max(1e-9, abs(np.mean(stab_vals))))
                               if len(stab_vals) >= 3 else np.nan)
 
+    # ── Down-year ratio (annual EPS YoY declines in the last ~5 fiscal years).
+    #    IBD explicitly docks the EPS rating for "a string of negative quarters"
+    #    — the annual series is the only multi-year EPS history yfinance keeps
+    #    (90% coverage vs ~0% for a 6-quarter lookback), so a down-YEAR count is
+    #    the computable stand-in for the string-of-negative-quarters concept.
+    #    Candidate for the two-part EPS stability part (research round 5). ──
+    neg_a, cnt_a = 0, 0
+    if eps_a:
+        _, vals = eps_a
+        for j in range(min(len(vals) - 1, 5)):
+            if abs(vals[j + 1]) > 1e-9:
+                cnt_a += 1
+                if (vals[j] - vals[j + 1]) / abs(vals[j + 1]) < 0:
+                    neg_a += 1
+    rec["EPS_DownYears"] = (neg_a / cnt_a) if cnt_a >= 2 else np.nan
+
     # ── Analyst blocks: surprise, beat rate, estimate revisions ──
     eh = fund.get("earnings_history")
     surprises, beats = [], 0
@@ -815,6 +894,316 @@ def extract_fund_features(ticker, cache_dir=None):
 
     # (EPS/Sales acceleration proxies were tested in the research round but were
     # neutral-to-worse for both ratings — left out intentionally.)
+
+    # ── DIAGNOSTIC ONLY (rejected by round-4 ablation — not in production) ──
+    #    EPS estimate-revision momentum (eps_revisions: net up/down counts).
+    #    Academic earnings-momentum literature (Chan-Jegadeesh-Lakonishok 1996,
+    #    IBES revision studies) shows net estimate revisions predict returns;
+    #    IBD's EPS rating emphasises the recent-2-quarter earnings trend, and a
+    #    net-revision signal is the closest forward-looking analog available.
+    #    Ablation: +0.0002 R² forward = noise; NOT adopted.
+    er = fund.get("eps_revisions")
+    rec_net30 = rec_net7 = np.nan
+    if isinstance(er, dict) and isinstance(er.get("0q"), dict):
+        q = er["0q"]
+        up30 = q.get("upLast30days"); dn30 = q.get("downLast30days")
+        up7 = q.get("upLast7days"); dn7 = q.get("downLast7Days")
+        if up30 is not None and dn30 is not None:
+            rec_net30 = (float(up30) - float(dn30)) / max(1.0, float(up30) + float(dn30))
+        if up7 is not None and dn7 is not None:
+            rec_net7 = (float(up7) - float(dn7)) / max(1.0, float(up7) + float(dn7))
+    rec["EpsRevNet30"] = rec_net30
+    rec["EpsRevNet7"] = rec_net7
+
+    # ── Analyst recommendation consensus (recommendations: strongBuy..strongSell
+    #    counts) → weighted score in [-1, 1].  Forward-looking analyst sentiment;
+    #    complements the historical surprise/beat-rate features. ──
+    rc = fund.get("recommendations")
+    rec_score = np.nan
+    if isinstance(rc, dict):
+        for _k in sorted(rc.keys()):
+            if _k.startswith("_"):
+                continue
+            v = rc[_k]
+            if isinstance(v, dict) and v.get("strongBuy") is not None:
+                sb = float(v["strongBuy"]); b = float(v.get("buy", 0) or 0)
+                h = float(v.get("hold", 0) or 0); s = float(v.get("sell", 0) or 0)
+                ss = float(v.get("strongSell", 0) or 0)
+                tot = sb + b + h + s + ss
+                if tot > 0:
+                    rec_score = (2 * sb + b - s - 2 * ss) / tot
+                break
+    rec["RecScore"] = rec_score
+
+    # ── DIAGNOSTIC ONLY (research round 7): analyst upgrade/downgrade
+    #    revision momentum (upgrades_downgrades: timestamped events with
+    #    ToGrade/FromGrade and currentPriceTarget).  Net grade-change balance
+    #    over trailing 30/90 days is the practical analog of IBES revision
+    #    momentum (Chan-Jegadeesh-Lakonishok 1996).  ABLATION VERDICT: rejected
+    #    — UpDownNet30/90 were flat on the NEW week (+0.0002 R² = noise); only
+    #    PTChg90 (price-target momentum) was adopted.  Not in production. ──
+    def _grade_rank(g):
+        """Map an analyst grade (A+..E subtiers, A..E, or words) to an ordinal."""
+        if g is None:
+            return None
+        s = str(g).strip().upper()
+        word_map = {"STRONG BUY": 13, "BUY": 11, "OUTPERFORM": 11, "OVERWEIGHT": 11,
+                    "HOLD": 7, "NEUTRAL": 7, "UNDERPERFORM": 4, "SELL": 4,
+                    "UNDERWEIGHT": 4, "STRONG SELL": 1}
+        if s in word_map:
+            return word_map[s]
+        if s in AD_LETTERS_ORDERED:
+            return AD_SUBTIER_13[s]  # A+=13 .. E=1, subtiers preserved
+        if s in ("A", "B", "C", "D", "E"):
+            return 13 - 3 * "ABCDE".index(s)  # A=13, B=10, C=7, D=4, E=1
+        return None
+
+    ud = fund.get("upgrades_downgrades")
+    ud_events = []
+    if isinstance(ud, dict):
+        for _k, v in ud.items():
+            if _k.startswith("_"):
+                continue
+            if not isinstance(v, dict):
+                continue
+            try:
+                ts = pd.Timestamp(_k)
+            except Exception:
+                continue
+            fg = _grade_rank(v.get("FromGrade"))
+            tg = _grade_rank(v.get("ToGrade"))
+            act = str(v.get("Action") or "").lower()
+            chg = None
+            if fg is not None and tg is not None:
+                chg = 1 if tg > fg else (-1 if tg < fg else 0)
+            elif act:
+                if any(w in act for w in ("upgrade", "raised", "promot")):
+                    chg = 1
+                elif any(w in act for w in ("downgrade", "lower", "cut")):
+                    chg = -1
+            pt = v.get("currentPriceTarget")
+            try:
+                pt = float(pt) if pt is not None else np.nan
+            except (TypeError, ValueError):
+                pt = np.nan
+            if chg is not None or np.isfinite(pt):
+                ud_events.append((ts, chg, pt))
+    ud_events.sort(key=lambda x: x[0])
+    try:
+        now = pd.Timestamp(fund.get("fetched_at") or pd.Timestamp.now())
+    except Exception:
+        now = pd.Timestamp.now()
+    for _days, out_k in ((30, "UpDownNet30"), (90, "UpDownNet90")):
+        wins = [e for e in ud_events if (now - e[0]).days <= _days and e[1] is not None]
+        if wins:
+            net = sum(e[1] for e in wins)
+            rec[out_k] = net / len(wins) * 100.0
+        else:
+            rec[out_k] = np.nan
+    # price-target momentum over ~90 days (normalized by current price)
+    pt_events = [(e[0], e[2]) for e in ud_events if np.isfinite(e[2])]
+    rec["PTChg90"] = np.nan
+    if len(pt_events) >= 2:
+        p_latest = pt_events[-1][1]
+        # closest event to 90 days before the latest
+        target_dt = pt_events[-1][0] - pd.Timedelta(days=90)
+        p_old, best_d = None, 1e9
+        for ts, pt in pt_events[:-1]:
+            dd = abs((target_dt - ts).days)
+            if dd < best_d:
+                best_d, p_old = dd, pt
+        if p_old and p_old > 0 and np.isfinite(p_latest):
+            px = _info_num(info, "currentPrice")
+            if not np.isfinite(px):
+                px = _info_num(info, "regularMarketPrice")
+            if np.isfinite(px) and px and px > 0:
+                rec["PTChg90"] = (p_latest - p_old) / px * 100.0
+
+    # ── Forward revenue-estimate growth (revenue_estimate.growth, % already) ──
+    re = fund.get("revenue_estimate")
+    for _k, out_k in (("0q", "RevEstGrowth_Q"), ("0y", "RevEstGrowth_Y")):
+        gv = np.nan
+        if isinstance(re, dict) and isinstance(re.get(_k), dict):
+            g = re[_k].get("growth")
+            if g is not None:
+                try:
+                    gv = float(g) * 100.0
+                except (TypeError, ValueError):
+                    pass
+        rec[out_k] = gv
+
+    # ── Cash-flow quality + balance-sheet strength from the STATEMENTS
+    #    (not just info.*).  Sloan (1996) accruals = (NI − CFO)/TA — negative
+    #    accruals signal higher earnings quality; Novy-Marx (2013) gross
+    #    profitability = GP/TA is one of the strongest standalone quality
+    #    factors; asset turnover and debt/assets complete a Piotroski-style
+    #    balance-sheet view.  All median-imputed at fit time → no universe loss.
+    #    ADOPTED: Accrual_Q + OCF_NI feed the SMR formula (both weeks improved).
+    #    REJECTED (diagnostic only): GP_Assets, AssetTurnover, Debt_Assets. ──
+    def _latest_q(section, labels):
+        """{date: value} for the first matching label in a statement section."""
+        blk = fund.get(section)
+        if not isinstance(blk, dict):
+            return {}
+        for lbl in labels:
+            col = blk.get(lbl)
+            if isinstance(col, dict) and col:
+                return {d: v for d, v in col.items() if v is not None}
+        return {}
+
+    ta_q = _latest_q("balance_q", ["Total Assets"])
+    ni_q2 = _latest_q("income_q", ["Net Income"])
+    ocf_q = _latest_q("cashflow_q", ["Operating Cash Flow"])
+    gp_q2 = _latest_q("income_q", ["Gross Profit"])
+    rev_q2 = _latest_q("income_q", ["Total Revenue"])
+    td_q = _latest_q("balance_q", ["Total Debt"])
+    common_dates = sorted(set(ta_q) & set(ni_q2) & set(ocf_q), reverse=True)
+    if common_dates:
+        d0 = common_dates[0]
+        ta0, ni0, ocf0 = ta_q[d0], ni_q2[d0], ocf_q[d0]
+        if abs(ta0 or 0) > 1e-6:
+            if ni0 is not None and ocf0 is not None:
+                rec["Accrual_Q"] = (float(ni0) - float(ocf0)) / float(ta0) * 100.0
+                rec["OCF_NI"] = float(ocf0) / float(ni0) if abs(ni0) > 1e-6 else np.nan
+            if d0 in gp_q2 and gp_q2[d0] is not None:
+                rec["GP_Assets"] = float(gp_q2[d0]) / float(ta0) * 100.0
+            if d0 in rev_q2 and rev_q2[d0] is not None:
+                rec["AssetTurnover"] = float(rev_q2[d0]) / float(ta0)
+            if d0 in td_q and td_q[d0] is not None:
+                rec["Debt_Assets"] = float(td_q[d0]) / float(ta0)
+
+    # ── DIAGNOSTIC ONLY (research round 7 — ABLATION VERDICT: ALL REJECTED,
+    #    not in production): operating-efficiency / capital-allocation quality
+    #    features from the statements, candidates for the SMR 'profit margins'
+    #    pillar.  ROIC/EBIT-margin hurt both weeks; FCF-margin/debtΔ and
+    #    buyback/issuance were flat-to-worse on the NEW week.
+    #      ROIC_Q          = (EBIT − tax)/Invested Capital — returns on the
+    #                        capital actually deployed (Novy-Marx gross-profit
+    #                        philosophy; ROE alone is leverage-inflated)
+    #      EBITMargin_*    = EBIT/Revenue level + 2-qtr trend (operating
+    #                        profitability, upstream of financing effects)
+    #      FCFMargin_Q     = Free Cash Flow/Revenue (cash conversion of sales)
+    #      DebtDelta_Q     = Δ Total Debt / Total Assets (leverage change,
+    #                        Piotroski-style; rising debt is a red flag)
+    #      BuybackYield_A  = −most-recent-annual share repurchases / market cap
+    #                        (positive = net buyback — shareholder-return quality)
+    #      NetIssuance_A   = (issuance + repurchases)/market cap (negative =
+    #                        net buyback; dilution penalty for positive) ──
+    ebit_q = _latest_q("income_q", ["EBIT", "Operating Income"])
+    tax_q = _latest_q("income_q", ["Tax Provision", "Tax Provision (Income Taxes)"])
+    fcf_q = _latest_q("cashflow_q", ["Free Cash Flow"])
+    ic_q = _latest_q("balance_q", ["Invested Capital"])
+    bq_dates = sorted(set(ic_q) & set(ta_q), reverse=True)
+    if bq_dates and abs(ta_q[bq_dates[0]] or 0) > 1e-6:
+        ic0 = ic_q[bq_dates[0]]
+        if ic0 is not None and abs(ic0) > 1e-6:
+            ebit0 = ebit_q.get(bq_dates[0])
+            tax0 = tax_q.get(bq_dates[0]) if isinstance(tax_q, dict) else None
+            if ebit0 is not None and tax0 is not None:
+                # NaN when tax is missing — treating it as 0 would silently
+                # turn ROIC into pre-tax ROIC and inflate it.
+                rec["ROIC_Q"] = (float(ebit0) - float(tax0)) / float(ic0) * 100.0
+    # EBIT margin level + trend from the dated income_q series
+    def _margin_series(num_block, den_block):
+        if not isinstance(num_block, dict) or not isinstance(den_block, dict):
+            return None
+        dates = sorted(set(num_block) & set(den_block), reverse=True)
+        ms = []
+        for dd in dates:
+            n_, d_ = num_block[dd], den_block[dd]
+            if n_ is not None and d_ is not None and abs(d_) > 1e-6:
+                ms.append(float(n_) / float(d_) * 100.0)
+        return ms or None
+    ebitm = _margin_series(ebit_q, rev_q2)
+    if ebitm:
+        rec["EBITMargin_Now"] = ebitm[0]
+        if len(ebitm) >= 3:
+            rec["EBITMargin_Trend"] = float(np.mean(ebitm[:2]) - np.mean(ebitm[-2:]))
+        else:
+            rec["EBITMargin_Trend"] = np.nan
+    if bq_dates and rev_q2.get(bq_dates[0]) is not None and abs(rev_q2[bq_dates[0]]) > 1e-6:
+        fcf0 = fcf_q.get(bq_dates[0])
+        if fcf0 is not None:
+            rec["FCFMargin_Q"] = float(fcf0) / float(rev_q2[bq_dates[0]]) * 100.0
+    td_sorted = sorted(td_q.keys(), reverse=True)
+    if len(td_sorted) >= 2 and ta_q.get(td_sorted[0]) and abs(ta_q[td_sorted[0]]) > 1e-6:
+        t0, t1 = td_q[td_sorted[0]], td_q[td_sorted[1]]
+        if t0 is not None and t1 is not None:
+            rec["DebtDelta_Q"] = (float(t0) - float(t1)) / float(ta_q[td_sorted[0]]) * 100.0
+    mc_buy = _info_num(info, "marketCap")
+    if mc_buy and mc_buy > 0:
+        cfa_sec = fund.get("cashflow_a")
+        def _latest_annual(section, labels):
+            """Most recent fiscal-year value of the first matching label."""
+            if not isinstance(section, dict):
+                return np.nan
+            for lbl in labels:
+                col = section.get(lbl)
+                if isinstance(col, dict) and col:
+                    best_d = max(col, key=lambda d: pd.Timestamp(d))
+                    v = col[best_d]
+                    try:
+                        return float(v) if v is not None else np.nan
+                    except (TypeError, ValueError):
+                        return np.nan
+            return np.nan
+        # NOTE: single most-recent fiscal year only — a multi-year SUM would
+        # produce a 4-5x inflated 'annual' yield.
+        buy = _latest_annual(cfa_sec, ["Repurchase Of Capital Stock"])
+        iss = _latest_annual(cfa_sec, ["Issuance Of Capital Stock"])
+        if np.isfinite(buy):
+            rec["BuybackYield_A"] = -buy / mc_buy * 100.0
+        if np.isfinite(buy) and np.isfinite(iss):
+            rec["NetIssuance_A"] = (iss + buy) / mc_buy * 100.0
+
+    # ── DIAGNOSTIC ONLY (rejected by round-4 ablation — not in production) ──
+    #    Mutual-fund ownership (fund-json mutualfund_holders): IBD's "C"
+    #    (current quarterly performance / fund sponsorship) pillar — institutions
+    #    and mutual funds accumulating a name is the canonical accumulation
+    #    signal.  Count of top holders + mean pctChange.  Ablation: hurt SMR's
+    #    calibrated grade mix on both weeks; NOT adopted. ──
+    mf = fund.get("mutualfund_holders")
+    mf_cnt = mf_chg = np.nan
+    if isinstance(mf, dict):
+        chgs = []
+        cnt = 0
+        for _k, v in mf.items():
+            if _k.startswith("_"):
+                continue
+            if isinstance(v, dict):
+                cnt += 1
+                if v.get("pctChange") is not None:
+                    try:
+                        chgs.append(float(v["pctChange"]))
+                    except (TypeError, ValueError):
+                        pass
+        if cnt:
+            mf_cnt = cnt
+        if chgs:
+            mf_chg = float(np.mean(chgs)) * 100.0
+    rec["MF_Count"] = mf_cnt
+    rec["MF_Chg"] = mf_chg
+
+    # ── DIAGNOSTIC ONLY (rejected by round-4 ablation — not in production) ──
+    #    Insider 6-month purchases vs sales (insider_purchases): insider buying
+    #    is a classic event-driven quality/conviction signal.  Ablation: flat
+    #    for SMR; NOT adopted. ──
+    ip = fund.get("insider_purchases")
+    insider_buy = np.nan
+    if isinstance(ip, dict):
+        buys, sells = 0, 0
+        for _k, v in ip.items():
+            if _k.startswith("_"):
+                continue
+            if isinstance(v, dict) and v.get("Insider Purchases Last 6m"):
+                s = str(v["Insider Purchases Last 6m"]).lower()
+                if "purchase" in s and "sale" not in s:
+                    buys += 1
+                elif "sale" in s:
+                    sells += 1
+        if buys + sells > 0:
+            insider_buy = (buys - sells) / (buys + sells)
+    rec["InsiderBuyRatio"] = insider_buy
 
     # ── ROE (info preferred, NI/equity fallback) ──
     roe_val = None

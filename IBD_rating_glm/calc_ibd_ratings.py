@@ -204,13 +204,17 @@ def _score_comp(eps, rs, smr_pct, ad_pct, group_rs, comp_p):
     return max(1, min(99, round(comp_raw)))
 
 
-def _features_frame(symbols, cache_dir=None):
-    """Build one feature row per symbol (price + fund features merged)."""
+def _features_frame(symbols, cache_dir=None, asof=None):
+    """Build one feature row per symbol (price + fund features merged).
+
+    `asof` (YYYY-MM-DD) truncates price history to that day — point-in-time
+    scoring for backtests: every rating uses only data available that day.
+    """
     cache_dir = Path(cache_dir) if cache_dir else CACHE_DIR
     syms = [str(s).strip() for s in symbols if str(s).strip()]
-    spy_perf, _, _ = load_spy_perf(cache_dir)
-    spy_close = load_spy_close(cache_dir)
-    df_price = extract_price_features_bulk(syms, spy_perf, spy_close=spy_close)
+    spy_perf, _, _ = load_spy_perf(cache_dir, asof=asof)
+    spy_close = load_spy_close(cache_dir, asof=asof)
+    df_price = extract_price_features_bulk(syms, spy_perf, asof=asof, spy_close=spy_close)
     df_fund = extract_fund_features_bulk(syms)
     if df_price.empty:
         return pd.DataFrame()
@@ -218,32 +222,16 @@ def _features_frame(symbols, cache_dir=None):
     return merged
 
 
-def score_universe(symbols, cache_dir=None, params=None):
-    """Score every symbol with the frozen formulas.
+def _score_features_frame(feats, params):
+    """Assemble the ratings table from a merged features frame.
 
-    Parameters
-    ----------
-    symbols : list[str]
-        Universe to rank against (RS/EPS/SMR/A-D are percentile ranks, so a
-        meaningful universe is required — pass the full screener list, or use
-        score_all_cached() for every ticker in the cache).
-    cache_dir : str or Path, optional
-        Where ticker_cache lives (defaults to repo ticker_cache).
-    params : dict, optional
-        Pre-loaded fitted_params.json (defaults to loading it).
-
-    Returns
-    -------
-    pd.DataFrame with columns: Symbol, RS Rating, RS 3M, RS 6M, EPS Rating,
-    SMR Score, SMR Rating, A/D Score, A/D Rating, Comp Rating, Group RS,
-    % Off 52W High, Latest Price, Hist Days.
+    This is the reusable scoring half of score_universe(): it takes the merged
+    price+fund features and runs the EXACT production formulas (RS sigmoid,
+    A-D/EPS/SMR OLS blends, industry Group RS percentile, 5-component
+    Composite).  The backtest feeds it in-memory features frames built at many
+    historical dates, so the same production path runs point-in-time without
+    re-reading the cache for every week.
     """
-    if params is None:
-        params = load_params()
-    feats = _features_frame(symbols, cache_dir)
-    if feats.empty:
-        return pd.DataFrame()
-
     rs_p, ad_p, eps_p, smr_p, comp_p = params["rs"], params["ad"], params["eps"], params["smr"], params["comp"]
     if comp_p is None:
         raise ValueError("fitted_params.json has no composite params — rerun reverse_engineer_ratings.py")
@@ -297,6 +285,36 @@ def score_universe(symbols, cache_dir=None, params=None):
     ]
     out = out.drop(columns=["_rs_raw", "_eps_raw", "_smr_raw", "_ad_raw"])
     return out
+
+
+def score_universe(symbols, cache_dir=None, params=None, asof=None):
+    """Score every symbol with the frozen formulas.
+
+    Parameters
+    ----------
+    symbols : list[str]
+        Universe to rank against (RS/EPS/SMR/A-D are percentile ranks, so a
+        meaningful universe is required — pass the full screener list, or use
+        score_all_cached() for every ticker in the cache).
+    cache_dir : str or Path, optional
+        Where ticker_cache lives (defaults to repo ticker_cache).
+    params : dict, optional
+        Pre-loaded fitted_params.json (defaults to loading it).
+    asof : str, optional
+        YYYY-MM-DD — score point-in-time (price history truncated to that day).
+
+    Returns
+    -------
+    pd.DataFrame with columns: Symbol, RS Rating, RS 3M, RS 6M, EPS Rating,
+    SMR Score, SMR Rating, A/D Score, A/D Rating, Comp Rating, Group RS,
+    % Off 52W High, Latest Price, Hist Days.
+    """
+    if params is None:
+        params = load_params()
+    feats = _features_frame(symbols, cache_dir, asof=asof)
+    if feats.empty:
+        return pd.DataFrame()
+    return _score_features_frame(feats, params)
 
 
 def score_ticker(ticker, peers=None, cache_dir=None, params=None):

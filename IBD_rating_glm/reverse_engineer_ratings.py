@@ -68,6 +68,14 @@ EPS_FEATURES = [
     # research round 2: gross-margin level + trend from income_q (both snapshots
     # improved: OLD 0.400->0.406, NEW 0.432->0.437)
     "GrossMargin_Now", "GrossMargin_Trend",
+    # research round 4: forward revenue-estimate growth (0q/0y) + analyst
+    # recommendation consensus (both weeks improved: NEW 0.3873 -> 0.3908)
+    "RevEstGrowth_Q", "RevEstGrowth_Y", "RecScore",
+    # research round 7: price-target momentum over ~90 days from
+    # upgrades_downgrades events, /current price (both weeks improved:
+    # OLD 0.3778->0.3783, NEW 0.3908->0.3910).  UpDownNet30/90 (net grade
+    # changes) were rejected — NEW week flat.
+    "PTChg90",
 ]
 SMR_FEATURES = [
     "Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now",
@@ -75,6 +83,9 @@ SMR_FEATURES = [
     "Info_ROA", "Info_GrossMargin", "Info_OpMargin", "Info_FCFYield",
     "Info_OCFYield", "Info_DebtEquity", "Info_CurrentRatio",
     "Info_QuickRatio", "Info_EarningsGrowth", "Info_EPSQGrowth", "Info_PriceBook",
+    # research round 4: Sloan accruals + operating-cash-flow/earnings quality
+    # from the statements (both weeks improved: NEW exact 62.1% -> 62.3%)
+    "Accrual_Q", "OCF_NI",
 ]
 EPS_CORE = ["EPS_Q0_YoY", "EPS_LT_Growth", "ROE"]      # required (else drop row)
 SMR_CORE = ["Sales_Q0_YoY", "Sales_LT_Growth", "ROE"]  # required (else drop row)
@@ -89,6 +100,8 @@ EPS_LOG_FEATURES = [
     "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE",
     "GrossMargin_Now", "GrossMargin_Trend",
+    "RevEstGrowth_Q", "RevEstGrowth_Y", "RecScore",
+    "PTChg90",
 ]
 
 

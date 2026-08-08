@@ -34,27 +34,35 @@ from common import (
 )
 
 # Curated, mostly-orthogonal accumulation feature set.
-# Extended (cross-week validated, both snapshots improve): closer MAs
-# (Dist_10MA/21MA) + the full multi-window stat set (5D..250D).  Price-side
-# only on purpose — fund fields like Info_EarningsGrowth would force a much
-# smaller fit universe (dropna), so they are NOT added here.
+# Research round 6 (learned from python/calc_ibd_ratings.py's refit, commit
+# 9f4ab64 + working tree): adopted the production set exactly.  It DROPS the
+# VWClsRange_* family (correlates ~0.98 with CMF at the same window — same
+# OHLCV-derived shape, redundant), CMF_130D (~0.75 with CMF_65D — the ridge/OLS
+# split a large canceling pair across collinear columns), UpDayVolRatio/
+# DnDayVolRatio and InstTop5Pct/InstAvgChg, and ADDS NetHeavyDays + AvgClsRange
+# at EVERY window (incl. 5D/10D/250D), CMF_5D, HeavyNetRatio_5D/10D/250D and
+# NetHeavyIntensity_5D.  Matched-universe ablation (fit OLD -> forward NEW):
+# forward exact 37.4%->38.0%, within-1 58.9%->60.1% — the production set wins
+# the forward week; OLD in-sample is flat (exact 35.5->35.1, within-1 58.0->58.2).
 AD_FEATURES = [
-    "UpDnVol_10D", "UpDnVol_30D", "UpDnVol_65D", "UpDnVol_130D",
-    "HeavyNetRatio_65D", "NetHeavyDays_65D", "NetHeavyIntensity_65D",
-    "NetHeavyIntensity_130D", "NetHeavyIntensity_30D",
-    "VWClsRange_65D", "CMF_30D", "CMF_65D", "CMF_130D",
-    "AvgClsRange_65D", "UpDayVolRatio", "DnDayVolRatio",
-    "Dist_50MA", "Dist_150MA", "Dist_200MA", "PctOff52WHigh",
-    "PriceChg_5D", "InstTop5Pct", "InstAvgChg",
-    # --- added: closer MAs + full window stat set (both-week holdout win) ---
-    "Dist_10MA", "Dist_21MA",
-    "UpDnVol_5D", "UpDnVol_250D", "HeavyNetRatio_30D",
-    "NetHeavyDays_30D", "NetHeavyDays_130D",
-    "NetHeavyIntensity_10D", "NetHeavyIntensity_250D",
-    "VWClsRange_30D", "VWClsRange_130D", "VWClsRange_250D",
-    "AvgClsRange_30D", "AvgClsRange_130D", "AvgClsRange_250D",
-    "CMF_10D", "CMF_250D", "PriceChg_10D", "PriceChg_30D",
-    "PriceChg_65D", "PriceChg_130D", "PriceChg_250D",
+    "UpDnVol_65D", "HeavyNetRatio_65D", "NetHeavyIntensity_65D", "CMF_65D",
+    "UpDnVol_130D", "NetHeavyIntensity_130D", "UpDnVol_30D", "NetHeavyIntensity_30D",
+    "Dist_10MA", "Dist_21MA", "Dist_50MA", "Dist_150MA", "Dist_200MA", "PctOff52WHigh",
+    "UpDnVol_5D", "HeavyNetRatio_5D", "NetHeavyIntensity_5D", "CMF_5D",
+    "UpDnVol_10D", "HeavyNetRatio_10D", "NetHeavyIntensity_10D", "CMF_10D",
+    "NetHeavyDays_5D", "NetHeavyDays_10D", "NetHeavyDays_30D", "NetHeavyDays_65D",
+    "NetHeavyDays_130D", "NetHeavyDays_250D",
+    "AvgClsRange_5D", "AvgClsRange_10D", "AvgClsRange_30D", "AvgClsRange_65D",
+    "AvgClsRange_130D", "AvgClsRange_250D",
+    "PriceChg_5D", "PriceChg_10D", "PriceChg_30D", "PriceChg_65D", "PriceChg_130D",
+    "PriceChg_250D",
+    "UpDnVol_250D", "HeavyNetRatio_30D", "HeavyNetRatio_250D", "NetHeavyIntensity_250D",
+    "CMF_250D",
+    # research round 7: 5-day volume spike vs 65-day mean (volume-surge proxy) —
+    # exact-letter improved BOTH weeks (OLD 35.6->35.7, NEW 38.0->38.3); the
+    # full 4-feature combo (incl. PriceVolCorr, UpDayVolRatio/DnDayVolRatio) was
+    # worse than this single feature and was not adopted.
+    "VolSpike_5D",
 ]
 
 
