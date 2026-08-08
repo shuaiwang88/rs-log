@@ -164,38 +164,56 @@ def cache_price_volume(ticker):
 
 
 def _csv_price_volume():
-    """Close / AvgVol50 per ticker from the RS csvs - what a NEW ticker is judged on.
+    """Close / AvgVol50 per ticker from the RS csvs and IBD MarketSurge - what a NEW
+    ticker is judged on.
 
     A ticker with no cached file yet cannot be measured from the cache, and fetching it just to
-    find out it is a $3 shell is the cost this is avoiding. Both csvs carry Close and AvgVol50
-    already, so the decision is made before any network call.
+    find out it is a $3 shell is the cost this is avoiding. The csvs carry Close and AvgVol50
+    already, so the decision is made before any network call. IBD MarketSurge is read last so
+    its live `Current Price` wins over stale/junk rows in the derived RS csvs (rs_stocks.csv
+    can carry a 0.086 ghost row for a name that really trades at 233.15). A later source only
+    overrides a field it actually has - NaN never clobbers a real value.
     """
     out = {}
-    for name in ("rs_stocks.csv", "rs_stocks_historical.csv"):
-        fp = REPO_DIR / "output" / name
+    sources = [
+        (REPO_DIR / "output" / "rs_stocks.csv", "Ticker", "Close", "AvgVol50", 1),
+        (REPO_DIR / "output" / "rs_stocks_historical.csv", "Ticker", "Close", "AvgVol50", 1),
+        (REPO_DIR / "IBD" / "marketsurge.csv", "Symbol", "Current Price",
+         "50-Day Avg Vol (1000s)", 1000),
+    ]
+    for fp, tcol, ccol, vcol, vscale in sources:
         if not fp.exists():
             continue
         try:
-            cols = ['Ticker', 'Close', 'AvgVol50']
-            d = pd.read_csv(fp, usecols=lambda c: c in cols)
-            if 'date' not in d.columns and name.endswith("historical.csv"):
-                pass
-            d = d.dropna(subset=['Ticker'])
-            for t, c, v in zip(d['Ticker'], d.get('Close', pd.Series(dtype=float)),
-                               d.get('AvgVol50', pd.Series(dtype=float))):
+            d = pd.read_csv(fp, usecols=lambda c: c in {tcol, ccol, vcol},
+                            encoding="utf-8-sig")
+            d = d.dropna(subset=[tcol])
+            for t, c, v in zip(d[tcol],
+                               pd.to_numeric(d.get(ccol), errors="coerce"),
+                               pd.to_numeric(d.get(vcol), errors="coerce")):
                 t = str(t).strip()
-                if t:                       # later files win; historical is read second
-                    out[t] = (c, v)
+                if not t:
+                    continue
+                cur = out.get(t, (None, None))
+                nc, nv = cur
+                if pd.notna(c):
+                    nc = float(c)
+                if pd.notna(v):
+                    nv = float(v) * vscale
+                out[t] = (nc, nv)
         except Exception:
             continue
     return out
 
 
-def passes_universe_filter(ticker, csv_pv=None):
+def passes_universe_filter(ticker, csv_pv=None, require_vol=True):
     """True if `ticker` is worth carrying: at least MIN_PRICE and MIN_AVG_VOL50.
 
     Judged on the cached parquet when there is one, otherwise on the RS csvs. A ticker we know
     nothing about is kept - the filter removes what is measurably too small, and never guesses.
+    `require_vol=False` admits the daily-screener universe on price alone (the 300K volume bar
+    was kept for the derived RS universe, but IBD's own screener names like BELFA are carried
+    at whatever volume they trade).
     """
     if str(ticker).strip() in ALWAYS_KEEP:
         return True
@@ -211,9 +229,22 @@ def passes_universe_filter(ticker, csv_pv=None):
             vol = v_csv
     if close is not None and pd.notna(close) and float(close) < MIN_PRICE:
         return False
-    if vol is not None and pd.notna(vol) and float(vol) < MIN_AVG_VOL50:
+    if vol is not None and pd.notna(vol) and require_vol and float(vol) < MIN_AVG_VOL50:
         return False
     return True
+
+
+def _screener_symbols():
+    """Symbols carried by the daily IBD screener - judged on price alone (see
+    passes_universe_filter / get_target_tickers), so prune_cache must not delete them on
+    the volume criterion either."""
+    fp = REPO_DIR / "output" / "daily_screener.csv"
+    if not fp.exists():
+        return set()
+    try:
+        return {str(t).strip() for t in pd.read_csv(fp, usecols=['Symbol'])['Symbol'].dropna()}
+    except Exception:
+        return set()
 
 
 def prune_cache(dry_run=False, verbose=True):
@@ -224,8 +255,10 @@ def prune_cache(dry_run=False, verbose=True):
     daily counterpart so the two never disagree about which tickers exist.
     """
     csv_pv = _csv_price_volume()
+    screener = _screener_symbols()
     tickers = sorted({f.stem.split("_")[0] for f in CACHE_DIR.glob("*.parquet") if "_" in f.stem})
-    doomed = [t for t in tickers if not passes_universe_filter(t, csv_pv)]
+    doomed = [t for t in tickers
+              if not passes_universe_filter(t, csv_pv, require_vol=t not in screener)]
     freed = 0
     for t in doomed:
         for fp in CACHE_DIR.glob(f"{t}_*.parquet"):
@@ -243,20 +276,28 @@ def get_target_tickers():
     tickers = set(ALWAYS_KEEP)
     csv_pv = _csv_price_volume()
 
-    def add_from(fp):
+    def add_from(fp, ticker_col='Ticker', price_only=False):
         if not fp.exists():
             return
         try:
-            df = pd.read_csv(fp, usecols=['Ticker'])
-            for t in df['Ticker'].dropna():
+            df = pd.read_csv(fp, usecols=lambda c: c == ticker_col)
+            for t in df[ticker_col].dropna():
                 clean = str(t).strip()
-                if clean and passes_universe_filter(clean, csv_pv):
+                if clean and passes_universe_filter(clean, csv_pv,
+                                                    require_vol=not price_only):
                     tickers.add(clean)
         except Exception:
             pass
 
     add_from(REPO_DIR / "output" / "rs_stocks.csv")
     add_from(REPO_DIR / "output" / "rs_stocks_historical.csv")
+
+    # The daily IBD screener universe (2026-08-05): every MarketSurge symbol, admitted on
+    # price alone. ~1,441 names were missing Current Price because the 300K volume bar had
+    # never admitted them (BELFA, KRNT, ...); the screener's own price column is blank for
+    # exactly these, so the filter judges them on IBD MarketSurge's `Current Price` instead.
+    add_from(REPO_DIR / "output" / "daily_screener.csv", ticker_col="Symbol",
+             price_only=True)
 
     # Existing tickers in ticker_cache/ - still filtered, so a name that has fallen under the
     # thresholds stops being refreshed even before prune_cache() deletes it.
@@ -453,6 +494,20 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
                             except Exception:
                                 pass
 
+                        # A full-history backfill is requested THROUGH YESTERDAY: yfinance can
+                        # include today's incomplete bar when run mid-session, and shipping it
+                        # would leave a partial row as the file's last price. Drop any row
+                        # dated today; the next incremental pass restores it once the session
+                        # completes. Keep at least one row so a brand-new listing is not
+                        # saved empty.
+                        if period_str == "max":
+                            today = pd.Timestamp.today().normalize()
+                            live = df_t.index >= today
+                            if live.any():
+                                kept = df_t[~live]
+                                if len(kept):
+                                    df_t = kept
+
                         # Save full history as <TICKER>_1d.parquet
                         df_t.to_parquet(p_1d)
 
@@ -492,7 +547,8 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
     elapsed = time.time() - start_time
     print(f"✅ Ticker cache update finished in {elapsed:.2f} seconds.")
 
-def update_fundamentals_cache(tickers, max_age_days=7, delay=1.0):
+def update_fundamentals_cache(tickers, max_age_days=7, delay=0.3, workers=1,
+                              timeout=None):
     """Fetch and cache EPS/ROE fundamentals from yfinance for the given tickers.
 
     Called after the OHLCV update so fresh price data and fresh fundamentals land
@@ -501,6 +557,13 @@ def update_fundamentals_cache(tickers, max_age_days=7, delay=1.0):
 
     Benchmarks and sector ETFs (ALWAYS_KEEP) are skipped — yfinance has no meaningful
     EPS/ROE for them.
+
+    `workers > 1` parallelizes the fetch (see batch_fetch_fundamentals). Keep it small:
+    the metadata endpoint is the rate-limit hot spot, and the yfrl cooling gate only
+    protects against cascades, not against the initial 429.
+
+    `timeout` (seconds) caps the whole pass; when it expires the run returns with
+    what it has and the rest is left for the next run.
     """
     try:
         from fetch_fundamentals import batch_fetch_fundamentals
@@ -518,10 +581,12 @@ def update_fundamentals_cache(tickers, max_age_days=7, delay=1.0):
         return
 
     print(f"📊 Fetching fundamentals (EPS/ROE) for {len(tickers):,} tickers "
-          f"(cached if < {max_age_days}d old)...")
+          f"(cached if < {max_age_days}d old, {workers} worker(s), "
+          f"{'unlimited' if timeout is None else str(timeout) + 's cap'})...")
     start = time.time()
     results = batch_fetch_fundamentals(tickers, max_age_days=max_age_days,
-                                        delay=delay, verbose=True)
+                                        delay=delay, verbose=True, workers=workers,
+                                        timeout=timeout)
     n_ok = sum(1 for v in results.values() if not v.get('error'))
     n_err = sum(1 for v in results.values() if v.get('error'))
     print(f"  fundamentals: {n_ok:,} ok, {n_err} errors "
@@ -530,6 +595,16 @@ def update_fundamentals_cache(tickers, max_age_days=7, delay=1.0):
 
 if __name__ == "__main__":
     # --prune / --prune-dry-run maintain the universe without refetching anything.
+    def _arg(name, default, cast):
+        if name in sys.argv:
+            i = sys.argv.index(name)
+            if i + 1 < len(sys.argv):
+                try:
+                    return cast(sys.argv[i + 1])
+                except Exception:
+                    pass
+        return default
+
     if "--prune-dry-run" in sys.argv:
         prune_cache(dry_run=True)
     elif "--prune" in sys.argv:
@@ -538,7 +613,12 @@ if __name__ == "__main__":
         # Refresh only the EPS/ROE fundamentals cache; skip the OHLCV price pass
         # (useful as a fast daily refresh once prices are up to date).
         tickers = get_target_tickers()
-        update_fundamentals_cache(tickers=tickers)
+        update_fundamentals_cache(
+            tickers=tickers,
+            delay=_arg("--fund-delay", 0.3, float),
+            workers=_arg("--fund-workers", 1, int),
+            timeout=_arg("--fund-timeout", None,
+                         lambda s: None if str(s).lower() in ("0", "none", "") else int(float(s) * 60)))
     else:
         with_fundamentals = "--with-fundamentals" in sys.argv
         tickers = get_target_tickers()
@@ -547,5 +627,9 @@ if __name__ == "__main__":
         # so the cache tracks the universe instead of accumulating everything ever fetched.
         prune_cache()
         if with_fundamentals:
-            update_fundamentals_cache(tickers=tickers)
+            update_fundamentals_cache(tickers=tickers,
+                                      delay=_arg("--fund-delay", 0.3, float),
+                                      workers=_arg("--fund-workers", 1, int),
+                                      timeout=_arg("--fund-timeout", None,
+                                                   lambda s: None if str(s).lower() in ("0", "none", "") else int(float(s) * 60)))
 

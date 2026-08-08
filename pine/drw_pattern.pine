@@ -626,7 +626,7 @@ _priorLowFull = ta.lowest(low, math.max(1, math.min(bar_index, 250)))
 // maxDbBars is the deepest it can ever be asked for: the search only proceeds when
 // `fHt >= bar_index - maxDbBars`, and the second low sLt always sits after fHt, so
 // `bar_index - sLt` cannot exceed maxDbBars.
-int _maxDbBars = i_dbLength * 5
+int _maxDbBars = i_dbLength
 var array<float> _sufMaxHigh = array.new_float(0)
 if isBase
     array.clear(_sufMaxHigh)
@@ -647,7 +647,7 @@ if isBase
                 int sHt = array.get(pivotHighBars, hp_i)
                 int fHt = array.get(pivotHighBars, hp_j)
 
-                int maxDbBars = i_dbLength * 5
+                int maxDbBars = i_dbLength
                 if fHt >= bar_index - maxDbBars
                     int fLt = -1
                     float fL = na
@@ -673,7 +673,7 @@ if isBase
                         bool condPriorTrend = (fH >= _priorLowFull * (1.0 + i_dbPriorUptrend / 100.0)) or (sH >= _priorLowFull * (1.0 + i_dbPriorUptrend / 100.0))
                         bool condPricesH = array.size(startBasePrice) > 0 ? (math.abs(fH - array.get(startBasePrice, 0)) < array.get(startBasePrice, 0) * 0.15 or math.abs(sH - array.get(startBasePrice, 0)) < array.get(startBasePrice, 0) * 0.15) : true
                         bool condPricesA = i_dbRequireUndercut ? (sL < fL * 1.05) : (sL <= fL * 1.05 or sL >= fL * 0.80)
-                        bool condPricesB = sL >= (1.0 - i_dbDepth / 100.0) * peak
+                        bool condPricesB = sL >= (1.0 - i_dbDepth) * peak
                         bool condPricesC = sL <= peak * 0.95
                         bool condPricesD = sH >= sL + (peak - sL) * 0.15
                         bool condPricesE = sH <= fH * 1.10
@@ -806,6 +806,13 @@ else
 var float handleLowPointSep = 0.0
 if not rightSide or handlePeakLockedSep == 0.0
     handleLowPointSep := 0.0
+else if handleBarCountSep == 0
+    // A new handle peak just locked in (see handlePeakLockedSep above) - restart the
+    // low tracker from here. Previously this only reset when `rightSide` went false,
+    // which never happens once a base has a low, so the tracker kept sliding down to
+    // the base's own low across every handle attempt in the base's life, and
+    // handleMidOKSep (below) failed by construction.
+    handleLowPointSep := low
 else
     if low < nz(handleLowPointSep[1], handleLowPointSep) or nz(handleLowPointSep[1], handleLowPointSep) == 0.0
         handleLowPointSep := low
@@ -1137,7 +1144,9 @@ if isDoubleBottom and bar_index - topDBBar > i_dbLength
     line.delete(dbLine2)
     line.delete(dbLine3)
     isDoubleBottom := false
-    isDoubleBottom
+    highLine := line.new(x1 = startBaseBar, y1 = array.get(startBasePrice, 0), x2 = bar_index, y2 = array.get(startBasePrice, 0), width = 3, style = line.style_dotted, color = color.rgb(146, 193, 131, 0))
+    lowLine := line.new(x1 = startBaseBar, y1 = array.get(lowBasePrice, 0), x2 = bar_index, y2 = array.get(lowBasePrice, 0), width = 2, style = line.style_solid, color = color.rgb(146, 193, 131, 0))
+    lowLine
 firstPivTime = line.get_x1(dbLine1)
 thrdPivTime = line.get_x2(dbLine2)
 if isDoubleBottom and (thrdPivTime - firstPivTime) * 2 <= bar_index - thrdPivTime or thrdPivTime - firstPivTime >= (bar_index - thrdPivTime) * 2

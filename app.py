@@ -1920,7 +1920,15 @@ def start_ticker_cache_update(mode="price"):
         if mode == "price+fund":
             cmd.append("--with-fundamentals")
         elif mode == "fundamentals":
-            cmd.append("--fundamentals-only")
+            # All yfinance calls inside update_ticker_cache.py go through
+            # yf_ratelimit (429 backoff 60/180/420s + global cooling gate), so
+            # both buttons are rate-limit safe. Fundamentals additionally runs
+            # with a small parallel pool and a wall-clock cap so a background
+            # click can never hammer the metadata endpoint or run forever.
+            cmd += ["--fundamentals-only",
+                    "--fund-workers", "4",
+                    "--fund-delay", "0.2",
+                    "--fund-timeout", "60"]
         labels = {"price": "[OHLCV only]",
                   "price+fund": "[OHLCV + fundamentals]",
                   "fundamentals": "[fundamentals only]"}
@@ -2395,6 +2403,30 @@ has_col = lambda sn, c: c in sn.columns
 def _n(sn, c):
     return pd.to_numeric(sn[c], errors='coerce') if has_col(sn, c) else pd.Series(np.nan, index=sn.index)
 
+# Rating/percentile-style columns that appear across both the rs_ranking.py world (Overview /
+# Top Performers / Trends / Data Table - "Relative Strength", "Percentile", "1M_RS_Percentile",
+# etc.) and the calc_ibd_ratings.py world (Ratings Scanner / Daily Screener / Weekly Screener -
+# "RS Rating", "EPS Rating", "Comp Rating", etc.). Real IBD ratings are always whole numbers in
+# MarketSurge itself, so these get rounded to a clean integer before display rather than showing
+# float noise like "99.00000".
+RATING_COLS = [
+    'Relative Strength', 'Percentile', '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile',
+    '1M', '3M', '6M', 'RS Rating', 'EPS Rating', 'Comp Rating', 'RS 3-Month Rating',
+    'RS 6-Month Rating', 'RS 3M', 'RS 6M', 'A/D Score', 'SMR Score', '_g250_score',
+    'Ind Group RS', 'Earnings Stability', 'P/E Percent Rank', 'EPS % Growth 5 Yr Pct Rnk',
+    'rs_score',
+]
+
+def _int_ratings(df, cols=None):
+    """Round known rating/percentile columns to whole numbers (nullable Int64, so NaN survives
+    as <NA> instead of crashing or silently becoming 0) for clean display."""
+    cols = cols if cols is not None else RATING_COLS
+    df = df.copy()
+    for c in cols:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors='coerce').round().astype('Int64')
+    return df
+
 # Latest cross-sectional snapshot (one row per ticker) via the analysis blocks.
 if has_historical and 'date' in filtered_df.columns:
     _maxd = filtered_df['date'].max()
@@ -2424,13 +2456,13 @@ def leader_score(row):
 
 # ---------------------- Tabs ----------------------
 if has_historical:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17 = st.tabs(
         ["📈 Overview", "🎯 Top Performers",
-         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern", "📊 Ratings Scanner", "📋 Daily Screener"])
+         "📉 Trends", "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern", "📊 Ratings Scanner", "📋 Daily Screener", "📅 Weekly Screener"])
 else:
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17 = st.tabs(
         ["📈 Overview", "🎯 Top Performers", "📊 Distributions",
-         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern", "📊 Ratings Scanner", "📋 Daily Screener"])
+         "🏭 Industry Rotation", "💼 Company Details", "📋 Data Table", "🔍 Pattern Finder", "🏆 IBD Pattern", "📝 Daily Report Card", "📸 MarketSurge Screenshots", "🎙️ IBD Live Summary", "🧪 Backtests", "🔍 Scans & Leads", "📐 TV Pattern", "📊 Ratings Scanner", "📋 Daily Screener", "📅 Weekly Screener"])
 
 tab_ibd_pattern = tab8
 tab_tv_pattern = tab14
@@ -2441,6 +2473,7 @@ tab_ms = tab10
 tab_ibd_live = tab11
 tab_ratings = tab15
 tab_screener = tab16
+tab_weekly_screener = tab17
 
 
 # ---------- TAB 1: Overview ----------
@@ -2832,7 +2865,7 @@ with tab2:
                                '3M_RS_Percentile', '1M_RS_Percentile', 'RevenueGrowth', 'PctFrom52WkHigh'] if has_col(lw, c)]
     if not lw.empty:
         top_leader = lw.sort_values('LeaderScore', ascending=False).head(15)[leader_cols]
-        st.dataframe(top_leader.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(_int_ratings(top_leader).reset_index(drop=True), use_container_width=True, hide_index=True)
     else:
         st.info("No leader data available.")
     st.caption("Composite blends RS percentile, 6M/3M momentum, revenue growth, near-52-wk-high proximity and profitability.")
@@ -2848,7 +2881,7 @@ with tab2:
         acc_f = acc[acc['Accelerating']].sort_values('6M_RS_Percentile', ascending=False).head(15)
         if not acc_f.empty:
             m_cols = [c for c in ['Ticker', 'Sector', 'Relative Strength', '1M_RS_Percentile', '3M_RS_Percentile', '6M_RS_Percentile'] if has_col(acc, c)]
-            st.dataframe(acc_f[m_cols].rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'}).reset_index(drop=True),
+            st.dataframe(_int_ratings(acc_f[m_cols].rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})).reset_index(drop=True),
                          use_container_width=True, hide_index=True)
             st.caption("Stocks whose RS percentile keeps climbing 1M → 3M → 6M: momentum is building rather than fading.")
         else:
@@ -2858,7 +2891,7 @@ with tab2:
         top_rs = snap.assign(RSn=rs_num).nlargest(15, 'RSn')
         show = ['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile'] if has_col(snap, 'Rank') else ['Ticker', 'Sector', 'Relative Strength', 'Percentile']
         top_rs = top_rs[[c for c in show + [PRICE_COL] if has_col(top_rs, c)]].drop(columns='RSn', errors='ignore')
-        st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(_int_ratings(top_rs).reset_index(drop=True), use_container_width=True, hide_index=True)
     st.divider()
 
     st.divider()
@@ -2869,13 +2902,13 @@ with tab2:
         top_rs = snap.assign(RSn=rs_num).nlargest(15, 'RSn')
         show = ['Rank', 'Ticker', 'Sector', 'Relative Strength', 'Percentile'] if has_col(snap, 'Rank') else ['Ticker', 'Sector', 'Relative Strength', 'Percentile']
         top_rs = top_rs[[c for c in show + [PRICE_COL] if has_col(top_rs, c)]].drop(columns='RSn', errors='ignore')
-        st.dataframe(top_rs.reset_index(drop=True), use_container_width=True, hide_index=True)
+        st.dataframe(_int_ratings(top_rs).reset_index(drop=True), use_container_width=True, hide_index=True)
     with col2:
         st.subheader("⭐ Top 15 by 6-Month Momentum")
         if has_col(snap, '6M_RS_Percentile'):
             top_6m = snap.assign(tmp=_n(snap, '6M_RS_Percentile')).nlargest(15, 'tmp').drop(columns=['tmp'])[['Ticker', '6M_RS_Percentile', '3M_RS_Percentile', '1M_RS_Percentile']].copy()
             top_6m = top_6m.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
-            st.dataframe(top_6m.reset_index(drop=True), use_container_width=True, hide_index=True)
+            st.dataframe(_int_ratings(top_6m).reset_index(drop=True), use_container_width=True, hide_index=True)
 
     st.divider()
     col1, col2 = st.columns(2)
@@ -4117,6 +4150,7 @@ with tab6:
     else:
         table_df = filtered_df.copy()
     table_df = table_df.rename(columns={'1M_RS_Percentile': '1M', '3M_RS_Percentile': '3M', '6M_RS_Percentile': '6M'})
+    table_df = _int_ratings(table_df)
     all_cols = [c for c in table_df.columns if c not in ('date', 'source_file')]
     default_cols = ['Rank', 'Ticker', 'Industry', '1M', '3M', '6M', 'Close' if 'Close' in table_df.columns else 'Price', 'MarketCap', 'AvgVol30', 'PctFrom52WkHigh']
     selected_cols = st.multiselect("Select columns to display", all_cols, default=[c for c in default_cols if c in all_cols])
@@ -6929,9 +6963,10 @@ with tab15:
 
     sys.path.insert(0, str(Path(__file__).resolve().parent / "python"))
     from calc_ibd_ratings import (
-        calc_rs_rating_snapshot, calc_ad_rating_snapshot,
-        calc_pct_off_52w_high_snapshot, calc_eps_rating,
-        calc_smr_rating, calc_composite_rating, _f_sigmoid
+        apply_rating_percentiles, calc_ad_raw_score,
+        calc_pct_off_52w_high_snapshot, calc_eps_rating, calc_rs_raw_score,
+        calc_rs_sub_raw_score, calc_smr_raw_score,
+        extract_eps_from_fundamentals, extract_smr_inputs_from_fundamentals,
     )
     from fetch_fundamentals import get_cached_fundamentals, fetch_and_cache_fundamentals
 
@@ -6950,19 +6985,7 @@ with tab15:
                 results = []
                 ticker_files = sorted(CACHE_DIR.glob("*_1d.parquet"))
                 total = len(ticker_files)
-                progress = st.progress(0, text="Loading SPY...")
-
-                # Load SPY once
-                spy_path = CACHE_DIR / "SPY_1d.parquet"
-                if not spy_path.exists():
-                    st.error("SPY cache not found. Run update_ticker_cache.py first.")
-                    st.stop()
-                spy_df = pd.read_parquet(spy_path)
-                if isinstance(spy_df.columns, pd.MultiIndex):
-                    spy_df.columns = spy_df.columns.get_level_values(0)
-                spy_df.index = pd.to_datetime(spy_df.index)
-                if spy_df.index.tz is not None:
-                    spy_df.index = spy_df.index.tz_localize(None)
+                progress = st.progress(0, text="Scanning...")
 
                 # Track fundamentals fetch stats
                 n_fundamental_fetched = 0
@@ -6983,32 +7006,13 @@ with tab15:
                         if df.empty or len(df) < 65 or 'Close' not in df.columns:
                             continue
 
-                        # Align SPY to this ticker's index
-                        spy_aligned = spy_df.reindex(df.index).ffill().bfill()
-
-                        # RS Rating
-                        rs_val = calc_rs_rating_snapshot(df['Close'], spy_aligned['Close'])
-                        # RS 3M / 6M
-                        close_arr = df['Close'].values.astype(float)
-                        spy_arr = spy_aligned['Close'].values.astype(float)
-                        n = len(close_arr)
-                        if n > 63:
-                            score_3m = ((close_arr[-1] / close_arr[-(63 + 1)]) /
-                                        (spy_arr[-1] / spy_arr[-(63 + 1)]) * 100.0
-                                        if spy_arr[-(63 + 1)] > 0 else 100.0)
-                            rs_3m = _f_sigmoid(score_3m)
-                        else:
-                            rs_3m = np.nan
-                        if n > 126:
-                            score_6m = ((close_arr[-1] / close_arr[-(126 + 1)]) /
-                                        (spy_arr[-1] / spy_arr[-(126 + 1)]) * 100.0
-                                        if spy_arr[-(126 + 1)] > 0 else 100.0)
-                            rs_6m = _f_sigmoid(score_6m)
-                        else:
-                            rs_6m = np.nan
-
-                        # A/D Rating
-                        ad_val = calc_ad_rating_snapshot(df)
+                        # RS / A-D RAW scores only - these are percentile-ranked against the
+                        # whole scanned universe by apply_rating_percentiles() after the loop
+                        # (a single ticker can't be percentile-ranked in isolation).
+                        rs_raw = calc_rs_raw_score(df['Close'])
+                        rs3m_raw = calc_rs_sub_raw_score(df['Close'], 63)
+                        rs6m_raw = calc_rs_sub_raw_score(df['Close'], 126)
+                        ad_raw = calc_ad_raw_score(df)
 
                         # % Off 52W High
                         pct_off = calc_pct_off_52w_high_snapshot(df)
@@ -7018,38 +7022,38 @@ with tab15:
 
                         # Fundamentals (Full Scan only)
                         eps_rating = None
-                        smr_score = None
-                        smr_grade = None
-                        comp_rating = None
+                        smr_raw = None
+                        market_cap_mil = None
 
                         if "Full" in mode:
                             fund = fetch_and_cache_fundamentals(ticker, max_age_days=30, delay=0.15)
                             if fund and not fund.get('error'):
-                                fy_eps = fund.get('fy_eps')
-                                fq_eps = fund.get('fq_eps')
-                                roe_val = fund.get('roe')
                                 n_fundamental_fetched += 1
+                                fy_eps, fq_eps, _ = extract_eps_from_fundamentals(fund)
+                                info = fund.get('info') if isinstance(fund.get('info'), dict) else {}
+                                roe_frac = info.get('returnOnEquity')
+                                roe_val = float(roe_frac) * 100.0 if roe_frac is not None else None
+                                mc = info.get('marketCap')
+                                market_cap_mil = float(mc) / 1e6 if mc is not None else None
 
                                 if fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5:
                                     eps_rating = calc_eps_rating(fy_eps, fq_eps, roe_val)
-                                if roe_val is not None:
-                                    smr_score, smr_grade = calc_smr_rating(roe_val)
-
-                            if eps_rating is not None and smr_score is not None and not np.isnan(rs_val) and not np.isnan(ad_val):
-                                comp_rating = calc_composite_rating(rs_val, eps_rating, smr_score, ad_val)
+                                sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = \
+                                    extract_smr_inputs_from_fundamentals(fund)
+                                smr_raw = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth,
+                                                              margin_now, margin_trend, roe_val)
 
                         results.append({
                             'Ticker': ticker,
-                            'Close': round(latest, 2),
-                            'RS Rating': round(rs_val, 1) if not np.isnan(rs_val) else None,
-                            'RS 3M': round(rs_3m, 1) if not np.isnan(rs_3m) else None,
-                            'RS 6M': round(rs_6m, 1) if not np.isnan(rs_6m) else None,
+                            'Current Price': round(latest, 2),
+                            'Market Cap (mil)': market_cap_mil,
                             '% Off 52W High': round(pct_off, 2) if not np.isnan(pct_off) else None,
-                            'A/D Rating': round(ad_val, 1) if not np.isnan(ad_val) else None,
+                            '_rs_raw': rs_raw,
+                            '_rs3m_raw': rs3m_raw,
+                            '_rs6m_raw': rs6m_raw,
+                            '_ad_raw': ad_raw,
+                            '_smr_raw': smr_raw,
                             'EPS Rating': eps_rating,
-                            'SMR Score': round(smr_score, 1) if smr_score is not None else None,
-                            'SMR Grade': smr_grade,
-                            'Comp Rating': comp_rating,
                         })
                     except Exception:
                         pass
@@ -7062,6 +7066,16 @@ with tab15:
 
                 if results:
                     result_df = pd.DataFrame(results)
+                    # universe post-pass: percentile-ranks the raw scores against the
+                    # eligible (price >= $4, mktcap >= $50M when known) scanned universe
+                    # and finalizes RS/RS-3M/RS-6M/A-D/SMR/Comp Rating
+                    result_df = apply_rating_percentiles(result_df)
+                    result_df = result_df.rename(columns={
+                        'Current Price': 'Close',
+                        'RS 3-Month Rating': 'RS 3M',
+                        'RS 6-Month Rating': 'RS 6M',
+                        'SMR Rating': 'SMR Grade',
+                    })
                     st.session_state.ratings_df = result_df
                     st.session_state.ratings_mode = mode
                     st.session_state.ratings_scanned = True
@@ -7081,17 +7095,19 @@ with tab15:
         with col_f1:
             min_rs = st.slider("Min RS Rating", 0, 99, 0, key="rs_min_filter")
         with col_f2:
-            min_ad = st.slider("Min A/D Rating", 0, 99, 0, key="ad_min_filter")
+            min_ad = st.slider("Min A/D Score", 0, 99, 0, key="ad_min_filter",
+                               help="A/D Rating is a letter grade (A+..E); this filters on its "
+                                    "underlying 1-99 percentile score.")
         with col_f3:
             max_pct_off = st.slider("Max % Off 52W High", 0.0, 100.0, 100.0, key="pct_off_filter")
         with col_f4:
             search_ticker = st.text_input("Search Ticker", "", key="rating_search").strip().upper()
 
-        filtered = result_df.copy()
+        filtered = _int_ratings(result_df)
         if min_rs > 0:
             filtered = filtered[filtered['RS Rating'].notna() & (filtered['RS Rating'] >= min_rs)]
         if min_ad > 0:
-            filtered = filtered[filtered['A/D Rating'].notna() & (filtered['A/D Rating'] >= min_ad)]
+            filtered = filtered[filtered['A/D Score'].notna() & (filtered['A/D Score'] >= min_ad)]
         if max_pct_off < 100:
             filtered = filtered[filtered['% Off 52W High'].notna() & (filtered['% Off 52W High'] <= max_pct_off)]
         if search_ticker:
@@ -7132,7 +7148,7 @@ with tab15:
                 return 'background-color: #450a0a; color: #fca5a5'
             return ''
 
-        styled = filtered.style.map(color_rating, subset=['RS Rating', 'RS 3M', 'RS 6M', 'A/D Rating'])
+        styled = filtered.style.map(color_rating, subset=['RS Rating', 'RS 3M', 'RS 6M', 'A/D Score'])
         if 'Comp Rating' in filtered.columns:
             styled = styled.map(color_rating, subset=['Comp Rating'])
         if 'EPS Rating' in filtered.columns:
@@ -7145,7 +7161,7 @@ with tab15:
                      column_config={
                          'Ticker': st.column_config.TextColumn('Ticker', width='small'),
                          'Close': st.column_config.NumberColumn('Close', format='$%.2f'),
-                         'RS Rating': st.column_config.NumberColumn('RS Rating', format='%.1f'),
+                         'RS Rating': st.column_config.NumberColumn('RS Rating', format='%d'),
                      })
 
         # Export option
@@ -7328,6 +7344,365 @@ with tab16:
                      column_config={'Current Price': st.column_config.NumberColumn('Current Price', format='$%.2f')})
         st.download_button("📥 Download filtered CSV", show.to_csv(index=False),
                            f"daily_screener_{datetime.now().strftime('%Y%m%d')}.csv", "text/csv")
+
+
+# ---------- TAB 17: Weekly Screener ----------
+with tab17:
+    st.subheader("📅 Weekly Screener — Quality Growth Stocks")
+    st.markdown(
+        "Multi-section screener for weekly review, built on the same `calc_ibd_ratings.py` pipeline "
+        "as the Daily Screener. The **Growth 250 Style** thresholds are reverse-engineered from real "
+        "MarketSurge Growth 250 exports (Feb/Mar/Apr 2026 snapshots), not guessed. Other sections "
+        "draw on classic IBD/O'Neil screening themes (the ~30-screen \"Bill\" list — 3 Weeks Tight, "
+        "Top ROE, EPS Accel Surprise, Recent IPO, etc.) and Jeff Sun's momentum/VCP routine "
+        "([jfsrev.substack.com](https://jfsrev.substack.com/p/my-trading-tools-process-routine)). "
+        "Every section starts from a quality/liquidity floor — the goal is leaders, not junk."
+    )
+
+    _WEEKLY_PATH = Path(__file__).resolve().parent / "output" / "daily_screener.csv"
+    if not _WEEKLY_PATH.exists():
+        st.info("Build the Daily Screener first (📋 Daily Screener tab) — this reads from "
+                "`output/daily_screener.csv`.")
+    else:
+        @st.cache_data(ttl=600, show_spinner=False)
+        def load_weekly_screener_data():
+            return pd.read_csv(_WEEKLY_PATH, low_memory=False)
+
+        wdf = load_weekly_screener_data()
+        _w_need = ['Symbol', 'Name', 'Current Price', 'Market Cap (mil)', 'RS Rating', 'EPS Rating',
+                   'Comp Rating', 'SMR Rating', 'A/D Rating', 'A/D Rating - Pr Wk', 'Ind Group Rank',
+                   'Industry Name', '50-Day Avg Vol (1000s)', 'ROE', 'AT Margin', 'Pre-tax Margins',
+                   'EPS % Chg Last Qtr (-/+)', 'EPS Surprise', 'Avg EPS Surprise 4Q', 'Funds % Increase',
+                   'Inst Count', 'Inst % Held', '% Off High', 'Price vs 50-Day', '21 Day ATR %', '30 Day ATR %',
+                   '50 Day ATR %', 'Years Since First Cached', '% Chg 5 Days', '% Chg 1 Month',
+                   '% Chg 3 Months', '% Chg 6 Months', 'Shrt Int % of Float', 'Shrt Int % Chg']
+        _w_missing = [c for c in _w_need if c not in wdf.columns]
+        if _w_missing:
+            st.warning(f"`daily_screener.csv` is missing {_w_missing} — rebuild it from the "
+                       "📋 Daily Screener tab to pick up the new columns.")
+        else:
+            _AD_ORDER = {"A+": 13, "A": 12, "A-": 11, "B+": 10, "B": 9, "B-": 8, "C+": 7, "C": 6,
+                         "C-": 5, "D+": 4, "D": 3, "D-": 2, "E": 1}
+            _SMR_ORDER = {"A": 4, "B": 3, "C": 2, "D": 1, "E": 0}
+
+            base = wdf.copy()
+            _num_cols = ['RS Rating', 'EPS Rating', 'Comp Rating', 'Current Price', 'Market Cap (mil)',
+                         '50-Day Avg Vol (1000s)', 'ROE', 'AT Margin', 'Pre-tax Margins',
+                         'EPS % Chg Last Qtr (-/+)', 'EPS Surprise', 'Avg EPS Surprise 4Q', 'Funds % Increase',
+                         'Inst Count', 'Inst % Held', '% Off High', 'Price vs 50-Day', '21 Day ATR %',
+                         '30 Day ATR %', '50 Day ATR %', 'Years Since First Cached', 'Ind Group Rank',
+                         '% Chg 5 Days', '% Chg 1 Month', '% Chg 3 Months', '% Chg 6 Months',
+                         'Shrt Int % of Float', 'Shrt Int % Chg']
+            for c in _num_cols:
+                base[c] = pd.to_numeric(base[c], errors='coerce')
+            base['_AD_n'] = base['A/D Rating'].map(_AD_ORDER)
+            base['_SMR_n'] = base['SMR Rating'].map(_SMR_ORDER)
+
+            # Universal quality/liquidity floor, applied up front so no individual section can
+            # accidentally surface a penny stock or ghost-liquidity name.
+            quality_gate = (
+                (base['Current Price'] >= 10) &
+                (base['50-Day Avg Vol (1000s)'].isna() | (base['50-Day Avg Vol (1000s)'] >= 100)) &
+                base['Comp Rating'].notna()
+            )
+            base = base[quality_gate].copy()
+            st.caption(f"Universe after quality/liquidity floor (price ≥ $10, 50-day avg vol ≥ 100K "
+                       f"shares when known): **{len(base):,}** of {len(wdf):,} tickers")
+
+            def _weekly_rate_style(val):
+                if pd.isna(val):
+                    return ''
+                try:
+                    v = float(val)
+                except (TypeError, ValueError):
+                    return ''
+                if v >= 90:
+                    return 'background-color: #14532d; color: #4ade80'
+                if v >= 80:
+                    return 'background-color: #1a3a1a; color: #86efac'
+                if v >= 70:
+                    return 'background-color: #1c3a1c; color: #bbf7d0'
+                if v < 30:
+                    return 'background-color: #450a0a; color: #fca5a5'
+                return ''
+
+            def show_section(df_, cols, sort_col, key, n=40, ascending=False, caption=None):
+                if df_.empty:
+                    st.info("No tickers currently pass this section's criteria.")
+                    return
+                d = df_.sort_values(sort_col, ascending=ascending).head(n)
+                show_cols = [c for c in cols if c in d.columns]
+                d_show = _int_ratings(d[show_cols])
+                style_cols = [c for c in ['RS Rating', 'EPS Rating', 'Comp Rating'] if c in show_cols]
+                styled = d_show.style.map(_weekly_rate_style, subset=style_cols) if style_cols else d_show
+                st.dataframe(styled, use_container_width=True, height=420,
+                             column_config={'Current Price': st.column_config.NumberColumn('Current Price', format='$%.2f')}
+                             if 'Current Price' in show_cols else None)
+                if caption:
+                    st.caption(caption)
+                st.download_button("📥 Download CSV", d_show.to_csv(index=False),
+                                   f"weekly_screener_{key}_{datetime.now():%Y%m%d}.csv", "text/csv",
+                                   key=f"dl_weekly_{key}")
+
+            sec_tabs = st.tabs([
+                "🏆 Growth 250 Style", "💪 CANSLIM Leaders", "🏭 Quality Fundamentals",
+                "📈 Accumulation Leaders", "⚡ EPS Growth & Surprise", "🚀 IPO Leaders",
+                "🎯 Volatility Contraction", "🔥 Strongest Movers",
+                "🌪️ High ADR% (Hottest)", "🩳 High Short Float",
+            ])
+
+            # ── 1. Growth 250 Style ──────────────────────────────────────────────
+            with sec_tabs[0]:
+                st.markdown(
+                    "Reverse-engineered from real MarketSurge Growth 250 exports (900 ticker-month "
+                    "rows across Feb/Mar/Apr 2026 snapshots, `~/Desktop/stock/List/`, cross-checked "
+                    "against a fresh 350-ticker export). A single blended score with one RS floor "
+                    "under-covers the real list, because the real list isn't one screen — it's a "
+                    "**union of distinct qualifying paths** (the real methodology is a merge of ~30 "
+                    "named sub-screens). Splitting real members by what got them in surfaced three "
+                    "clear, reusable patterns, each scored independently below:"
+                )
+                gA = base[base['RS Rating'] >= 90].copy()
+                gB = base[(base['EPS Rating'] >= 75) & (base['_SMR_n'] >= 3) &
+                          (base['_AD_n'] >= 6) & (base['Comp Rating'] >= 75) &
+                          (base['RS Rating'] >= 40)].copy()
+                gC = base[(base['Market Cap (mil)'].between(300, 2000)) &
+                          (base['EPS Rating'] >= 70) & (base['RS Rating'] >= 70) &
+                          (base['Comp Rating'] >= 70)].copy()
+                n_union = pd.concat([gA['Symbol'], gB['Symbol'], gC['Symbol']]).nunique()
+                st.caption(f"**{n_union:,}** distinct tickers qualify via at least one path "
+                           f"(A: {len(gA):,} · B: {len(gB):,} · C: {len(gC):,}).")
+
+                st.markdown("##### Path A — Momentum / Story (RS Rating ≥ 90, EPS not required)")
+                show_section(gA, ['Symbol', 'Name', 'RS Rating', 'Comp Rating', 'EPS Rating',
+                                   'SMR Rating', 'A/D Rating', 'Ind Group Rank', 'Industry Name',
+                                   'Current Price'],
+                             'RS Rating', 'growth250_a', n=50,
+                             caption="Real analogue: clinical-stage biotech running on catalyst "
+                                     "momentum, not earnings (e.g. RS Rating 95-99 with EPS Rating "
+                                     "in the single digits).")
+
+                st.divider()
+                st.markdown("##### Path B — Quality Compounder (EPS ≥75, SMR A/B, A/D C-or-better, "
+                             "Comp ≥75 — RS Rating not required)")
+                show_section(gB, ['Symbol', 'Name', 'Comp Rating', 'EPS Rating', 'SMR Rating',
+                                   'A/D Rating', 'RS Rating', 'Industry Name', 'Current Price',
+                                   'Market Cap (mil)'],
+                             'Comp Rating', 'growth250_b', n=50,
+                             caption="Real analogue: mega-cap compounders (MSFT, AMZN, BRK.B, V) that "
+                                     "qualify on business quality despite RS Rating as low as the 50s.")
+
+                st.divider()
+                st.markdown("##### Path C — Cheap-Quality Small-Cap ($300M–$2B, EPS/RS/Comp all ≥70)")
+                show_section(gC, ['Symbol', 'Name', 'Comp Rating', 'RS Rating', 'EPS Rating',
+                                   'SMR Rating', 'A/D Rating', 'Industry Name', 'Current Price',
+                                   'Market Cap (mil)'],
+                             'Comp Rating', 'growth250_c', n=50,
+                             caption="Real analogue: small, financially sound names strong on every "
+                                     "factor at once (e.g. RELL, FCCO, FVCB), not just riding a hot "
+                                     "sector.")
+
+            # ── 2. CANSLIM Leaders ───────────────────────────────────────────────
+            with sec_tabs[1]:
+                st.markdown("**Bill 04 / Bill 30 style**: Comp Rating and RS Rating both above the "
+                            "same round threshold — the simplest two-factor screen on the list.")
+                b8080 = base[(base['Comp Rating'] > 80) & (base['RS Rating'] > 80)].copy()
+                b9090 = base[(base['Comp Rating'] > 90) & (base['RS Rating'] > 90)].copy()
+                col_8080, col_9090 = st.columns(2)
+                with col_8080:
+                    st.markdown("##### 80 / 80 (Comp > 80 and RS > 80)")
+                    show_section(b8080, ['Symbol', 'Name', 'Comp Rating', 'RS Rating', 'EPS Rating',
+                                          'Current Price'],
+                                 'Comp Rating', '8080', n=25)
+                with col_9090:
+                    st.markdown("##### 90 / 90 (Comp > 90 and RS > 90)")
+                    show_section(b9090, ['Symbol', 'Name', 'Comp Rating', 'RS Rating', 'EPS Rating',
+                                          'Current Price'],
+                                 'Comp Rating', '9090', n=25)
+
+                st.divider()
+                st.markdown(
+                    "**Bill 12/13/15/16 style** (Strong Group, Top EPS, Top Comp, Top RS): all four "
+                    "pillars genuinely strong at once, not just a high composite masking one weak leg."
+                )
+                c = base[(base['Comp Rating'] >= 90) & (base['RS Rating'] >= 90) &
+                         (base['EPS Rating'] >= 80)].copy()
+                show_section(c, ['Symbol', 'Name', 'Comp Rating', 'RS Rating', 'EPS Rating',
+                                  'SMR Rating', 'A/D Rating', 'Ind Group Rank', 'Industry Name',
+                                  'Current Price'],
+                             'Comp Rating', 'canslim', n=50)
+
+            # ── 3. Quality Fundamentals ──────────────────────────────────────────
+            with sec_tabs[2]:
+                st.markdown(
+                    "**Bill 11/14/22/24/25 style — avoid the junk.** O'Neil's classic ROE ≥17% "
+                    "quality bar, A/B SMR (sales + margins + ROE all sound), and EPS Rating >1 "
+                    "(excludes negative/no-earnings names). Deliberately doesn't require high RS — "
+                    "this is about business quality independent of whether the stock is moving now."
+                )
+                # ROE/margins are NI-over-(equity|revenue) ratios: a company with near-zero or
+                # negative book equity/revenue (heavy buybacks, micro-caps) blows these up to
+                # thousands of percent - real, not a display bug (e.g. MAS showed ROE=5862.5%
+                # from Masco's buyback-shrunk equity base). The core RS/EPS/SMR/Comp ratings
+                # already guard against this via log-compression inside calc_ibd_ratings.py, but
+                # this screen filters on the RAW figures directly, so it needs its own sanity caps
+                # - a real "quality" company's ROE/margins essentially never legitimately exceed
+                # a couple hundred percent.
+                q = base[(base['ROE'] >= 17) & (base['ROE'] <= 200) &
+                         (base['AT Margin'].between(0, 100)) &
+                         (base['Pre-tax Margins'].between(0, 100)) &
+                         (base['_SMR_n'] >= 3) & (base['EPS Rating'] > 1)].copy()
+                show_section(q, ['Symbol', 'Name', 'ROE', 'AT Margin', 'Pre-tax Margins', 'SMR Rating',
+                                  'EPS Rating', 'Comp Rating', 'RS Rating', 'Current Price'],
+                             'ROE', 'quality', n=50)
+
+            # ── 4. Accumulation Leaders ──────────────────────────────────────────
+            with sec_tabs[3]:
+                st.markdown(
+                    "**Bill 21 style**: strongest institutional accumulation (A/D Rating A- or "
+                    "better) with rising fund sponsorship — buyers actually stepping in, not just a "
+                    "price move."
+                )
+                # Funds % Increase is new-position-count over old-position-count - a fund going
+                # from a handful of shares to a few more reads as a multi-million-percent
+                # "increase" (max observed: 2,872,824%). Same near-zero-denominator pattern as
+                # ROE/margins above; capped so the ranking reflects real sponsorship growth.
+                #
+                # "Number of Funds" is NOT a real holder count - it's len(yfinance's
+                # mutualfund_holders), which is Yahoo's top-10-holders *snapshot table*, hard-capped
+                # at 10 rows. Any stock with >=10 tracked mutual-fund holders shows exactly 10, and
+                # since this section already filters to A- or better (large, liquid, well-covered
+                # names), 575/650 (88%) of the eligible universe hits that cap - hence "all 10".
+                # "Inst Count" (yfinance's institutionsCount, from the separate major_holders table)
+                # is the real aggregate count of institutional 13F filers - not top-10-capped - and
+                # actually differentiates within this group (3 to 1700+ in spot checks). "Inst % Held"
+                # (institutionsPercentHeld, same table) is the matching aggregate ownership percent -
+                # a handful of tickers have corrupted upstream values (>100%, one as high as 96,525%),
+                # so it's capped at a generous 200% for display; genuine heavy ETF/fund overlap can
+                # push a name slightly past 100% without being bad data.
+                a = base[base['_AD_n'] >= 11].copy()
+                a['Funds % Increase'] = pd.to_numeric(a['Funds % Increase'], errors='coerce').clip(-95, 500)
+                a['Inst Count'] = pd.to_numeric(a['Inst Count'], errors='coerce').astype('Int64')
+                a['Inst % Held'] = pd.to_numeric(a['Inst % Held'], errors='coerce').clip(0, 200)
+                show_section(a, ['Symbol', 'Name', 'A/D Rating', 'A/D Rating - Pr Wk',
+                                  'Funds % Increase', 'Inst Count', 'Inst % Held', 'Comp Rating',
+                                  'RS Rating', 'Current Price'],
+                             'Funds % Increase', 'accumulation', n=50)
+
+            # ── 5. EPS Growth & Surprise ─────────────────────────────────────────
+            with sec_tabs[4]:
+                st.markdown(
+                    "**Bill 19/20/27 style**: recent-quarter EPS growth plus a track record of "
+                    "beating analyst estimates — the earnings-side confirmation CANSLIM's \"E\" is "
+                    "built on. Originally titled \"EPS Accel\", but `EPS Accel 3 Qtrs` (and every "
+                    "multi-quarter-comparison column feeding it) turned out to be **100% empty** "
+                    "in `daily_screener.csv` — it needs 6+ trailing quarters and yfinance only "
+                    "carries ~5, the same depth limit documented in the ratings work. This uses "
+                    "`EPS % Chg Last Qtr` (most recent quarter's YoY growth) instead, winsorized "
+                    "at ±300% — like `ROE` above, a quarter's growth off a near-zero prior-year "
+                    "base can otherwise read as thousands of percent."
+                )
+                e = base.copy()
+                e['EPS % Chg Last Qtr (-/+)'] = pd.to_numeric(
+                    e['EPS % Chg Last Qtr (-/+)'], errors='coerce').clip(-300, 300)
+                e['EPS Surprise'] = pd.to_numeric(e['EPS Surprise'], errors='coerce').clip(-100, 300)
+                e['Avg EPS Surprise 4Q'] = pd.to_numeric(
+                    e['Avg EPS Surprise 4Q'], errors='coerce').clip(-100, 300)
+                e = e[(e['EPS % Chg Last Qtr (-/+)'] > 0) & (e['EPS Rating'] >= 70)]
+                show_section(e, ['Symbol', 'Name', 'EPS % Chg Last Qtr (-/+)', 'EPS Surprise',
+                                  'Avg EPS Surprise 4Q', 'EPS Rating', 'Comp Rating', 'RS Rating',
+                                  'Current Price'],
+                             'EPS % Chg Last Qtr (-/+)', 'epsgrowth', n=50)
+
+            # ── 6. IPO Leaders ───────────────────────────────────────────────────
+            with sec_tabs[5]:
+                st.markdown(
+                    "**Bill 03/07/08/09 style.** Recent IPOs often run on RS/story since they rarely "
+                    "have full earnings history yet; the \"8-Year Club\" reflects O'Neil's "
+                    "observation that many all-time-great winners hit stride 6-10 years post-listing "
+                    "as institutional sponsorship builds. `Years Since First Cached` is a proxy for "
+                    "listing age (first date in `ticker_cache`), not a verified IPO date."
+                )
+                recent = base[(base['Years Since First Cached'] <= 3) & (base['RS Rating'] >= 80) &
+                              (base['Comp Rating'] >= 70)].copy()
+                veteran = base[(base['Years Since First Cached'] >= 6) &
+                               (base['Years Since First Cached'] <= 10) & (base['RS Rating'] >= 85) &
+                               (base['Comp Rating'] >= 85)].copy()
+                st.markdown("##### Recent IPO Leaders (≤3 yrs listed, RS ≥80, Comp ≥70)")
+                show_section(recent, ['Symbol', 'Name', 'Years Since First Cached', 'RS Rating',
+                                       'Comp Rating', 'EPS Rating', 'Industry Name', 'Current Price'],
+                             'RS Rating', 'ipo_recent', n=30)
+                st.markdown("##### 8-Year Club (6-10 yrs listed, RS ≥85, Comp ≥85)")
+                show_section(veteran, ['Symbol', 'Name', 'Years Since First Cached', 'RS Rating',
+                                        'Comp Rating', 'EPS Rating', 'SMR Rating', 'Industry Name',
+                                        'Current Price'],
+                             'Comp Rating', 'ipo_veteran', n=30)
+
+            # ── 7. Volatility Contraction ────────────────────────────────────────
+            with sec_tabs[6]:
+                st.markdown(
+                    "**Jeff Sun / Minervini VCP style**: current volatility (21-day ATR%) "
+                    "meaningfully below its own 50-day baseline, price still holding near the "
+                    "50-day MA and within 25% of the 52-week high — a tightening base near highs "
+                    "(the pre-breakout signature), not a stock that's simply gone quiet in a "
+                    "downtrend."
+                )
+                v = base.copy()
+                v['_contraction_ratio'] = (v['21 Day ATR %'] / v['50 Day ATR %']).round(3)
+                v = v[(v['_contraction_ratio'] < 0.75) & (v['% Off High'] < 25) &
+                      (v['Price vs 50-Day'] > -5) & (v['RS Rating'] >= 70)]
+                show_section(v, ['Symbol', 'Name', '_contraction_ratio', '21 Day ATR %',
+                                  '50 Day ATR %', '% Off High', 'Price vs 50-Day', 'RS Rating',
+                                  'Comp Rating', 'Current Price'],
+                             '_contraction_ratio', 'vcp', n=50, ascending=True,
+                             caption="Sorted tightest-first (lowest 21D/50D ATR% ratio).")
+
+            # ── 8. Strongest Movers ──────────────────────────────────────────────
+            with sec_tabs[7]:
+                st.markdown(
+                    "**Jeff Sun style momentum leaderboard**, quality-gated first (Comp ≥70) so "
+                    "this surfaces genuine leaders extending, not penny-stock spikes."
+                )
+                m_ = base[base['Comp Rating'] >= 70].copy()
+                mv_tabs = st.tabs(["1 Week", "1 Month", "3 Month", "6 Month"])
+                mv_cols = ['% Chg 5 Days', '% Chg 1 Month', '% Chg 3 Months', '% Chg 6 Months']
+                for mv_tab, mv_col in zip(mv_tabs, mv_cols):
+                    with mv_tab:
+                        show_section(m_, ['Symbol', 'Name', mv_col, 'RS Rating', 'Comp Rating',
+                                           'Industry Name', 'Current Price'],
+                                     mv_col, f'movers_{mv_col}', n=30)
+
+            # ── 9. High ADR% (Hottest Stocks) ────────────────────────────────────
+            with sec_tabs[8]:
+                st.markdown(
+                    "**Jeff Sun's \"High ADR% Hottest Stocks\" screener** — the opposite framing "
+                    "from Volatility Contraction: stocks with the widest daily trading ranges, "
+                    "quality-gated (Comp ≥70, RS ≥70) so this is aggressive momentum candidates "
+                    "among real leaders, not random high-beta junk. Jeff Sun's exact numeric "
+                    "thresholds live in linked X/Twitter posts I couldn't retrieve (404s — likely "
+                    "JS-rendered or auth-walled); this reproduces the *theme* using `21 Day ATR %`, "
+                    "not a verified replica of his exact filter."
+                )
+                adr = base[(base['Comp Rating'] >= 70) & (base['RS Rating'] >= 70)].copy()
+                show_section(adr, ['Symbol', 'Name', '21 Day ATR %', '30 Day ATR %', 'RS Rating',
+                                    'Comp Rating', 'Industry Name', 'Current Price'],
+                             '21 Day ATR %', 'high_adr', n=40,
+                             caption="Sorted highest-ATR%-first.")
+
+            # ── 10. High Short Float ─────────────────────────────────────────────
+            with sec_tabs[9]:
+                st.markdown(
+                    "**Jeff Sun's weekly \"High Short Float\" screener** — heavily-shorted names "
+                    "among quality growth stocks (Comp ≥70), a classic squeeze-candidate list: "
+                    "strong fundamentals/technicals that a crowded short book could accelerate on "
+                    "a breakout. Exact thresholds from the source screener weren't retrievable "
+                    "(same X/Twitter access limitation as the High ADR% section above); this uses "
+                    "`Shrt Int % of Float` directly."
+                )
+                short_ = base[(base['Comp Rating'] >= 70) & base['Shrt Int % of Float'].notna()].copy()
+                show_section(short_, ['Symbol', 'Name', 'Shrt Int % of Float', 'Shrt Int % Chg',
+                                       'RS Rating', 'Comp Rating', 'Industry Name', 'Current Price'],
+                             'Shrt Int % of Float', 'short_float', n=40)
 
 
 # Footer

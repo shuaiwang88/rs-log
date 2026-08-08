@@ -1,0 +1,173 @@
+{
+  "date": "2026-08-05",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-05.md",
+  "market_summary": "Overall Sentiment: Confidently moving back to offense. Webby described the move as a \"momentum shift\" with unequivocal power, especially the S&P 500's thrust on Tuesday. The key line in the sand is the low of the follow-through day (Tuesday's low). As long as the indexes hold above that, the bull case is intact, though intraday wiggles are expected and should be largely ignored on the daily charts.",
+  "tickers": [
+    "DELL",
+    "SPY",
+    "QQQ",
+    "SMH",
+    "AMD",
+    "ALAB",
+    "ANET",
+    "TVTX",
+    "LLY",
+    "DT",
+    "SHOP",
+    "YOU",
+    "BKNG",
+    "EXPE",
+    "EXTR",
+    "CVS",
+    "HNGE",
+    "SN",
+    "SPCX",
+    "BLLN",
+    "BROS",
+    "DAVE",
+    "RELY",
+    "SNDK",
+    "WDC",
+    "TTMI",
+    "NVDA",
+    "AMZN",
+    "GOOGL",
+    "CSCO",
+    "DIS",
+    "TNX",
+    "USO",
+    "NUE",
+    "VIK",
+    "SCCO",
+    "FCX",
+    "GLD",
+    "GDX",
+    "SCHW",
+    "MRK",
+    "SKWD",
+    "HPE",
+    "CRDO",
+    "QLYS",
+    "ATI",
+    "FLYW",
+    "TPR",
+    "GE",
+    "BA",
+    "AVGO",
+    "V",
+    "DDOG",
+    "KRYS",
+    "SEZL",
+    "ILMN",
+    "MRVL",
+    "ZETA",
+    "FSLY",
+    "DAL",
+    "HLNE",
+    "PATH",
+    "BE",
+    "LITE",
+    "NBIS",
+    "FFIV",
+    "IQV",
+    "TQQQ",
+    "UPRO",
+    "QLD",
+    "MAGS",
+    "KRE"
+  ],
+  "ticker_details": {
+    "DELL": {
+      "actionability": "Actionable",
+      "technical_action": "Breakout above recent highs, strong RS line vs. peers, triple-digit earnings growth. Leaderboard and SwingTrader added.",
+      "story": "AI server infrastructure. Best-looking large-cap AI play that held up during the correction."
+    },
+    "NVDA": {
+      "actionability": "Actionable",
+      "technical_action": "Moving up the right side of a base, clearing short-term resistance. Webby bought, added to SwingTrader. Stop at today's low.",
+      "story": "AI kingpin. Liquid mega-cap that will move with the market. Good risk/reward for a new position."
+    },
+    "NUE": {
+      "actionability": "Actionable (Add)",
+      "technical_action": "Breakout on the follow-through day, extended gains. Leaderboard added and increased to a full position today.",
+      "story": "Steel producer. Rotational play into metals and infrastructure; strong earnings growth."
+    },
+    "HNGE": {
+      "actionability": "Actionable (Add)",
+      "technical_action": "Ugly open on an EPS miss, then a powerful upside reversal. Chris added on the 15-minute high reclaim. Leaderboard half position.",
+      "story": "Digital physical therapy. Expanding into GI health via acquisition."
+    },
+    "TVTX": {
+      "actionability": "Watchlist (wait for pullback)",
+      "technical_action": "Breakaway gap on huge earnings, strong RS line. Not profitable but accelerating revenue.",
+      "story": "Revenue biotech (kidney disease). One of the better post-earnings setups."
+    },
+    "SKWD": {
+      "actionability": "Watchlist (buy at pivot)",
+      "technical_action": "Cup-with-handle base, near a traditional pivot. Earnings out of the way.",
+      "story": "Specialty insurance. A strong sector leader with solid fundamentals."
+    },
+    "GOOGL": {
+      "actionability": "Actionable",
+      "technical_action": "Added to Leaderboard on Monday. Breaking out, holding gains.",
+      "story": "Mega-cap AI/Cloud. Liquid leader driving the recovery."
+    },
+    "VIK": {
+      "actionability": "Actionable",
+      "technical_action": "Added to Leaderboard on Monday. Acting well, extending gains.",
+      "story": "Cruise line leader. Non-tech rotation play."
+    },
+    "LLY": {
+      "actionability": "Avoid / Sell",
+      "technical_action": "Beat on earnings but faded sharply from the open. Ali and Ken sold. Leaderboard holding a tiny gain.",
+      "story": "Weight-loss drug giant. The market's negative reaction to great news is a short-term red flag."
+    },
+    "CVS": {
+      "actionability": "Avoid",
+      "technical_action": "Gapped down hard on earnings. Harold would have sold immediately on the 5-minute chart.",
+      "story": "Healthcare/pharmacy. A failed bounce; protecting capital is the priority."
+    },
+    "EXTR": {
+      "actionability": "Avoid",
+      "technical_action": "Gap down on earnings, broke key support. Harold would have sold right away.",
+      "story": "Networking. A reminder to never hold through earnings without a large cushion."
+    },
+    "ANET": {
+      "actionability": "Extended",
+      "technical_action": "Huge post-earnings rally, but extremely volatile. Extended.",
+      "story": "High-speed networking. A fundamental beast but too wide and loose to chase."
+    },
+    "AMD": {
+      "actionability": "Avoid",
+      "technical_action": "Gapped down on earnings. Webby says avoid, prefer stocks with strength.",
+      "story": "Chip designer. Needs time to repair the technical damage."
+    },
+    "YOU": {
+      "actionability": "Watchlist (hold $60)",
+      "technical_action": "Big earnings gap up, fading from highs. Key $60 level on the 5-minute chart.",
+      "story": "Airport security/biometrics. Speculative; hold if it holds $60."
+    },
+    "CRDO": {
+      "actionability": "Avoid",
+      "technical_action": "Too weak, still in a messy downtrend. Webby passes.",
+      "story": "AI connectivity. Too much overhead supply to trust a bounce."
+    },
+    "QLYS": {
+      "actionability": "Avoid",
+      "technical_action": "Big move on earnings, but fundamentals (sales growth slowing) don't support the price. Webby passes.",
+      "story": "Cybersecurity. A disconnect between price and fundamentals."
+    },
+    "GLD": {
+      "actionability": "Actionable (with tight stop)",
+      "technical_action": "Gapping above the 50-day on heavy volume, breaking a long downtrend. Gold miners (GDX) also rallying.",
+      "story": "Gold. A technical move; buyable with a stop at the 50-day, but not a high-growth trade."
+    },
+    "IQV": {
+      "actionability": "Actionable",
+      "technical_action": "Strong post-earnings bounce, holding near highs. Ken's final pick.",
+      "story": "Contract research organization. A steady, defensive growth name in healthcare."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": []
+}

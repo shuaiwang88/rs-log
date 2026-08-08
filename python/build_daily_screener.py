@@ -65,15 +65,17 @@ OUTPUT_DIR = REPO_DIR / "output"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from calc_ibd_ratings import (
-    _f_sigmoid,
     apply_group_columns,
-    calc_ad_rating_snapshot,
-    calc_composite_rating,
+    apply_rating_percentiles,
+    calc_ad_raw_score,
     calc_eps_rating,
     calc_pct_off_52w_high_snapshot,
-    calc_rs_rating_snapshot,
-    calc_smr_rating,
+    calc_rs_raw_score,
+    calc_rs_sub_raw_score,
+    calc_smr_raw_score,
+    extract_eps_analyst_features,
     extract_eps_from_fundamentals,
+    extract_smr_inputs_from_fundamentals,
 )
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -169,6 +171,8 @@ EXTRA_COLUMNS = [
     "RSI 14", "% Chg 5 Days", "% Chg 10 Days", "% Chg 20 Days",
     "50-Day Avg Price", "200-Day Avg Price", "10-Day Avg Vol (1000s)",
     "Relative Volume", "52-Week Position %", "Volatility 30D %",
+    # listing-age proxy (first cached date, not a verified true IPO date)
+    "First Cached Date", "Years Since First Cached",
 ]
 
 
@@ -245,10 +249,10 @@ def _q_yoy(series, j, span=4):
     """YoY % growth of quarter `j` (0 = most recent) vs `span` quarters earlier."""
     if len(series) <= j + span:
         return None
-    older = series[j + span]
-    if older is None or older == 0:
+    newer, older = series[j], series[j + span]
+    if newer is None or older is None or older == 0:
         return None
-    return (series[j] / older - 1.0) * 100.0
+    return (newer / older - 1.0) * 100.0
 
 
 def _avg_growth(series, n, span=4):
@@ -279,37 +283,6 @@ def _est_growth(fund, horizon, metric="growth"):
             if g is not None:
                 return g
     return None
-
-
-def _ad_grade(score):
-    f = _num(score)
-    if f is None:
-        return ""
-    if f >= 95:
-        return "A+"
-    if f >= 80:
-        return "A"
-    if f >= 75:
-        return "A-"
-    if f >= 70:
-        return "B+"
-    if f >= 65:
-        return "B"
-    if f >= 60:
-        return "B-"
-    if f >= 55:
-        return "C+"
-    if f >= 50:
-        return "C"
-    if f >= 45:
-        return "C-"
-    if f >= 40:
-        return "D+"
-    if f >= 35:
-        return "D"
-    if f >= 30:
-        return "D-"
-    return "E"
 
 
 def _roe_percent(fund):
@@ -351,6 +324,12 @@ def compute_technical_metrics(df, spy_close):
     if float(close.iloc[-2]) > 0:
         m["Price % Chg"] = round((c / float(close.iloc[-2]) - 1) * 100, 2)
     m["Volume (1000s)"] = round(float(volume.iloc[-1]) / 1000.0, 1)
+
+    # ── listing-age proxy (first date our cache has for this ticker; not a true IPO
+    # date, but ticker_cache generally carries a stock's full available history, so
+    # this is a reasonable stand-in - used for the IPO Leaders screener section) ──
+    m["First Cached Date"] = df.index[0].strftime("%Y-%m-%d")
+    m["Years Since First Cached"] = round((df.index[-1] - df.index[0]).days / 365.25, 1)
 
     # ── 52-week window ──
     w52 = df.tail(252)
@@ -518,7 +497,14 @@ def compute_technical_metrics(df, spy_close):
 
 # ── ratings via calc_ibd_ratings.py ──────────────────────────────────────────
 
-def compute_rating_metrics(df, spy_close, fund, fy_eps=None, fq_eps=None, roe=None):
+def compute_rating_metrics(df, fund, fy_eps=None, fq_eps=None, roe=None):
+    """Per-ticker RAW scores for RS / A-D / SMR, plus the already-final EPS Rating.
+
+    RS / A-D / SMR / Comp Rating are inherently universe computations (percentile
+    ranks can't be produced for one ticker in isolation) — apply_rating_percentiles()
+    finishes the job in a post-pass over the whole assembled `out` DataFrame, the
+    same pattern apply_group_columns() already uses for the group columns.
+    """
     m = {}
     close = df["Close"].astype(float)
     n = len(df)
@@ -526,46 +512,32 @@ def compute_rating_metrics(df, spy_close, fund, fy_eps=None, fq_eps=None, roe=No
     if not np.isfinite(c) or c <= 0:
         return m
 
-    # RS Rating (full weighted formula), RS 3M / 6M
-    rs_val = calc_rs_rating_snapshot(close, spy_close)
-    if _num(rs_val):
-        m["RS Rating"] = round(rs_val, 1)
-        m["_rs_cur"] = rs_val
-    arr_c = close.values.astype(float)
-    arr_m = spy_close.values.astype(float)
-    if n > 63 and arr_m[-(63 + 1)] > 0:
-        m["RS 3-Month Rating"] = round(_f_sigmoid(
-            (arr_c[-1] / arr_c[-(63 + 1)]) / (arr_m[-1] / arr_m[-(63 + 1)]) * 100.0), 1)
-    if n > 126 and arr_m[-(126 + 1)] > 0:
-        m["RS 6-Month Rating"] = round(_f_sigmoid(
-            (arr_c[-1] / arr_c[-(126 + 1)]) / (arr_m[-1] / arr_m[-(126 + 1)]) * 100.0), 1)
+    m["_rs_raw"] = calc_rs_raw_score(close)
+    m["_rs3m_raw"] = calc_rs_sub_raw_score(close, 63)
+    m["_rs6m_raw"] = calc_rs_sub_raw_score(close, 126)
 
-    # Historical RS snapshots used for the group-rank-history columns
-    # (Ind Grp Rnk Last Week / 3 Mo Ago / 6 Mo Ago).  We replay the RS rating
-    # on the series truncated to exclude the last ~5 / 63 / 126 trading days.
+    # Historical RS raw scores used for the group-rank-history columns (Ind Grp Rnk
+    # Last Week / 3 Mo Ago / 6 Mo Ago). These feed apply_group_columns()'s per-industry
+    # MEAN + industry-vs-industry rank, not a per-ticker rating, so a raw (not
+    # independently percentile-ranked) score is a reasonable proxy here — a full
+    # historical universe re-rank at 3 extra cutoff dates would ~4x this pass's
+    # runtime for what is a secondary/display feature, not one of the 5 core ratings.
     for _drop, _key in ((5, "_rs_1w_ago"), (63, "_rs_3m_ago"), (126, "_rs_6m_ago")):
-        if n > _drop + 3:
-            m[_key] = calc_rs_rating_snapshot(close.iloc[:-_drop], spy_close.iloc[:-_drop])
+        if n > _drop + 249:
+            m[_key] = calc_rs_raw_score(close.iloc[:-_drop])
 
-    # A/D rating (current + previous week)
-    ad_val = calc_ad_rating_snapshot(df)
-    if _num(ad_val):
-        m["_ad_score"] = ad_val
-        m["A/D Rating"] = _ad_grade(ad_val)
+    m["_ad_raw"] = calc_ad_raw_score(df)
     if n >= 66:
         weeks = df.index.to_period("W")
         prev = weeks < weeks[-1]
         if prev.any():
             end = df.index[prev][-1]
             sub = df.iloc[:df.index.get_loc(end) + 1]
-            ad_prev = calc_ad_rating_snapshot(sub)
-            if _num(ad_prev):
-                m["A/D Rating - Pr Wk"] = _ad_grade(ad_prev)
+            m["_ad_prev_raw"] = calc_ad_raw_score(sub)
 
-    # EPS / SMR / Composite from fundamentals.  EPS Rating is only emitted when it was
-    # actually computed from real EPS data - otherwise it is left blank ("skip it if you
-    # cannot find related information") rather than showing calc_ibd_ratings' 1-floor as a
-    # genuine rating.
+    # EPS / SMR from fundamentals.  EPS Rating is only emitted when it was actually
+    # computed from real EPS data - otherwise it is left blank ("skip it if you cannot
+    # find related information") rather than showing a data-poor fallback as genuine.
     if fund and not fund.get("error"):
         if fy_eps is None:
             fy_eps, fq_eps, _ = extract_eps_from_fundamentals(fund)
@@ -573,15 +545,13 @@ def compute_rating_metrics(df, spy_close, fund, fy_eps=None, fq_eps=None, roe=No
             roe = _roe_percent(fund)
     fund_eps_ok = bool(fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5)
     if fund_eps_ok:
-        m["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe)
+        eps_extra = extract_eps_analyst_features(fund) if fund else (None,) * 6
+        m["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, *eps_extra)
 
-    if roe is not None:
-        smr_score, smr_grade = calc_smr_rating(roe)
-        m["SMR Rating"] = smr_grade
-        m["_smr_score"] = smr_score
-        ad = m.get("_ad_score")
-        if fund_eps_ok and _num(rs_val) and _num(ad):
-            m["Comp Rating"] = calc_composite_rating(rs_val, m["EPS Rating"], smr_score, ad)
+    if fund and not fund.get("error"):
+        sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = extract_smr_inputs_from_fundamentals(fund)
+        m["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe)
+
     return m
 
 
@@ -613,27 +583,30 @@ def compute_fundamental_metrics(fund, close_price=None, fy_eps=None, fq_eps=None
         return _num(info.get(key))
 
     # ── fiscal EPS history ──
+    # fy_eps/fq_eps may hold None at a calendar-correct position (a period with no
+    # reported EPS) rather than being dropped - see extract_eps_from_fundamentals().
+    # Every direct use below must skip (not just index-guard) a None entry.
     if fy_eps:
         for j, col in enumerate(("Fiscal EPS Lst Yr", "Fiscal EPS 1 Yr Ago", "Fiscal EPS 2 Yrs Ago",
                                  "Fiscal EPS 3 Yrs Ago", "Fiscal EPS 4 Yrs Ago", "Fiscal EPS 5 Yrs Ago",
                                  "Fiscal EPS 6 Yrs Ago")):
-            if j < len(fy_eps):
+            if j < len(fy_eps) and fy_eps[j] is not None:
                 m[col] = round(fy_eps[j], 2)
 
     # ── trailing EPS ──
-    if fq_eps and len(fq_eps) >= 4:
+    if fq_eps and len(fq_eps) >= 4 and all(v is not None for v in fq_eps[:4]):
         m["EPS Trailing 4 Qtrs"] = round(float(np.sum(fq_eps[:4])), 2)
-    if fq_eps:
+    if fq_eps and fq_eps[0] is not None:
         m["EPS Lst Rptd"] = round(fq_eps[0], 2)
 
     # ── EPS growth (annual) ──
     # NOTE: with annual-only EPS in the cache, "EPS % Growth 1 Yr" and
     # "EPS % Chg Lst Yr" both resolve to last fiscal year's change.
     if fy_eps:
-        if len(fy_eps) >= 2 and fy_eps[1]:
+        if len(fy_eps) >= 2 and fy_eps[0] is not None and fy_eps[1]:
             m["EPS % Growth 1 Yr"] = _pct_round((fy_eps[0] / fy_eps[1] - 1) * 100, 1)
             m["EPS % Chg Lst Yr"] = _pct_round((fy_eps[0] / fy_eps[1] - 1) * 100, 1)
-        if len(fy_eps) >= 3 and fy_eps[2]:
+        if len(fy_eps) >= 3 and fy_eps[1] is not None and fy_eps[2]:
             m["EPS % Chg 1 Yr Ago"] = _pct_round((fy_eps[1] / fy_eps[2] - 1) * 100, 1)
         g3 = _cagr(fy_eps, 3)
         # 5-yr growth uses the longest span available (the fund cache only holds
@@ -670,13 +643,13 @@ def compute_fundamental_metrics(fund, close_price=None, fy_eps=None, fq_eps=None
                 m["EPS % Chg Lst Q Gtr 3-Yr Growth"] = _yes_no(last > g3 * 100)
 
     # ── comparisons of EPS levels ──
-    if fq_eps and len(fq_eps) >= 4 and fy_eps:
+    if fq_eps and len(fq_eps) >= 4 and fy_eps and all(v is not None for v in fq_eps[:4]):
         t4 = float(np.sum(fq_eps[:4]))
         if len(fy_eps) >= 5 and fy_eps[4]:
             m["EPS Trl 4Q Gtr EPS 4 Yrs Ago"] = _yes_no(t4 > fy_eps[4])
         if fy_eps[0]:
             m["EPS Trl 4Q Geq EPS Lst Fiscal Yr"] = _yes_no(t4 >= fy_eps[0])
-        if len(fy_eps) >= 5 and fy_eps[4]:
+        if fy_eps[0] and len(fy_eps) >= 5 and fy_eps[4]:
             m["EPS Lst Yr Gtr EPS 4 Yrs Ago"] = _yes_no(fy_eps[0] > fy_eps[4])
 
     # ── forward estimates ──
@@ -1140,7 +1113,7 @@ def build_screener(limit=None, with_ratings=True):
                     tech = compute_technical_metrics(df, spy_al)
                     row.update(tech)
                     if with_ratings:
-                        row.update(compute_rating_metrics(df, spy_al, fund,
+                        row.update(compute_rating_metrics(df, fund,
                                                           fy_eps=fy_eps, fq_eps=fq_eps, roe=roe))
                     row.update(compute_fundamental_metrics(fund, close_price=tech.get("Current Price"),
                                                            fy_eps=fy_eps, fq_eps=fq_eps, roe=roe))
@@ -1154,8 +1127,10 @@ def build_screener(limit=None, with_ratings=True):
         except Exception as e:
             print(f"  ! {sym}: {e}")
 
-        # hidden per-ticker fields used by the universe group pass (apply_group_columns)
-        row["_rs_cur"] = row.get("RS Rating")
+        # hidden per-ticker fields used by the universe passes (apply_rating_percentiles,
+        # apply_group_columns). _rs_cur is set from the FINAL RS Rating after
+        # apply_rating_percentiles runs (see below) - "RS Rating" doesn't exist yet here.
+        row["_rs_raw"] = row.get("_rs_raw")
         row["_rs_1w_ago"] = row.get("_rs_1w_ago")
         row["_rs_3m_ago"] = row.get("_rs_3m_ago")
         row["_rs_6m_ago"] = row.get("_rs_6m_ago")
@@ -1177,19 +1152,30 @@ def build_screener(limit=None, with_ratings=True):
         if (i + 1) % 500 == 0 or i == total - 1:
             print(f"  processed {i + 1:,}/{total:,} ({n_ok:,} with price data)")
 
-        # ratings columns from fundamentals only (no price data)
-        if fund and not fp and with_ratings:
+        # ratings columns from fundamentals only (no price data): EPS Rating is complete
+        # on its own; SMR only gets its raw score here (still needs apply_rating_percentiles
+        # for the final letter grade, same as every other ticker).
+        if fund and not fp and with_ratings and not fund.get("error"):
             if fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5:
-                row["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe)
-            if roe is not None:
-                row["SMR Rating"] = calc_smr_rating(roe)[1]
+                eps_extra = extract_eps_analyst_features(fund)
+                row["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, *eps_extra)
+            sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = extract_smr_inputs_from_fundamentals(fund)
+            row["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe)
 
         rows.append(row)
 
     out = pd.DataFrame(rows, columns=MS_COLUMNS + EXTRA_COLUMNS +
-                       ["_rs_cur", "_rs_1w_ago", "_rs_3m_ago", "_rs_6m_ago",
+                       ["_rs_raw", "_rs3m_raw", "_rs6m_raw", "_ad_raw", "_ad_prev_raw", "_smr_raw",
+                        "_rs_cur", "_rs_1w_ago", "_rs_3m_ago", "_rs_6m_ago",
                         "_mcap", "_pe", "_at_margin", "_eps_g5",
                         "_eps_cv", "_nh", "_nl"])
+
+    # RS / A-D / SMR / Composite Rating: percentile-ranked against the current eligible
+    # universe (needs the whole universe, same reason apply_group_columns does).  Must run
+    # BEFORE apply_group_columns, since "Ind Group RS" is the group-mean of the FINAL RS
+    # Rating (_rs_cur), which doesn't exist until this pass fills it in.
+    out = apply_rating_percentiles(out)
+    out["_rs_cur"] = out["RS Rating"]
 
     # group-wide / percentile-rank columns (needs the whole universe)
     out = apply_group_columns(out)
@@ -1221,7 +1207,8 @@ def build_screener(limit=None, with_ratings=True):
                     "Current day's Volume greater than previous 5 days' Volume",
                     "50-Day > 150-Day > 200-Day", "10 Day > 21 Day > 50 Day",
                     "RS Line New Low", "RS Line New High", "RS Line Within 5% of New High",
-                    "A/D Rating", "A/D Rating - Pr Wk", "SMR Rating", "Expected X Dividend Amount")
+                    "A/D Rating", "A/D Rating - Pr Wk", "SMR Rating", "Expected X Dividend Amount",
+                    "First Cached Date")
     numeric_cols = [c for c in (MS_COLUMNS + EXTRA_COLUMNS)
                     if c not in SKIP_COLUMNS and c not in _non_numeric]
     for c in numeric_cols:

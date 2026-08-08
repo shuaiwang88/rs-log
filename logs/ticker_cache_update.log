@@ -14510,3 +14510,491 @@ HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","desc
   fundamentals: 3851/3862 tickers...
   fundamentals: 3862/3862 tickers...
   fundamentals: 3,862 ok, 0 errors in 18584.6s
+
+============================================================
+2026-08-05T17:33:45.025731 [OHLCV only]
+
+1 Failed download:
+['AEE']: YFRateLimitError('Too Many Requests. Rate limited. Try after a while.')
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$NFBK: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NFBK']: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NSA']: possibly delisted; no price data found  (period=5d)
+$TMHC: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+$VYNE: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['VYNE']: possibly delisted; no price data found  (period=5d)
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: ALTS"}}}
+$ALTS: possibly delisted; no timezone found
+$BITF: possibly delisted; no timezone found
+$BLFY: possibly delisted; no timezone found
+$ALEX: possibly delisted; no timezone found
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: ASGN"}}}
+$AHH: possibly delisted; no timezone found
+$ACLX: possibly delisted; no timezone found
+$ASGN: possibly delisted; no timezone found
+$AL: possibly delisted; no timezone found
+$BK: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+$AGAE: possibly delisted; no timezone found
+$APLS: possibly delisted; no timezone found
+
+13 Failed downloads:
+['ALTS', 'BITF', 'BLFY', 'ALEX', 'AHH', 'ACLX', 'ASGN', 'AL', 'BK', 'ATON', 'BHAT', 'AGAE', 'APLS']: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+$DVS: possibly delisted; no timezone found
+$CTRA: possibly delisted; no timezone found
+$CTLP: possibly delisted; no timezone found
+$DAWN: possibly delisted; no timezone found
+$EM: possibly delisted; no timezone found
+$CFLT: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$CSGS: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$EB: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$CUK: possibly delisted; no timezone found
+$EHAB: possibly delisted; no timezone found
+
+15 Failed downloads:
+['CGCT']: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+['DVS', 'CTRA', 'CTLP', 'DAWN', 'EM', 'CFLT', 'DTCK', 'CSGS', 'CMBM', 'CHAC', 'EB', 'EKSO', 'CUK', 'EHAB']: possibly delisted; no timezone found
+$EWCZ: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+$FIHL: possibly delisted; no timezone found
+$HTBK: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$EXAS: possibly delisted; no timezone found
+$FOLD: possibly delisted; no timezone found
+$HOLX: possibly delisted; no timezone found
+$GLDD: possibly delisted; no timezone found
+
+10 Failed downloads:
+['EWCZ', 'ETHZ', 'FIHL', 'HTBK', 'FFWM', 'EXPI', 'EXAS', 'FOLD', 'HOLX', 'GLDD']: possibly delisted; no timezone found
+$ITRM: possibly delisted; no timezone found
+$IDIAU: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+$MEG: possibly delisted; no timezone found
+$IINN: possibly delisted; no timezone found
+$IMG: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+$LITM: possibly delisted; no timezone found
+$KLTO: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+
+9 Failed downloads:
+['ITRM', 'MEG', 'IINN', 'IMG', 'IOBT', 'LITM', 'KLTO', 'JFBR']: possibly delisted; no timezone found
+['IDIAU']: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+$PSTG: possibly delisted; no timezone found
+$MYNZ: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+$PELI: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$RAPT: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$PKST: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+
+11 Failed downloads:
+['PSTG', 'MYNZ', 'NGD', 'PELI', 'QIPT', 'NBY', 'ONTF', 'RAPT', 'QVCGP', 'PKST', 'OS']: possibly delisted; no timezone found
+$SNCY: possibly delisted; no timezone found
+$TGNA: possibly delisted; no timezone found
+$TIVC: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+$RVYL: possibly delisted; no timezone found
+$TERN: possibly delisted; no timezone found
+$SGMO: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+$SAVA: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$TIRX: possibly delisted; no timezone found
+$SEMR: possibly delisted; no timezone found
+$THR: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05) (Yahoo error = "No data found, symbol may be delisted")
+$SLNO: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+$RNAM: possibly delisted; no timezone found
+$SEE: possibly delisted; no timezone found
+
+16 Failed downloads:
+['SNCY', 'TGNA', 'TIVC', 'STKL', 'RVYL', 'TERN', 'SAVA', 'SGN', 'TIRX', 'SEMR', 'SLNO', 'RNAM', 'SEE']: possibly delisted; no timezone found
+['SGMO', 'SVAC']: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05)
+['THR']: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05) (Yahoo error = "No data found, symbol may be delisted")
+$VSCO: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05) (Yahoo error = "No data found, symbol may be delisted")
+$UHG: possibly delisted; no timezone found
+$TPH: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+$ULY: possibly delisted; no timezone found
+$TSE: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+$UDMY: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$TICKER: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$VRE: possibly delisted; no timezone found
+$VTYX: possibly delisted; no timezone found
+
+13 Failed downloads:
+['VSCO']: possibly delisted; no price data found  (1d 1927-08-30 -> 2026-08-05) (Yahoo error = "No data found, symbol may be delisted")
+['UHG', 'TPH', 'VVPR', 'ULY', 'TSE', 'UOKA', 'UDMY', 'XTKG', 'TICKER', 'XWIN', 'VRE', 'VTYX']: possibly delisted; no timezone found
+🔄 Starting ticker_cache update for 4,019 tickers (Target earliest date: 2024-06-04)...
+  • 3,348 tickers with complete cache (incremental 5d update)
+  • 671 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,348 tickers (498 saved successfully)...
+    Batch 10: Processed 1,000 / 3,348 tickers (997 saved successfully)...
+    Batch 15: Processed 1,500 / 3,348 tickers (1,497 saved successfully)...
+    Batch 20: Processed 2,000 / 3,348 tickers (1,997 saved successfully)...
+    Batch 25: Processed 2,500 / 3,348 tickers (2,495 saved successfully)...
+  ! SMX: price discontinuity (history 2025-12-05 x1.89) - refetching full history
+    Batch 30: Processed 3,000 / 3,348 tickers (2,994 saved successfully)...
+  ! WLFC: price discontinuity (history 2026-07-20 x0.34) - refetching full history
+    Batch 34: Processed 3,348 / 3,348 tickers (3,341 saved successfully)...
+  split repairs: 0 resolved, 2 still discontinuous after refetch (recorded, will not retry)
+  ✓ Updated 3,341 / 3,348 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 671 tickers (442 saved successfully)...
+    Batch 7: Processed 671 / 671 tickers (584 saved successfully)...
+  ✓ Created/Backfilled 584 / 671 ticker parquets.
+✅ Ticker cache update finished in 146.32 seconds.
+🧹 prune: removed 86 of 3,929 tickers (<$10 or <300,000 avg vol), 7 MB
+
+============================================================
+2026-08-06T21:43:05.574488 [OHLCV only]
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$NFBK: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NFBK']: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NSA']: possibly delisted; no price data found  (period=5d)
+$TMHC: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+$VYNE: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['VYNE']: possibly delisted; no price data found  (period=5d)
+$BLFY: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: AL"}}}
+$AL: possibly delisted; no timezone found
+$AGAE: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+$BK: possibly delisted; no timezone found
+$APLS: possibly delisted; no timezone found
+$BITF: possibly delisted; no timezone found
+$ALEX: possibly delisted; no timezone found
+$ASGN: possibly delisted; no timezone found
+$ACLX: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+
+13 Failed downloads:
+['BLFY', 'ATON', 'AL', 'AGAE', 'BHAT', 'AHH', 'BK', 'APLS', 'BITF', 'ALEX', 'ASGN', 'ACLX', 'ALTS']: possibly delisted; no timezone found
+$EB: possibly delisted; no timezone found
+$CUK: possibly delisted; no timezone found
+$EHAB: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+$EM: possibly delisted; no timezone found
+$CSGS: possibly delisted; no timezone found
+$CFLT: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+$DTCK: possibly delisted; no timezone found
+$CTLP: possibly delisted; no timezone found
+$DAWN: possibly delisted; no timezone found
+$CTRA: possibly delisted; no timezone found
+
+15 Failed downloads:
+['EB', 'CUK', 'EHAB', 'CMBM', 'CHAC', 'EKSO', 'DVS', 'EM', 'CSGS', 'CFLT', 'DTCK', 'CTLP', 'DAWN', 'CTRA']: possibly delisted; no timezone found
+['CGCT']: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+$EWCZ: possibly delisted; no timezone found
+$IAC: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06) (Yahoo error = "No data found, symbol may be delisted")
+$FOLD: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$GLDD: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+$EXAS: possibly delisted; no timezone found
+$HTBK: possibly delisted; no timezone found
+$HOLX: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+$FIHL: possibly delisted; no timezone found
+
+11 Failed downloads:
+['EWCZ', 'FOLD', 'EXPI', 'GLDD', 'FFWM', 'EXAS', 'HTBK', 'HOLX', 'ETHZ', 'FIHL']: possibly delisted; no timezone found
+['IAC']: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06) (Yahoo error = "No data found, symbol may be delisted")
+$MEG: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+$LITM: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+$IMG: possibly delisted; no timezone found
+$IINN: possibly delisted; no timezone found
+$KLTO: possibly delisted; no timezone found
+$IDIAU: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+$ITRM: possibly delisted; no timezone found
+
+9 Failed downloads:
+['MEG', 'JFBR', 'LITM', 'IOBT', 'IMG', 'IINN', 'KLTO', 'ITRM']: possibly delisted; no timezone found
+['IDIAU']: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+$PSTG: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+$PKST: possibly delisted; no timezone found
+$MYNZ: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$PELI: possibly delisted; no timezone found
+$RAPT: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+
+11 Failed downloads:
+['PSTG', 'OS', 'PKST', 'MYNZ', 'NBY', 'ONTF', 'PELI', 'RAPT', 'QIPT', 'NGD', 'QVCGP']: possibly delisted; no timezone found
+$SGMO: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+$RVYL: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+$SEMR: possibly delisted; no timezone found
+$TERN: possibly delisted; no timezone found
+$TIVC: possibly delisted; no timezone found
+$SEE: possibly delisted; no timezone found
+$TGNA: possibly delisted; no timezone found
+$RNAM: possibly delisted; no timezone found
+$THR: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06) (Yahoo error = "No data found, symbol may be delisted")
+$TIRX: possibly delisted; no timezone found
+$SNCY: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$SLNO: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+
+16 Failed downloads:
+['SGMO', 'SVAC']: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06)
+['RVYL', 'SAVA', 'SEMR', 'TERN', 'TIVC', 'SEE', 'TGNA', 'RNAM', 'TIRX', 'SNCY', 'SGN', 'SLNO', 'STKL']: possibly delisted; no timezone found
+['THR']: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06) (Yahoo error = "No data found, symbol may be delisted")
+$VRE: possibly delisted; no timezone found
+$VSCO: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06) (Yahoo error = "No data found, symbol may be delisted")
+$TPH: possibly delisted; no timezone found
+$TSE: possibly delisted; no timezone found
+$VTYX: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$UDMY: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$TICKER: possibly delisted; no timezone found
+$ULY: possibly delisted; no timezone found
+
+13 Failed downloads:
+['VRE', 'TPH', 'TSE', 'VTYX', 'VVPR', 'XTKG', 'UDMY', 'UHG', 'UOKA', 'XWIN', 'TICKER', 'ULY']: possibly delisted; no timezone found
+['VSCO']: possibly delisted; no price data found  (1d 1927-08-31 -> 2026-08-06) (Yahoo error = "No data found, symbol may be delisted")
+🔄 Starting ticker_cache update for 4,016 tickers (Target earliest date: 2024-06-04)...
+  • 3,345 tickers with complete cache (incremental 5d update)
+  • 671 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,345 tickers (499 saved successfully)...
+    Batch 10: Processed 1,000 / 3,345 tickers (998 saved successfully)...
+    Batch 15: Processed 1,500 / 3,345 tickers (1,498 saved successfully)...
+    Batch 20: Processed 2,000 / 3,345 tickers (1,998 saved successfully)...
+    Batch 25: Processed 2,500 / 3,345 tickers (2,496 saved successfully)...
+    Batch 30: Processed 3,000 / 3,345 tickers (2,995 saved successfully)...
+    Batch 34: Processed 3,345 / 3,345 tickers (3,339 saved successfully)...
+  ✓ Updated 3,339 / 3,345 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 671 tickers (441 saved successfully)...
+    Batch 7: Processed 671 / 671 tickers (583 saved successfully)...
+  ✓ Created/Backfilled 583 / 671 ticker parquets.
+✅ Ticker cache update finished in 136.40 seconds.
+🧹 prune: removed 88 of 3,926 tickers (<$10 or <300,000 avg vol), 7 MB
+
+============================================================
+2026-08-07T17:21:50.786249 [OHLCV only]
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$NFBK: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NFBK']: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NSA']: possibly delisted; no price data found  (period=5d)
+$TMHC: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+$VYNE: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['VYNE']: possibly delisted; no price data found  (period=5d)
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: AGAE"}}}
+$AGAE: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+$ACLX: possibly delisted; no timezone found
+$BLFY: possibly delisted; no timezone found
+$ASGN: possibly delisted; no timezone found
+$APLS: possibly delisted; no timezone found
+$BITF: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+$BK: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+$ALEX: possibly delisted; no timezone found
+$AL: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+
+13 Failed downloads:
+['AGAE', 'BHAT', 'ACLX', 'BLFY', 'ASGN', 'APLS', 'BITF', 'AHH', 'BK', 'ALTS', 'ALEX', 'AL', 'ATON']: possibly delisted; no timezone found
+$CSGS: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$EB: possibly delisted; no timezone found
+$CUK: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$CFLT: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+$EHAB: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$CTRA: possibly delisted; no timezone found
+$CTLP: possibly delisted; no timezone found
+$DAWN: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+
+14 Failed downloads:
+['CSGS', 'EKSO', 'EB', 'CUK', 'CHAC', 'CFLT', 'CMBM', 'EHAB', 'DTCK', 'CTRA', 'CTLP', 'DAWN', 'DVS']: possibly delisted; no timezone found
+['CGCT']: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$FFWM: possibly delisted; no timezone found
+$IAC: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07) (Yahoo error = "No data found, symbol may be delisted")
+$FIHL: possibly delisted; no timezone found
+$HOLX: possibly delisted; no timezone found
+$GLDD: possibly delisted; no timezone found
+$EWCZ: possibly delisted; no timezone found
+$EM: possibly delisted; no timezone found
+$EXAS: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+$HTBK: possibly delisted; no timezone found
+$FOLD: possibly delisted; no timezone found
+
+12 Failed downloads:
+['FFWM', 'FIHL', 'HOLX', 'GLDD', 'EWCZ', 'EM', 'EXAS', 'EXPI', 'ETHZ', 'HTBK', 'FOLD']: possibly delisted; no timezone found
+['IAC']: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07) (Yahoo error = "No data found, symbol may be delisted")
+$IMG: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+$LITM: possibly delisted; no timezone found
+$IDIAU: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$KLTO: possibly delisted; no timezone found
+$ITRM: possibly delisted; no timezone found
+$MEG: possibly delisted; no timezone found
+$IINN: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+
+9 Failed downloads:
+['IMG', 'JFBR', 'LITM', 'KLTO', 'ITRM', 'MEG', 'IINN', 'IOBT']: possibly delisted; no timezone found
+['IDIAU']: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$PKST: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+$PELI: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+$MYNZ: possibly delisted; no timezone found
+$PSTG: possibly delisted; no timezone found
+
+10 Failed downloads:
+['PKST', 'ONTF', 'NBY', 'OS', 'PELI', 'NGD', 'QVCGP', 'QIPT', 'MYNZ', 'PSTG']: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$TIRX: possibly delisted; no timezone found
+$THR: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07) (Yahoo error = "No data found, symbol may be delisted")
+$SVAC: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$TGNA: possibly delisted; no timezone found
+$SEMR: possibly delisted; no timezone found
+$RAPT: possibly delisted; no timezone found
+$RNAM: possibly delisted; no timezone found
+$TIVC: possibly delisted; no timezone found
+$SGMO: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$TERN: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$SEE: possibly delisted; no timezone found
+$RVYL: possibly delisted; no timezone found
+$SNCY: possibly delisted; no timezone found
+$SLNO: possibly delisted; no timezone found
+
+17 Failed downloads:
+['STKL', 'SGN', 'TIRX', 'TGNA', 'SEMR', 'RAPT', 'RNAM', 'TIVC', 'TERN', 'SAVA', 'SEE', 'RVYL', 'SNCY', 'SLNO']: possibly delisted; no timezone found
+['THR']: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07) (Yahoo error = "No data found, symbol may be delisted")
+['SVAC', 'SGMO']: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07)
+$VRE: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$VSCO: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07) (Yahoo error = "No data found, symbol may be delisted")
+$TICKER: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$UDMY: possibly delisted; no timezone found
+$TPH: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+$VTYX: possibly delisted; no timezone found
+$ULY: possibly delisted; no timezone found
+$TSE: possibly delisted; no timezone found
+
+13 Failed downloads:
+['VRE', 'XWIN', 'TICKER', 'XTKG', 'UDMY', 'TPH', 'UOKA', 'UHG', 'VVPR', 'VTYX', 'ULY', 'TSE']: possibly delisted; no timezone found
+['VSCO']: possibly delisted; no price data found  (1d 1927-09-01 -> 2026-08-07) (Yahoo error = "No data found, symbol may be delisted")
+🔄 Starting ticker_cache update for 4,013 tickers (Target earliest date: 2024-06-04)...
+  • 3,339 tickers with complete cache (incremental 5d update)
+  • 674 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,339 tickers (499 saved successfully)...
+    Batch 10: Processed 1,000 / 3,339 tickers (998 saved successfully)...
+    Batch 15: Processed 1,500 / 3,339 tickers (1,498 saved successfully)...
+    Batch 20: Processed 2,000 / 3,339 tickers (1,998 saved successfully)...
+    Batch 25: Processed 2,500 / 3,339 tickers (2,496 saved successfully)...
+    Batch 30: Processed 3,000 / 3,339 tickers (2,995 saved successfully)...
+    Batch 34: Processed 3,339 / 3,339 tickers (3,333 saved successfully)...
+  ✓ Updated 3,333 / 3,339 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 674 tickers (442 saved successfully)...
+    Batch 7: Processed 674 / 674 tickers (586 saved successfully)...
+  ✓ Created/Backfilled 586 / 674 ticker parquets.
+✅ Ticker cache update finished in 127.80 seconds.
+🧹 prune: removed 87 of 3,923 tickers (<$10 or <300,000 avg vol), 7 MB

@@ -232,15 +232,15 @@ def fetch_all_fundamentals(ticker, delay=0.3):
         # avoids every call colliding at once. The rate limiter will still catch
         # any that do hit 429, but staggering means fewer retries overall.
         result['income_q'] = _df_to_dict(_safe_get(lambda: t.quarterly_financials, ticker, 'income_q'))
-        time.sleep(0.3)
+        time.sleep(delay)
         result['income_a'] = _df_to_dict(_safe_get(lambda: t.financials, ticker, 'income_a'))
-        time.sleep(0.3)
+        time.sleep(delay)
         result['balance_q'] = _df_to_dict(_safe_get(lambda: t.quarterly_balance_sheet, ticker, 'balance_q'))
-        time.sleep(0.3)
+        time.sleep(delay)
         result['balance_a'] = _df_to_dict(_safe_get(lambda: t.balance_sheet, ticker, 'balance_a'))
-        time.sleep(0.3)
+        time.sleep(delay)
         result['cashflow_q'] = _df_to_dict(_safe_get(lambda: t.quarterly_cashflow, ticker, 'cashflow_q'))
-        time.sleep(0.3)
+        time.sleep(delay)
         result['cashflow_a'] = _df_to_dict(_safe_get(lambda: t.cashflow, ticker, 'cashflow_a'))
 
         # ── Earnings history ──
@@ -413,21 +413,76 @@ def fetch_and_cache_fundamentals(ticker, max_age_days=30, delay=0.3):
 
 
 def batch_fetch_fundamentals(tickers, max_age_days=30, delay=0.3,
-                             verbose=True):
+                             verbose=True, workers=1, timeout=None):
     """
     Fetch fundamentals for a list of tickers.
     Returns dict: ticker -> fundamentals dict.
+
+    `workers > 1` fetches in parallel via a thread pool. Parallelism is safe
+    against 429s because every yfinance call goes through yf_ratelimit, whose
+    global cooling gate pauses ALL workers while any one of them is in its
+    long backoff sleep — the pool cannot descend into cascading rate-limit
+    retries. Keep `workers` small (3-5): the quoteSummary metadata endpoint
+    is the path measured to 429 most aggressively.
+
+    `timeout` (seconds, optional) caps the whole pass at a wall-clock budget:
+    when it expires the loop stops submitting new tickers and returns with
+    what is done. Already-in-flight fetches are let to finish (each is bounded
+    by yfrl's retry cap, ~11 min worst case) so no cache file is written
+    half-way; whatever is left is simply skipped and picked up by the next
+    run.
     """
     results = {}
     n = len(tickers)
-    for i, ticker in enumerate(tickers):
-        if verbose and (i % 50 == 0 or i == n - 1):
-            print(f"  fundamentals: {i + 1}/{n} tickers...")
-        try:
-            data = fetch_and_cache_fundamentals(ticker, max_age_days, delay)
-            results[ticker] = data
-        except Exception as e:
-            results[ticker] = {'error': str(e)}
+    if workers <= 1:
+        deadline = None if timeout is None else time.time() + timeout
+        for i, ticker in enumerate(tickers):
+            if deadline is not None and time.time() >= deadline:
+                print(f"  ⏱ fundamentals timeout ({timeout}s) reached after "
+                      f"{i}/{n} tickers - leaving the rest for the next run",
+                      flush=True)
+                break
+            if verbose and (i % 50 == 0 or i == n - 1):
+                print(f"  fundamentals: {i + 1}/{n} tickers...")
+            try:
+                data = fetch_and_cache_fundamentals(ticker, max_age_days, delay)
+                results[ticker] = data
+            except Exception as e:
+                results[ticker] = {'error': str(e)}
+    else:
+        import concurrent.futures as cf
+
+        def _work(t):
+            try:
+                return t, fetch_and_cache_fundamentals(t, max_age_days, delay)
+            except Exception as e:
+                return t, {'error': str(e)}
+
+        done = 0
+        deadline = None if timeout is None else time.time() + timeout
+        with cf.ThreadPoolExecutor(max_workers=workers) as ex:
+            futures = [ex.submit(_work, t) for t in tickers]
+            pending = set(futures)
+            while pending:
+                remain = None if deadline is None else deadline - time.time()
+                if deadline is not None and remain <= 0:
+                    print(f"  ⏱ fundamentals timeout ({timeout}s) reached; "
+                          f"{len(pending)}/{n} ticker(s) left for the next run",
+                          flush=True)
+                    break
+                try:
+                    fut = next(cf.as_completed(pending, timeout=remain))
+                except cf.TimeoutError:
+                    print(f"  ⏱ fundamentals timeout ({timeout}s) reached; "
+                          f"{len(pending)}/{n} ticker(s) left for the next run",
+                          flush=True)
+                    break
+                pending.discard(fut)
+                t, data = fut.result()
+                results[t] = data
+                done += 1
+                if verbose and (done % 100 == 0 or done == n):
+                    print(f"  fundamentals: {done}/{n} tickers...", flush=True)
 
     # Report any rate-limit drops that occurred during the batch
     yfrl.report()

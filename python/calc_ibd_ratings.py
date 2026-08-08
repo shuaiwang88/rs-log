@@ -1,13 +1,44 @@
-#!/usr/bin/env python3
 """
 calc_ibd_ratings.py
 
-Python implementation of the IBD-style Ratings Scanner from drw_ratings_scanner.pine.
-Computes RS Rating, EPS Rating, A/D Rating, SMR Rating, and Composite Rating
-using daily OHLCV data and fundamental data (EPS, ROE) from yfinance.
+Python implementation of the IBD-style Ratings Scanner, computing RS Rating,
+EPS Rating, A/D Rating, SMR Rating, and Composite Rating from daily OHLCV data
+(ticker_cache/*_1d.parquet) and fundamental data (ticker_cache/*_fund.json).
 
-All formulas match the Pine Script exactly, using the same sigmoid function,
-weightings, penalty logic, and composite formula coefficients.
+Methodology (walk-forward calibrated in python/fit_production_ratings.py — fit on
+the 2026-07-24 MarketSurge snapshot, forward-validated on 2026-08-07, no retraining
+between them):
+
+  * RS Rating   = percentile rank of a monotonic-recency-weighted blend of the
+                  stock's own ABSOLUTE trailing returns (1M/3M/6M/9M/12M), against
+                  the eligible universe. NOT SPY-relative: summing w_i * (stock_i /
+                  spy_i) across windows with a DIFFERENT SPY divisor per window
+                  distorts the cross-window weighting by whatever shape SPY's own
+                  return took that period — it is not equivalent to ranking the
+                  stock's own performance. The universe-wide percentile rank already
+                  captures "beat the market," since every stock in the ranking pool
+                  faced the same SPY backdrop that day.
+  * A/D Rating  = percentile rank of a ridge-regularized multi-window Chaikin-money-
+                  flow / heavy-volume-day / moving-average-distance blend, converted
+                  to an A+..E grade via train-frozen grade-frequency boundaries.
+  * EPS Rating  = direct-scale OLS blend of log-compressed EPS growth/ROE features
+                  (no percentile step — percentile-ranking measurably hurt EPS in
+                  calibration, likely because the underlying signal-to-noise ratio
+                  from yfinance's shallow ~5-quarter window is already low).
+  * SMR Rating  = percentile rank of an OLS blend of log-compressed sales-growth,
+                  margin (level + trend), and ROE features, -> A-E grade.
+  * Comp Rating = linear combination of the four components above (RS/A-D/SMR as
+                  percentile ranks, EPS as its own direct 1-99 scale), matching
+                  IBD's documented "combines the percentile rankings" approach.
+
+RS / A-D / SMR / Comp Rating are inherently UNIVERSE computations — a single
+ticker cannot be percentile-ranked in isolation. The per-ticker functions below
+(calc_rs_raw_score, calc_ad_raw_score, calc_smr_raw_score) compute a RAW score
+during a per-ticker pass; apply_rating_percentiles() is a universe post-pass (same
+pattern as apply_group_columns) that ranks those raw scores against the CURRENT
+eligible universe — price >= $4 and market cap >= $50M when known, IBD's own
+junk/tiny-cap filter — and fills in the final ratings. Only EPS Rating is complete
+after the per-ticker pass alone.
 
 The module also hosts the IBD group-rank helpers: derive_ibd_asof() is a
 standalone utility that detects the trading day the IBD_data.txt MarketSurge
@@ -26,81 +57,153 @@ import pandas as pd
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# RS RATING (1-99) — sigmoid-based, no seed data needed
+# FITTED PARAMETERS — walk-forward calibrated in python/fit_production_ratings.py
+# (fit on MarketSurge 2026-07-24, forward-tested on 2026-08-07). See
+# output/production_fitted_params.json for the full calibration record.
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _f_sigmoid(score):
-    """Pine Script f_sigmoid: d = score - 100, 50 + 49 * d/(|d|+22), clamped [1,99]."""
-    d = score - 100.0
-    return max(1.0, min(99.0, 50.0 + 49.0 * (d / (abs(d) + 22.0))))
+RS_RAW_WINDOWS = {"1M": 21, "3M": 63, "6M": 126, "9M": 188, "12M": 249}
+RS_RAW_WEIGHTS = {"1M": 0.2398615489255944, "3M": 0.2398597773981456, "6M": 0.23259603611327384,
+                   "9M": 0.22243834909982305, "12M": 0.06524428846316314}
+# Trend-confirmation gate: a stock's 9M/12M returns only get full weight when its 3M return is
+# also positive (the longer-term strength is "confirmed" by recent price action). When 3M is
+# negative, 9M/12M are scaled down by this factor before blending. Without this, a stock that
+# rallied hard 9-12 months ago and has since reversed (e.g. down -9%/-17%/-34%/-61% over
+# 1M/3M/6M/9M but still +412% over 12M) reads as falsely strong from the stale 12M number alone
+# (raw percentile ~90 vs a true RS Rating of 22) - while a stock merely pausing after a genuine
+# uptrend (one soft month, but 3M/6M/9M all solidly positive) gets penalized for the SAME reason
+# the crash case needs penalizing. Gating on whether 3M confirms or contradicts the longer trend
+# fixes both simultaneously: TEST R²=0.845->0.869, MAE=7.60->6.88, corr=0.940->0.951, with no
+# metric regressing (see python/fit_production_ratings.py).
+RS_TREND_GATE_REDUCTION = 0.50
+
+AD_RAW_FEATURES = [
+    "UpDnVol_65D", "HeavyNetRatio_65D", "NetHeavyIntensity_65D", "CMF_65D",
+    "UpDnVol_130D", "NetHeavyIntensity_130D", "UpDnVol_30D", "NetHeavyIntensity_30D",
+    "Dist_10MA", "Dist_21MA", "Dist_50MA", "Dist_150MA", "Dist_200MA", "PctOff52WHigh",
+    "UpDnVol_5D", "HeavyNetRatio_5D", "NetHeavyIntensity_5D", "CMF_5D",
+    "UpDnVol_10D", "HeavyNetRatio_10D", "NetHeavyIntensity_10D", "CMF_10D",
+]
+AD_RAW_COEFS = [
+    0.34967480193560485, 2.1897638921253963, -0.06719042537158329, 5.181897158177819,
+    0.27691148574671515, -0.008050180344146483, 0.000403154704968294, -0.3654821919756783,
+    -0.13610908645042324, 0.111329192782794, 0.14673085403905506, 0.2152969282340527,
+    -0.1889154560921097, 0.002750442381063726, -1.942157058715131e-08, 0.010478581415874712,
+    1.573336648964523, 0.3726299491741793, 0.0011519686892018336, 0.5875381980017129,
+    -0.967261206595406, 4.673391221438038,
+]
+AD_RAW_INTERCEPT = 3.9244287979135892
+AD_LETTERS_ORDERED = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "D-", "E"]
+AD_CUM_TOP = {
+    "A+": 0.0738, "A": 0.1577, "A-": 0.1956, "B+": 0.2494, "B": 0.3391, "B-": 0.3896,
+    "C+": 0.4203, "C": 0.4874, "C-": 0.5291, "D+": 0.5670, "D": 0.6639, "D-": 0.7040, "E": 1.0,
+}
+
+EPS_RAW_FEATURES = ["EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio", "ROE",
+                     "EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"]
+EPS_RAW_COEFS = [1.6670799437309827, 1.5727689904980522, -1.6688291454915354, 2.736583873896307,
+                  -0.43052150673398204, 0.08072757657626828, 23.09505447850493, 0.2730948276664221,
+                  0.808210542220797, 0.12539278151754665]
+EPS_RAW_INTERCEPT = 35.004080630794206
+# EpsBeatRate's coefficient (23.1) dwarfs the others - a company that consistently beats
+# analyst estimates is a strong, largely independent EPS-Rating signal, found by comparing
+# against IBD_rating_glm's parallel effort (R^2 0.345 vs our then-0.333) and confirmed by our
+# own walk-forward refit (R^2 0.333 -> 0.416, same test population, no other metric regressed).
+EPS_LOG_FEATURES = {"EPS_Q0_YoY", "EPS_LT_Growth", "ROE", "EpsSurpriseMean", "EpsRevTrend",
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"}
+EPS_CLIP = {
+    "EPS_Q0_YoY": (-300, 300), "EPS_LT_Growth": (-300, 300), "EpsSurpriseMean": (-300, 300),
+    "EpsRevTrend": (-300, 300), "EstEPSGrowth_Q": (-300, 300), "EstEPSGrowth_Y": (-300, 300),
+    "EPS_StabilityCV": (0, 10), "EPS_NegQRatio": (0, 1), "EpsBeatRate": (0, 1),
+}
+EPS_MEDIANS = {
+    "EPS_Q0_YoY": 17.089216944801024, "EPS_LT_Growth": 11.005390522399962,
+    "EPS_NegQRatio": 0.0, "ROE": 10.6835003,
+    "EPS_StabilityCV": 1.4707799687755612, "EpsSurpriseMean": 6.9287499375,
+    "EpsBeatRate": 0.75, "EpsRevTrend": -0.0724612846210726,
+    "EstEPSGrowth_Q": 10.8150002, "EstEPSGrowth_Y": 13.01,
+}
+
+SMR_RAW_FEATURES = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE"]
+SMR_RAW_COEFS = [1.0836196928957507, 4.04823699701578, 3.078193914449797, -1.2385417551305598, 4.330382100668682]
+SMR_RAW_INTERCEPT = 43.494514603313135
+SMR_MEDIANS = {
+    "Sales_Q0_YoY": 9.505376828065279, "Sales_LT_Growth": 6.816226945651465,
+    "Margin_Now": 9.098851021951301, "Margin_Trend": 0.34718079468168384, "ROE": 10.7015,
+}
+SMR_LETTERS_ORDERED = ["A", "B", "C", "D", "E"]
+SMR_CUM_TOP = {"A": 0.3014, "B": 0.5822, "C": 0.8143, "D": 0.9670, "E": 1.0}
+
+COMPOSITE_COEFS = {"EPS": 0.29733326821052003, "RS": 0.5191465672786759,
+                    "SMR": 0.22740995821369406, "AD": 0.2109262117191658}
+COMPOSITE_INTERCEPT = -1.8129595138811236
+
+# IBD-style eligibility filter for the RATING universe (the comparison pool that
+# percentile ranks are computed against). Junk/illiquid/tiny-cap names are excluded
+# from the pool and get every rating left blank, not scored.
+RATING_MIN_PRICE = 4.0
+RATING_MIN_MKTCAP_MIL = 50.0
 
 
-def calc_rs_ratings(df, spy_df):
+def _log_compress(x):
+    """Sign-preserving log compression: tames small-denominator YoY blowups (e.g. EPS
+    growth off a near-zero base can read +28,600%) while preserving rank order, unlike
+    a hard clip which throws away the difference between merely-large and absurdly-
+    large values."""
+    x = np.asarray(x, dtype=float)
+    return np.sign(x) * np.log1p(np.abs(x))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RS RATING — raw score (per-ticker); apply_rating_percentiles() finishes the job
+# ──────────────────────────────────────────────────────────────────────────────
+
+def calc_rs_raw_score(close_series):
+    """Weighted blend of the stock's own ABSOLUTE trailing returns (1M/3M/6M/9M/12M),
+    with 9M/12M scaled down by RS_TREND_GATE_REDUCTION whenever the 3M return is
+    negative (see RS_TREND_GATE_REDUCTION for why: a stale 12M gain from a rally
+    that's already reversed shouldn't count the same as one still confirmed by
+    recent price action).
+
+    This is a RAW number, not a 1-99 rating — pass the whole universe's raw scores
+    through apply_rating_percentiles() to get the final RS Rating. Returns NaN if
+    the ticker doesn't have the full 12-month history the blend needs (matches the
+    calibration: partial windows were never validated, so they're not guessed at
+    here either).
     """
-    Calculate RS Rating (1-99), RS 3M, and RS 6M for each bar in `df`.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        OHLCV data with datetime index, columns including 'Close'.
-    spy_df : pd.DataFrame
-        SPY/S&P 500 OHLCV data with datetime index, aligned to same dates.
-        Must have 'Close' column.
-
-    Returns
-    -------
-    pd.DataFrame with columns: rs_rating, rs_rating_3m, rs_rating_6m
-    """
-    close = df['Close'].values.astype(float)
-    spy_close = spy_df['Close'].reindex(df.index).ffill().bfill().values.astype(float)
-
+    close = close_series.values.astype(float) if hasattr(close_series, "values") else np.asarray(close_series, dtype=float)
     n = len(close)
-    rs_rating = np.full(n, np.nan)
-    rs_3m = np.full(n, np.nan)
-    rs_6m = np.full(n, np.nan)
+    if n == 0:
+        return np.nan
+    latest = close[-1]
+    rets = {}
+    for label, days in RS_RAW_WINDOWS.items():
+        if n <= days:
+            return np.nan
+        past = close[-(days + 1)]
+        if not (past > 0):
+            return np.nan
+        rets[label] = (latest / past - 1.0) * 100.0
 
-    for i in range(n):
-        n63 = min(i, 63)
-        n126 = min(i, 126)
-        n189 = min(i, 189)
-        n252 = min(i, 252)
+    gate = 1.0 if rets["3M"] >= 0 else RS_TREND_GATE_REDUCTION
+    raw = (RS_RAW_WEIGHTS["1M"] * rets["1M"] + RS_RAW_WEIGHTS["3M"] * rets["3M"] +
+           RS_RAW_WEIGHTS["6M"] * rets["6M"] + RS_RAW_WEIGHTS["9M"] * rets["9M"] * gate +
+           RS_RAW_WEIGHTS["12M"] * rets["12M"] * gate)
+    return float(raw)
 
-        i63 = i - n63
-        i126 = i - n126
-        i189 = i - n189
-        i252 = i - n252
 
-        # Stock performance (weighted: 40/20/20/20)
-        perf_t = (0.4 * (close[i] / close[i63]) +
-                  0.2 * (close[i] / close[i126]) +
-                  0.2 * (close[i] / close[i189]) +
-                  0.2 * (close[i] / close[i252]))
-
-        # Benchmark performance (same weights)
-        perf_c = (0.4 * (spy_close[i] / spy_close[i63]) +
-                  0.2 * (spy_close[i] / spy_close[i126]) +
-                  0.2 * (spy_close[i] / spy_close[i189]) +
-                  0.2 * (spy_close[i] / spy_close[i252]))
-
-        total_rs_score = (perf_t / perf_c) * 100.0 if perf_c > 0 else 100.0
-
-        # 3M and 6M scores
-        score_3m = ((close[i] / close[i63]) /
-                    (spy_close[i] / spy_close[i63]) * 100.0
-                    if spy_close[i63] > 0 else 100.0)
-        score_6m = ((close[i] / close[i126]) /
-                    (spy_close[i] / spy_close[i126]) * 100.0
-                    if spy_close[i126] > 0 else 100.0)
-
-        rs_rating[i] = _f_sigmoid(total_rs_score)
-        rs_3m[i] = _f_sigmoid(score_3m)
-        rs_6m[i] = _f_sigmoid(score_6m)
-
-    return pd.DataFrame({
-        'rs_rating': rs_rating,
-        'rs_rating_3m': rs_3m,
-        'rs_rating_6m': rs_6m,
-    }, index=df.index)
+def calc_rs_sub_raw_score(close_series, days):
+    """Single-window absolute return (raw) for the RS 3-Month / RS 6-Month sub-ratings.
+    Same percentile-rank treatment as the main RS Rating, just one window."""
+    close = close_series.values.astype(float) if hasattr(close_series, "values") else np.asarray(close_series, dtype=float)
+    n = len(close)
+    if n <= days:
+        return np.nan
+    past = close[-(days + 1)]
+    if not (past > 0):
+        return np.nan
+    return float((close[-1] / past - 1.0) * 100.0)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -109,8 +212,8 @@ def calc_rs_ratings(df, spy_df):
 
 def calc_pct_off_52w_high(df):
     """Percentage below 52-week (252-day) high: (high52w - close) / high52w * 100."""
-    high = df['High'].values.astype(float)
-    close = df['Close'].values.astype(float)
+    high = df["High"].values.astype(float)
+    close = df["Close"].values.astype(float)
     n = len(close)
 
     pct_off = np.full(n, np.nan)
@@ -122,318 +225,13 @@ def calc_pct_off_52w_high(df):
         else:
             pct_off[i] = 0.0
 
-    return pd.Series(pct_off, index=df.index, name='pct_off_52w_high')
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# A/D RATING (0-99) — Accumulation/Distribution, from price & volume only
-# ──────────────────────────────────────────────────────────────────────────────
-
-def calc_ad_rating(df):
-    """
-    Money Flow-based A/D Rating (0-99) over 65-day window.
-    Matches drw_ratings_scanner.pine exactly.
-    """
-    high = df['High'].values.astype(float)
-    low = df['Low'].values.astype(float)
-    close = df['Close'].values.astype(float)
-    volume = df['Volume'].values.astype(float)
-
-    n = len(close)
-    ad_rating = np.full(n, np.nan)
-
-    for i in range(65, n):
-        # Money flow multiplier per bar
-        hl_diff = high[i - 65:i + 1] - low[i - 65:i + 1]
-        safe_hl = np.where(hl_diff == 0, 1.0, hl_diff)
-        mf = np.where(hl_diff != 0,
-                      ((close[i - 65:i + 1] - low[i - 65:i + 1]) -
-                       (high[i - 65:i + 1] - close[i - 65:i + 1])) / safe_hl,
-                      0.0)
-
-        sum_mf_vol = np.sum(mf * volume[i - 65:i + 1])
-        sum_vol = np.sum(volume[i - 65:i + 1])
-
-        ad_ratio_val = sum_mf_vol / sum_vol if sum_vol != 0 else 0.0
-        ad_rating[i] = max(0.0, min(99.0, 49.5 + ad_ratio_val * 49.5))
-
-    # Fill first 65 bars
-    if n >= 66:
-        ad_rating[:65] = ad_rating[65]
-
-    return pd.Series(ad_rating, index=df.index, name='ad_rating')
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# EPS RATING (1-99) — from EPS history arrays
-# ──────────────────────────────────────────────────────────────────────────────
-
-def calc_eps_rating(fy_eps, fq_eps, roe_val):
-    """
-    Calculate EPS Rating (1-99) from annual and quarterly EPS data.
-
-    Parameters
-    ----------
-    fy_eps : list of float (length >= 2)
-        Annual diluted EPS values, most recent first [FY0, FY-1, FY-2, ...].
-        From yfinance: ticker.financials.loc['Diluted EPS'].
-    fq_eps : list of float (length >= 5)
-        Quarterly diluted EPS values, most recent first [Q0, Q-1, Q-2, ...].
-        From yfinance: ticker.quarterly_financials.loc['Diluted EPS'].
-    roe_val : float or None
-        Return on Equity from the most recent quarter.
-        From yfinance: ticker.info['returnOnEquity'] or derived from
-        net income / total equity.
-
-    Returns
-    -------
-    int : EPS Rating (1-99), or 1 if insufficient data.
-    """
-    # ── Short-term growth (QoQ YoY) ──
-    n_fq = len(fq_eps)
-    q0g = None
-    q1g = None
-    if n_fq > 4:
-        if abs(fq_eps[4]) > 0:
-            q0g = (fq_eps[0] - fq_eps[4]) / abs(fq_eps[4]) * 100.0
-    if n_fq > 5:
-        if abs(fq_eps[5]) > 0:
-            q1g = (fq_eps[1] - fq_eps[5]) / abs(fq_eps[5]) * 100.0
-
-    st_growth = None
-    if q0g is not None:
-        st_growth = q0g * 0.65 + q1g * 0.35 if q1g is not None else q0g
-
-    # ── Long-term growth (annual, weighted recent) ──
-    n_fy = len(fy_eps)
-    lt_growth = None
-    sum_g = 0.0
-    sum_w = 0.0
-    for j in range(min(n_fy - 1, 5)):
-        if abs(fy_eps[j + 1]) > 0:
-            gv = (fy_eps[j] - fy_eps[j + 1]) / abs(fy_eps[j + 1]) * 100.0
-            w = 5 - j
-            sum_g += gv * w
-            sum_w += w
-
-    if sum_w > 0:
-        lt_growth = sum_g / sum_w
-
-    # ── EPS acceleration ──
-    eps_accel = q0g - q1g if (q0g is not None and q1g is not None) else 0.0
-
-    # ── Blended growth rate ──
-    if st_growth is None and lt_growth is None:
-        blended = 0.0
-    elif st_growth is None:
-        blended = lt_growth
-    elif lt_growth is None:
-        blended = st_growth
-    else:
-        blended = st_growth * 0.50 + lt_growth * 0.35 + eps_accel * 0.15
-
-    raw_eps_base = 50.0 + 49.0 * (blended / (abs(blended) + 40.0))
-
-    # ── Negative quarter ratio ──
-    neg_q = 0.0
-    cnt_q = 0.0
-    for j in range(min(n_fq - 4, 4)):
-        if abs(fq_eps[j + 4]) > 0:
-            gv = (fq_eps[j] - fq_eps[j + 4]) / abs(fq_eps[j + 4]) * 100.0
-            cnt_q += 1
-            if gv < 0:
-                neg_q += 1
-    neg_ratio = neg_q / cnt_q if cnt_q > 0 else 0.0
-
-    # ── Penalties ──
-    roe_pen = 0.0
-    if roe_val is not None and roe_val < 0:
-        roe_pen = min(22.0, abs(roe_val) * 0.05 + 5.0)
-
-    lt_neg_pen = 0.0
-    if lt_growth is not None and lt_growth < 0:
-        lt_neg_pen = min(15.0, abs(lt_growth) * 0.4)
-
-    eps = raw_eps_base - roe_pen - lt_neg_pen - neg_ratio * 10.0
-    return max(1, min(99, round(eps)))
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# SMR RATING — ROE-driven, single-pillar (margin/sales not available via yfinance)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def calc_smr_rating(roe_val):
-    """
-    SMR Score (0-99) and Grade (A-E), driven solely by ROE.
-    Matches the Pine Script simplified approach.
-    """
-    if roe_val is None:
-        roe_val = 15.0
-
-    score = max(0.0, min(99.0, 50.0 + 49.0 * (roe_val / (abs(roe_val) + 17.0))))
-
-    if score >= 80:
-        grade = 'A'
-    elif score >= 65:
-        grade = 'B'
-    elif score >= 50:
-        grade = 'C'
-    elif score >= 35:
-        grade = 'D'
-    else:
-        grade = 'E'
-
-    return score, grade
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# COMPOSITE RATING (1-99)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def calc_composite_rating(rs_rating, eps_rating, smr_score, ad_rating):
-    """
-    Composite Rating = -15.94 + 0.5794*RS + 0.3766*EPS + 0.2166*SMR + 1.4080*AD_num
-    where AD_num = 1.0 + (ad_rating / 99.0) * 12.0
-    """
-    ad_num = 1.0 + (ad_rating / 99.0) * 12.0
-    comp_raw = (-15.94 + 0.5794 * rs_rating + 0.3766 * eps_rating +
-                0.2166 * smr_score + 1.4080 * ad_num)
-    return max(1, min(99, round(comp_raw)))
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# ALL-IN-ONE CALCULATION
-# ──────────────────────────────────────────────────────────────────────────────
-
-def calc_all_ratings(df, spy_df, fy_eps=None, fq_eps=None, roe_val=None):
-    """
-    Compute all IBD-style ratings for the last bar of `df`.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Daily OHLCV data (from ticker_cache), with columns
-        'Open', 'High', 'Low', 'Close', 'Volume'.
-    spy_df : pd.DataFrame
-        SPY daily OHLCV data, aligned.
-    fy_eps : list of float, optional
-        Annual diluted EPS, most recent first.
-    fq_eps : list of float, optional
-        Quarterly diluted EPS, most recent first.
-    roe_val : float, optional
-        Return on Equity from most recent quarter.
-
-    Returns
-    -------
-    dict with keys: ticker, rs_rating, rs_3m, rs_6m, pct_off_52w_high,
-    eps_rating, smr_score, smr_grade, ad_rating, comp_rating
-    """
-    # RS Ratings
-    rs = calc_rs_ratings(df, spy_df)
-    rs_val = rs['rs_rating'].iloc[-1]
-    rs_3m = rs['rs_rating_3m'].iloc[-1]
-    rs_6m = rs['rs_rating_6m'].iloc[-1]
-
-    # % Off 52W High
-    pct_off = calc_pct_off_52w_high(df).iloc[-1]
-
-    # A/D Rating
-    ad = calc_ad_rating(df).iloc[-1]
-
-    # EPS Rating
-    if fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5:
-        eps = calc_eps_rating(fy_eps, fq_eps, roe_val)
-    else:
-        eps = 1  # minimum if insufficient data
-
-    # SMR Rating
-    smr_score, smr_grade = calc_smr_rating(roe_val)
-
-    # Composite Rating
-    comp = calc_composite_rating(rs_val, eps, smr_score, ad)
-
-    return {
-        'rs_rating': round(rs_val, 1),
-        'rs_3m': round(rs_3m, 1),
-        'rs_6m': round(rs_6m, 1),
-        'pct_off_52w_high': round(pct_off, 2),
-        'eps_rating': eps,
-        'smr_score': round(smr_score, 1),
-        'smr_grade': smr_grade,
-        'ad_rating': round(ad, 1),
-        'comp_rating': comp,
-    }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# BATCH RS RATING (vectorized for speed on many tickers with SPY pre-computed)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def calc_rs_rating_snapshot(close_series, spy_close_series):
-    """
-    Calculate the RS Rating for the LAST bar given two pandas Series
-    of closing prices (stock and SPY, aligned by index).
-
-    Returns single float: the RS Rating (1-99) at the last bar.
-    """
-    close = close_series.values.astype(float)
-    spy = spy_close_series.values.astype(float)
-
-    n = len(close)
-    if n < 4:
-        return np.nan
-
-    n63 = min(n - 1, 63)
-    n126 = min(n - 1, 126)
-    n189 = min(n - 1, 189)
-    n252 = min(n - 1, 252)
-
-    try:
-        perf_t = (0.4 * (close[-1] / close[-(n63 + 1)]) +
-                  0.2 * (close[-1] / close[-(n126 + 1)]) +
-                  0.2 * (close[-1] / close[-(n189 + 1)]) +
-                  0.2 * (close[-1] / close[-(n252 + 1)]))
-
-        perf_c = (0.4 * (spy[-1] / spy[-(n63 + 1)]) +
-                  0.2 * (spy[-1] / spy[-(n126 + 1)]) +
-                  0.2 * (spy[-1] / spy[-(n189 + 1)]) +
-                  0.2 * (spy[-1] / spy[-(n252 + 1)]))
-
-        score = (perf_t / perf_c) * 100.0 if perf_c > 0 else 100.0
-        return _f_sigmoid(score)
-    except (IndexError, ZeroDivisionError):
-        return np.nan
-
-
-def calc_ad_rating_snapshot(df):
-    """A/D Rating for the single last bar from a DataFrame with OHLCV."""
-    high = df['High'].values.astype(float)
-    low = df['Low'].values.astype(float)
-    close = df['Close'].values.astype(float)
-    volume = df['Volume'].values.astype(float)
-
-    n = len(close)
-    if n < 65:
-        return np.nan
-
-    w = slice(-65, None)
-    hl_diff = high[w] - low[w]
-    safe_hl = np.where(hl_diff == 0, 1.0, hl_diff)
-    mf = np.where(hl_diff != 0,
-                  ((close[w] - low[w]) - (high[w] - close[w])) / safe_hl,
-                  0.0)
-
-    sum_mf_vol = np.sum(mf * volume[w])
-    sum_vol = np.sum(volume[w])
-
-    ad_ratio_val = sum_mf_vol / sum_vol if sum_vol != 0 else 0.0
-    return max(0.0, min(99.0, 49.5 + ad_ratio_val * 49.5))
+    return pd.Series(pct_off, index=df.index, name="pct_off_52w_high")
 
 
 def calc_pct_off_52w_high_snapshot(df):
     """% Off 52W High for the last bar."""
-    high = df['High'].values.astype(float)
-    close = df['Close'].values.astype(float)
+    high = df["High"].values.astype(float)
+    close = df["Close"].values.astype(float)
 
     n = len(close)
     if n < 1:
@@ -444,6 +242,360 @@ def calc_pct_off_52w_high_snapshot(df):
     if h52 > 0:
         return (h52 - close[-1]) / h52 * 100.0
     return 0.0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# A/D RATING — raw score (per-ticker); apply_rating_percentiles() finishes the job
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _window_ad_features(prices, vols, highs, lows, w):
+    """Chaikin-money-flow / heavy-volume-day accumulation stats over a trailing window."""
+    if len(prices) < w:
+        return None
+    wp, wv, wh, wl = prices[-w:], vols[-w:], highs[-w:], lows[-w:]
+    p_diff = np.diff(wp)
+    safe_prev = np.where(wp[:-1] == 0, 1.0, wp[:-1])
+    p_rets = p_diff / safe_prev
+    vtail = wv[1:]
+    mean_vol = max(1.0, np.mean(wv))
+    vratio = vtail / mean_vol
+
+    up = p_rets > 0
+    dn = p_rets < 0
+    up_vol = np.sum(vtail[up])
+    dn_vol = np.sum(vtail[dn])
+    updn_ratio = up_vol / max(1.0, dn_vol)
+
+    heavy_up = up & (vratio > 1.2)
+    heavy_dn = dn & (vratio > 1.2)
+    h_up_vol = np.sum(vtail[heavy_up])
+    h_dn_vol = np.sum(vtail[heavy_dn])
+    heavy_net_ratio = h_up_vol / max(1.0, h_up_vol + h_dn_vol)
+    net_heavy_intensity = (np.sum(p_rets[heavy_up] * vratio[heavy_up]) -
+                            np.sum(np.abs(p_rets[heavy_dn]) * vratio[heavy_dn]))
+
+    rng = np.maximum(1e-6, wh - wl)
+    cls_rng = (wp - wl) / rng * 100.0
+    vw_cls_rng = np.sum(cls_rng * wv) / max(1.0, np.sum(wv))
+    mf_mult = ((wp - wl) - (wh - wp)) / rng
+    cmf = np.sum(mf_mult * wv) / max(1.0, np.sum(wv))
+
+    return {
+        "UpDnVol": updn_ratio,
+        "HeavyNetRatio": heavy_net_ratio,
+        "NetHeavyIntensity": net_heavy_intensity,
+        "VWClsRange": vw_cls_rng,
+        "CMF": cmf,
+    }
+
+
+def calc_ad_raw_score(df):
+    """Ridge-regularized blend of multi-window (5/10/30/65/130D) Chaikin-money-flow /
+    heavy-volume-day features plus moving-average-distance and % off 52-week high.
+
+    The short 5D/10D windows were added after A/B-testing against GLM's broader
+    AD_WINDOWS and confirmed a real out-of-sample win (TEST within-1-grade accuracy
+    53.8%->56.7%) — recent accumulation/distribution carries signal the 30D+ windows
+    alone smooth away. CMF_130D and VWClsRange_65D were then dropped (VWClsRange_65D
+    correlates 0.98 with CMF_65D - same signal; CMF_130D correlates 0.75 with CMF_65D,
+    causing the ridge fit to split a large canceling coefficient pair across them - a
+    collinearity artifact, not independent signal) and Dist_10MA/21MA added (short-
+    horizon price position). Net: TEST exact 32.1%->36.3%, within-1 51.5%->57.2%
+    (see python/fit_production_ratings.py).
+
+    RAW number, not a grade — apply_rating_percentiles() percentile-ranks this
+    against the eligible universe and converts to an A+..E grade. Returns NaN if
+    the ticker doesn't have the ~250 days of history the feature set needs.
+    """
+    close = df["Close"].values.astype(float)
+    high = df["High"].values.astype(float)
+    low = df["Low"].values.astype(float)
+    volume = df["Volume"].values.astype(float)
+    n = len(close)
+    if n < 250:
+        return np.nan
+
+    feats = {}
+    for w in (5, 10, 30, 65, 130):
+        wf = _window_ad_features(close, volume, high, low, w)
+        if wf is None:
+            return np.nan
+        for k, v in wf.items():
+            feats[f"{k}_{w}D"] = v
+
+    latest = close[-1]
+    for ma in (10, 21, 50, 150, 200):
+        feats[f"Dist_{ma}MA"] = (latest / np.mean(close[-ma:]) - 1.0) * 100.0
+    h52 = np.max(close[-253:])
+    feats["PctOff52WHigh"] = (h52 - latest) / h52 * 100.0 if h52 > 0 else 0.0
+
+    vals = np.array([feats.get(c, np.nan) for c in AD_RAW_FEATURES])
+    if np.isnan(vals).any():
+        return np.nan
+    return float(AD_RAW_INTERCEPT + np.dot(vals, AD_RAW_COEFS))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# EPS RATING (1-99) — direct scale, no percentile step needed
+# ──────────────────────────────────────────────────────────────────────────────
+
+def calc_eps_rating(fy_eps, fq_eps, roe_val, eps_stability_cv=None, eps_surprise_mean=None,
+                     eps_beat_rate=None, eps_rev_trend=None, est_eps_growth_q=None,
+                     est_eps_growth_y=None):
+    """Calculate EPS Rating (1-99) from annual/quarterly EPS data plus analyst signals.
+
+    Direct-scale OLS blend of log-compressed growth/ROE/analyst features (percentile-
+    ranking was tested in calibration and measurably hurt EPS — likely because
+    the signal is already low-SNR from yfinance's shallow ~5-quarter window, and
+    percentile-ranking a noisy raw score just re-orders the noise). This IS the
+    final EPS Rating already; no universe pass required.
+
+    The 6 keyword args (from extract_eps_analyst_features()) are optional and
+    median-imputed when unavailable — a ticker with no earnings-history/estimate
+    data still gets a rating from the original 4 fundamentals-only features.
+
+    Parameters
+    ----------
+    fy_eps : list of float (length >= 2)
+        Annual diluted EPS values, most recent first [FY0, FY-1, FY-2, ...].
+    fq_eps : list of float (length >= 5)
+        Quarterly diluted EPS values, most recent first [Q0, Q-1, Q-2, ...].
+    roe_val : float or None
+        Return on Equity from the most recent quarter (as a percent, e.g. 15.0).
+
+    Returns
+    -------
+    int : EPS Rating (1-99), or a data-poor fallback near the population median
+    if insufficient EPS history is available.
+    """
+    # fq_eps/fy_eps may now contain None at a calendar-correct position (a quarter/
+    # year with no reported EPS) rather than being dropped, so every offset compare
+    # below must guard BOTH sides of the subtraction, not just the divisor side.
+    q0g = None
+    if (fq_eps and len(fq_eps) > 4 and fq_eps[0] is not None and fq_eps[4] is not None
+            and abs(fq_eps[4]) > 1e-9):
+        q0g = (fq_eps[0] - fq_eps[4]) / abs(fq_eps[4]) * 100.0
+
+    lt_growth = None
+    if fy_eps and len(fy_eps) > 1:
+        sum_g, sum_w = 0.0, 0.0
+        for j in range(min(len(fy_eps) - 1, 5)):
+            if fy_eps[j] is not None and fy_eps[j + 1] is not None and abs(fy_eps[j + 1]) > 1e-9:
+                gv = (fy_eps[j] - fy_eps[j + 1]) / abs(fy_eps[j + 1]) * 100.0
+                w = 5 - j
+                sum_g += gv * w
+                sum_w += w
+        if sum_w > 0:
+            lt_growth = sum_g / sum_w
+
+    neg_q, cnt_q = 0, 0
+    if fq_eps and len(fq_eps) > 4:
+        for j in range(min(len(fq_eps) - 4, 4)):
+            if fq_eps[j] is not None and fq_eps[j + 4] is not None and abs(fq_eps[j + 4]) > 1e-9:
+                gv = (fq_eps[j] - fq_eps[j + 4]) / abs(fq_eps[j + 4]) * 100.0
+                cnt_q += 1
+                if gv < 0:
+                    neg_q += 1
+    neg_ratio = neg_q / cnt_q if cnt_q > 0 else 0.0
+
+    raw_by_feature = {
+        "EPS_Q0_YoY": q0g, "EPS_LT_Growth": lt_growth, "EPS_NegQRatio": neg_ratio, "ROE": roe_val,
+        "EPS_StabilityCV": eps_stability_cv, "EpsSurpriseMean": eps_surprise_mean,
+        "EpsBeatRate": eps_beat_rate, "EpsRevTrend": eps_rev_trend,
+        "EstEPSGrowth_Q": est_eps_growth_q, "EstEPSGrowth_Y": est_eps_growth_y,
+    }
+    vals = []
+    for feat in EPS_RAW_FEATURES:
+        v = raw_by_feature[feat]
+        v = v if v is not None else EPS_MEDIANS[feat]
+        lo, hi = EPS_CLIP.get(feat, (-np.inf, np.inf))
+        v = max(lo, min(hi, v))
+        vals.append(_log_compress(v) if feat in EPS_LOG_FEATURES else v)
+
+    raw = EPS_RAW_INTERCEPT + float(np.dot(np.array(vals), EPS_RAW_COEFS))
+    return int(max(1, min(99, round(raw))))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SMR RATING — raw score (per-ticker); apply_rating_percentiles() finishes the job
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _series_from_label(block, labels):
+    """block[label] = {date_str: value}; returns (dates_desc, values) of first matching label.
+
+    dates/values stay in lockstep with one entry per calendar period - a period with
+    no reported value keeps a None in `values` rather than being dropped, so vals[4]
+    stays "4 periods back" even when an earlier period is missing (see the identical
+    fix in extract_eps_from_fundamentals for why dropping instead of preserving
+    silently misaligns every offset-based comparison downstream)."""
+    if not isinstance(block, dict):
+        return None
+    for lbl in labels:
+        col = block.get(lbl)
+        if isinstance(col, dict) and col:
+            dates = sorted(col.keys(), reverse=True)
+            vals = []
+            for d in dates:
+                v = col[d]
+                if v is None:
+                    vals.append(None)
+                    continue
+                try:
+                    vals.append(float(v))
+                except (TypeError, ValueError):
+                    vals.append(None)
+            if sum(1 for x in vals if x is not None) >= 2:
+                return dates, vals
+    return None
+
+
+def extract_smr_inputs_from_fundamentals(fund):
+    """Extract SMR's sales-growth + margin inputs from the fundamentals cache dict.
+
+    Returns (sales_q0_yoy, sales_lt_growth, margin_now, margin_trend) — Nones where
+    the underlying quarterly/annual data isn't available; calc_smr_raw_score()
+    median-imputes any that come back None.
+    """
+    if not fund or fund.get("error"):
+        return None, None, None, None
+
+    rev_q = _series_from_label(fund.get("income_q"), ("Total Revenue",))
+    rev_a = _series_from_label(fund.get("income_a"), ("Total Revenue",))
+    ni_q = _series_from_label(fund.get("income_q"), ("Net Income", "Net Income Common Stockholders"))
+
+    sales_q0_yoy = None
+    if rev_q:
+        _, vals = rev_q
+        if len(vals) > 4 and vals[0] is not None and vals[4] is not None and abs(vals[4]) > 1e-9:
+            sales_q0_yoy = (vals[0] - vals[4]) / abs(vals[4]) * 100.0
+
+    sales_lt_growth = None
+    if rev_a:
+        _, vals = rev_a
+        sum_g, sum_w = 0.0, 0.0
+        for j in range(min(len(vals) - 1, 5)):
+            if vals[j] is not None and vals[j + 1] is not None and abs(vals[j + 1]) > 1e-9:
+                gv = (vals[j] - vals[j + 1]) / abs(vals[j + 1]) * 100.0
+                w = 5 - j
+                sum_g += gv * w
+                sum_w += w
+        if sum_w > 0:
+            sales_lt_growth = sum_g / sum_w
+
+    margin_now = margin_trend = None
+    if rev_q and ni_q:
+        rdates, rvals = rev_q
+        ndates, nvals = ni_q
+        rmap, nmap = dict(zip(rdates, rvals)), dict(zip(ndates, nvals))
+        margins = [nmap[d] / rmap[d] * 100.0 for d in rdates
+                   if nmap.get(d) is not None and rmap.get(d) is not None and abs(rmap[d]) > 1e-6]
+        if margins:
+            margin_now = margins[0]
+            if len(margins) >= 3:
+                margin_trend = float(np.mean(margins[:2]) - np.mean(margins[-2:]))
+
+    return sales_q0_yoy, sales_lt_growth, margin_now, margin_trend
+
+
+def calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe_val):
+    """Raw SMR blend: log-compressed OLS combination of sales growth (short + long
+    term), margin (level + trend), and ROE.
+
+    RAW number, not a grade — apply_rating_percentiles() percentile-ranks this
+    against the eligible universe (the percentile value is also SMR's numeric
+    contribution to Composite Rating) and converts to an A-E grade.
+    """
+    def _f(v, med):
+        return v if (v is not None and np.isfinite(v)) else med
+
+    vals = np.array([
+        _log_compress(_f(sales_q0_yoy, SMR_MEDIANS["Sales_Q0_YoY"])),
+        _log_compress(_f(sales_lt_growth, SMR_MEDIANS["Sales_LT_Growth"])),
+        _log_compress(_f(margin_now, SMR_MEDIANS["Margin_Now"])),
+        _log_compress(_f(margin_trend, SMR_MEDIANS["Margin_Trend"])),
+        _log_compress(_f(roe_val, SMR_MEDIANS["ROE"])),
+    ])
+    return float(SMR_RAW_INTERCEPT + np.dot(vals, SMR_RAW_COEFS))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# UNIVERSE POST-PASS — percentile-ranks raw scores, finalizes RS/A-D/SMR/Composite
+# ──────────────────────────────────────────────────────────────────────────────
+
+def letter_from_pct(pct, letters_ordered, cum_top):
+    """Assign a letter grade from a 1-99 percentile using train-frozen grade-frequency
+    boundaries (cum_top[g] = cumulative population share from the best grade down
+    through g). `letters_ordered` must be best-to-worst."""
+    if pct is None or (isinstance(pct, float) and np.isnan(pct)):
+        return None
+    for g in letters_ordered:
+        if pct / 100.0 >= 1.0 - cum_top[g]:
+            return g
+    return letters_ordered[-1]
+
+
+def apply_rating_percentiles(out, min_price=None, min_mktcap_mil=None):
+    """Universe post-pass (same pattern as apply_group_columns): turns the raw
+    per-ticker scores already on `out` into final RS Rating / RS 3-Month Rating /
+    RS 6-Month Rating / A/D Rating / SMR Rating / Composite Rating, percentile-
+    ranked LIVE against the CURRENT eligible universe.
+
+    Eligibility = price >= min_price AND (market cap unknown OR market cap >=
+    min_mktcap_mil) — IBD's own junk/tiny-cap filter. Ineligible tickers get every
+    rating left blank (None/NaN), not scored, matching this pipeline's existing
+    "leave blank rather than guess" convention.
+
+    Ranking against the LIVE current universe (not a frozen historical reference)
+    is deliberate: percentile rank is supposed to self-normalize to today's overall
+    market dispersion, which a frozen reference would undermine as it goes stale.
+    Both production call sites (build_daily_screener.py, app.py's Ratings Scanner)
+    already loop over the full universe per run, so this is always available.
+
+    Requires hidden per-ticker fields _rs_raw, _rs3m_raw, _rs6m_raw, _ad_raw,
+    _smr_raw, plus 'Current Price', 'Market Cap (mil)', and 'EPS Rating' to
+    already be on `out`.
+    """
+    min_price = RATING_MIN_PRICE if min_price is None else min_price
+    min_mktcap_mil = RATING_MIN_MKTCAP_MIL if min_mktcap_mil is None else min_mktcap_mil
+
+    price = pd.to_numeric(out.get("Current Price"), errors="coerce")
+    mktcap = pd.to_numeric(out.get("Market Cap (mil)"), errors="coerce")
+    eligible = (price >= min_price) & (mktcap.isna() | (mktcap >= min_mktcap_mil))
+    out["_rating_eligible"] = eligible
+
+    def _pct_rank_99(raw_col):
+        s = pd.to_numeric(out.get(raw_col), errors="coerce")
+        pool = s[eligible].dropna()
+        ranks = pd.Series(np.nan, index=s.index)
+        if len(pool) > 0:
+            ranks.loc[pool.index] = np.clip(pool.rank(pct=True, method="average") * 99, 1, 99)
+        return ranks
+
+    rs_pct = _pct_rank_99("_rs_raw")
+    out["RS Rating"] = rs_pct.round(1)
+    out["RS 3-Month Rating"] = _pct_rank_99("_rs3m_raw").round(1)
+    out["RS 6-Month Rating"] = _pct_rank_99("_rs6m_raw").round(1)
+
+    ad_pct = _pct_rank_99("_ad_raw")
+    out["A/D Score"] = ad_pct.round(1)
+    out["A/D Rating"] = [letter_from_pct(p, AD_LETTERS_ORDERED, AD_CUM_TOP) for p in ad_pct]
+    if "_ad_prev_raw" in out.columns:
+        ad_prev_pct = _pct_rank_99("_ad_prev_raw")
+        out["A/D Rating - Pr Wk"] = [letter_from_pct(p, AD_LETTERS_ORDERED, AD_CUM_TOP) for p in ad_prev_pct]
+
+    smr_pct = _pct_rank_99("_smr_raw")
+    out["SMR Score"] = smr_pct.round(1)
+    out["SMR Rating"] = [letter_from_pct(p, SMR_LETTERS_ORDERED, SMR_CUM_TOP) for p in smr_pct]
+
+    eps = pd.to_numeric(out.get("EPS Rating"), errors="coerce").where(eligible)
+    out["EPS Rating"] = eps
+
+    comp_ok = eligible & eps.notna() & rs_pct.notna() & smr_pct.notna() & ad_pct.notna()
+    comp_raw = (COMPOSITE_INTERCEPT + COMPOSITE_COEFS["EPS"] * eps + COMPOSITE_COEFS["RS"] * rs_pct +
+                COMPOSITE_COEFS["SMR"] * smr_pct + COMPOSITE_COEFS["AD"] * ad_pct)
+    out["Comp Rating"] = comp_raw.where(comp_ok).clip(1, 99).round(0)
+
+    return out
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -478,6 +630,12 @@ def extract_eps_from_fundamentals(fund):
                 pass
 
     # ── Quarterly EPS from income statement ──
+    # Positions must stay calendar-aligned (index 4 = exactly 4 quarters back) since
+    # calc_eps_rating() does fixed-offset YoY math (fq_eps[0] - fq_eps[4]). A quarter
+    # with no reported Diluted EPS (common: anti-dilutive losses, late filings) must
+    # keep its slot as None rather than being dropped - dropping it would silently
+    # shift every earlier quarter into the wrong position instead of just leaving a
+    # gap, turning "missing data" into "wrong data" for any ticker with a gap.
     income_q = fund.get('income_q')
     if isinstance(income_q, dict):
         for label in ('Diluted EPS', 'Diluted Earnings Per Share', 'Basic EPS'):
@@ -489,12 +647,14 @@ def extract_eps_from_fundamentals(fund):
                 vals = []
                 for d in sorted_dates:
                     v = col[d]
-                    if v is not None:
-                        try:
-                            vals.append(float(v))
-                        except (ValueError, TypeError):
-                            pass
-                if len(vals) >= 2:
+                    if v is None:
+                        vals.append(None)
+                        continue
+                    try:
+                        vals.append(float(v))
+                    except (ValueError, TypeError):
+                        vals.append(None)
+                if sum(1 for x in vals if x is not None) >= 2:
                     fq_eps = vals
                     break
 
@@ -508,12 +668,14 @@ def extract_eps_from_fundamentals(fund):
                 vals = []
                 for d in sorted_dates:
                     v = col[d]
-                    if v is not None:
-                        try:
-                            vals.append(float(v))
-                        except (ValueError, TypeError):
-                            pass
-                if len(vals) >= 2:
+                    if v is None:
+                        vals.append(None)
+                        continue
+                    try:
+                        vals.append(float(v))
+                    except (ValueError, TypeError):
+                        vals.append(None)
+                if sum(1 for x in vals if x is not None) >= 2:
                     fy_eps = vals
                     break
 
@@ -547,6 +709,93 @@ def extract_eps_from_fundamentals(fund):
                     pass
 
     return fy_eps, fq_eps, roe_val
+
+
+def extract_eps_analyst_features(fund):
+    """Extract the 6 analyst-driven EPS features calc_eps_rating() takes beyond the
+    original fundamentals-only 4 (EPS_Q0_YoY/EPS_LT_Growth/EPS_NegQRatio/ROE).
+
+    Ported from IBD_rating_glm's independent reverse-engineering effort, which
+    forward-tested EPS higher (R^2 0.345 vs our then-0.333) using exactly this
+    signal group; our own walk-forward refit with these added reached R^2 0.416
+    on the same test population. Source tables (earnings_history, eps_trend,
+    earnings_estimate) are already in the cached fund.json, just unused before.
+
+    Returns (eps_stability_cv, eps_surprise_mean, eps_beat_rate, eps_rev_trend,
+    est_eps_growth_q, est_eps_growth_y) — any of which may be None if that table
+    isn't present for this ticker; calc_eps_rating() median-imputes them.
+    """
+    if not fund or fund.get('error'):
+        return None, None, None, None, None, None
+
+    eh = fund.get('earnings_history')
+    surprises, beats = [], 0
+    if isinstance(eh, dict):
+        for k, v in eh.items():
+            if k.startswith('_'):
+                continue
+            if isinstance(v, dict) and v.get('epsActual') is not None:
+                s = v.get('surprisePercent')
+                if isinstance(s, (int, float)):
+                    surprises.append(float(s) * 100.0)
+                diff = v.get('epsDifference')
+                if diff is not None:
+                    try:
+                        if float(diff) > 0:
+                            beats += 1
+                    except (TypeError, ValueError):
+                        pass
+    eps_surprise_mean = float(np.mean(surprises)) if surprises else None
+    eps_beat_rate = (beats / len(surprises)) if surprises else None
+
+    # EPS stability: CV of YoY EPS growth (quarterly; falls back to annual if <3 quarterly points)
+    income_q = fund.get('income_q')
+    income_a = fund.get('income_a')
+    stab_vals = []
+    if isinstance(income_q, dict):
+        for label in ('Diluted EPS', 'Diluted Earnings Per Share', 'Basic EPS'):
+            col = income_q.get(label)
+            if isinstance(col, dict) and col:
+                dates = sorted(col.keys(), reverse=True)
+                vals = [col[d] for d in dates]
+                for j in range(min(len(vals) - 4, 4)):
+                    a, b = vals[j], vals[j + 4]
+                    if a is not None and b is not None and abs(float(b)) > 1e-9:
+                        stab_vals.append((float(a) - float(b)) / abs(float(b)) * 100.0)
+                break
+    if len(stab_vals) < 3 and isinstance(income_a, dict):
+        for label in ('Diluted EPS', 'Diluted Earnings Per Share', 'Basic EPS'):
+            col = income_a.get(label)
+            if isinstance(col, dict) and col:
+                dates = sorted(col.keys(), reverse=True)
+                vals = [col[d] for d in dates]
+                stab_vals = []
+                for j in range(min(len(vals) - 1, 4)):
+                    a, b = vals[j], vals[j + 1]
+                    if a is not None and b is not None and abs(float(b)) > 1e-9:
+                        stab_vals.append((float(a) - float(b)) / abs(float(b)) * 100.0)
+                break
+    eps_stability_cv = (float(np.std(stab_vals) / max(1e-9, abs(np.mean(stab_vals))))
+                        if len(stab_vals) >= 3 else None)
+
+    et = fund.get('eps_trend')
+    eps_rev_trend = None
+    if isinstance(et, dict) and isinstance(et.get('0q'), dict):
+        cur = et['0q'].get('current')
+        ago = et['0q'].get('90daysAgo')
+        if cur is not None and ago and float(ago) != 0:
+            eps_rev_trend = (float(cur) / float(ago) - 1) * 100.0
+
+    ee = fund.get('earnings_estimate')
+    est_eps_growth_q = est_eps_growth_y = None
+    if isinstance(ee, dict):
+        if isinstance(ee.get('0q'), dict) and ee['0q'].get('growth') is not None:
+            est_eps_growth_q = float(ee['0q']['growth']) * 100.0
+        if isinstance(ee.get('+1y'), dict) and ee['+1y'].get('growth') is not None:
+            est_eps_growth_y = float(ee['+1y']['growth']) * 100.0
+
+    return (eps_stability_cv, eps_surprise_mean, eps_beat_rate, eps_rev_trend,
+            est_eps_growth_q, est_eps_growth_y)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

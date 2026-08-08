@@ -14,6 +14,7 @@ limited for roughly twenty minutes. So the backoff here starts at a minute, not 
 See docs/yfinance_rate_limits.md for the measurements.
 """
 import time
+import threading
 
 try:
     from yfinance.exceptions import YFRateLimitError
@@ -26,6 +27,27 @@ BACKOFF = (60, 180, 420)
 
 _dropped = {}          # label -> list of reasons; what a run failed to fetch
 _rate_limit_hits = 0
+
+# A rate-limit cooling gate for multi-threaded callers (batch_fetch_fundamentals with
+# workers > 1). Without it, when one worker hits 429 and starts its long backoff the OTHER
+# workers keep firing into the same limited window, trip their own 429s, and the whole
+# pool descends into cascading minute-long sleeps that burn the same budget they are
+# waiting out. So the backoff sleep holds a global gate: any other call blocks until the
+# cooling thread finishes its wait, then everyone resumes together.
+_gate = threading.Event()
+_gate.set()
+
+
+def _wait_if_cooling():
+    _gate.wait()
+
+
+def _start_cooling():
+    _gate.clear()
+
+
+def _end_cooling():
+    _gate.set()
 
 
 def _is_rate_limit(exc):
@@ -69,6 +91,7 @@ def call(fn, *args, label=None, retries=len(BACKOFF), **kwargs):
     """
     global _rate_limit_hits
     for attempt in range(retries + 1):
+        _wait_if_cooling()
         try:
             return fn(*args, **kwargs)
         except Exception as e:
@@ -82,7 +105,11 @@ def call(fn, *args, label=None, retries=len(BACKOFF), **kwargs):
             wait = BACKOFF[min(attempt, len(BACKOFF) - 1)]
             print(f"  ⏳ yfinance rate limited; sleeping {wait}s "
                   f"(attempt {attempt + 1}/{retries})", flush=True)
-            time.sleep(wait)
+            _start_cooling()
+            try:
+                time.sleep(wait)
+            finally:
+                _end_cooling()
     return None
 
 

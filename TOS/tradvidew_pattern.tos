@@ -1,0 +1,1147 @@
+# TradeVizion MarketSmith / TradingView pattern study
+# Ported from: pine/drw_pattern.pine
+# Base conventions: TOS/drw_pattern.tos
+#
+# ThinkScript cannot retain Pine line/box/label objects.  The Pine drawings are
+# therefore represented by persistent plots, AddCloud ranges, arrows, bubbles,
+# and status labels.  The scan plots near the end are intentionally hidden.
+
+declare upper;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PORTABLE PINE HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+script PivotHigh {
+    input price = high;
+    input leftLen = 9;
+    input rightLen = 9;
+    plot Pivot = if price[rightLen] >= Highest(price[rightLen + 1], leftLen)
+                 and price[rightLen] > Highest(price, rightLen)
+                 then price[rightLen] else Double.NaN;
+}
+
+script PivotLow {
+    input price = low;
+    input leftLen = 9;
+    input rightLen = 9;
+    plot Pivot = if price[rightLen] <= Lowest(price[rightLen + 1], leftLen)
+                 and price[rightLen] < Lowest(price, rightLen)
+                 then price[rightLen] else Double.NaN;
+}
+
+# Equivalent of Pine f_attributePercentile().  The script form is reusable in
+# studies and scans, unlike Pine's mutable function/array implementation.
+script AttributePercentile {
+    input score = 0.0;
+    input taller = 100.0;
+    input smaller = 0.0;
+    input rangeUp = 99.0;
+    input rangeDn = 1.0;
+    input weight = 0.0;
+    def summed = Min(taller - 1,
+                     score + (score - smaller) * weight);
+    def k1 = if rangeDn != 0 then smaller / rangeDn else 0;
+    def k2 = if rangeUp != 0 then (taller - 1) / rangeUp else 0;
+    def k3 = if taller - 1 - smaller != 0
+             then (k1 - k2) / (taller - 1 - smaller) else 0;
+    def raw = if k1 - k3 * (score - smaller) != 0
+              then summed / (k1 - k3 * (score - smaller)) else rangeDn;
+    plot Value = Max(rangeDn, Min(rangeUp, raw));
+}
+
+script ReclaimsMA {
+    input maValue = close;
+    input tolerancePct = 0.5;
+    plot Signal = !IsNaN(maValue) and maValue > 0
+        and low >= maValue * (1 - tolerancePct / 100)
+        and low <= maValue * (1 + tolerancePct / 100)
+        and close > maValue and close > close[1];
+}
+
+DefineGlobalColor("PosCandle", CreateColor(39, 54, 233));
+DefineGlobalColor("NegCandle", CreateColor(222, 50, 174));
+DefineGlobalColor("HVWPFP", CreateColor(255, 255, 0));
+DefineGlobalColor("Cup", CreateColor(146, 193, 131));
+DefineGlobalColor("CupCurve", CreateColor(0, 220, 120));
+DefineGlobalColor("Flat", CreateColor(255, 165, 0));
+DefineGlobalColor("DB", CreateColor(0, 200, 255));
+DefineGlobalColor("HTF", CreateColor(200, 60, 255));
+DefineGlobalColor("Handle", Color.ORANGE);
+DefineGlobalColor("Entry", CreateColor(0, 122, 255));
+DefineGlobalColor("Stop", CreateColor(255, 59, 48));
+DefineGlobalColor("Tgt", CreateColor(52, 199, 89));
+DefineGlobalColor("RS", CreateColor(24, 140, 202));
+DefineGlobalColor("RsMaLine", CreateColor(149, 152, 161));
+DefineGlobalColor("FastMA", Color.RED);
+DefineGlobalColor("SlowMA", Color.YELLOW);
+DefineGlobalColor("QuickEMA", CreateColor(86, 184, 230));
+DefineGlobalColor("QuickSandEMA", CreateColor(255, 140, 0));
+DefineGlobalColor("GratefulDeadEMA", CreateColor(245, 2, 2));
+DefineGlobalColor("Blue_12M", CreateColor(0, 80, 255));
+DefineGlobalColor("Blue_6M", CreateColor(100, 170, 255));
+DefineGlobalColor("Blue_3M", CreateColor(180, 220, 255));
+DefineGlobalColor("Green_12M", CreateColor(0, 180, 0));
+DefineGlobalColor("Green_6M", CreateColor(0, 255, 128));
+DefineGlobalColor("Green_3M", CreateColor(150, 255, 150));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INPUTS
+# ══════════════════════════════════════════════════════════════════════════════
+input PaintBars = yes;
+input ColorBasedOnPrevClose = yes;
+input HighlightHeavyVolNoProgress = yes;
+input VolumeMultiplier = 1.1;
+input VolumeMALength = 20;
+input MaxPriceProgressPct = 0.9;
+input RecentHighLookback = 20;
+
+input ShowDailyMAs = yes;
+input ShowWeeklyMAs = yes;
+input DailyMA10Length = 10;
+input DailyMA21Length = 21;
+input DailyMA50Length = 50;
+input DailyMA200Length = 200;
+input WeeklyMA10Length = 10;
+input WeeklyMA20Length = 20;
+input WeeklyMA30Length = 30;
+input WeeklyMA40Length = 40;
+
+def isWeekly = GetAggregationPeriod() >= AggregationPeriod.WEEK;
+def isMonthly = GetAggregationPeriod() >= AggregationPeriod.MONTH;
+def bn = BarNumber();
+
+def dailyVolMA = Average(volume, VolumeMALength);
+def dailyPricePct = if close[1] != 0 then (close - close[1]) / close[1] * 100 else 0;
+def heavyVol = volume >= dailyVolMA * VolumeMultiplier;
+def minimalProgress = AbsValue(dailyPricePct) <= MaxPriceProgressPct;
+def nearRecentHigh = close >= Highest(high, RecentHighLookback) * 0.95;
+def hvwpfp = HighlightHeavyVolNoProgress and heavyVol and minimalProgress and nearRecentHigh;
+def upCandle = if ColorBasedOnPrevClose then close >= close[1] else close >= open;
+AssignPriceColor(if !PaintBars then Color.CURRENT
+                 else if hvwpfp then GlobalColor("HVWPFP")
+                 else if upCandle then GlobalColor("PosCandle")
+                 else GlobalColor("NegCandle"));
+
+plot DailyMA10 = if !isWeekly and ShowDailyMAs then ExpAverage(close, DailyMA10Length) else Double.NaN;
+plot DailyMA21 = if !isWeekly and ShowDailyMAs then ExpAverage(close, DailyMA21Length) else Double.NaN;
+plot DailyMA50 = if !isWeekly and ShowDailyMAs then Average(close, DailyMA50Length) else Double.NaN;
+plot DailyMA200 = if !isWeekly and ShowDailyMAs then Average(close, DailyMA200Length) else Double.NaN;
+DailyMA10.SetDefaultColor(CreateColor(240, 141, 240));
+DailyMA21.SetDefaultColor(CreateColor(68, 186, 76));
+DailyMA50.SetDefaultColor(Color.RED);
+DailyMA200.SetDefaultColor(CreateColor(80, 80, 80));
+DailyMA200.SetLineWeight(2);
+
+plot WeeklyMA10 = if isWeekly and ShowWeeklyMAs then Average(close, WeeklyMA10Length) else Double.NaN;
+plot WeeklyMA20 = if isWeekly and ShowWeeklyMAs then ExpAverage(close, WeeklyMA20Length) else Double.NaN;
+plot WeeklyMA30 = if isWeekly and ShowWeeklyMAs then Average(close, WeeklyMA30Length) else Double.NaN;
+plot WeeklyMA40 = if isWeekly and ShowWeeklyMAs then Average(close, WeeklyMA40Length) else Double.NaN;
+WeeklyMA10.SetDefaultColor(Color.RED);
+WeeklyMA20.SetDefaultColor(CreateColor(240, 141, 240));
+WeeklyMA30.SetDefaultColor(CreateColor(68, 186, 76));
+WeeklyMA40.SetDefaultColor(CreateColor(80, 80, 80));
+WeeklyMA40.SetLineWeight(2);
+
+input ShowPattern = yes;
+input ShowTradeBoxes = yes;
+input ShowDetectionLabel = yes;
+input ShowStatusLabels = yes;
+input PatternPivotLength = 9;
+input BaseDepthPct = 35.0;
+input BaseLengthWeeks = 65;
+
+input DBDepthPct = 40.0;
+input DBLengthWeeks = 17;
+input DBMinPriorUptrendPct = 30.0;
+input DBMinLengthWeeks = 7;
+input DBRequireUndercut = yes;
+input DBBreakoutVolumeMultiplier = 1.35;
+
+input ShowCupHandle = yes;
+input HandleMinBars = 5;
+input HandleMaxBars = 25;
+input HandleMaxDeclinePct = 12.0;
+input HandleMinHeightPct = 60.0;
+input UseHandleVolume = no;
+input RequireCupForHandle = yes;
+input HandleVolumeMALength = 50;
+input HandleMaxVolumePct = 50.0;
+input HandleBreakoutVolumeMultiplier = 1.5;
+
+input EnableHTF = yes;
+input HTFMaxFlagDepthPct = 25.0;
+input HTFMaxFlagBars = 20;
+input HTFMinFlagBars = 6;
+input HTFPriorUptrendMinPct = 80.0;
+input HTFMaxPoleBars = 40;
+input HTFMinPoleBars = 5;
+input HTFBreakoutVolumeMultiplier = 1.1;
+
+input ShowTightCloseBoxes = yes;
+input TightCloseThresholdPct = 1.5;
+# Swing high/low dots and their price bubbles are off by default to keep the
+# cup and handle geometry unobstructed.
+input ShowHighLowPoints = no;
+input ShowPivotPercent = yes;
+# ThinkScript inputs cannot use a Color constant. Keep this Pine gold label
+# color as a global custom color instead.
+DefineGlobalColor("PivotLabel", CreateColor(180, 158, 48));
+
+# ── Raw RS + Quick / QuickSand / Grateful Dead RS ────────────────────────
+# The RS line keeps the ORIGINAL plotting: the stock/index ratio is scaled
+# onto the price chart (RSReferenceValue x RSOffset) so it overlays the price,
+# exactly like drw_pattern.pine. Only the RS CALCULATION is the new iArpanK
+# method - rs_raw (close * sc_factor * 1000 / index close) drives all
+# new-high/new-low detection and the RS rating. Quick / QuickSand / Grateful
+# Dead are EMAs of the price-scale line and are off by default.
+input ShowRSFeatures = yes;
+input HideRSLine = no;
+input indexSymbol = "SPX";
+input sc_factor = 7.0;
+input highPeriod = 250;
+input sixMBars = 126;
+input threeMBars = 63;
+# Original price-scale overlay inputs (drw_pattern.pine SpxValue / offset).
+input RSReferenceValue = 4200.0;
+input RSOffset = 130.0;
+# QGDRS EMA lengths - timeframe adaptive (Daily / Weekly / Monthly)
+input quickLen_D = 21;
+input quickLen_W = 8;
+input quickLen_M = 5;
+input quickSandLen_D = 34;
+input quickSandLen_W = 13;
+input quickSandLen_M = 8;
+input gdLen_D = 50;
+input gdLen_W = 21;
+input gdLen_M = 13;
+input showRawRS = yes;
+input showRsNewHighMark = yes;
+input showRsLeadHighMark = yes;
+input showRsNewLowMark = yes;
+# Quick / QuickSand / Grateful Dead lines are OFF by default.
+input ShowRSQuick = no;
+input ShowRSQuickSand = no;
+input ShowRSGratefulDead = no;
+input ShowRSRatingLabel = yes;
+
+input ShowSignalMarkers = yes;
+input SignalVDULength = 50;
+input SignalDryUpPct = 45.0;
+input SignalMATolerancePct = 0.5;
+input SignalShakeTrendLength = 50;
+input SignalShakeSwingBars = 3;
+
+# Daily/weekly bar conversions are the same conversions used by the Pine port.
+def baseMaxBars = if isWeekly then Max(1, Ceil(BaseLengthWeeks / 5)) else BaseLengthWeeks * 5;
+def dbMaxBars = if isWeekly then Max(1, Ceil(DBLengthWeeks)) else DBLengthWeeks * 5;
+def dbMinBars = if isWeekly then Max(1, Ceil(DBMinLengthWeeks)) else DBMinLengthWeeks * 5;
+def handleMinBarsResolved = if isWeekly then Max(1, Ceil(HandleMinBars / 5)) else HandleMinBars;
+def handleMaxBarsResolved = if isWeekly then Max(1, Ceil(HandleMaxBars / 5)) else HandleMaxBars;
+def htfMinBars = if isWeekly then Max(1, Ceil(HTFMinFlagBars / 5)) else HTFMinFlagBars;
+def htfMaxBars = if isWeekly then Max(1, Ceil(HTFMaxFlagBars / 5)) else HTFMaxFlagBars;
+def htfPoleMaxBars = if isWeekly then Max(1, Ceil(HTFMaxPoleBars / 5)) else HTFMaxPoleBars;
+def htfPoleMinBars = if isWeekly then Max(1, Ceil(HTFMinPoleBars / 5)) else HTFMinPoleBars;
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RELATIVE STRENGTH (iArpanK), NEW HIGH/LOW DOTS, AND RS RATING
+# ══════════════════════════════════════════════════════════════════════════════
+# INDEX CLOSE - follows the chart timeframe (daily or weekly), like the
+# reference relative-strength study.
+def idxClose = close(indexSymbol);
+# Comparison close for the RS-rating performance ladder (Pine: spxCloseDa).
+# Shares the chart-timeframe index close so stock vs. index performance is
+# measured on the same aggregation (daily or weekly).
+def compareClose = idxClose;
+
+# RAW RS (iArpanK formula) - the new RS calculation. Drives new-high/new-low
+# detection and the RS rating.
+def rs_raw = if !IsNaN(idxClose) and idxClose != 0
+             then close * sc_factor * 1000 / idxClose
+             else Double.NaN;
+
+# ORIGINAL RS line: stock/index ratio scaled onto the price chart. rs_raw is
+# exactly sc_factor*1000 times rsCurve, so the plotted line keeps its original
+# shape and placement while every detection below runs on the iArpanK value.
+def rsCurve = if !IsNaN(idxClose) and idxClose != 0
+              then close / idxClose
+              else Double.NaN;
+def aggPeriod = GetAggregationPeriod();
+def rsWeekly = aggPeriod >= AggregationPeriod.WEEK and aggPeriod < AggregationPeriod.MONTH;
+def rsMonthly = aggPeriod >= AggregationPeriod.MONTH;
+# Same weekly adjustment as the original: the line sits 10% lower on weekly.
+def rsRatio = if rsWeekly then RSReferenceValue * (RSOffset - 10) / 100
+              else RSReferenceValue * RSOffset / 100;
+def rsLineValue = rsCurve * rsRatio;
+
+# QGDRS EMAs of the price-scale line (like the original Pine: ta.ema(rs, len)).
+# ThinkScript cannot vary EMA length, so fixed lengths are computed and
+# selected by timeframe.
+def rs_quick_D = ExpAverage(rsLineValue, quickLen_D);
+def rs_quick_W = ExpAverage(rsLineValue, quickLen_W);
+def rs_quick_M = ExpAverage(rsLineValue, quickLen_M);
+def rsQuickEMA = if rsMonthly then rs_quick_M else if rsWeekly then rs_quick_W else rs_quick_D;
+def rs_qs_D = ExpAverage(rsLineValue, quickSandLen_D);
+def rs_qs_W = ExpAverage(rsLineValue, quickSandLen_W);
+def rs_qs_M = ExpAverage(rsLineValue, quickSandLen_M);
+def rsQuickSandEMA = if rsMonthly then rs_qs_M else if rsWeekly then rs_qs_W else rs_qs_D;
+def rs_gd_D = ExpAverage(rsLineValue, gdLen_D);
+def rs_gd_W = ExpAverage(rsLineValue, gdLen_W);
+def rs_gd_M = ExpAverage(rsLineValue, gdLen_M);
+def rsGratefulDeadEMA = if rsMonthly then rs_gd_M else if rsWeekly then rs_gd_W else rs_gd_D;
+
+# PLOTS - RS line and QGDRS EMAs on the original price-scale overlay.
+plot RSLinePlot = if ShowRSFeatures and showRawRS and !HideRSLine then rsLineValue else Double.NaN;
+plot RSQuick = if ShowRSFeatures and ShowRSQuick then rsQuickEMA else Double.NaN;
+plot RSQuickSand = if ShowRSFeatures and ShowRSQuickSand then rsQuickSandEMA else Double.NaN;
+plot RSGratefulDead = if ShowRSFeatures and ShowRSGratefulDead then rsGratefulDeadEMA else Double.NaN;
+RSLinePlot.SetDefaultColor(GlobalColor("RS"));
+RSQuick.SetDefaultColor(GlobalColor("QuickEMA"));
+RSQuickSand.SetDefaultColor(GlobalColor("QuickSandEMA"));
+RSGratefulDead.SetDefaultColor(GlobalColor("GratefulDeadEMA"));
+RSLinePlot.HideBubble(); RSQuick.HideBubble(); RSQuickSand.HideBubble(); RSGratefulDead.HideBubble();
+RSLinePlot.SetLineWeight(2); RSQuick.SetLineWeight(2); RSQuickSand.SetLineWeight(2); RSGratefulDead.SetLineWeight(2);
+
+# NEW HIGH / NEW LOW DETECTION - on rs_raw, unchanged from the reference.
+def rs_highest_1y = Highest(rs_raw, highPeriod + 1)[1];
+def rs_lowest_1y = Lowest(rs_raw, highPeriod + 1)[1];
+def price_highest_1y = Highest(high, highPeriod + 1)[1];
+def rs_nh_1y = rs_raw > rs_highest_1y;
+def rs_nl_1y = rs_raw < rs_lowest_1y;
+def price_nh_1y = high > price_highest_1y;
+def rs_highest_6m = Highest(rs_raw, sixMBars + 1)[1];
+def price_highest_6m = Highest(high, sixMBars + 1)[1];
+def rs_nh_6m = rs_raw > rs_highest_6m;
+def price_nh_6m = high > price_highest_6m;
+def rs_highest_3m = Highest(rs_raw, threeMBars + 1)[1];
+def price_highest_3m = Highest(high, threeMBars + 1)[1];
+def rs_nh_3m = rs_raw > rs_highest_3m;
+def price_nh_3m = high > price_highest_3m;
+def rs_nh_any = rs_nh_1y or rs_nh_6m or rs_nh_3m;
+def price_nh_matching = if rs_nh_1y then price_nh_1y
+                        else if rs_nh_6m then price_nh_6m
+                        else price_nh_3m;
+def rs_raw_new_high = rs_nh_1y;
+def rs_raw_new_low = rs_nl_1y;
+def price_new_high = price_nh_1y;
+# Compatibility aliases used by the pattern study.
+def rsNewHigh = rs_raw_new_high;
+def rsNewHighYear = rs_nh_1y;
+def rsNewHighHalf = rs_nh_6m and !rs_nh_1y;
+def rsNewHighQuarter = rs_nh_3m and !rs_nh_6m and !rs_nh_1y;
+
+plot RSNewHighDot = if ShowRSFeatures and showRawRS and showRsNewHighMark and rs_nh_any then rsLineValue else Double.NaN;
+RSNewHighDot.SetPaintingStrategy(PaintingStrategy.POINTS);
+RSNewHighDot.SetLineWeight(5);
+RSNewHighDot.AssignValueColor(
+    if rs_nh_any and !price_nh_matching and showRsLeadHighMark then
+        if rs_nh_1y then GlobalColor("Green_12M")
+        else if rs_nh_6m then GlobalColor("Green_6M")
+        else GlobalColor("Green_3M")
+    else
+        if rs_nh_1y then GlobalColor("Blue_12M")
+        else if rs_nh_6m then GlobalColor("Blue_6M")
+        else GlobalColor("Blue_3M"));
+plot RSNewLowDot = if ShowRSFeatures and showRawRS and showRsNewLowMark and rs_raw_new_low then rsLineValue else Double.NaN;
+RSNewLowDot.SetPaintingStrategy(PaintingStrategy.POINTS);
+RSNewLowDot.SetDefaultColor(CreateColor(255, 50, 50));
+RSNewLowDot.SetLineWeight(5);
+
+# Pine's request.seed percentile ladder is not available in TOS.  Preserve its
+# weighted 63/126/189/252 performance score and map it to a bounded rating.
+def stock63 = if close[63] != 0 then close / close[63] else Double.NaN;
+def stock126 = if close[126] != 0 then close / close[126] else Double.NaN;
+def stock189 = if close[189] != 0 then close / close[189] else Double.NaN;
+def stock252 = if close[252] != 0 then close / close[252] else Double.NaN;
+def comp63 = if compareClose[63] != 0 then compareClose / compareClose[63] else Double.NaN;
+def comp126 = if compareClose[126] != 0 then compareClose / compareClose[126] else Double.NaN;
+def comp189 = if compareClose[189] != 0 then compareClose / compareClose[189] else Double.NaN;
+def comp252 = if compareClose[252] != 0 then compareClose / compareClose[252] else Double.NaN;
+def rsStockScore = 0.4 * stock63 + 0.2 * stock126 + 0.2 * stock189 + 0.2 * stock252;
+def rsRefScore = 0.4 * comp63 + 0.2 * comp126 + 0.2 * comp189 + 0.2 * comp252;
+def totalRSScore = if rsRefScore != 0 then rsStockScore / rsRefScore * 100 else Double.NaN;
+input RSUseReplayValues = yes;
+input RSFirst = 195.93;
+input RSSecond = 117.11;
+input RSThird = 99.04;
+input RSFourth = 91.66;
+input RSFifth = 80.96;
+input RSSixth = 53.64;
+input RSSeventh = 24.86;
+
+def totalRSRating = if RSUseReplayValues and totalRSScore >= RSFirst then 99
+                    else if RSUseReplayValues and totalRSScore >= RSSecond then AttributePercentile(totalRSScore, RSFirst, RSSecond, 98, 90, .33)
+                    else if RSUseReplayValues and totalRSScore >= RSThird then AttributePercentile(totalRSScore, RSSecond, RSThird, 89, 70, 2.1)
+                    else if RSUseReplayValues and totalRSScore >= RSFourth then AttributePercentile(totalRSScore, RSThird, RSFourth, 69, 50, 0)
+                    else if RSUseReplayValues and totalRSScore >= RSFifth then AttributePercentile(totalRSScore, RSFourth, RSFifth, 49, 30, 0)
+                    else if RSUseReplayValues and totalRSScore >= RSSixth then AttributePercentile(totalRSScore, RSFifth, RSSixth, 29, 10, 0)
+                    else if RSUseReplayValues and totalRSScore >= RSSeventh then AttributePercentile(totalRSScore, RSSixth, RSSeventh, 9, 2, 0)
+                    else Max(1, Min(99, 50 + (totalRSScore - 100) * 2));
+# drw_pattern.tos uses compact status labels. Keep the RS label in the same
+# one-line style, with the project-wide rating spelling and a colon.
+# Keep the chart label and also print the rating beside the latest bar, using
+# the same HighestAll/BarNumber() last-bar test as relative_strength.tos.
+def isLastBar = BarNumber() == HighestAll(
+    if !IsNaN(close) then BarNumber() else Double.NaN);
+AddLabel(ShowRSFeatures and ShowRSRatingLabel and !IsNaN(totalRSRating),
+         "RS Rating: " + Round(totalRSRating, 0), GlobalColor("RS"));
+AddChartBubble(ShowRSFeatures and ShowRSRatingLabel and isLastBar
+               and !IsNaN(totalRSRating),
+               rsLineValue,
+               "RS Rating: " + Round(totalRSRating, 0),
+               GlobalColor("RS"),
+               no);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PIVOTS AND PINE BASE STATE MACHINE
+# ══════════════════════════════════════════════════════════════════════════════
+def pivotHighValue = PivotHigh(high, PatternPivotLength, PatternPivotLength);
+def pivotLowValue = PivotLow(low, PatternPivotLength, PatternPivotLength);
+def newPivotHigh = !IsNaN(pivotHighValue);
+def newPivotLow = !IsNaN(pivotLowValue);
+rec pivotHigh1 = CompoundValue(1, if newPivotHigh then high[PatternPivotLength] else pivotHigh1[1], Double.NaN);
+rec pivotHigh2 = CompoundValue(1, if newPivotHigh then pivotHigh1[1] else pivotHigh2[1], Double.NaN);
+rec pivotHighBar1 = CompoundValue(1, if newPivotHigh then bn[PatternPivotLength] else pivotHighBar1[1], 0);
+rec pivotHighBar2 = CompoundValue(1, if newPivotHigh then pivotHighBar1[1] else pivotHighBar2[1], 0);
+rec pivotLow1 = CompoundValue(1, if newPivotLow then low[PatternPivotLength] else pivotLow1[1], Double.NaN);
+rec pivotLow2 = CompoundValue(1, if newPivotLow then pivotLow1[1] else pivotLow2[1], Double.NaN);
+rec pivotLowBar1 = CompoundValue(1, if newPivotLow then bn[PatternPivotLength] else pivotLowBar1[1], 0);
+rec pivotLowBar2 = CompoundValue(1, if newPivotLow then pivotLowBar1[1] else pivotLowBar2[1], 0);
+
+# Pine base detection: pivot at 25 bars ago, 13-week high, prior leg gain,
+# max depth, and no candle above the candidate base top.
+def baseTopCandidate = high[25];
+def highest25 = Highest(high, 25);
+def lowest25 = Lowest(low, 25);
+def priorHigh = Highest(high, 65)[26];
+def priorLegLow = Lowest(low[25], 103);
+# `newPivotHigh[16]` confirms the pivot located at high[25] when the
+# default PatternPivotLength is 9. Keep that precise confirmation, but also
+# allow an equivalent fixed-window geometry fallback so a valid base is not
+# lost when delayed pivot confirmation is unavailable on a symbol/timeframe.
+def pivotAt25 = newPivotHigh[16];
+def pivotAt25GeometryFallback = baseTopCandidate >= Highest(high[26], PatternPivotLength)
+                                and baseTopCandidate >= Highest(high, 25);
+def priorHighOK = baseTopCandidate >= priorHigh;
+def priorLegOK = baseTopCandidate >= priorLegLow * 1.20;
+def baseDepthOK = baseTopCandidate * (1 - BaseDepthPct / 100) <= lowest25;
+# Equal highs inside the base are allowed. Only a strict candle high above
+# the base top ends the base; that termination is handled by baseReset below.
+def noHighAbove = Highest(high, 25) <= baseTopCandidate;
+# Keep the candidate independent of activeBase. Referencing activeBase[25] here
+# while activeBase is itself derived from this candidate creates a circular
+# recursive dependency and can leave the entire cup painter as NaN.
+# The pivot/geometry gates are the reliable rendering gates. The older fixed
+# prior-high and prior-leg filters can reject every valid base on some symbols,
+# so they remain available above for diagnostics but do not block painting.
+def baseCandidate = (pivotAt25 or pivotAt25GeometryFallback)
+                    and baseDepthOK
+                    and noHighAbove;
+
+# Explicit CompoundValue seeds prevent an uninitialized recursive boolean or
+# price from poisoning the base state and making every curve value NaN.
+# Do not reference baseTop/baseBars here: those recurrences depend on
+# activeBase[1] and would create a forward/mutual recursion error in TOS.
+# Reset only on a fresh higher high (breakout); otherwise keep the base state
+# latched while the cup forms.
+def baseReset = !baseCandidate
+                 and high > Highest(high[1], 25);
+# A fresh candidate supersedes an in-progress base so the painter adopts the
+# newest base-top pivot instead of carrying stale geometry.
+def baseStart = baseCandidate;
+rec activeBase = CompoundValue(1,
+    if baseStart then yes
+    else if activeBase[1] and baseReset then no
+    else activeBase[1], no);
+rec baseTop = CompoundValue(1,
+    if baseStart then baseTopCandidate
+    else if activeBase[1] then baseTop[1] else Double.NaN, Double.NaN);
+rec baseLow = CompoundValue(1,
+    if baseStart then lowest25
+    else if activeBase[1] then Min(baseLow[1], low) else Double.NaN, Double.NaN);
+# Pine calls this lowOfBaseHigh: it is the low of the candle carrying the
+# base-top pivot, not the base's eventual lowest low. It is the upper anchor
+# for the exponential cup arc.
+rec baseTopLow = CompoundValue(1,
+    if baseStart then low[25]
+    else if activeBase[1] then baseTopLow[1]
+    else Double.NaN, Double.NaN);
+rec baseStartBar = CompoundValue(1,
+    if baseStart then bn - 25 else baseStartBar[1], 0);
+rec baseLowBar = CompoundValue(1,
+    if baseStart then bn - GetMinValueOffset(low, 25)
+    else if activeBase[1] and low <= baseLow[1] then bn
+    else if activeBase[1] then baseLowBar[1] else 0, 0);
+rec baseBars = CompoundValue(1,
+    if baseStart then 25
+    else if activeBase[1] then baseBars[1] + 1 else 0, 0);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CUP, DOUBLE BOTTOM, AND CUP-WITH-HANDLE DETECTION
+# ══════════════════════════════════════════════════════════════════════════════
+def cupMid = baseLow + (baseTop - baseLow) * 0.5;
+def cupMaxDepthOK = baseLow >= (1 - BaseDepthPct / 100) * baseTop;
+def cupMinDepthOK = baseLow <= 0.92 * baseTop;
+def cupLengthOK = baseBars >= 30 and baseBars <= baseMaxBars;
+def cupRightSide = high >= cupMid;
+def cupTier = Max(1, Floor(baseBars / 3));
+def cupQuarter = Max(1, Floor(baseBars / 4));
+def closesBelowMid = fold cb = 0 to 325 with n = 0 do
+    n + (if cb >= cupTier and cb <= baseBars - cupTier
+         and GetValue(close, cb) <= cupMid then 1 else 0);
+def closesAboveMid = fold ca = 0 to 325 with n2 = 0 do
+    n2 + (if ca >= 3 * cupQuarter and ca <= baseBars
+          and GetValue(close, ca) >= cupMid then 1 else 0);
+def cupForm = closesBelowMid / cupTier >= 0.90
+              and closesAboveMid / cupQuarter >= 0.30
+              and (closesBelowMid[1] / cupTier >= 0.90)
+              and (closesAboveMid[1] / cupQuarter >= 0.30);
+def detectCup = activeBase and cupMaxDepthOK and cupMinDepthOK
+                and cupLengthOK and cupRightSide and cupForm;
+rec isCup = CompoundValue(1, if detectCup or isCup[1] then activeBase else no, no);
+
+# Four ordered pivots form the double-bottom W.  The additional bar and price
+# gates mirror the Pine fHt/fLt/sHt/sLt search without mutable arrays.
+def dbFirstHigh = pivotHigh2;
+def dbSecondHigh = pivotHigh1;
+def dbFirstLow = pivotLow2;
+def dbSecondLow = pivotLow1;
+def dbFirstHighBar = pivotHighBar2;
+def dbSecondHighBar = pivotHighBar1;
+def dbFirstLowBar = pivotLowBar2;
+def dbSecondLowBar = pivotLowBar1;
+def dbPriorLow = Lowest(low, 250);
+def dbPriorTrendOK = dbFirstHigh >= dbPriorLow * (1 + DBMinPriorUptrendPct / 100);
+def dbUndercutOK = if DBRequireUndercut then dbSecondLow < dbFirstLow else dbSecondLow <= dbFirstLow * 1.05;
+def dbDepthOK = dbSecondLow >= dbFirstHigh * (1 - DBDepthPct / 100)
+                and dbFirstLow >= dbFirstHigh * (1 - DBDepthPct / 100);
+def dbPullbackOK = dbSecondLow <= dbFirstHigh * 0.95;
+def dbRecoverOK = dbSecondHigh >= dbSecondLow + (dbFirstHigh - dbSecondLow) * 0.15;
+def dbCeilingOK = dbSecondHigh <= dbFirstHigh * 1.10;
+def dbLegsOK = dbFirstHigh > dbFirstLow and dbSecondHigh > dbSecondLow;
+def dbTimeOK = dbFirstHighBar < dbFirstLowBar and dbFirstLowBar < dbSecondHighBar
+              and dbSecondHighBar < dbSecondLowBar
+              and dbSecondLowBar - dbFirstHighBar <= dbMaxBars
+              and dbSecondLowBar - dbFirstHighBar >= dbMinBars;
+# ThinkScript does not accept Pine's series-length Highest() reliably.  The
+# fixed DB window is the bounded equivalent of Pine's suffix maximum and keeps
+# the study scan-safe.
+def dbNoHigherHigh = Highest(high, dbMaxBars) <= dbSecondHigh * 1.02;
+# No volume requirement is applied to pattern formation or breakout signals.
+def dbBreakoutVolumeOK = yes;
+def detectDoubleBottom = activeBase and dbPriorTrendOK and dbUndercutOK and dbDepthOK
+                         and dbPullbackOK and dbRecoverOK and dbCeilingOK and dbLegsOK
+                         and dbTimeOK and dbNoHigherHigh;
+rec isDoubleBottom = CompoundValue(1,
+    if detectDoubleBottom or isDoubleBottom[1] then activeBase else no, no);
+
+# Pine freezes these four prices/bars when it creates dbLine1/2/3. Keep the
+# same snapshot so later pivot updates cannot redraw an older W with new points.
+rec drawDbFHigh = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbFirstHigh else drawDbFHigh[1], Double.NaN);
+rec drawDbFLow = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbFirstLow else drawDbFLow[1], Double.NaN);
+rec drawDbSHigh = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbSecondHigh else drawDbSHigh[1], Double.NaN);
+rec drawDbSLow = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbSecondLow else drawDbSLow[1], Double.NaN);
+rec drawDbFHighBar = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbFirstHighBar else drawDbFHighBar[1], 0);
+rec drawDbFLowBar = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbFirstLowBar else drawDbFLowBar[1], 0);
+rec drawDbSHighBar = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbSecondHighBar else drawDbSHighBar[1], 0);
+rec drawDbSLowBar = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then dbSecondLowBar else drawDbSLowBar[1], 0);
+# Pine deletes the DB objects when the second bottom is undercut, when the
+# pattern times out, or when its two legs become materially asymmetric.
+def dbDrawTimedOut = drawDbSHighBar > 0 and bn - drawDbSHighBar > dbMaxBars;
+def dbDrawAsymmetric = drawDbFHighBar > 0 and drawDbSHighBar > 0
+                       and ((drawDbSHighBar - drawDbFHighBar) * 2 <= bn - drawDbSHighBar
+                            or drawDbSHighBar - drawDbFHighBar >= (bn - drawDbSHighBar) * 2);
+rec dbDrawActive = CompoundValue(1,
+    if detectDoubleBottom and !isDoubleBottom[1] then yes
+    else if dbDrawActive[1] and (low < drawDbSLow[1] or dbDrawTimedOut or dbDrawAsymmetric) then no
+    else dbDrawActive[1], no);
+
+# Handle state: right-side high, lock the peak after a 5% extension, then track
+# the low and contraction.  This is the Pine Sep handle implementation.
+def onRightSide = activeBase and bn > baseLowBar;
+rec rightSideHigh = CompoundValue(1,
+    if !onRightSide then 0
+    else if close > rightSideHigh[1] and close <= baseTop then close
+    else rightSideHigh[1], 0);
+rec handlePeakBar = CompoundValue(1,
+    if !onRightSide or rightSideHigh == 0 then 0
+    else if close > rightSideHigh[1] * 1.05 and close <= baseTop
+         and close >= baseTop * HandleMinHeightPct / 100 then bn
+    else handlePeakBar[1], 0);
+def handleBars = if onRightSide and handlePeakBar > 0 then bn - handlePeakBar else 0;
+rec handlePeak = CompoundValue(1,
+    if !onRightSide or rightSideHigh == 0 then 0
+    else if handleBars == 0 then rightSideHigh
+    else handlePeak[1], 0);
+rec handleLow = CompoundValue(1,
+    if !onRightSide or handlePeak == 0 then 0
+    else if handleLow[1] == 0 then low
+    else Min(handleLow[1], low), 0);
+def handleDepthOK = handleLow >= handlePeak * (1 - HandleMaxDeclinePct / 100);
+def handleMiddleOK = handleLow > (baseTop + baseLow) * 0.5;
+def handleVolMA = Average(volume, HandleVolumeMALength);
+def handleVolSum = fold hv = 0 to 25 with vs = 0 do
+    vs + (if hv < handleBars then GetValue(volume, hv) else 0);
+def handleVolAvg = if handleBars > 0 then handleVolSum / handleBars else handleVolMA;
+def handleVolumeOK = !UseHandleVolume or (handleBars > 0
+                       and handleVolAvg <= handleVolMA * HandleMaxVolumePct / 100);
+def handlePatternGate = !RequireCupForHandle or isCup or isDoubleBottom;
+def handleForming = ShowCupHandle and onRightSide and handlePeak > 0
+                    and handleBars >= handleMinBarsResolved and handleBars <= handleMaxBarsResolved
+                    and handleDepthOK and handleMiddleOK and handleVolumeOK
+                    and handlePatternGate;
+def handleBreakout = handleForming and close > handlePeak
+                     and (!UseHandleVolume or volume >= handleBreakoutVolumeMultiplier * handleVolMA);
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HIGH-TIGHT-FLAG STATE MACHINE
+# ══════════════════════════════════════════════════════════════════════════════
+def htfPoleLow = if isWeekly then Lowest(low, 8) else Lowest(low, htfPoleMaxBars);
+def htfPoleOffset = if isWeekly then GetMinValueOffset(low, 8) else GetMinValueOffset(low, htfPoleMaxBars);
+def htfPoleGain = if htfPoleLow > 0 then (high / htfPoleLow - 1) * 100 else 0;
+def htfFreshHigh = high >= Highest(high, if isWeekly then 52 else 65);
+def htfPoleLengthOK = htfPoleOffset >= htfPoleMinBars and htfPoleOffset <= htfPoleMaxBars;
+def htfNewPole = EnableHTF and htfPoleLengthOK and htfPoleGain >= HTFPriorUptrendMinPct and htfFreshHigh;
+# Keep the cap alive while price remains inside the allowed flag depth.  Age
+# enforcement is applied by htfAge; separating the two avoids a circular
+# htfTop <-> htfAge definition in ThinkScript.
+rec htfTop = CompoundValue(1,
+    if htfNewPole then high
+    else if htfTop[1] > 0
+         and low >= htfTop[1] * (1 - HTFMaxFlagDepthPct / 100)
+         and high <= htfTop[1] then htfTop[1]
+    else 0, 0);
+rec htfAge = CompoundValue(1,
+    if htfNewPole then 0
+    else if htfTop[1] > 0 and htfAge[1] < htfMaxBars
+         and low >= htfTop[1] * (1 - HTFMaxFlagDepthPct / 100)
+         and high <= htfTop[1] then htfAge[1] + 1
+    else 0, 0);
+rec htfLow = CompoundValue(1,
+    if htfNewPole then low
+    else if htfTop[1] > 0 and htfAge[1] < htfMaxBars
+         and low >= htfTop[1] * (1 - HTFMaxFlagDepthPct / 100)
+         and high <= htfTop[1] then Min(htfLow[1], low)
+    else 0, 0);
+def htfContinue = htfTop[1] > 0 and htfAge[1] < htfMaxBars
+                  and low >= htfTop[1] * (1 - HTFMaxFlagDepthPct / 100)
+                  and high <= htfTop[1];
+rec htfPolePrice = CompoundValue(1,
+    if htfNewPole then GetValue(low, htfPoleOffset)
+    else if htfContinue then htfPolePrice[1]
+    else 0, 0);
+rec htfPoleBar = CompoundValue(1,
+    if htfNewPole then bn - htfPoleOffset
+    else if htfContinue then htfPoleBar[1]
+    else 0, 0);
+rec htfFlagStartBar = CompoundValue(1,
+    if htfNewPole then bn
+    else if htfContinue then htfFlagStartBar[1]
+    else 0, 0);
+def htfFlagForming = htfTop > 0 and htfAge >= htfMinBars and htfAge <= htfMaxBars;
+def htfDetected = htfFlagForming and !htfFlagForming[1];
+# Volume is not required for any pattern; HTF breakout is price-only.
+def htfBreakout = htfTop[1] > 0 and htfAge[1] >= htfMinBars
+                  and high > htfTop[1];
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PERSISTENT PATTERN PAINTING
+# ══════════════════════════════════════════════════════════════════════════════
+# Base high/low channel follows Pine's highLine/lowLine: it starts at the
+# base-top bar, extends only while price remains inside the base, and is
+# replaced by the historical cup/DB drawing on a breakout.
+# If the base state is still invisible after a reload, watch the Base status
+# label: it reports whether the base is active and how deep it has pulled
+# back, which separates a detection problem from a painting problem.
+rec cupBreakoutBars = CompoundValue(1,
+    if detectCup and close > baseTop then 1
+    else if cupBreakoutBars[1] > 0 and cupBreakoutBars[1] < 10 then cupBreakoutBars[1] + 1
+    else 0, 0);
+rec cupBreakoutPivot = CompoundValue(1,
+    if detectCup and close > baseTop then baseTop
+    else if cupBreakoutBars[1] > 0 and cupBreakoutBars[1] < 10 then cupBreakoutPivot[1]
+    else 0, 0);
+rec dbBreakoutBars = CompoundValue(1,
+    if detectDoubleBottom and close > dbSecondHigh then 1
+    else if dbBreakoutBars[1] > 0 and dbBreakoutBars[1] < 10 then dbBreakoutBars[1] + 1
+    else 0, 0);
+rec dbBreakoutPivot = CompoundValue(1,
+    if detectDoubleBottom and close > dbSecondHigh and dbBreakoutVolumeOK then dbSecondHigh
+    else if dbBreakoutBars[1] > 0 and dbBreakoutBars[1] < 10 then dbBreakoutPivot[1]
+    else 0, 0);
+rec handleBreakoutBars = CompoundValue(1,
+    if handleBreakout then 1
+    else if handleBreakoutBars[1] > 0 and handleBreakoutBars[1] < 10 then handleBreakoutBars[1] + 1
+    else 0, 0);
+rec handleBreakoutPivot = CompoundValue(1,
+    if handleBreakout then handlePeak
+    else if handleBreakoutBars[1] > 0 and handleBreakoutBars[1] < 10 then handleBreakoutPivot[1]
+    else 0, 0);
+
+# Pine's markerBaseBreakout fires on the first bar above highLine. Snapshot
+# the cup anchors at that event so the post-breakout curve is not rebuilt from
+# a later base or a later close.
+def cupBreakoutEvent = ShowPattern and !isDoubleBottom[1]
+                       and activeBase[1] and high > baseTop[1];
+rec drawCupStartBar = CompoundValue(1,
+    if cupBreakoutEvent then baseStartBar[1] else drawCupStartBar[1], 0);
+rec drawCupLowBar = CompoundValue(1,
+    if cupBreakoutEvent then baseLowBar[1] else drawCupLowBar[1], 0);
+rec drawCupEndBar = CompoundValue(1,
+    if handleBreakout then bn
+    else if cupBreakoutEvent then bn
+    else drawCupEndBar[1], 0);
+rec drawCupRightTop = CompoundValue(1,
+    if handleBreakout then handlePeak
+    else if cupBreakoutEvent then baseTop[1]
+    else drawCupRightTop[1], Double.NaN);
+rec drawCupRightBar = CompoundValue(1,
+    if handleBreakout then handlePeakBar
+    else if cupBreakoutEvent then bn
+    else drawCupRightBar[1], 0);
+rec drawCupStartUp = CompoundValue(1,
+    if cupBreakoutEvent then
+        (if baseTopLow[1] * 0.99 > baseLow[1] * 0.99
+         then baseTopLow[1] * 0.99 else baseTop[1] * 0.99)
+    else drawCupStartUp[1], Double.NaN);
+rec drawCupBottom = CompoundValue(1,
+    if cupBreakoutEvent then baseLow[1] * 0.99 else drawCupBottom[1], Double.NaN);
+rec drawCupEndUp = CompoundValue(1,
+    if cupBreakoutEvent then low[1] * 0.99 else drawCupEndUp[1], Double.NaN);
+rec drawCupActive = CompoundValue(1,
+    if cupBreakoutEvent then yes
+    else if drawCupActive[1] and bn - drawCupStartBar[1] <= baseMaxBars then yes
+    else no, no);
+
+def baseInside = activeBase and high <= baseTop and low >= baseLow;
+def baseHighPaint = if ShowPattern and baseInside then baseTop
+                    else if ShowPattern and cupBreakoutBars > 0 then cupBreakoutPivot
+                    else Double.NaN;
+def baseLowPaint = if ShowPattern and baseInside then baseLow else Double.NaN;
+# Pine changes lowLine to dotted/3px once the base reaches 15% depth.
+def deepBase = baseTop > 0 and baseLow <= baseTop * 0.85;
+plot BaseHighLine = baseHighPaint;
+plot BaseLowLine = if !deepBase then baseLowPaint else Double.NaN;
+plot BaseLowDeepLine = if deepBase then baseLowPaint else Double.NaN;
+BaseHighLine.SetDefaultColor(GlobalColor("Cup"));
+BaseHighLine.SetStyle(Curve.SHORT_DASH);
+BaseHighLine.SetLineWeight(3);
+BaseLowLine.SetDefaultColor(GlobalColor("Cup"));
+BaseLowLine.SetLineWeight(2);
+BaseLowDeepLine.SetDefaultColor(GlobalColor("Cup"));
+BaseLowDeepLine.SetStyle(Curve.SHORT_DASH);
+BaseLowDeepLine.SetLineWeight(3);
+
+# Latch the cup anchors while the base is active. The previous painter used
+# baseTop/baseLow directly; those series are reset when price breaks above the
+# base top, which made the entire curve disappear exactly at the rim.
+rec cupCurveAnchorTop = CompoundValue(1,
+    if activeBase then baseTop else cupCurveAnchorTop[1], Double.NaN);
+rec cupCurveAnchorBottom = CompoundValue(1,
+    if activeBase then baseLow else cupCurveAnchorBottom[1], Double.NaN);
+rec cupCurveAnchorStartBar = CompoundValue(1,
+    if activeBase then baseStartBar else cupCurveAnchorStartBar[1], 0);
+rec cupCurveAnchorLowBar = CompoundValue(1,
+    if activeBase then baseLowBar else cupCurveAnchorLowBar[1], 0);
+rec cupCurveHandleTopLatched = CompoundValue(1,
+    if ShowCupHandle and handlePeak > 0
+       and (handleForming or handleBreakout or handleBreakoutBars > 0)
+    then handlePeak
+    else cupCurveHandleTopLatched[1], Double.NaN);
+rec cupCurveHandleBarLatched = CompoundValue(1,
+    if ShowCupHandle and handlePeakBar > 0
+       and (handleForming or handleBreakout or handleBreakoutBars > 0)
+    then handlePeakBar
+    else cupCurveHandleBarLatched[1], 0);
+rec cupCurveActive = CompoundValue(1,
+    if activeBase then yes
+    else if cupCurveActive[1] and cupCurveAnchorStartBar[1] > 0
+         and bn - cupCurveAnchorStartBar[1] <= baseMaxBars then yes
+    else no, no);
+
+# Smooth cosine cup curve. The first half connects the high of the left rim
+# (`baseTop`) to the base low (`baseLow`). The second half rises from that low
+# to the right rim; for a cup-with-handle it uses the handle high instead.
+
+# A cosine easing function gives horizontal tangents at both joins:
+#   down(t) = (1 + cos(pi*t)) / 2
+#   up(t)   = (1 - cos(pi*t)) / 2
+# This avoids the sharp kink produced by straight-line interpolation.
+def cupCurvePi = 3.141592653589793;
+def cupCurveLeftTop = cupCurveAnchorTop;
+def cupCurveBottom = cupCurveAnchorBottom;
+def cupCurveHasHandle = ShowCupHandle
+                        and cupCurveHandleTopLatched > 0
+                        and cupCurveHandleBarLatched > cupCurveAnchorLowBar;
+def cupCurveRightTop = if cupCurveHasHandle
+                       then cupCurveHandleTopLatched
+                       else cupCurveLeftTop;
+# Use a stable right-side span so the cosine parameter progresses across
+# multiple bars. A current-bar denominator would make rightT equal 1 on every
+# bar and collapse the entire right half into an endpoint.
+def cupCurveLeftBars = Max(1,
+    cupCurveAnchorLowBar - cupCurveAnchorStartBar);
+def cupCurveRightBars = if cupCurveHasHandle
+                        then Max(1, cupCurveHandleBarLatched - cupCurveAnchorLowBar)
+                        else cupCurveLeftBars;
+def cupCurveLeftT = Min(1, Max(0,
+    (bn - cupCurveAnchorStartBar) / cupCurveLeftBars));
+def cupCurveRightT = Min(1, Max(0,
+    (bn - cupCurveAnchorLowBar) / cupCurveRightBars));
+def cupCurveLeftValue = cupCurveBottom
+    + (cupCurveLeftTop - cupCurveBottom)
+    * (1 + Cos(cupCurvePi * cupCurveLeftT)) / 2;
+def cupCurveRightValue = cupCurveBottom
+    + (cupCurveRightTop - cupCurveBottom)
+    * (1 - Cos(cupCurvePi * cupCurveRightT)) / 2;
+def cupCurveReady = cupCurveActive
+                    and cupCurveAnchorStartBar > 0
+                    and cupCurveAnchorLowBar >= cupCurveAnchorStartBar
+                    and cupCurveLeftTop > 0 and cupCurveBottom > 0
+                    and cupCurveRightTop > cupCurveBottom;
+# Keep the curve live while the base is active. This is important in
+# ThinkScript: unlike Pine's line.new(), a plot cannot backpaint a past-to-past
+# object after detectCup becomes true. The active-base path paints each causal
+# bar as the base develops, while the frozen path preserves breakout bars.
+# Paint the geometry as soon as the base anchors are valid. Pattern detection
+# remains separate; the old depth/form gate could leave a visibly cup-shaped
+# base completely blank while its detector was still settling.
+# Cup geometry is painted independently from the DB classifier. A structure
+# can satisfy both classifiers, and a DB latch must not erase the cup curve.
+def cupPaintActive = cupCurveActive
+                     and cupCurveAnchorStartBar > 0
+                     and cupCurveAnchorLowBar >= cupCurveAnchorStartBar
+                     and cupCurveAnchorTop > 0
+                     and cupCurveAnchorBottom > 0;
+def cupLiveValue = if ShowPattern and cupPaintActive and cupCurveReady
+                   then if bn <= cupCurveAnchorLowBar
+                        then cupCurveLeftValue
+                        else cupCurveRightValue
+                   else Double.NaN;
+def cupFrozenLeftBars = Max(1, drawCupLowBar - drawCupStartBar);
+def cupFrozenRightBars = Max(1, drawCupRightBar - drawCupLowBar);
+def cupFrozenLeftT = Min(1, Max(0,
+    (bn - drawCupStartBar) / cupFrozenLeftBars));
+def cupFrozenRightT = Min(1, Max(0,
+    (bn - drawCupLowBar) / cupFrozenRightBars));
+def cupFrozenLeft = drawCupBottom
+    + (drawCupStartUp - drawCupBottom)
+    * (1 + Cos(cupCurvePi * cupFrozenLeftT)) / 2;
+def cupFrozenRight = drawCupBottom
+    + ((if cupCurveHasHandle then cupCurveHandleTopLatched else drawCupRightTop)
+       - drawCupBottom)
+    * (1 - Cos(cupCurvePi * cupFrozenRightT)) / 2;
+def cupFrozenValue = if ShowPattern and drawCupActive
+                     and drawCupRightBar > drawCupLowBar
+                     and drawCupStartUp > drawCupBottom
+                     and (if cupCurveHasHandle then cupCurveHandleTopLatched else drawCupRightTop) > drawCupBottom
+                     and bn <= drawCupRightBar
+                     then if bn <= drawCupLowBar
+                          then cupFrozenLeft
+                          else cupFrozenRight
+                     else Double.NaN;
+def cupBowlValue = if !IsNaN(cupLiveValue)
+                   then cupLiveValue
+                   else cupFrozenValue;
+# Separate plots make the two requested curve segments visible independently
+# in TOS. CupBowl remains as the compatibility/combined output.
+#
+# The historical left-rim bars are already in the past by the time the base is
+# recognized, and ThinkScript cannot backpaint them. To draw BOTH halves of
+# the cup, the shape is painted causally from the recognition bar forward:
+# left rim -> bottom -> right rim/handle. It is triggered by the same events
+# as the detection label (detectCup) and by the active-base painter, so the
+# curve appears together with the Cup label.
+# Once latched, the shape is held until the cup actually ends (base broken or
+# detection gone). It then persists for a short grace window so the completed
+# bowl stays visible, and only after that resets. This prevents the old
+# expire-then-immediately-relatch behavior that stacked repeated curves on
+# long active bases.
+rec cupShapeStartBar = CompoundValue(1,
+    if cupShapeStartBar[1] == 0
+    then if ShowPattern and (cupPaintActive or detectCup) then bn else 0
+    else if (cupPaintActive or detectCup)
+         or bn - cupShapeStartBar[1] <= cupCurveLeftBars + cupCurveRightBars + 5
+    then cupShapeStartBar[1]
+    else 0, 0);
+def cupShapeActive = cupShapeStartBar > 0;
+def cupShapeLeftBar = cupShapeStartBar + cupCurveLeftBars;
+def cupShapeRightBar = cupShapeLeftBar + cupCurveRightBars;
+def cupShapeLeftT = Min(1, Max(0,
+    (bn - cupShapeStartBar) / cupCurveLeftBars));
+def cupShapeRightT = Min(1, Max(0,
+    (bn - cupShapeLeftBar) / cupCurveRightBars));
+def cupShapeLeftValue = cupCurveBottom
+    + (cupCurveLeftTop - cupCurveBottom)
+    * (1 + Cos(cupCurvePi * cupShapeLeftT)) / 2;
+def cupShapeRightValue = cupCurveBottom
+    + (cupCurveRightTop - cupCurveBottom)
+    * (1 - Cos(cupCurvePi * cupShapeRightT)) / 2;
+def cupLeftVisible = if ShowPattern and cupShapeActive
+                     and bn <= cupShapeLeftBar
+                     then cupShapeLeftValue
+                     else Double.NaN;
+def cupRightVisible = if ShowPattern and cupShapeActive
+                      and bn > cupShapeLeftBar
+                      and bn <= cupShapeRightBar
+                      then cupShapeRightValue
+                      else Double.NaN;
+plot CupLeftCurve = cupLeftVisible;
+plot CupRightCurve = cupRightVisible;
+CupLeftCurve.SetDefaultColor(GlobalColor("CupCurve"));
+CupRightCurve.SetDefaultColor(GlobalColor("CupCurve"));
+CupLeftCurve.SetPaintingStrategy(PaintingStrategy.LINE);
+CupRightCurve.SetPaintingStrategy(PaintingStrategy.LINE);
+CupLeftCurve.SetStyle(Curve.FIRM);
+CupRightCurve.SetStyle(Curve.FIRM);
+CupLeftCurve.SetLineWeight(4);
+CupRightCurve.SetLineWeight(4);
+# Legacy combined bowl: superseded by CupLeftCurve/CupRightCurve. Kept hidden
+# so the two dedicated halves do not double-draw over the same geometry.
+plot CupBowl = cupBowlValue;
+CupBowl.SetDefaultColor(GlobalColor("CupCurve"));
+CupBowl.SetPaintingStrategy(PaintingStrategy.LINE);
+CupBowl.SetStyle(Curve.FIRM);
+CupBowl.SetLineWeight(4);
+CupBowl.HideBubble();
+CupBowl.HideTitle();
+CupBowl.Hide();
+
+# DB W: four straight segments, with the values/locations latched by the
+# current ordered pivot set. This is the closest persistent ThinkScript form of
+# Pine's dbLine1/dbLine2/dbLine3 and the live right-side line.
+def dbSegment1 = if dbDrawActive and drawDbFHighBar > 0 and bn >= drawDbFHighBar and bn <= drawDbFLowBar
+                 and drawDbFLowBar > drawDbFHighBar
+                 then drawDbFHigh + (drawDbFLow - drawDbFHigh)
+                    * (bn - drawDbFHighBar) / (drawDbFLowBar - drawDbFHighBar)
+                 else Double.NaN;
+def dbSegment2 = if dbDrawActive and drawDbFLowBar > 0 and bn >= drawDbFLowBar and bn <= drawDbSHighBar
+                 and drawDbSHighBar > drawDbFLowBar
+                 then drawDbFLow + (drawDbSHigh - drawDbFLow)
+                    * (bn - drawDbFLowBar) / (drawDbSHighBar - drawDbFLowBar)
+                 else Double.NaN;
+def dbSegment3 = if dbDrawActive and drawDbSHighBar > 0 and bn >= drawDbSHighBar and bn <= drawDbSLowBar
+                 and drawDbSLowBar > drawDbSHighBar
+                 then drawDbSHigh + (drawDbSLow - drawDbSHigh)
+                    * (bn - drawDbSHighBar) / (drawDbSLowBar - drawDbSHighBar)
+                 else Double.NaN;
+# Pine's lowLine is a live line from the second bottom to the current close.
+def dbSegment4 = if dbDrawActive and drawDbSLowBar > 0 and bn >= drawDbSLowBar
+                 then drawDbSLow + (close - drawDbSLow)
+                    * (bn - drawDbSLowBar) / Max(1, bn - drawDbSLowBar)
+                 else Double.NaN;
+# Pine creates four independent green lines: dbLine1, dbLine2, dbLine3,
+# and the live lowLine. Keep them independent instead of selecting only one
+# segment with a chained if/else; that preserves the W's line vocabulary.
+plot DBLine1 = dbSegment1;
+plot DBLine2 = dbSegment2;
+plot DBLine3 = dbSegment3;
+plot DBLiveLine = dbSegment4;
+DBLine1.SetDefaultColor(Color.GREEN); DBLine2.SetDefaultColor(Color.GREEN);
+DBLine3.SetDefaultColor(Color.GREEN); DBLiveLine.SetDefaultColor(Color.GREEN);
+DBLine1.SetLineWeight(2); DBLine2.SetLineWeight(2);
+DBLine3.SetLineWeight(2); DBLiveLine.SetLineWeight(2);
+# Compatibility alias for consumers that expect one DB drawing plot.
+plot DoubleBottomW = if !IsNaN(dbSegment1) then dbSegment1
+                     else if !IsNaN(dbSegment2) then dbSegment2
+                     else if !IsNaN(dbSegment3) then dbSegment3
+                     else dbSegment4;
+DoubleBottomW.Hide();
+plot DBPivotLine = if ShowPattern and dbDrawActive and drawDbSHighBar > 0 then drawDbSHigh
+                   else if ShowPattern and dbBreakoutBars > 0 then dbBreakoutPivot
+                   else Double.NaN;
+DBPivotLine.SetDefaultColor(GlobalColor("DB"));
+DBPivotLine.SetStyle(Curve.LONG_DASH);
+DBPivotLine.SetLineWeight(2);
+
+# Handle peak separator and range box. Pine's handleSepLine is orange,
+# dotted, and begins at handlePeakBarSep; the cloud is the blue handleBox.
+plot HandlePivotLine = if ShowCupHandle and handleForming then handlePeak
+                       else if ShowCupHandle and handleBreakoutBars > 0 then handleBreakoutPivot
+                       else Double.NaN;
+HandlePivotLine.SetDefaultColor(GlobalColor("Handle"));
+HandlePivotLine.SetStyle(Curve.SHORT_DASH);
+HandlePivotLine.SetLineWeight(2);
+plot HandleRangeHigh = if ShowCupHandle and handleForming then handlePeak else Double.NaN;
+plot HandleRangeLow = if ShowCupHandle and handleForming then handleLow else Double.NaN;
+HandleRangeHigh.Hide(); HandleRangeLow.Hide();
+AddCloud(HandleRangeHigh, HandleRangeLow, CreateColor(60, 130, 220), CreateColor(60, 130, 220));
+
+# HTF flag cap, floor, and pole are plotted as dotted lines.
+plot HTFFlagHighLine = if EnableHTF and htfFlagForming then htfTop else Double.NaN;
+plot HTFFlagLowLine = if EnableHTF and htfFlagForming then htfLow else Double.NaN;
+# Pine's flagPLine is one fixed segment from pole low to flag low. A
+# ThinkScript series cannot backpaint a variable-length segment after its
+# endpoints are confirmed. Paint the flag-start anchor rather than an
+# unreachable condition, while the channel lines remain live below.
+plot HTFPoleLine = if EnableHTF and htfFlagStartBar > 0 and bn == htfFlagStartBar
+                   then htfLow else Double.NaN;
+HTFPoleLine.SetPaintingStrategy(PaintingStrategy.POINTS);
+HTFFlagHighLine.SetDefaultColor(GlobalColor("HTF"));
+HTFFlagLowLine.SetDefaultColor(GlobalColor("HTF"));
+HTFPoleLine.SetDefaultColor(GlobalColor("HTF"));
+HTFFlagHighLine.SetStyle(Curve.SHORT_DASH); HTFFlagLowLine.SetStyle(Curve.SHORT_DASH);
+HTFPoleLine.SetStyle(Curve.LONG_DASH);
+HTFFlagHighLine.SetLineWeight(2); HTFFlagLowLine.SetLineWeight(2); HTFPoleLine.SetLineWeight(2);
+
+# Breakout arrows and Pine trade boxes represented with clouds.
+plot CupBreakoutArrow = if ShowPattern and detectCup and close > baseTop then low * 0.99 else Double.NaN;
+plot HandleBreakoutArrow = if ShowCupHandle and handleBreakout then low * 0.99 else Double.NaN;
+plot DBBreakoutArrow = if ShowPattern and detectDoubleBottom and close > dbSecondHigh and dbBreakoutVolumeOK then low * 0.99 else Double.NaN;
+plot HTFBreakoutArrow = if EnableHTF and htfBreakout then low * 0.99 else Double.NaN;
+CupBreakoutArrow.SetPaintingStrategy(PaintingStrategy.ARROW_UP); CupBreakoutArrow.SetDefaultColor(GlobalColor("Cup")); CupBreakoutArrow.SetLineWeight(4);
+HandleBreakoutArrow.SetPaintingStrategy(PaintingStrategy.ARROW_UP); HandleBreakoutArrow.SetDefaultColor(GlobalColor("Handle")); HandleBreakoutArrow.SetLineWeight(4);
+DBBreakoutArrow.SetPaintingStrategy(PaintingStrategy.ARROW_UP); DBBreakoutArrow.SetDefaultColor(GlobalColor("DB")); DBBreakoutArrow.SetLineWeight(4);
+HTFBreakoutArrow.SetPaintingStrategy(PaintingStrategy.ARROW_UP); HTFBreakoutArrow.SetDefaultColor(GlobalColor("HTF")); HTFBreakoutArrow.SetLineWeight(4);
+
+def anyBreakout = detectCup and close > baseTop or handleBreakout
+                 or detectDoubleBottom and close > dbSecondHigh and dbBreakoutVolumeOK or htfBreakout;
+def activeTradePivot = if handleBreakout then handlePeak
+                       else if detectDoubleBottom then dbSecondHigh
+                       else if htfBreakout then htfTop[1]
+                       else baseTop;
+# Keep the start bar independent from the pivot recurrence.  This avoids the
+# tradePivot <-> tradeBars circular dependency that Pine's mutable boxes permit.
+rec tradeStartBar = CompoundValue(1,
+    if anyBreakout and tradeStartBar[1] == 0 then bn
+    else if tradeStartBar[1] > 0 and bn - tradeStartBar[1] < 15 then tradeStartBar[1]
+    else 0, 0);
+rec tradePivot = CompoundValue(1,
+    if anyBreakout and tradeStartBar[1] == 0 then activeTradePivot
+    else if tradeStartBar[1] > 0 and bn - tradeStartBar[1] < 15
+         and high <= tradePivot[1] * 1.25 and low >= tradePivot[1] * 0.92 then tradePivot[1]
+    else 0, 0);
+def tradeBars = if tradePivot > 0 then bn - tradeStartBar + 1 else 0;
+def tradeActive = tradePivot > 0;
+# Exact Pine box prices: entry [pivot, +5%], stop [-8%, -5%],
+# target [+20%, +25%]. Pine starts each box at bar_index[1] and extends
+# while price remains within +25% / -8%; these clouds mirror that lifecycle.
+plot EntryHi = if ShowTradeBoxes and tradeActive then tradePivot * 1.05 else Double.NaN;
+plot EntryLo = if ShowTradeBoxes and tradeActive then tradePivot else Double.NaN;
+plot StopHi = if ShowTradeBoxes and tradeActive then tradePivot * 0.95 else Double.NaN;
+plot StopLo = if ShowTradeBoxes and tradeActive then tradePivot * 0.92 else Double.NaN;
+plot TargetHi = if ShowTradeBoxes and tradeActive then tradePivot * 1.25 else Double.NaN;
+plot TargetLo = if ShowTradeBoxes and tradeActive then tradePivot * 1.20 else Double.NaN;
+EntryHi.Hide(); EntryLo.Hide(); StopHi.Hide(); StopLo.Hide(); TargetHi.Hide(); TargetLo.Hide();
+AddCloud(EntryHi, EntryLo, GlobalColor("Entry"), GlobalColor("Entry"));
+AddCloud(StopHi, StopLo, GlobalColor("Stop"), GlobalColor("Stop"));
+AddCloud(TargetHi, TargetLo, GlobalColor("Tgt"), GlobalColor("Tgt"));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TIGHT CLOSES, H/L PIVOT LABELS, AND SIGNAL MARKERS
+# ══════════════════════════════════════════════════════════════════════════════
+def nearPct = AbsValue(close - close[1]) <= close[1] * TightCloseThresholdPct / 100;
+def nearHighPct = AbsValue(high - high[1]) <= high[1] * TightCloseThresholdPct / 100;
+def nearLowPct = AbsValue(low - low[1]) <= low[1] * TightCloseThresholdPct / 100;
+def nearClose02 = AbsValue(close - close[2]) <= close[2] * TightCloseThresholdPct / 100;
+def nearHigh02 = AbsValue(high - high[2]) <= high[2] * TightCloseThresholdPct / 100;
+def nearLow02 = AbsValue(low - low[2]) <= low[2] * TightCloseThresholdPct / 100;
+def firstTightCandle = if close[2] >= open[2]
+                      then high[2] - close[2] + open[2] - low[2] > 2 * (close[2] - open[2])
+                           or high[2] - low[2] < high[1] - low[1]
+                      else high[2] - open[2] + close[2] - low[2] > 2 * (open[2] - close[2])
+                           or high[2] - low[2] < high[1] - low[1];
+def tight3 = isWeekly and nearPct and nearPct[1] and nearClose02
+             and nearHighPct and nearHighPct[1] and nearHigh02
+             and nearLowPct and nearLowPct[1] and nearLow02
+             and firstTightCandle;
+plot TightHigh = if ShowTightCloseBoxes and tight3 then Highest(high, 3) else Double.NaN;
+plot TightLow = if ShowTightCloseBoxes and tight3 then Lowest(low, 3) else Double.NaN;
+TightHigh.Hide(); TightLow.Hide();
+AddCloud(TightHigh, TightLow, CreateColor(0, 180, 210), CreateColor(0, 180, 210));
+
+plot PivotHighMarker = if ShowHighLowPoints and !isWeekly and newPivotHigh then high[PatternPivotLength] else Double.NaN;
+plot PivotLowMarker = if ShowHighLowPoints and !isWeekly and newPivotLow then low[PatternPivotLength] else Double.NaN;
+PivotHighMarker.SetPaintingStrategy(PaintingStrategy.POINTS); PivotHighMarker.SetDefaultColor(GlobalColor("PivotLabel")); PivotHighMarker.SetLineWeight(3);
+PivotLowMarker.SetPaintingStrategy(PaintingStrategy.POINTS); PivotLowMarker.SetDefaultColor(GlobalColor("PivotLabel")); PivotLowMarker.SetLineWeight(3);
+# The marker value is confirmed on the PatternPivotLength-delayed bar,
+# while the displayed price remains the actual
+# pivot value, matching Pine's label text without using an unsupported method.
+AddChartBubble(ShowHighLowPoints and ShowPivotPercent and newPivotHigh, high[PatternPivotLength],
+    AsText(Round(high[PatternPivotLength], 2)), GlobalColor("PivotLabel"), yes);
+AddChartBubble(ShowHighLowPoints and ShowPivotPercent and newPivotLow, low[PatternPivotLength],
+    AsText(Round(low[PatternPivotLength], 2)), GlobalColor("PivotLabel"), no);
+
+# Clean signal equivalents for Pine's marker functions.  TOS paints the signal
+# classes separately; this avoids mutable label arrays and keeps hover-free dots.
+def markerAvgVol = Average(volume, SignalVDULength);
+def markerVDU = volume / markerAvgVol * 100 < 100 - SignalDryUpPct;
+def markerPP10 = close > close[1] and volume > Highest(if close[1] < close[2] then volume[1] else 0, 10);
+def markerPP5 = close > close[1] and volume > Highest(if close[1] < close[2] then volume[1] else 0, 5);
+def markerMA = ReclaimsMA(ExpAverage(close, 10), SignalMATolerancePct)
+               or ReclaimsMA(ExpAverage(close, 21), SignalMATolerancePct)
+               or ReclaimsMA(ExpAverage(close, 34), SignalMATolerancePct);
+def markerATR = Average(TrueRange(high, close, low), 14);
+def markerReversal = high - low > markerATR and close > (high + low) / 2;
+def markerShake = low < Lowest(low, SignalShakeSwingBars)[1]
+                  and close > ExpAverage(close, 3)
+                  and close > ExpAverage(close, SignalShakeTrendLength);
+def markerRSNH = rs_raw_new_high;
+def markerInWindow = activeBase or isCup or isDoubleBottom or handleForming or htfFlagForming
+                     or (tradeActive and tradeBars <= 20);
+plot VDUPoint = if ShowSignalMarkers and markerInWindow and markerVDU then high else Double.NaN;
+plot PocketPivotPoint = if ShowSignalMarkers and markerInWindow and (markerPP10 or markerPP5) then low else Double.NaN;
+plot MATouchPoint = if ShowSignalMarkers and markerInWindow and markerMA then low else Double.NaN;
+plot ReversalPoint = if ShowSignalMarkers and markerInWindow and markerReversal and markerMA then low else Double.NaN;
+plot ShakeoutPoint = if ShowSignalMarkers and markerInWindow and markerShake then low else Double.NaN;
+plot RSNHPoint = if ShowSignalMarkers and markerInWindow and markerRSNH then high else Double.NaN;
+VDUPoint.SetPaintingStrategy(PaintingStrategy.POINTS); VDUPoint.SetDefaultColor(CreateColor(255, 255, 0)); VDUPoint.SetLineWeight(3);
+PocketPivotPoint.SetPaintingStrategy(PaintingStrategy.POINTS); PocketPivotPoint.SetDefaultColor(CreateColor(255, 255, 0)); PocketPivotPoint.SetLineWeight(3);
+MATouchPoint.SetPaintingStrategy(PaintingStrategy.POINTS); MATouchPoint.SetDefaultColor(Color.CYAN); MATouchPoint.SetLineWeight(3);
+ReversalPoint.SetPaintingStrategy(PaintingStrategy.POINTS); ReversalPoint.SetDefaultColor(Color.GREEN); ReversalPoint.SetLineWeight(3);
+ShakeoutPoint.SetPaintingStrategy(PaintingStrategy.POINTS); ShakeoutPoint.SetDefaultColor(CreateColor(0, 255, 0)); ShakeoutPoint.SetLineWeight(3);
+RSNHPoint.SetPaintingStrategy(PaintingStrategy.POINTS); RSNHPoint.SetDefaultColor(Color.BLUE); RSNHPoint.SetLineWeight(3);
+
+# Pattern bubbles/status and a compact active-trade summary.
+AddChartBubble(ShowDetectionLabel and detectCup and !detectCup[1], low, "Cup", GlobalColor("Cup"), no);
+AddChartBubble(ShowDetectionLabel and handleForming and !handleForming[1], low, "C+H", GlobalColor("Handle"), no);
+AddChartBubble(ShowDetectionLabel and detectDoubleBottom and !detectDoubleBottom[1], low, "DB", GlobalColor("DB"), no);
+AddChartBubble(ShowDetectionLabel and htfDetected, low, "HTF", GlobalColor("HTF"), no);
+# Diagnostic: show the base-state gate so a missing pattern is easy to
+# separate into detection vs. painting issues.
+AddLabel(ShowStatusLabels and activeBase and !isCup and !handleForming and !isDoubleBottom,
+    "BASE ACTIVE D:" + AsPercent(if baseTop != 0 then (baseTop - baseLow) / baseTop else 0)
+    + " L:" + AsText(baseBars) + "b", GlobalColor("Cup"));
+AddLabel(ShowStatusLabels and isCup and !handleForming,
+    "Cup D:" + AsPercent(if baseTop != 0 then (baseTop - baseLow) / baseTop else 0)
+    + " L:" + AsText(baseBars) + "b A" + AsText(Max(0, baseBars))
+    + " Piv:" + AsDollars(baseTop), GlobalColor("Cup"));
+AddLabel(ShowStatusLabels and handleForming,
+    "C+H Handle:" + AsText(handleBars) + "b Vol:" + AsText(Round(handleVolAvg / handleVolMA * 100, 0))
+    + "% Piv:" + AsDollars(handlePeak), GlobalColor("Handle"));
+AddLabel(ShowStatusLabels and isDoubleBottom,
+    "DB Undercut:" + (if DBRequireUndercut then "YES" else "NO")
+    + " L:" + AsText(baseBars) + "b Piv:" + AsDollars(dbSecondHigh), GlobalColor("DB"));
+AddLabel(ShowStatusLabels and htfFlagForming,
+    "HTF Flag:" + AsText(htfAge) + "b Piv:" + AsDollars(htfTop), GlobalColor("HTF"));
+AddLabel(ShowStatusLabels and tradeActive,
+    "TRADE ACTIVE Piv:" + AsDollars(tradePivot) + " Stop:" + AsDollars(tradePivot * .92)
+    + " Target:" + AsDollars(tradePivot * 1.20), GlobalColor("Entry"));
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HIDDEN SCAN OUTPUTS (compatible with drw_pattern_scan.tos conventions)
+# ══════════════════════════════════════════════════════════════════════════════
+plot ScanCup = if isCup then 1 else Double.NaN;
+plot ScanFlatBase = if activeBase and !isCup and !isDoubleBottom then 1 else Double.NaN;
+plot ScanDoubleBottom = if isDoubleBottom then 1 else Double.NaN;
+plot ScanCupHandle = if handleForming then 1 else Double.NaN;
+plot ScanHTF = if htfFlagForming then 1 else Double.NaN;
+plot ScanCupBreakout = if detectCup and close > baseTop then 1 else Double.NaN;
+plot ScanHandleBreakout = if handleBreakout then 1 else Double.NaN;
+plot ScanDBBreakout = if detectDoubleBottom and close > dbSecondHigh and dbBreakoutVolumeOK then 1 else Double.NaN;
+plot ScanHTFBreakout = if htfBreakout then 1 else Double.NaN;
+plot HighLine = baseHighPaint;
+plot FlatHighLine = if activeBase and !isCup and !isDoubleBottom then baseTop else Double.NaN;
+plot DBPivotScanLine = if dbDrawActive and drawDbSHighBar > 0 then drawDbSHigh else Double.NaN;
+plot HandlePivLine = if handleForming then handlePeak else Double.NaN;
+plot HTFTopLine = if htfFlagForming then htfTop else Double.NaN;
+ScanCup.Hide(); ScanFlatBase.Hide(); ScanDoubleBottom.Hide(); ScanCupHandle.Hide(); ScanHTF.Hide();
+ScanCupBreakout.Hide(); ScanHandleBreakout.Hide(); ScanDBBreakout.Hide(); ScanHTFBreakout.Hide();
+HighLine.Hide(); FlatHighLine.Hide(); DBPivotScanLine.Hide(); HandlePivLine.Hide(); HTFTopLine.Hide();

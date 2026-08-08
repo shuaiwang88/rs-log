@@ -134,7 +134,7 @@ input EnableHTF                  = yes;
 input HTFMaxFlagDepthPct         = 25.0;  # Max flag depth % (pullback <= 25%)
 input HTFMaxFlagBars             = 20;    # Max flag length (bars)
 input HTFMinFlagBars             = 6;     # Min flag length (bars)
-input HTFPriorUptrendMinPct       = 85.0;  # Flagpole prior uptrend min %
+input HTFPriorUptrendMinPct       = 80.0;  # Flagpole prior uptrend min %
 input HTFMaxPoleBars             = 40;    # Max flagpole length (bars)
 input HTFMinPoleBars             = 5;     # Min flagpole length (bars)
 input HTFBreakoutVolMult         = 1.1;   # Breakout volume multiplier

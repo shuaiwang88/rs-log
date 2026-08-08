@@ -1,0 +1,123 @@
+# Double Bottom (Improved & Fixed)
+# Mobius‑derived logic with proper pattern validation
+
+input TolerancePercent = 2.0;        # Max % difference between the two lows
+input PeakMinPercent   = 1.0;        # Min % the middle peak must be above the higher low
+input Lookback         = 13;         # Pivot lookback period
+input ShowValues       = yes;
+input ShowLines        = yes;
+input ConfirmBreakout  = yes;        # Require close above neckline?
+input DBRequireUndercut = no;        # no (classic W): 2nd low may equal or be slightly higher than 1st; yes: 2nd low must undercut 1st low
+input ExtendBars        = 20;        # Bars the zone/neckline lines and labels extend past the 2nd bottom
+
+def tol = TolerancePercent / 100;
+def peakMin = PeakMinPercent / 100;
+
+# --- Pivot Low detection ---
+# DBRequireUndercut = yes keeps the original behavior: each pivot low must be
+# strictly below the prior Lookback bars (a 2nd bottom close in time to the 1st
+# implicitly undercuts it).
+# DBRequireUndercut = no (classic W-bottom): a low that is equal to or up to
+# TolerancePercent above the surrounding lows still registers as a pivot low,
+# so a non-undercutting 2nd bottom can form the pattern.
+def l = low;
+def h = high;
+def bn = BarNumber();
+def pivotOK = if DBRequireUndercut
+              then l == Lowest(l, Lookback)
+              else l <= Lowest(l, Lookback) * (1 + tol);
+def isPivotLow = bn > Lookback and pivotOK and
+                 fold i = 1 to Lookback + 1 with test = 1 while test do
+                     (if DBRequireUndercut then l < GetValue(l, -i)
+                      else l <= GetValue(l, -i) * (1 + tol));
+
+# --- Store the last three pivot lows and their bars ---
+def PL1_Val; def PL1_Bar;
+def PL2_Val; def PL2_Bar;
+def PL3_Val; def PL3_Bar;
+
+if isPivotLow {
+    PL1_Val = l;
+    PL1_Bar = bn;
+    PL2_Val = PL1_Val[1];
+    PL2_Bar = PL1_Bar[1];
+    PL3_Val = PL2_Val[1];
+    PL3_Bar = PL2_Bar[1];
+} else {
+    PL1_Val = PL1_Val[1];
+    PL1_Bar = PL1_Bar[1];
+    PL2_Val = PL2_Val[1];
+    PL2_Bar = PL2_Bar[1];
+    PL3_Val = PL3_Val[1];
+    PL3_Bar = PL3_Bar[1];
+}
+
+# --- Dynamic highest high between the two most recent pivot lows ---
+# Use a running maximum that resets each time a new pivot low forms.
+def runHigh = if bn == 1 then h
+              else if isPivotLow then h
+              else Max(h, runHigh[1]);
+
+# The middle peak is the highest high reached *between* PL2 and PL1,
+# i.e. the running high just before the latest pivot low.
+def midHigh = if isPivotLow and !IsNaN(PL2_Val)
+              then runHigh[1]
+              else midHigh[1];
+
+# --- Double Bottom conditions ---
+def lowsClose = AbsValue(PL1_Val - PL2_Val) / PL1_Val <= tol and
+                (if DBRequireUndercut then PL1_Val < PL2_Val else yes);
+def peakHighEnough = midHigh > Max(PL1_Val, PL2_Val) * (1 + peakMin);
+def necklineVal = if peakHighEnough then midHigh else Double.NaN;   # renamed from 'neckline'
+def breakout = if ConfirmBreakout then close > necklineVal else yes;
+
+def isDoubleBottom = !IsNaN(PL2_Val) and lowsClose and peakHighEnough and breakout;
+
+# --- Plot pivot lows ---
+# Only the two lows of an active pattern get value labels; dots mark all pivots.
+# A pattern stays active for ExtendBars bars past the 2nd bottom, so labels
+# disappear instead of piling up on every pivot low.
+def dbActive = if IsNaN(PL1_Bar) then no
+               else if isDoubleBottom then yes
+               else if bn <= PL1_Bar + ExtendBars then dbActive[1]
+               else no;
+
+plot PivotLow = if dbActive and (bn == PL1_Bar or bn == PL2_Bar) then l else Double.NaN;
+PivotLow.SetPaintingStrategy(PaintingStrategy.VALUES_BELOW);
+PivotLow.SetDefaultColor(Color.YELLOW);
+PivotLow.SetHiding(!ShowValues);
+
+plot PivotDot = if isPivotLow then l else Double.NaN;
+PivotDot.SetPaintingStrategy(PaintingStrategy.POINTS);
+PivotDot.SetLineWeight(3);
+PivotDot.SetDefaultColor(Color.GRAY);
+
+# --- Zone around the two lows (horizontal lines) ---
+def dbLow  = Min(PL1_Val, PL2_Val);
+def dbHigh = Max(PL1_Val, PL2_Val);
+
+# Hold the zone levels once a pattern appears.
+def lowZoneHold = if isDoubleBottom then dbLow else lowZoneHold[1];
+def highZoneHold = if isDoubleBottom then dbHigh else highZoneHold[1];
+
+# Draw the lines only from the 1st bottom to ExtendBars bars past the 2nd
+# bottom (LINE style, not HORIZONTAL), so they stop instead of bleeding to
+# the right edge of the chart.
+def inZone = !IsNaN(PL1_Bar) and bn >= PL2_Bar and bn <= PL1_Bar + ExtendBars;
+
+plot ZoneLow = if ShowLines and inZone then lowZoneHold else Double.NaN;
+ZoneLow.SetDefaultColor(Color.LIGHT_GREEN);
+ZoneLow.SetLineWeight(1);
+
+plot ZoneHigh = if ShowLines and inZone then highZoneHold else Double.NaN;
+ZoneHigh.SetDefaultColor(Color.LIGHT_GREEN);
+ZoneHigh.SetLineWeight(1);
+
+# --- Neckline plot (dashed line) ---
+plot NeckLine = if ShowLines and inZone then necklineVal else Double.NaN;
+NeckLine.SetDefaultColor(Color.CYAN);
+NeckLine.SetStyle(Curve.SHORT_DASH);
+NeckLine.SetLineWeight(2);
+
+# --- Alerts (uncomment to use) ---
+# Alert(isDoubleBottom and !isDoubleBottom[1], "Double Bottom", Alert.BAR, Sound.Ring);
