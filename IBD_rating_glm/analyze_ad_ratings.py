@@ -33,7 +33,11 @@ from common import (
     load_marketsurge, load_spy_perf, lstsq_fit, pct_rank_99, transfer_pct_rank,
 )
 
-# Curated, mostly-orthogonal accumulation feature set
+# Curated, mostly-orthogonal accumulation feature set.
+# Extended (cross-week validated, both snapshots improve): closer MAs
+# (Dist_10MA/21MA) + the full multi-window stat set (5D..250D).  Price-side
+# only on purpose — fund fields like Info_EarningsGrowth would force a much
+# smaller fit universe (dropna), so they are NOT added here.
 AD_FEATURES = [
     "UpDnVol_10D", "UpDnVol_30D", "UpDnVol_65D", "UpDnVol_130D",
     "HeavyNetRatio_65D", "NetHeavyDays_65D", "NetHeavyIntensity_65D",
@@ -42,6 +46,15 @@ AD_FEATURES = [
     "AvgClsRange_65D", "UpDayVolRatio", "DnDayVolRatio",
     "Dist_50MA", "Dist_150MA", "Dist_200MA", "PctOff52WHigh",
     "PriceChg_5D", "InstTop5Pct", "InstAvgChg",
+    # --- added: closer MAs + full window stat set (both-week holdout win) ---
+    "Dist_10MA", "Dist_21MA",
+    "UpDnVol_5D", "UpDnVol_250D", "HeavyNetRatio_30D",
+    "NetHeavyDays_30D", "NetHeavyDays_130D",
+    "NetHeavyIntensity_10D", "NetHeavyIntensity_250D",
+    "VWClsRange_30D", "VWClsRange_130D", "VWClsRange_250D",
+    "AvgClsRange_30D", "AvgClsRange_130D", "AvgClsRange_250D",
+    "CMF_10D", "CMF_250D", "PriceChg_10D", "PriceChg_30D",
+    "PriceChg_65D", "PriceChg_130D", "PriceChg_250D",
 ]
 
 

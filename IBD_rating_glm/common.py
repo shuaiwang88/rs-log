@@ -280,6 +280,27 @@ def load_spy_perf(cache_dir=None, asof=None):
     return perf, float(perf_c), int(n)
 
 
+def load_spy_close(cache_dir=None, asof=None):
+    """SPY close as a pandas Series (index = date), truncated to `asof`.
+
+    Needed for RS-line computations (price/SPY ratio, R² of the RS-line
+    regression, RS momentum) — the window-perf dict alone can't build the line.
+    """
+    p = resolve_cache_file("SPY", "_1d.parquet", cache_dir)
+    if p is None:
+        return None
+    spy = pd.read_parquet(p, columns=["Close"])
+    if asof is not None:
+        try:
+            idx = pd.to_datetime(spy.index)
+            spy = spy[idx <= pd.Timestamp(asof)]
+        except Exception:
+            pass
+    close = pd.to_numeric(spy["Close"], errors="coerce").dropna()
+    close = close[close > 0]
+    return close if len(close) else None
+
+
 def derive_csv_asof(csv_path, sample=None):
     """Find the trading day a MarketSurge CSV reflects by price-matching a sample
     of liquid tickers against the price cache (most common matching day).
@@ -369,11 +390,41 @@ def _window_stats(prices, vols, highs, lows, w):
     }
 
 
-def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None):
+def _rs_line_series(cdf, spy_close, n_max=260):
+    """Aligned price/SPY ratio (RS line) over the trailing `n_max` days.
+
+    Both series are truncated to the same as-of day by the caller.  Aligns on
+    the DATE INDEX (tickers can have gaps/halts), keeping the last `n_max`
+    shared trading days.  Returns a numpy array or None if < 60 aligned days.
+    """
+    if spy_close is None or len(spy_close) < 60:
+        return None
+    dates = pd.to_datetime(cdf.index)
+    t = pd.Series(pd.to_numeric(cdf["Close"], errors="coerce").values, index=dates)
+    s = spy_close.astype(float)
+    s.index = pd.to_datetime(s.index)
+    common = t.index.intersection(s.index)
+    if len(common) < 60:
+        return None
+    common = common[-n_max:]
+    t = t.loc[common].values
+    s = s.loc[common].values
+    ok = (s > 0) & np.isfinite(s) & (t > 0) & np.isfinite(t)
+    if ok.sum() < 60:
+        return None
+    rs = t / np.where(ok, s, np.nan)
+    return rs[np.isfinite(rs)]
+
+
+def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None, spy_close=None):
     """One ticker -> RS + A/D feature dict (or None if unusable).
 
     `asof` (YYYY-MM-DD) truncates the price history to that day, for
     cross-week validation against older MarketSurge snapshots.
+    `spy_close` (pd.Series indexed by date, truncated to `asof`) enables the
+    RS-line features: relative volatility, vol-adjusted relative performance
+    (Moreira-Muir Sharpe-style), StockCharts R² of the RS-line regression, and
+    the RRG JdK RS-Momentum analog (RS-line % change).
     """
     p_path = resolve_cache_file(ticker, "_1d.parquet", cache_dir)
     if p_path is None:
@@ -412,6 +463,52 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None):
     rec = {"Ticker": str(ticker).strip(), "Latest_Price": round(latest, 2),
            "Hist_Days": len(prices)}
 
+    # ---- RS-line features (price/SPY ratio) — TradingView/StockCharts/RRG ----
+    # DIAGNOSTIC ONLY: computed so future RS research can reuse them without
+    # re-reading parquets.  NO production formula consumes RS_RSq_*/RS_Mom_*/
+    # RS_RSI_14/RS_RSMA_20D/RelVol_*/SharpeRel_*/RS_Ratio_Now — an ablation
+    # showed none beat the production dual-momentum RS on both weeks.
+    rs_line = _rs_line_series(cdf, spy_close)
+    if rs_line is not None and len(rs_line) >= 60:
+        # realized vol of stock vs SPY over each RS window (Moreira-Muir
+        # vol-management / Sharpe-style momentum uses return / vol)
+        log_rs = np.log(rs_line)
+        # R² of the linear regression of log(RS line) over 65/126 days — the
+        # StockCharts 'R-squared adjustment': a noisy RS line (low R²) is
+        # penalised relative to a clean trend.
+        for wd, tag in ((65, "65D"), (126, "126D"), (250, "250D")):
+            if len(log_rs) >= wd:
+                seg = log_rs[-wd:]
+                x = np.arange(wd)
+                slope, intercept = np.polyfit(x, seg, 1)
+                fit = intercept + slope * x
+                ss_res = float(np.sum((seg - fit) ** 2))
+                ss_tot = float(np.sum((seg - seg.mean()) ** 2))
+                rec[f"RS_RSq_{tag}"] = 1.0 - ss_res / ss_tot if ss_tot > 0 else np.nan
+        # RS momentum (RRG JdK RS-Momentum analog): % change of the RS line
+        # over 20/65 trading days — the second RRG axis.
+        for wd, tag in ((21, "20D"), (66, "65D")):
+            if len(rs_line) > wd:
+                rec[f"RS_Mom_{tag}"] = (rs_line[-1] / rs_line[-(wd + 1)] - 1.0) * 100.0
+        rec["RS_Ratio_Now"] = float(rs_line[-1])
+        # TradingView rs()/RSMA crossover: distance of the RS line from its own
+        # 20-day moving average (the classic TV relative-strength indicator).
+        # Convention: current RS line vs the mean of the PRIOR 20 days (excludes
+        # today, avoiding self-correlation).
+        if len(rs_line) >= 21:
+            rec["RS_RSMA_20D"] = (rs_line[-1] / np.mean(rs_line[-21:-1]) - 1.0) * 100.0
+        # TradingView rs()/RSI-of-RS: RSI(14) of the RS line (Wilder)
+        d = np.diff(rs_line)
+        if len(d) >= 15:
+            up = np.clip(d, 0, None)
+            dn = np.clip(-d, 0, None)
+            avg_up = up[:14].mean()
+            avg_dn = dn[:14].mean()
+            for i in range(14, len(d)):
+                avg_up = (avg_up * 13 + up[i]) / 14.0
+                avg_dn = (avg_dn * 13 + dn[i]) / 14.0
+            rec["RS_RSI_14"] = 100.0 - 100.0 / (1.0 + avg_up / max(avg_dn, 1e-12))
+
     # ---- RS: absolute returns + relative performance vs SPY per window ----
     for label, days in RS_WINDOWS.items():
         if len(prices) > days:
@@ -421,6 +518,25 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None):
         else:
             rec[f"AbsRet_{label}"] = np.nan
             rec[f"RelPerf_{label}"] = np.nan
+
+    # ---- volatility + vol-adjusted relative performance per RS window ----
+    if spy_close is not None and len(spy_close) > 30:
+        sc = spy_close.astype(float).values
+        for label, days in RS_WINDOWS.items():
+            if len(prices) > days and len(sc) > days:
+                tr = np.diff(prices[-(days + 1):]) / np.where(prices[-(days + 1):-1] == 0, 1.0, prices[-(days + 1):-1])
+                sr = np.diff(sc[-(days + 1):]) / np.where(sc[-(days + 1):-1] == 0, 1.0, sc[-(days + 1):-1])
+                vol_t = float(np.std(tr)) * np.sqrt(252.0) * 100.0
+                vol_s = float(np.std(sr)) * np.sqrt(252.0) * 100.0
+                if vol_s > 1e-6 and np.isfinite(vol_s) and np.isfinite(vol_t):
+                    relvol = vol_t / vol_s
+                    perf_w = latest / prices[-(days + 1)]
+                    rec[f"RelVol_{label}"] = relvol
+                    # vol-adjusted relative performance, kept in RATIO space (~1.0)
+                    # like RelPerf so the sigmoid raw = X @ w * 100 stays on the
+                    # same ~100 scale: 1 + (relperf - 1)/relvol (Moreira-Muir
+                    # vol-management: high relative volatility discounts excess)
+                    rec[f"SharpeRel_{label}"] = 1.0 + (perf_w / spy_perf[label] - 1.0) / relvol
 
     # current-production baseline RS (40/20/20/20 weighted vs SPY, sigmoid)
     n = len(prices)
@@ -456,6 +572,9 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None):
     h52 = np.max(prices[-253:])
     rec["PctOff52WHigh"] = (h52 - latest) / h52 * 100.0 if h52 > 0 else 0.0
 
+    # (OBV trend/divergence + volume z-score were tested in the research round
+    # but hurt A/D on the matched-universe holdout — left out intentionally.)
+
     tail_n = min(n - 1, 250)
     if tail_n >= 20:
         pr = np.diff(prices[-(tail_n + 1):]) / np.where(prices[-(tail_n + 1):-1] == 0, 1.0,
@@ -474,9 +593,10 @@ def extract_price_features(ticker, spy_perf, cache_dir=None, asof=None):
     return rec
 
 
-def extract_price_features_bulk(tickers, spy_perf, max_workers=MAX_WORKERS, asof=None):
+def extract_price_features_bulk(tickers, spy_perf, max_workers=MAX_WORKERS, asof=None, spy_close=None):
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        results = list(ex.map(lambda t: extract_price_features(t, spy_perf, asof=asof), tickers))
+        results = list(ex.map(
+            lambda t: extract_price_features(t, spy_perf, asof=asof, spy_close=spy_close), tickers))
     return pd.DataFrame([r for r in results if r is not None])
 
 
@@ -505,13 +625,22 @@ def _series_from_label(block, labels):
     return None
 
 
+# info.* fields that are stored as fractions (0.25 = 25%) and must be
+# converted to percent for consistency with the rest of the feature set.
+# (returnOnEquity is NOT here: ROE is extracted separately in
+# extract_fund_features with its own *100 conversion and info fallback.)
+_INFO_PCT_FIELDS = {"profitMargins", "revenueGrowth", "earningsQuarterlyGrowth",
+                    "returnOnAssets", "grossMargins", "operatingMargins",
+                    "earningsGrowth", "heldPercentInstitutions",
+                    "heldPercentInsiders"}
+
+
 def _info_num(info, key):
     v = info.get(key)
     if v is None:
         return np.nan
     try:
-        return float(v) * 100.0 if key in ("profitMargins", "revenueGrowth",
-                                           "earningsQuarterlyGrowth", "returnOnAssets") else float(v)
+        return float(v) * 100.0 if key in _INFO_PCT_FIELDS else float(v)
     except (TypeError, ValueError):
         return np.nan
 
@@ -665,6 +794,28 @@ def extract_fund_features(ticker, cache_dir=None):
     rec["Margin_Now"] = margin_now
     rec["Margin_Trend"] = margin_trend
 
+    # ── Gross margin level + trend (quarterly gross profit / revenue) — the
+    #    SMR 'profit margins' pillar benefits from a second margin series with
+    #    its own trend direction (research-backed: margin trend > level). ──
+    gp_q = _series_from_label(fund.get("income_q"), ["Gross Profit"])
+    gm_now = gm_trend = np.nan
+    if gp_q and rev_q:
+        gdates, gvals = gp_q
+        rdates2, rvals2 = rev_q
+        gmap = dict(zip(gdates, gvals))
+        rmap2 = dict(zip(rdates2, rvals2))
+        gms = [gmap[d] / rmap2[d] * 100.0 for d in gdates
+               if d in rmap2 and abs(rmap2[d]) > 1e-6 and abs(gmap[d]) > 1e-6]
+        if gms:
+            gm_now = gms[0]
+            if len(gms) >= 3:
+                gm_trend = float(np.mean(gms[:2]) - np.mean(gms[-2:]))
+    rec["GrossMargin_Now"] = gm_now
+    rec["GrossMargin_Trend"] = gm_trend
+
+    # (EPS/Sales acceleration proxies were tested in the research round but were
+    # neutral-to-worse for both ratings — left out intentionally.)
+
     # ── ROE (info preferred, NI/equity fallback) ──
     roe_val = None
     roe_info = info.get("returnOnEquity")
@@ -684,8 +835,33 @@ def extract_fund_features(ticker, cache_dir=None):
     for k, out_k in (("profitMargins", "Info_ProfitMargin"),
                      ("revenueGrowth", "Info_RevGrowth"),
                      ("earningsQuarterlyGrowth", "Info_EPSQGrowth"),
-                     ("returnOnAssets", "Info_ROA")):
+                     ("returnOnAssets", "Info_ROA"),
+                     ("grossMargins", "Info_GrossMargin"),
+                     ("operatingMargins", "Info_OpMargin"),
+                     ("earningsGrowth", "Info_EarningsGrowth"),
+                     ("heldPercentInstitutions", "Info_InstHeld"),
+                     ("heldPercentInsiders", "Info_InsiderHeld"),
+                     ("beta", "Info_Beta"),
+                     ("debtToEquity", "Info_DebtEquity"),
+                     ("currentRatio", "Info_CurrentRatio"),
+                     ("quickRatio", "Info_QuickRatio"),
+                     ("priceToBook", "Info_PriceBook"),
+                     ("totalCashPerShare", "Info_TotalCashPS"),
+                     ("forwardPE", "Info_FwdPE"),
+                     ("numberOfAnalystOpinions", "Info_NumAnalysts")):
         rec[out_k] = _info_num(info, k)
+
+    # ── Cash-flow yields and analyst target upside (fund-json only) ──
+    mc = _info_num(info, "marketCap")
+    fcf = _info_num(info, "freeCashflow")
+    ocf = _info_num(info, "operatingCashflow")
+    rec["Info_FCFYield"] = (fcf / mc * 100.0) if (mc and mc > 0 and np.isfinite(fcf)) else np.nan
+    rec["Info_OCFYield"] = (ocf / mc * 100.0) if (mc and mc > 0 and np.isfinite(ocf)) else np.nan
+    px = _info_num(info, "currentPrice")
+    if not np.isfinite(px):
+        px = _info_num(info, "regularMarketPrice")
+    tgt = _info_num(info, "targetMeanPrice")
+    rec["Info_TargetUpside"] = ((tgt / px - 1.0) * 100.0) if (px and px > 0 and np.isfinite(tgt)) else np.nan
 
     # ── Institutional footprint (proxy for fund accumulation) ──
     ih = fund.get("institutional_holders")

@@ -328,7 +328,17 @@ def main():
     print("\n" + "=" * 80)
     print("RS RATING")
     print("=" * 80)
-    rs_cols = [f"AbsRet_{w}" for w in RS_WINDOWS]
+    # Dual-momentum: Dist_200MA (the stock's OWN distance from its 200-day MA - an
+    # absolute-trend term, no benchmark involved) added as a 6th input, alongside the
+    # 5 relative-return windows. Ported from IBD_rating_glm's second RS update (the
+    # SCTR/dual-momentum insight: relative strength vs a benchmark PLUS an absolute
+    # trend filter beats either alone), which took their forward R2 0.834->0.912.
+    # NOTE: an earlier attempt here added Mansfield RS (ratio vs its own 200D SMA)
+    # instead - a single-snapshot 70/30 holdout suggested a modest gain, but the
+    # proper walk-forward test (train OLD, test NEW - the only trustworthy protocol
+    # in this file) showed it net HURT forward R2 (0.889->0.811 on an identical
+    # population), so it was reverted rather than deployed on the weaker evidence.
+    rs_cols = [f"AbsRet_{w}" for w in RS_WINDOWS] + ["Dist_200MA"]
     tr = train.dropna(subset=rs_cols + ["RS Rating"])
     te = test.dropna(subset=rs_cols + ["RS Rating"])
     print(f"train n={len(tr):,}, test n={len(te):,}")
@@ -349,22 +359,46 @@ def main():
     perf_matrix_tr = gate_rs_matrix(tr)
     y_tr = tr["RS Rating"].values
 
-    def mono_obj(params):
+    # Non-negative weights, sum to 1 - NOT monotonically constrained by window length.
+    # An earlier version forced w1>=w2>=w3>=w4>=w5 (1M weight >= 3M >= 6M >= ... >= 12M) via a
+    # cumulative-sum parameterization, which structurally CANNOT represent "3M matters more than
+    # 1M" - found by head-to-head testing against IBD_rating_glm's independently-fit weights
+    # (3M~0.51, 9M~0.38, 1M/6M/12M near 0), which measurably beat our monotonic-constrained fit
+    # even inside OUR OWN pipeline (percentile-rank of a linear sum, not their sigmoid): R2 0.732
+    # -> 0.746 on a wide validation population just from swapping in GLM's weights. Multiple
+    # random restarts guard against the non-convex percentile-rank objective settling on a
+    # different local optimum than the global one.
+    def free_obj(params):
         v = np.abs(params)
-        w5 = v[4]; w4 = w5 + v[3]; w3 = w4 + v[2]; w2 = w3 + v[1]; w1 = w2 + v[0]
-        w = np.array([w1, w2, w3, w4, w5]); w = w / w.sum()
+        w = v / v.sum()
         raw = perf_matrix_tr @ w
         ref = np.sort(raw)
         pct = pct_from_ref(raw, ref)
         return np.mean(np.abs(y_tr - pct))
 
-    res = minimize(mono_obj, [0.15, 0.10, 0.08, 0.05, 0.02], method="Nelder-Mead",
-                    options={"maxiter": 5000, "xatol": 1e-7, "fatol": 1e-7})
+    rng = np.random.default_rng(0)
+    n_feat = len(rs_cols)
+    starts = [
+        np.array([0.15, 0.10, 0.08, 0.05, 0.02, 0.0]),           # old monotonic-fit starting point
+        np.array([0.0, 0.513, 0.051, 0.379, 0.057, 0.0]),        # GLM's reported window weights
+        np.array([0.2, 0.2, 0.2, 0.2, 0.2, 0.0]),                # uniform (ex-Dist_200MA)
+        np.array([0.08, 0.376, 0.26, 0.18, 0.102, 0.0]),         # our prior unconstrained-refit weights
+        np.array([0.056, 0.263, 0.182, 0.126, 0.071, 0.3]),      # prior weights * 0.7 + 0.3 Dist_200MA
+    ] + [rng.dirichlet(np.ones(n_feat)) for _ in range(7)]       # 7 random simplex points
+
+    best_res, best_val = None, np.inf
+    for x0 in starts:
+        res = minimize(free_obj, x0, method="Nelder-Mead",
+                        options={"maxiter": 5000, "xatol": 1e-7, "fatol": 1e-7})
+        if res.fun < best_val:
+            best_val, best_res = res.fun, res
+    res = best_res
     v = np.abs(res.x)
-    w5 = v[4]; w4 = w5 + v[3]; w3 = w4 + v[2]; w2 = w3 + v[1]; w1 = w2 + v[0]
-    rs_weights = np.array([w1, w2, w3, w4, w5]); rs_weights = rs_weights / rs_weights.sum()
-    labels = list(RS_WINDOWS.keys())
-    print("RS weights (train-fit):", dict(zip(labels, np.round(rs_weights, 4))))
+    rs_weights = v / v.sum()
+    # rs_cols (not RS_WINDOWS.keys()) labels every weight - RS_WINDOWS alone is 1 short
+    # whenever a non-window feature (e.g. Dist_200MA) has been appended to rs_cols; zipping
+    # against the shorter RS_WINDOWS list would silently truncate/mislabel the printed weights.
+    print("RS weights (train-fit, unconstrained):", dict(zip(rs_cols, np.round(rs_weights, 4))))
 
     raw_tr = perf_matrix_tr @ rs_weights
     rs_score_ref = np.sort(raw_tr)
@@ -376,8 +410,8 @@ def main():
     y_te = te["RS Rating"].values
     print("TEST (forward, no retrain):", score_report("RS out-of-sample", y_te, pct_te))
 
-    report["rs"] = {"weights": dict(zip(labels, rs_weights.tolist())),
-                     "windows": {k: RS_WINDOWS[k] for k in labels},
+    report["rs"] = {"weights": dict(zip(rs_cols, rs_weights.tolist())), "feature_cols": rs_cols,
+                     "windows": dict(RS_WINDOWS),
                      "score_ref_sample": rs_score_ref[::max(1, len(rs_score_ref) // 200)].tolist(),
                      "train_metric": score_report("train", y_tr, pct_tr),
                      "test_metric": score_report("test", y_te, pct_te)}
@@ -449,11 +483,21 @@ def main():
     print("\n" + "=" * 80)
     print("EPS RATING")
     print("=" * 80)
+    # Info_* fields (13): yfinance info-dict fundamentals (margins, ROA, FCF/OCF yield,
+    # debt/equity, current ratio, cash/share, analyst target upside, analyst count, forward
+    # P/E) - ported from IBD_rating_glm's second update, which found these high-coverage
+    # fields raised its own forward EPS R^2 0.345 -> 0.386. Extraction added to
+    # reverse_engineer_ratings_v2.py's extract_fund_features() / calc_ibd_ratings.py's
+    # extract_info_features().
+    eps_info_cols = ["Info_ROA", "Info_EPSQGrowth", "Info_GrossMargin", "Info_OpMargin",
+                      "Info_ProfitMargin", "Info_FCFYield", "Info_OCFYield", "Info_DebtEquity",
+                      "Info_CurrentRatio", "Info_TotalCashPS", "Info_TargetUpside",
+                      "Info_NumAnalysts", "Info_FwdPE"]
     eps_raw_cols = ["EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio", "ROE",
                      "EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
-                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"]
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"] + eps_info_cols
     eps_log_cols = ["EPS_Q0_YoY", "EPS_LT_Growth", "ROE", "EpsSurpriseMean", "EpsRevTrend",
-                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"]
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"] + eps_info_cols
     eps_clip = {"EPS_Q0_YoY": (-300, 300), "EPS_LT_Growth": (-300, 300),
                 "EpsSurpriseMean": (-300, 300), "EpsRevTrend": (-300, 300),
                 "EstEPSGrowth_Q": (-300, 300), "EstEPSGrowth_Y": (-300, 300),
@@ -502,16 +546,27 @@ def main():
     print("\n" + "=" * 80)
     print("SMR RATING")
     print("=" * 80)
-    smr_raw_cols = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE"]
+    # Info_* fields (13, overlapping but not identical to EPS's set): ported from
+    # IBD_rating_glm's second update, which raised its own forward SMR exact-letter accuracy
+    # 60.2% -> 62.1% and direct-scale holdout R^2 to ~0.68-0.69.
+    smr_info_cols = ["Info_ProfitMargin", "Info_RevGrowth", "Info_ROA", "Info_GrossMargin",
+                      "Info_OpMargin", "Info_FCFYield", "Info_OCFYield", "Info_DebtEquity",
+                      "Info_CurrentRatio", "Info_QuickRatio", "Info_EarningsGrowth",
+                      "Info_EPSQGrowth", "Info_PriceBook"]
+    smr_core_cols = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE"]
+    smr_raw_cols = smr_core_cols + smr_info_cols
     for d in (train, test):
-        for c in ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend"]:
+        for c in smr_raw_cols:
             d[c] = pd.to_numeric(d[c], errors="coerce")
 
-    tr_smr = train.dropna(subset=["SMR_Num", "SMR_Letter", "Sales_Q0_YoY"]).copy()
+    # Only the original 5 core columns are required (dropna) - the 13 new Info_* fields are
+    # median-imputed, matching EPS's pattern, so SMR coverage doesn't shrink toward only the
+    # most info-rich tickers.
+    tr_smr = train.dropna(subset=["SMR_Num", "SMR_Letter"] + smr_core_cols).copy()
     smr_medians = {c: tr_smr[c].median() for c in smr_raw_cols}
     for c in smr_raw_cols:
         tr_smr[c] = tr_smr[c].fillna(smr_medians[c])
-    te_smr = test.dropna(subset=["SMR_Num", "SMR_Letter", "Sales_Q0_YoY"]).copy()
+    te_smr = test.dropna(subset=["SMR_Num", "SMR_Letter"] + smr_core_cols).copy()
     for c in smr_raw_cols:
         te_smr[c] = te_smr[c].fillna(smr_medians[c])
     print(f"train n={len(tr_smr):,}, test n={len(te_smr):,}")
@@ -561,7 +616,7 @@ def main():
 
     def comp_features(df, rs_ref, ad_coefs, ad_ref, eps_coefs, eps_b0, eps_meds,
                        smr_coefs, smr_b0, smr_meds, smr_ref):
-        sub = df.dropna(subset=["Comp Rating"] + rs_cols + ad_cols + eps_core_cols + smr_raw_cols).copy()
+        sub = df.dropna(subset=["Comp Rating"] + rs_cols + ad_cols + eps_core_cols + smr_core_cols).copy()
         raw_rs = gate_rs_matrix(sub) @ rs_weights
         rs_pct = pct_from_ref(raw_rs, rs_ref)
         raw_ad = sub[ad_cols].values @ ad_coefs

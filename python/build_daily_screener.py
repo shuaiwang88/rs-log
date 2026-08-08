@@ -75,8 +75,20 @@ from calc_ibd_ratings import (
     calc_smr_raw_score,
     extract_eps_analyst_features,
     extract_eps_from_fundamentals,
+    extract_info_features,
     extract_smr_inputs_from_fundamentals,
 )
+
+# extract_eps_analyst_features()'s return-tuple order -> calc_eps_rating()'s extra_features keys
+_EPS_ANALYST_KEYS = ("EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y")
+
+
+def _eps_extra_features(fund):
+    """extra_features dict for calc_eps_rating(): analyst signals + info-dict fields."""
+    analyst = dict(zip(_EPS_ANALYST_KEYS, extract_eps_analyst_features(fund))) if fund else {}
+    info = extract_info_features(fund) if fund else {}
+    return {**analyst, **info}
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -545,12 +557,12 @@ def compute_rating_metrics(df, fund, fy_eps=None, fq_eps=None, roe=None):
             roe = _roe_percent(fund)
     fund_eps_ok = bool(fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5)
     if fund_eps_ok:
-        eps_extra = extract_eps_analyst_features(fund) if fund else (None,) * 6
-        m["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, *eps_extra)
+        m["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, _eps_extra_features(fund))
 
     if fund and not fund.get("error"):
         sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = extract_smr_inputs_from_fundamentals(fund)
-        m["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe)
+        m["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe,
+                                            extract_info_features(fund))
 
     return m
 
@@ -1157,10 +1169,10 @@ def build_screener(limit=None, with_ratings=True):
         # for the final letter grade, same as every other ticker).
         if fund and not fp and with_ratings and not fund.get("error"):
             if fy_eps and fq_eps and len(fy_eps) >= 2 and len(fq_eps) >= 5:
-                eps_extra = extract_eps_analyst_features(fund)
-                row["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, *eps_extra)
+                row["EPS Rating"] = calc_eps_rating(fy_eps, fq_eps, roe, _eps_extra_features(fund))
             sales_q0_yoy, sales_lt_growth, margin_now, margin_trend = extract_smr_inputs_from_fundamentals(fund)
-            row["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe)
+            row["_smr_raw"] = calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe,
+                                                  extract_info_features(fund))
 
         rows.append(row)
 

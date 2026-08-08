@@ -497,6 +497,42 @@ def extract_fund_features(ticker):
     rec["EstEPSGrowth_Q"] = est_growth_q
     rec["EstEPSGrowth_Y"] = est_growth_y
 
+    # ── yfinance info-dict fields (Info_*): ported from IBD_rating_glm, which found these
+    # high-coverage fields improved both EPS and SMR forward accuracy. _INFO_PCT_FIELDS are
+    # stored as a fraction (0.25 = 25%) by yfinance and need *100 for scale consistency.
+    _pct_fields = {"profitMargins", "revenueGrowth", "earningsQuarterlyGrowth", "returnOnAssets",
+                   "grossMargins", "operatingMargins", "earningsGrowth"}
+
+    def _info_num(key):
+        v = info.get(key)
+        if v is None:
+            return np.nan
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return np.nan
+        return f * 100.0 if key in _pct_fields else f
+
+    for k, out_k in (("profitMargins", "Info_ProfitMargin"), ("revenueGrowth", "Info_RevGrowth"),
+                     ("earningsQuarterlyGrowth", "Info_EPSQGrowth"), ("returnOnAssets", "Info_ROA"),
+                     ("grossMargins", "Info_GrossMargin"), ("operatingMargins", "Info_OpMargin"),
+                     ("earningsGrowth", "Info_EarningsGrowth"), ("debtToEquity", "Info_DebtEquity"),
+                     ("currentRatio", "Info_CurrentRatio"), ("quickRatio", "Info_QuickRatio"),
+                     ("priceToBook", "Info_PriceBook"), ("totalCashPerShare", "Info_TotalCashPS"),
+                     ("forwardPE", "Info_FwdPE"), ("numberOfAnalystOpinions", "Info_NumAnalysts")):
+        rec[out_k] = _info_num(k)
+
+    mc = _info_num("marketCap")
+    fcf = _info_num("freeCashflow")
+    ocf = _info_num("operatingCashflow")
+    rec["Info_FCFYield"] = (fcf / mc * 100.0) if (mc and mc > 0 and np.isfinite(fcf)) else np.nan
+    rec["Info_OCFYield"] = (ocf / mc * 100.0) if (mc and mc > 0 and np.isfinite(ocf)) else np.nan
+    px = _info_num("currentPrice")
+    if not np.isfinite(px):
+        px = _info_num("regularMarketPrice")
+    tgt = _info_num("targetMeanPrice")
+    rec["Info_TargetUpside"] = ((tgt / px - 1.0) * 100.0) if (px and px > 0 and np.isfinite(tgt)) else np.nan
+
     rec["Industry"] = info.get("industry")
     return rec
 

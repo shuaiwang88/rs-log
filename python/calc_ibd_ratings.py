@@ -63,8 +63,25 @@ import pandas as pd
 # ──────────────────────────────────────────────────────────────────────────────
 
 RS_RAW_WINDOWS = {"1M": 21, "3M": 63, "6M": 126, "9M": 188, "12M": 249}
-RS_RAW_WEIGHTS = {"1M": 0.2398615489255944, "3M": 0.2398597773981456, "6M": 0.23259603611327384,
-                   "9M": 0.22243834909982305, "12M": 0.06524428846316314}
+# Refit with the monotonicity constraint (1M weight >= 3M >= 6M >= 9M >= 12M) removed - that
+# constraint was structurally incapable of representing "3M matters more than 1M", which is
+# exactly the shape both an unconstrained refit AND IBD_rating_glm's independent fit converged
+# on. Found via a head-to-head against GLM's production scorer on a shared ~3,000-ticker
+# population: GLM's weights (3M~0.51, 9M~0.38) beat our old monotonic fit even inside OUR OWN
+# pipeline (R2 0.732->0.746 on that check), which motivated re-deriving our own free-form
+# weights rather than adopting GLM's numbers directly. TEST R2 0.869->0.889, MAE 6.88->6.50.
+# Dist_200MA (the stock's OWN %-distance from its 200-day SMA - an absolute-trend term, no
+# benchmark involved) added as a 6th, ungated term - the "dual momentum" insight (relative
+# strength vs a benchmark PLUS an absolute trend filter beats either alone, popularized by
+# Gary Antonacci / StockCharts' SCTR) that IBD_rating_glm's RS update used to take its own
+# forward R^2 0.834->0.912 via a nonlinear sigmoid. Our architecture is a linear blend +
+# percentile rank (not a sigmoid), so the same idea transfers a smaller but still real gain
+# here: TEST R2 unchanged at 0.889 but MAE 6.50->6.44 and corr 0.961->0.968, Composite R2
+# 0.730->0.751, tail (Comp>=80) MAE 6.15->6.00 - Dist_200MA drew the single largest weight
+# (43%) of any RS term, confirming genuine independent signal despite the flat headline R2.
+RS_RAW_WEIGHTS = {"1M": 0.012309453159623928, "3M": 0.3012155462702567, "6M": 0.04582928001065274,
+                   "9M": 0.13572737721157122, "12M": 0.07276532241440425,
+                   "Dist_200MA": 0.43215302093349117}
 # Trend-confirmation gate: a stock's 9M/12M returns only get full weight when its 3M return is
 # also positive (the longer-term strength is "confirmed" by recent price action). When 3M is
 # negative, 9M/12M are scaled down by this factor before blending. Without this, a stock that
@@ -101,17 +118,28 @@ AD_CUM_TOP = {
 
 EPS_RAW_FEATURES = ["EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio", "ROE",
                      "EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
-                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"]
-EPS_RAW_COEFS = [1.6670799437309827, 1.5727689904980522, -1.6688291454915354, 2.736583873896307,
-                  -0.43052150673398204, 0.08072757657626828, 23.09505447850493, 0.2730948276664221,
-                  0.808210542220797, 0.12539278151754665]
-EPS_RAW_INTERCEPT = 35.004080630794206
-# EpsBeatRate's coefficient (23.1) dwarfs the others - a company that consistently beats
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y", "Info_ROA", "Info_EPSQGrowth",
+                     "Info_GrossMargin", "Info_OpMargin", "Info_ProfitMargin", "Info_FCFYield",
+                     "Info_OCFYield", "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
+                     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE"]
+EPS_RAW_COEFS = [1.5256089887129651, 1.4200972997110517, -0.810940265274701, 0.713897349186385,
+                  -0.4264006361356283, 0.1903165809631391, 21.115249847280854, 0.3033869221204607,
+                  0.7334668161126477, 0.10109630099039753, 2.418774803772509, 0.23949367733631088,
+                  -0.6572739678627285, 0.4345257017423123, 1.5818329549279697, -0.3218147297887479,
+                  -0.6756011537387426, -0.42346128870191446, -0.03961994494691097, 0.6488675372001247,
+                  0.025529491438706964, 0.7455024400479839, 0.7509079099110159]
+EPS_RAW_INTERCEPT = 33.39552477469008
+# EpsBeatRate's coefficient (~21-23) dwarfs the others - a company that consistently beats
 # analyst estimates is a strong, largely independent EPS-Rating signal, found by comparing
-# against IBD_rating_glm's parallel effort (R^2 0.345 vs our then-0.333) and confirmed by our
-# own walk-forward refit (R^2 0.333 -> 0.416, same test population, no other metric regressed).
+# against IBD_rating_glm's parallel effort and confirmed by our own walk-forward refits:
+# R^2 0.333 (4 fundamentals-only features) -> 0.416 (+6 analyst-history features) -> 0.444
+# (+13 yfinance info-dict features: margins, ROA, FCF/OCF yield, debt/equity, analyst count/
+# target upside, forward P/E), each step validated on the same test population, no regressions.
 EPS_LOG_FEATURES = {"EPS_Q0_YoY", "EPS_LT_Growth", "ROE", "EpsSurpriseMean", "EpsRevTrend",
-                     "EstEPSGrowth_Q", "EstEPSGrowth_Y"}
+                     "EstEPSGrowth_Q", "EstEPSGrowth_Y", "Info_ROA", "Info_EPSQGrowth",
+                     "Info_GrossMargin", "Info_OpMargin", "Info_ProfitMargin", "Info_FCFYield",
+                     "Info_OCFYield", "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
+                     "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE"}
 EPS_CLIP = {
     "EPS_Q0_YoY": (-300, 300), "EPS_LT_Growth": (-300, 300), "EpsSurpriseMean": (-300, 300),
     "EpsRevTrend": (-300, 300), "EstEPSGrowth_Q": (-300, 300), "EstEPSGrowth_Y": (-300, 300),
@@ -123,21 +151,46 @@ EPS_MEDIANS = {
     "EPS_StabilityCV": 1.4707799687755612, "EpsSurpriseMean": 6.9287499375,
     "EpsBeatRate": 0.75, "EpsRevTrend": -0.0724612846210726,
     "EstEPSGrowth_Q": 10.8150002, "EstEPSGrowth_Y": 13.01,
+    "Info_ROA": 3.7049998, "Info_EPSQGrowth": 17.1, "Info_GrossMargin": 38.07950099999999,
+    "Info_OpMargin": 14.2809995, "Info_ProfitMargin": 8.876000000000001,
+    "Info_FCFYield": 3.3823657765832724, "Info_OCFYield": 6.509364222585143,
+    "Info_DebtEquity": 64.3, "Info_CurrentRatio": 1.707, "Info_TotalCashPS": 4.555,
+    "Info_TargetUpside": 13.228671837396222, "Info_NumAnalysts": 9.0, "Info_FwdPE": 14.3565285,
 }
 
-SMR_RAW_FEATURES = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE"]
-SMR_RAW_COEFS = [1.0836196928957507, 4.04823699701578, 3.078193914449797, -1.2385417551305598, 4.330382100668682]
-SMR_RAW_INTERCEPT = 43.494514603313135
+# Same 13 yfinance info-dict fields as EPS_RAW_FEATURES's Info_* group (overlapping but not
+# identical set), ported from IBD_rating_glm - raised its own forward exact-letter accuracy
+# 60.2%->62.1%; our own walk-forward refit went 62.6%->66.1% exact, R^2 0.645->0.698, same
+# test population, no regressions. Every SMR_RAW_FEATURES entry is log-compressed (no
+# exceptions, unlike EPS) - matches the original 5-feature formula's convention.
+SMR_RAW_FEATURES = ["Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now", "Margin_Trend", "ROE",
+                     "Info_ProfitMargin", "Info_RevGrowth", "Info_ROA", "Info_GrossMargin",
+                     "Info_OpMargin", "Info_FCFYield", "Info_OCFYield", "Info_DebtEquity",
+                     "Info_CurrentRatio", "Info_QuickRatio", "Info_EarningsGrowth",
+                     "Info_EPSQGrowth", "Info_PriceBook"]
+SMR_RAW_COEFS = [0.6780180390408662, 3.779136858292958, 1.4412834082773123, -0.9379056241378534,
+                  2.1300106672997203, 2.9461487536594566, 0.21472465865842366, 1.3314709926584603,
+                  -0.8336381900537227, 0.9520353765354804, -0.6066899048011337, 0.05083409461091817,
+                  -0.9383584146282787, -2.648487315623116, 2.091174440018797, -0.8081785687947829,
+                  0.7188022287773491, 2.7387764981156293]
+SMR_RAW_INTERCEPT = 46.71183495657752
 SMR_MEDIANS = {
-    "Sales_Q0_YoY": 9.505376828065279, "Sales_LT_Growth": 6.816226945651465,
-    "Margin_Now": 9.098851021951301, "Margin_Trend": 0.34718079468168384, "ROE": 10.7015,
+    "Sales_Q0_YoY": 9.505376828065279, "Sales_LT_Growth": 6.82156508892308,
+    "Margin_Now": 9.123252858958068, "Margin_Trend": 0.3618103646649491, "ROE": 10.741,
+    "Info_ProfitMargin": 9.086, "Info_RevGrowth": 9.6, "Info_ROA": 3.7165,
+    "Info_GrossMargin": 38.794996999999995, "Info_OpMargin": 14.642,
+    "Info_FCFYield": 3.4572954544341394, "Info_OCFYield": 6.671291852054251,
+    "Info_DebtEquity": 65.049, "Info_CurrentRatio": 1.699, "Info_QuickRatio": 1.104,
+    "Info_EarningsGrowth": 17.45, "Info_EPSQGrowth": 16.900000000000002,
+    "Info_PriceBook": 2.3680876499999997,
 }
 SMR_LETTERS_ORDERED = ["A", "B", "C", "D", "E"]
-SMR_CUM_TOP = {"A": 0.3014, "B": 0.5822, "C": 0.8143, "D": 0.9670, "E": 1.0}
+SMR_CUM_TOP = {"A": 0.3033465275278877, "B": 0.586541921554516, "C": 0.8179201151493343,
+                "D": 0.9701331414177762, "E": 1.0}
 
-COMPOSITE_COEFS = {"EPS": 0.29733326821052003, "RS": 0.5191465672786759,
-                    "SMR": 0.22740995821369406, "AD": 0.2109262117191658}
-COMPOSITE_INTERCEPT = -1.8129595138811236
+COMPOSITE_COEFS = {"EPS": 0.32922245099195746, "RS": 0.5122822757042118,
+                    "SMR": 0.22275320342583896, "AD": 0.20780758917224953}
+COMPOSITE_INTERCEPT = -3.0859435551104633
 
 # IBD-style eligibility filter for the RATING universe (the comparison pool that
 # percentile ranks are computed against). Junk/illiquid/tiny-cap names are excluded
@@ -186,10 +239,16 @@ def calc_rs_raw_score(close_series):
             return np.nan
         rets[label] = (latest / past - 1.0) * 100.0
 
+    # Dist_200MA: absolute-trend term (no benchmark) - n > 249 (checked above via the 12M
+    # window) guarantees at least 250 bars, so the 200-day SMA always has a full window.
+    ma200 = float(np.mean(close[-200:]))
+    dist_200ma = (latest / ma200 - 1.0) * 100.0 if ma200 > 0 else 0.0
+
     gate = 1.0 if rets["3M"] >= 0 else RS_TREND_GATE_REDUCTION
     raw = (RS_RAW_WEIGHTS["1M"] * rets["1M"] + RS_RAW_WEIGHTS["3M"] * rets["3M"] +
            RS_RAW_WEIGHTS["6M"] * rets["6M"] + RS_RAW_WEIGHTS["9M"] * rets["9M"] * gate +
-           RS_RAW_WEIGHTS["12M"] * rets["12M"] * gate)
+           RS_RAW_WEIGHTS["12M"] * rets["12M"] * gate +
+           RS_RAW_WEIGHTS["Dist_200MA"] * dist_200ma)
     return float(raw)
 
 
@@ -339,20 +398,14 @@ def calc_ad_raw_score(df):
 # EPS RATING (1-99) — direct scale, no percentile step needed
 # ──────────────────────────────────────────────────────────────────────────────
 
-def calc_eps_rating(fy_eps, fq_eps, roe_val, eps_stability_cv=None, eps_surprise_mean=None,
-                     eps_beat_rate=None, eps_rev_trend=None, est_eps_growth_q=None,
-                     est_eps_growth_y=None):
-    """Calculate EPS Rating (1-99) from annual/quarterly EPS data plus analyst signals.
+def calc_eps_rating(fy_eps, fq_eps, roe_val, extra_features=None):
+    """Calculate EPS Rating (1-99) from annual/quarterly EPS data plus analyst/info signals.
 
-    Direct-scale OLS blend of log-compressed growth/ROE/analyst features (percentile-
-    ranking was tested in calibration and measurably hurt EPS — likely because
-    the signal is already low-SNR from yfinance's shallow ~5-quarter window, and
-    percentile-ranking a noisy raw score just re-orders the noise). This IS the
+    Direct-scale OLS blend of log-compressed growth/ROE/analyst/info features
+    (percentile-ranking was tested in calibration and measurably hurt EPS — likely
+    because the signal is already low-SNR from yfinance's shallow ~5-quarter window,
+    and percentile-ranking a noisy raw score just re-orders the noise). This IS the
     final EPS Rating already; no universe pass required.
-
-    The 6 keyword args (from extract_eps_analyst_features()) are optional and
-    median-imputed when unavailable — a ticker with no earnings-history/estimate
-    data still gets a rating from the original 4 fundamentals-only features.
 
     Parameters
     ----------
@@ -362,12 +415,18 @@ def calc_eps_rating(fy_eps, fq_eps, roe_val, eps_stability_cv=None, eps_surprise
         Quarterly diluted EPS values, most recent first [Q0, Q-1, Q-2, ...].
     roe_val : float or None
         Return on Equity from the most recent quarter (as a percent, e.g. 15.0).
+    extra_features : dict or None
+        Any of EPS_RAW_FEATURES beyond EPS_Q0_YoY/EPS_LT_Growth/EPS_NegQRatio/ROE
+        (from extract_eps_analyst_features() + extract_info_features()). Optional
+        and median-imputed per-key when missing/absent — a ticker with no earnings-
+        history/estimate/info data still gets a rating from the core 4 features.
 
     Returns
     -------
     int : EPS Rating (1-99), or a data-poor fallback near the population median
     if insufficient EPS history is available.
     """
+    extra_features = extra_features or {}
     # fq_eps/fy_eps may now contain None at a calendar-correct position (a quarter/
     # year with no reported EPS) rather than being dropped, so every offset compare
     # below must guard BOTH sides of the subtraction, not just the divisor side.
@@ -400,13 +459,11 @@ def calc_eps_rating(fy_eps, fq_eps, roe_val, eps_stability_cv=None, eps_surprise
 
     raw_by_feature = {
         "EPS_Q0_YoY": q0g, "EPS_LT_Growth": lt_growth, "EPS_NegQRatio": neg_ratio, "ROE": roe_val,
-        "EPS_StabilityCV": eps_stability_cv, "EpsSurpriseMean": eps_surprise_mean,
-        "EpsBeatRate": eps_beat_rate, "EpsRevTrend": eps_rev_trend,
-        "EstEPSGrowth_Q": est_eps_growth_q, "EstEPSGrowth_Y": est_eps_growth_y,
+        **extra_features,
     }
     vals = []
     for feat in EPS_RAW_FEATURES:
-        v = raw_by_feature[feat]
+        v = raw_by_feature.get(feat)
         v = v if v is not None else EPS_MEDIANS[feat]
         lo, hi = EPS_CLIP.get(feat, (-np.inf, np.inf))
         v = max(lo, min(hi, v))
@@ -497,25 +554,30 @@ def extract_smr_inputs_from_fundamentals(fund):
     return sales_q0_yoy, sales_lt_growth, margin_now, margin_trend
 
 
-def calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe_val):
+def calc_smr_raw_score(sales_q0_yoy, sales_lt_growth, margin_now, margin_trend, roe_val,
+                        extra_features=None):
     """Raw SMR blend: log-compressed OLS combination of sales growth (short + long
-    term), margin (level + trend), and ROE.
+    term), margin (level + trend), ROE, plus 13 yfinance info-dict quality fields.
 
     RAW number, not a grade — apply_rating_percentiles() percentile-ranks this
     against the eligible universe (the percentile value is also SMR's numeric
     contribution to Composite Rating) and converts to an A-E grade.
-    """
-    def _f(v, med):
-        return v if (v is not None and np.isfinite(v)) else med
 
-    vals = np.array([
-        _log_compress(_f(sales_q0_yoy, SMR_MEDIANS["Sales_Q0_YoY"])),
-        _log_compress(_f(sales_lt_growth, SMR_MEDIANS["Sales_LT_Growth"])),
-        _log_compress(_f(margin_now, SMR_MEDIANS["Margin_Now"])),
-        _log_compress(_f(margin_trend, SMR_MEDIANS["Margin_Trend"])),
-        _log_compress(_f(roe_val, SMR_MEDIANS["ROE"])),
-    ])
-    return float(SMR_RAW_INTERCEPT + np.dot(vals, SMR_RAW_COEFS))
+    extra_features : dict or None
+        Any of SMR_RAW_FEATURES beyond the core 5 (from extract_info_features()).
+        Optional and median-imputed per-key when missing/absent.
+    """
+    raw_by_feature = {
+        "Sales_Q0_YoY": sales_q0_yoy, "Sales_LT_Growth": sales_lt_growth,
+        "Margin_Now": margin_now, "Margin_Trend": margin_trend, "ROE": roe_val,
+        **(extra_features or {}),
+    }
+    vals = []
+    for feat in SMR_RAW_FEATURES:
+        v = raw_by_feature.get(feat)
+        v = v if (v is not None and np.isfinite(v)) else SMR_MEDIANS[feat]
+        vals.append(_log_compress(v))
+    return float(SMR_RAW_INTERCEPT + np.dot(np.array(vals), SMR_RAW_COEFS))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -796,6 +858,63 @@ def extract_eps_analyst_features(fund):
 
     return (eps_stability_cv, eps_surprise_mean, eps_beat_rate, eps_rev_trend,
             est_eps_growth_q, est_eps_growth_y)
+
+
+# info.* fields yfinance stores as a fraction (0.25 = 25%) - converted to percent for
+# consistency with every other percent-scale feature in this module.
+_INFO_PCT_FIELDS = {"profitMargins", "revenueGrowth", "earningsQuarterlyGrowth",
+                    "returnOnAssets", "grossMargins", "operatingMargins", "earningsGrowth"}
+
+
+def _info_num(info, key):
+    v = info.get(key)
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if not np.isfinite(f):
+        return None
+    return f * 100.0 if key in _INFO_PCT_FIELDS else f
+
+
+def extract_info_features(fund):
+    """Extract the 17 yfinance info-dict fields used by the EPS/SMR Info_* feature
+    group (ported from IBD_rating_glm's independent effort, which found these
+    high-coverage fund-json fields improved both EPS and SMR forward accuracy).
+
+    Returns a dict keyed by the same Info_* names calc_eps_rating()/
+    calc_smr_raw_score() expect - any value may be None if that info field isn't
+    populated for this ticker; both raw-score functions median-impute.
+    """
+    if not fund or fund.get('error'):
+        return {}
+    info = fund.get('info')
+    if not isinstance(info, dict):
+        return {}
+
+    rec = {}
+    for key, out_key in (
+        ("profitMargins", "Info_ProfitMargin"), ("revenueGrowth", "Info_RevGrowth"),
+        ("earningsQuarterlyGrowth", "Info_EPSQGrowth"), ("returnOnAssets", "Info_ROA"),
+        ("grossMargins", "Info_GrossMargin"), ("operatingMargins", "Info_OpMargin"),
+        ("earningsGrowth", "Info_EarningsGrowth"), ("debtToEquity", "Info_DebtEquity"),
+        ("currentRatio", "Info_CurrentRatio"), ("quickRatio", "Info_QuickRatio"),
+        ("priceToBook", "Info_PriceBook"), ("totalCashPerShare", "Info_TotalCashPS"),
+        ("forwardPE", "Info_FwdPE"), ("numberOfAnalystOpinions", "Info_NumAnalysts"),
+    ):
+        rec[out_key] = _info_num(info, key)
+
+    mc = _info_num(info, "marketCap")
+    fcf = _info_num(info, "freeCashflow")
+    ocf = _info_num(info, "operatingCashflow")
+    rec["Info_FCFYield"] = (fcf / mc * 100.0) if (mc and mc > 0 and fcf is not None) else None
+    rec["Info_OCFYield"] = (ocf / mc * 100.0) if (mc and mc > 0 and ocf is not None) else None
+    px = _info_num(info, "currentPrice") or _info_num(info, "regularMarketPrice")
+    tgt = _info_num(info, "targetMeanPrice")
+    rec["Info_TargetUpside"] = ((tgt / px - 1.0) * 100.0) if (px and px > 0 and tgt is not None) else None
+    return rec
 
 
 # ──────────────────────────────────────────────────────────────────────────────

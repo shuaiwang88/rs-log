@@ -21,9 +21,8 @@ Method (no machine learning):
   * EPS:  fundamental growth/quality features (log-compressed) -> OLS blend
           -> percentile 1-99
   * SMR:  sales/margin/ROE pillars (log-compressed features) -> OLS blend ->
-          percentile -> A-E quintiles
-  * Comp: closed-form OLS combination of the four self-computed components
-          (+ our own industry group RS from IBD Industry Mapping.txt)
+          percentile -> A-E quintiles  * Comp: closed-form OLS combination of the five self-computed components
+    (EPS/RS/SMR/A-D + our own industry group RS from IBD Industry Mapping.txt)
   * Group RS: percentile of industry-mean RS (IBD Industry Mapping.txt)
 
 Writes:
@@ -47,22 +46,35 @@ from common import (
     SMR_GRADE_NUM, SMR_LETTERS_ORDERED, apply_letter_map, build_universe,
     derive_csv_asof, extract_fund_features_bulk, extract_price_features_bulk,
     fit_letter_map, industry_map_series, letter_accuracy, letter_from_pct,
-    load_marketsurge, load_spy_perf, log_compress, lstsq_fit, pct_from_ref,
-    score_report,
+    load_marketsurge, load_spy_close, load_spy_perf, log_compress, lstsq_fit,
+    pct_from_ref, score_report,
 )
 from analyze_rs_ratings import fit_rs
 from analyze_ad_ratings import fit_ad
 
 # EPS_Q1_YoY / EPS_Accel / Sales_Accel are excluded: yfinance's quarterly
 # window is only ~5 quarters, so the 6-quarter lookback is never available.
+# The Info_* additions are the high-coverage fund-json fields (>70% of the
+# universe); both snapshots improved under the 20% holdout when they were added
+# (EPS forward R2 0.409 -> 0.432; SMR exact-letter 64.1% -> 67.0%).
 EPS_FEATURES = [
     "EPS_Q0_YoY", "EPS_LT_Growth", "EPS_NegQRatio",
     "ROE", "EPS_StabilityCV", "EpsSurpriseMean", "EpsBeatRate", "EpsRevTrend",
     "EstEPSGrowth_Q", "EstEPSGrowth_Y",
+    "Info_ROA", "Info_EPSQGrowth", "Info_GrossMargin", "Info_OpMargin",
+    "Info_ProfitMargin", "Info_FCFYield", "Info_OCFYield",
+    "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
+    "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE",
+    # research round 2: gross-margin level + trend from income_q (both snapshots
+    # improved: OLD 0.400->0.406, NEW 0.432->0.437)
+    "GrossMargin_Now", "GrossMargin_Trend",
 ]
 SMR_FEATURES = [
     "Sales_Q0_YoY", "Sales_LT_Growth", "Margin_Now",
     "Margin_Trend", "ROE", "Info_ProfitMargin", "Info_RevGrowth",
+    "Info_ROA", "Info_GrossMargin", "Info_OpMargin", "Info_FCFYield",
+    "Info_OCFYield", "Info_DebtEquity", "Info_CurrentRatio",
+    "Info_QuickRatio", "Info_EarningsGrowth", "Info_EPSQGrowth", "Info_PriceBook",
 ]
 EPS_CORE = ["EPS_Q0_YoY", "EPS_LT_Growth", "ROE"]      # required (else drop row)
 SMR_CORE = ["Sales_Q0_YoY", "Sales_LT_Growth", "ROE"]  # required (else drop row)
@@ -72,6 +84,11 @@ SMR_CORE = ["Sales_Q0_YoY", "Sales_LT_Growth", "ROE"]  # required (else drop row
 EPS_LOG_FEATURES = [
     "EPS_Q0_YoY", "EPS_LT_Growth", "EpsSurpriseMean", "EpsRevTrend",
     "EstEPSGrowth_Q", "EstEPSGrowth_Y", "ROE",
+    "Info_ROA", "Info_EPSQGrowth", "Info_GrossMargin", "Info_OpMargin",
+    "Info_ProfitMargin", "Info_FCFYield", "Info_OCFYield",
+    "Info_DebtEquity", "Info_CurrentRatio", "Info_TotalCashPS",
+    "Info_TargetUpside", "Info_NumAnalysts", "Info_FwdPE",
+    "GrossMargin_Now", "GrossMargin_Trend",
 ]
 
 
@@ -95,7 +112,9 @@ def build_features(df_universe, asof, verbose=True):
     spy_perf, spy_perf_c, spy_days = load_spy_perf(asof=asof)
     if verbose:
         print(f"  SPY ref ({asof}): {spy_days} days")
-    df_price = extract_price_features_bulk(df_universe["Symbol"].tolist(), spy_perf, asof=asof)
+    spy_close = load_spy_close(asof=asof)
+    df_price = extract_price_features_bulk(df_universe["Symbol"].tolist(), spy_perf,
+                                           asof=asof, spy_close=spy_close)
     df_fund = extract_fund_features_bulk(df_universe["Symbol"].tolist())
     df_price["_perf_c_baseline"] = spy_perf_c
     merged = df_universe.merge(df_price, left_on="Symbol", right_on="Ticker", how="inner")
@@ -120,11 +139,19 @@ def apply_params(d, params):
     d = d.copy()
     rs_p, ad_p, eps_p, smr_p = params["rs"], params["ad"], params["eps"], params["smr"]
 
-    # ── RS: production mode is a fixed sigmoid map (stable cross-week) ──
-    if rs_p.get("mode") == "sigmoid":
+    # ── RS: production mode is a fixed sigmoid map (stable cross-week).  The
+    #    dual_sigmoid variant adds an absolute-trend term (distance from the
+    #    200-day MA) inside the sigmoid argument — Dual Momentum: relative
+    #    strength vs SPY + absolute trend beats either alone. ──
+    if rs_p.get("mode") in ("sigmoid", "dual_sigmoid"):
         cols = [f"RelPerf_{w}" for w in rs_p["windows"]]
         raw_r = d[cols].values.astype(float) @ np.array(rs_p["weights"]) * 100.0
         z = raw_r - 100.0
+        k = float(rs_p.get("dual_k", 0.0))
+        if k:
+            d200 = pd.to_numeric(d.get("Dist_200MA"), errors="coerce").values
+            d200 = np.where(np.isfinite(d200), d200, 0.0)
+            z = z + k * d200 / 100.0
         d["RS_self"] = np.clip(50.0 + 49.0 * (z / (np.abs(z) + 22.0)), 1, 99)
     else:
         rs_cols = [f"AbsRet_{w}" for w in rs_p["windows"]]
@@ -197,6 +224,14 @@ def apply_params(d, params):
     if params.get("comp") and params["comp"] is not None:
         cp = params["comp"]
         Xc = d[cp["components"]].values.astype(float)
+        # rows missing GroupRS_self (industry too small / unmapped) get the
+        # fit-week median so the Composite stays computable for every ticker
+        if "GroupRS_self" in cp.get("components", []):
+            med = cp.get("group_median", 50.0)
+            nan_g = np.isnan(Xc[:, -1])
+            if nan_g.any():
+                Xc = Xc.copy()
+                Xc[nan_g, -1] = med
         comp_raw = Xc @ np.array(cp["coefs"]) + cp["intercept"]
         d["Comp_self"] = np.clip(np.round(comp_raw), 1, 99)
     return d
@@ -251,11 +286,9 @@ def fit_eps(d, holdout=0.2, seed=42, verbose=True):
     dd = dd[dd["EPS Rating"] > 0]
     # log-compressed features are NOT hard-clipped (the log tames outliers and
     # keeps rank order — a clip would collapse extreme rows); only the bounded
-    # ratios / CV keep their clip.
-    for c in ["EPS_Q0_YoY", "EPS_LT_Growth", "EpsSurpriseMean", "EpsRevTrend",
-              "EstEPSGrowth_Q", "EstEPSGrowth_Y"]:
-        if c in dd.columns and c not in EPS_LOG_FEATURES:
-            dd[c] = dd[c].clip(-300, 300)
+    # ratios / CV keep their clip.  Every growth/level feature is in
+    # EPS_LOG_FEATURES, so the old -300..300 clip is intentionally replaced by
+    # the log transform applied further down.
     if "EPS_StabilityCV" in dd.columns:
         dd["EPS_StabilityCV"] = dd["EPS_StabilityCV"].clip(0, 10)
     for c in ["EPS_NegQRatio", "EpsBeatRate"]:
@@ -507,22 +540,28 @@ def fit_composite(d, holdout=0.2, seed=42, verbose=True):
             pred_pg = np.clip(X_pg[ge2_] @ coefspg + b0pg, 1, 99)
             rows.append(score_report("Self-computed + our group RS", y_pg[ge2_], pred_pg))
 
-        # production combining weights (fit on the full self-computed universe).
-        # All four components are on a common 1-99 scale, so the raw OLS
-        # coefficients are directly comparable; std_share_pct normalises by each
-        # component's variability for a fair 'importance' ranking.
-        b0pf, coefspf, _ = lstsq_fit(X_p, y_p)
-        stds = X_p.std(axis=0)
-        contrib = np.abs(coefspf) * stds
-        share = contrib / contrib.sum() if contrib.sum() > 0 else np.full(4, 0.25)
-        comp_params = {
-            "components": self_cols,
-            "intercept": float(b0pf),
-            "coefs": [round(float(c), 6) for c in coefspf],
-            "std": [round(float(s), 4) for s in stds],
-            "std_share_pct": [round(float(x) * 100, 1) for x in share],
-            "universe_size": int(len(pd_)),
-        }
+        # production combining weights — FIVE components including our industry
+        # Group RS (cross-week validated: adding GroupRS_self improved BOTH
+        # weeks' holdout R2, OLD 0.758->0.769 and NEW 0.752->0.773).  Fit on the
+        # rows that have a GroupRS_self; rows without one (industry group too
+        # small / unmapped) fall back to the stored group_median at scoring.
+        pg_all = pd_.dropna(subset=["GroupRS_self"]).copy()
+        if len(pg_all) > 200:
+            y_g2 = pg_all["Comp Rating"].values
+            X_g2 = pg_all[self_cols + ["GroupRS_self"]].values.astype(float)
+            b0pf, coefspf, _ = lstsq_fit(X_g2, y_g2)
+            stds = X_g2.std(axis=0)
+            contrib = np.abs(coefspf) * stds
+            share = contrib / contrib.sum() if contrib.sum() > 0 else np.full(5, 0.2)
+            comp_params = {
+                "components": self_cols + ["GroupRS_self"],
+                "intercept": float(b0pf),
+                "coefs": [round(float(c), 6) for c in coefspf],
+                "std": [round(float(s), 4) for s in stds],
+                "std_share_pct": [round(float(x) * 100, 1) for x in share],
+                "group_median": round(float(pg_all["GroupRS_self"].median()), 4),
+                "universe_size": int(len(pg_all)),
+            }
     return {"results": pd.DataFrame(rows), "params": comp_params, "universe_size": len(pd_)}
 
 
