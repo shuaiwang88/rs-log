@@ -1,0 +1,171 @@
+{
+  "date": "2026-08-11",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-11.md",
+  "market_summary": "Overall Sentiment: Constructive but bifurcated. The broad market (S&P, Dow, RSP) is healthy and at highs, which is bullish. However, the growth-heavy Nasdaq is still below its prior peak, and the speculative AI complex is under distribution. \"The averages are holding well, very tight... but it's almost a mask of what is really going on behind the curtain\" (David Ryan). The short-term trader must be in the right sectors; long-term bulls can use the pause to accumulate leaders.",
+  "tickers": [
+    "MPC",
+    "VLO",
+    "CRAK",
+    "DINO",
+    "PSX",
+    "DELL",
+    "NBIS",
+    "SMH",
+    "MU",
+    "CSCO",
+    "LFUS",
+    "CRWD",
+    "PANW",
+    "FTNT",
+    "AVT",
+    "ARW",
+    "APH",
+    "CAH",
+    "COR",
+    "MCK",
+    "JPM",
+    "PLTR",
+    "FN",
+    "FROG",
+    "TWLO",
+    "FSLY",
+    "ENVA",
+    "NVT",
+    "CIEN",
+    "AAOI",
+    "LITE",
+    "CRDO",
+    "TTAN",
+    "NOW",
+    "ONON",
+    "OLLI",
+    "ELF",
+    "KFY",
+    "MAN",
+    "AMN",
+    "RHI",
+    "RCRUY",
+    "SPY",
+    "VOO",
+    "TSM",
+    "ASML",
+    "AMAT",
+    "RBRK",
+    "VEEV",
+    "DPZ",
+    "UPWK",
+    "USAR",
+    "BH",
+    "BBIO",
+    "TNGX",
+    "LLY",
+    "HIMS",
+    "ACVA",
+    "MDB",
+    "ALL",
+    "ABNB",
+    "BA",
+    "MPWR",
+    "SMCI",
+    "CRWV",
+    "ATRO",
+    "LQDA",
+    "AMBQ",
+    "MRVL",
+    "QQQ",
+    "QQQE",
+    "RSP",
+    "IWM",
+    "MDY",
+    "DIA",
+    "USO",
+    "TNX",
+    "IGV",
+    "XLE",
+    "JETS"
+  ],
+  "ticker_details": {
+    "MPC": {
+      "actionability": "Actionable (extended from entry)",
+      "technical_action": "Strong uptrend; Leaderboard added on an aggressive entry. Cleared 200 resistance. David Ryan bought a small position.",
+      "story": "Refiner benefiting from constrained global supply and a favorable crack spread. \"Very, very strong.\""
+    },
+    "CRAK": {
+      "actionability": "Actionable",
+      "technical_action": "Pullback to 21-day, massive volume, RS rating 99.",
+      "story": "Oil Refiners ETF. A diversified way to play the strong refining group."
+    },
+    "AVT": {
+      "actionability": "Actionable (add on pullback)",
+      "technical_action": "Breakout on earnings, now consolidating tightly. RS line at new highs. Chris bought a week ago.",
+      "story": "Electronic components/AI infrastructure. Character change after long sideways action; weekly chart looks powerful."
+    },
+    "CRWD": {
+      "actionability": "Actionable (on pullback)",
+      "technical_action": "Held above 50-day during market weakness, pulled back inside, and have now resumed strong uptrends.",
+      "story": "Cybersecurity leaders. The textbook model for stocks to buy in this market\u2014strong RS, constructive bases."
+    },
+    "LFUS": {
+      "actionability": "Watchlist",
+      "technical_action": "Broke below 50-day, made three lows, then surged on earnings. Now drifting quietly.",
+      "story": "Circuit protection/electronics. David Ryan's example of the ideal setup: tight, quiet consolidation after a strong move."
+    },
+    "TWLO": {
+      "actionability": "Actionable",
+      "technical_action": "25% correction, now back above 50-day, RS line at new highs. Chris prefers over FSLY.",
+      "story": "Communications software. A normal, constructive base with strong fundamentals."
+    },
+    "CAH": {
+      "actionability": "Actionable",
+      "technical_action": "Strong earnings gap, now holding near highs. Earnings accelerating. David says it looks good.",
+      "story": "Healthcare distributor (Cardinal Health). The leader in a group that also includes MCK and COR."
+    },
+    "OLLI": {
+      "actionability": "Actionable",
+      "technical_action": "Undercut long-term low, then 8-9 days up in a row, reclaiming 50-day. David bought a small position.",
+      "story": "Discount retail. A classic undercut-and-rally setup showing institutional accumulation."
+    },
+    "ELF": {
+      "actionability": "Watchlist",
+      "technical_action": "Undercut prior low, then a massive string of up days.",
+      "story": "Cosmetics. Another undercut-and-rally, showing that someone is aggressively accumulating."
+    },
+    "KFY": {
+      "actionability": "Watchlist",
+      "technical_action": "Emerging from long bases, hitting new highs.",
+      "story": "Commercial staffing. A new group showing strength after years of going sideways."
+    },
+    "DELL": {
+      "actionability": "Avoid (for longs) / Short candidate",
+      "technical_action": "Wide and loose, 100-point swings. David Ryan has shorted it twice. Not a buy until it tightens up.",
+      "story": "AI server. A \"wild and loose sloppy base\" is not where you buy. Wait for quiet."
+    },
+    "NBIS": {
+      "actionability": "Avoid / Short candidate",
+      "technical_action": "Rejected three times at the declining 50-day.",
+      "story": "Neocloud/AI compute. David Ryan says until it gets above the 50-day, it's out of play."
+    },
+    "SMH": {
+      "actionability": "Avoid / Short",
+      "technical_action": "Rallied to declining 50-day, now rolling over. David is short.",
+      "story": "Semiconductor ETF. A short on weak rallies; avoid for longs."
+    },
+    "MU": {
+      "actionability": "Hold / Hedged",
+      "technical_action": "Stuck below 50-day and 21-day. Chris is fully hedged, waiting.",
+      "story": "Memory/AI leader. Needs to reclaim the 50-day; a break of the 787 low would be a sell."
+    },
+    "CIEN": {
+      "actionability": "Avoid / Short candidate",
+      "technical_action": "All below declining 50-day lines.",
+      "story": "Optical networking. Potential short candidates on rallies into the 50-day."
+    },
+    "PLTR": {
+      "actionability": "Watchlist",
+      "technical_action": "Gap up on earnings, above 200-day. Chris waiting for a shelf or pullback to enter. Hatman has a position.",
+      "story": "AI analytics. A character change from short to potential leader."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": []
+}

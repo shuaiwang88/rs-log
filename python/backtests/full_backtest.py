@@ -3,18 +3,23 @@
 Full Backtest — All Ticker Cache Tickers
 ========================================
 Scans every ticker in ticker_cache/ with filters (price > $12, avg vol > 500K),
-runs IBD pattern detection, tests all buy strategies + exit rules, and generates
-a comprehensive HTML report.
+runs OUR pattern engine (python/tv_pattern_scanner.py — the drw_pattern.pine port,
+same patterns as the 📐 TV Pattern tab), tests all buy strategies + exit rules, and
+generates a comprehensive HTML report.
 
-Buy Strategies (8 core + Composite + Any):
-  1. Pivot Breakout       — price crosses above base pivot
+Buy Strategies (8 core + Composite + Any) — the engine's per-bar signals:
+  1. Pivot Breakout       — the scanner-confirmed breakout bar above base pivot
   2. Upside Reversal      — wide-range up bar within base
   3. Shakeout near Pivot  — undercut swing low then reclaim
-  4. Volume Dry-Up        — volume < 55% of 20d avg near pivot
-  5. MA Touch             — touches EMA10/EMA20/SMA50
+  4. Volume Dry-Up        — volume < 55% of its 50d avg near pivot
+  5. MA Touch             — touches EMA10/21/34
   6. Pocket Pivot         — up day vol > max down-day vol in 10 bars
   7. RS New High          — RS makes new high within base
   8. SMA50 Bounce         — dips near SMA50 then reclaims
+
+New in this round: every trade carries its SPY market regime at entry, % vs SPY 200-day,
+price bucket, base shape and acc/dis ratios; --spy-regime / --max-price apply the filters
+the history backtest found (see tv_pattern_history_backtest.py).
 
 Exit Rules:
   - Stop-Loss: base low
@@ -36,6 +41,10 @@ import glob
 import time
 import warnings
 warnings.filterwarnings("ignore")
+
+from tv_engine import (extract_bases, pat_groups, price_bucket, regime_arrays,
+                       regime_label, scan_record, ticker_signals,
+                       detect_buy_signals as _engine_detect_buy_signals)
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 TICKER_CACHE_DIR = ROOT_DIR / "ticker_cache"
@@ -85,364 +94,71 @@ def find_pivots(highs, lows, left=5, right=5):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Pattern detection (lightweight — reuses IBD pattern scanner logic)
+# Pattern detection — OUR scanner (tv_pattern_scanner.py / drw_pattern.pine port),
+# via the shared tv_engine.
 # ══════════════════════════════════════════════════════════════════════════════
 
-def scan_ticker_for_bases(df, spy_close_series=None):
-    """Detect all base patterns in a ticker's history.
-    Returns list of base events: {start_bar, end_bar, bTop, bLow, bDepPct, bCount,
-                                   pattern_name, break_bar, pivot_price, history_state}
+def scan_ticker_for_bases(df, spy_close_series=None, ticker="", fpath=""):
+    """Detect all base patterns in a ticker's history using OUR pattern engine.
+
+    Returns (bases, arrays_tuple, sig):
+      bases        — list of base events {start_bar, end_bar, bTop, bLow, bDepPct,
+                     bCount, pattern_name, shape, raw_pattern, break_bar, pivot_price,
+                     acc_days, dis_days, neu_days};
+      arrays_tuple — (highs, lows, closes, opens, volumes, ema10, ema20, sma50,
+                     sma20_vol, atr14, rs_raw) over the prepared frame;
+      sig          — per-bar signal dict from tv_engine (fed to detect_buy_signals).
     """
-    df = df.sort_index()
-    if len(df) > 1500:
-        df = df.iloc[-1500:]
-
-    highs = df['High'].values
-    lows = df['Low'].values
-    closes = df['Close'].values
-    volumes = df['Volume'].values
-    opens = df['Open'].values
+    rec, df = scan_record(ticker, str(fpath), spy_close_series, df)
+    if rec is None:
+        return [], None, None
     n = len(df)
-
-    pivLag = 5
-    pivLen = 5
-    bLenB = 325
-    bdF = 0.50
-
-    close_s = pd.Series(closes)
-    ema10 = close_s.ewm(span=10, adjust=False).mean().values
-    ema20 = close_s.ewm(span=20, adjust=False).mean().values
-    sma50 = close_s.rolling(50, min_periods=10).mean().values
+    bases = []
+    for b in extract_bases(rec, n):
+        bases.append({
+            "start_bar": b["start"], "end_bar": b["end"],
+            "bTop": b["bTop"], "bLow": b["bLow"],
+            "bDepPct": b["bDepPct"], "bCount": b["bCount"],
+            "pattern_name": b["pattern"], "raw_pattern": b["raw_pattern"],
+            "shape": b["shape"] or "",
+            "break_bar": b["bo_bar"] if b["bo_bar"] is not None else b["end"],
+            "pivot_price": b["pivot"], "rs_count": 0,
+            "acc_days": b["acc_days"], "dis_days": b["dis_days"],
+            "neu_days": b["neu_days"],
+        })
+    if not bases:
+        return bases, None, None
+    highs = df["High"].to_numpy(dtype=float)
+    lows = df["Low"].to_numpy(dtype=float)
+    closes = df["Close"].to_numpy(dtype=float)
+    opens = df["Open"].to_numpy(dtype=float)
+    volumes = df["Volume"].to_numpy(dtype=float)
+    ema10 = pd.Series(closes).ewm(span=10, adjust=False).mean().values
+    ema20 = pd.Series(closes).ewm(span=20, adjust=False).mean().values
     sma20_vol = pd.Series(volumes).rolling(20, min_periods=5).mean().values
     atr14 = calculate_atr(highs, lows, closes, 14)
-
-    # RS
     rs_raw = closes.copy()
     if spy_close_series is not None and not spy_close_series.empty:
         aligned_spy = spy_close_series.reindex(df.index).ffill().bfill().values
         if len(aligned_spy) == n and np.all(aligned_spy > 0):
             rs_raw = closes * 7.0 * 1000.0 / aligned_spy
-
-    rs_s = pd.Series(rs_raw)
-    rs_h1y = rs_s.shift(1).rolling(min(252, n), min_periods=30).max().values
-    rs_h6m = rs_s.shift(1).rolling(min(126, n), min_periods=20).max().values
-    rs_h3m = rs_s.shift(1).rolling(min(63, n), min_periods=10).max().values
-    rs_nh_any = (rs_raw > rs_h1y) | (rs_raw > rs_h6m) | (rs_raw > rs_h3m)
-
-    pivot_highs, pivot_lows = find_pivots(highs, lows, pivLen, pivLen)
-
-    aHP_list = []
-    aLP_list = []
-    bTop = bLow = bStart = None
-    isBase = False
-    bCount = 0
-
-    # State variables
-    shakeLastSwingLow = None
-    shakeUndercutBar = None
-    shakeReclaimBar = None
-    shakeReclaimHigh = None
-    shakeSetupActive = False
-    shakeEma3 = close_s.ewm(span=3, adjust=False).mean()
-
-    down_vols = np.where(close_s.diff() < 0, volumes, 0.0)
-
-    rsCount = 0
-    bases_found = []
-
-    for i in range(n):
-        conf_bar = i - pivLen
-        if conf_bar in pivot_highs:
-            aHP_list.insert(0, (conf_bar, pivot_highs[conf_bar]))
-        if conf_bar in pivot_lows:
-            aLP_list.insert(0, (conf_bar, pivot_lows[conf_bar]))
-            shakeLastSwingLow = pivot_lows[conf_bar]
-
-        w25_start = max(0, i - pivLag + 1)
-        H25 = np.max(highs[w25_start:i+1])
-        L25 = np.min(lows[w25_start:i+1])
-
-        w103_start = max(0, i - 130 + 1)
-        L103 = np.min(lows[w103_start:i+1])
-
-        shift_idx = i - pivLag - 1
-        if shift_idx >= 0:
-            w65_start = max(0, shift_idx - 65 + 1)
-            H65s = np.max(highs[w65_start:shift_idx + 1])
-        else:
-            H65s = highs[i]
-
-        # New base detection
-        newBase = False
-        if len(aHP_list) >= 3 and i >= pivLag:
-            piv_h = highs[i - pivLag]
-            recent_hp_prices = [p for _, p in aHP_list[:3]]
-            bH = any(abs(piv_h - p) < 1e-4 for p in recent_hp_prices)
-            bPH = (piv_h > H65s) or (bTop is not None and piv_h > bTop)
-            lUp = L103 * 1.20 <= piv_h
-            dep = piv_h * (1.0 - bdF) <= L25
-            noAb = H25 <= piv_h
-            newBase = bH and bPH and lUp and dep and noAb
-
-        if newBase and not isBase:
-            bTop = highs[i - pivLag]
-            bLow = L25
-            bStart = i - pivLag
-            bCount = pivLag
-            isBase = True
-        elif not newBase and isBase:
-            isBase = True
-
-        if isBase:
-            bCount += 1
-            if bTop is not None and highs[i] > bTop and highs[i] <= bTop * 1.05:
-                bTop = highs[i]
-            if bLow is not None and lows[i] < bLow and bTop is not None and lows[i] >= bTop * (1.0 - bdF):
-                bLow = lows[i]
-
-        # Invalidation
-        if isBase and bTop is not None:
-            if lows[i] < bTop * (1.0 - bdF) or bCount > bLenB or closes[i] > bTop * 1.40:
-                isBase = False
-
-        # Base depth
-        bDepPct = (bTop - bLow) / bTop * 100.0 if (bTop and bLow and bTop > 0) else None
-
-        # Pattern classification (simplified)
-        pattern_name = 'Base'
-        isCup = isFlat = isDB = isCupH = isConsolidation = False
-        cupHandlePivot = None
-        dbMiddlePivot = None
-        cupMid = bLow + (bTop - bLow) * 0.5 if (bTop and bLow) else None
-
-        # Flat Base
-        recent_win = min(i + 1, max(20, min(bCount, 65)))
-        end_r = max(0, i)
-        rTop = np.max(highs[max(0, end_r - recent_win + 1):end_r + 1])
-        rLow = np.min(lows[max(0, end_r - recent_win + 1):end_r + 1])
-        rDepPct = (rTop - rLow) / rTop * 100.0 if rTop > 0 else 999
-        isFlat = isBase and rDepPct <= 18.0 and bCount >= 20
-
-        # Cup
-        if isBase and bTop and bLow and not isFlat and bCount >= 20 and bDepPct is not None:
-            if 8.0 <= bDepPct <= 55.0:
-                isCup = True
-
-        # Cup+Handle
-        if isBase and bTop and bLow and cupMid and bCount >= 20:
-            handle_len = 15
-            w12_start = max(0, i - handle_len)
-            H12 = np.max(highs[w12_start:i+1]) if i >= w12_start else highs[i]
-            L12 = np.min(lows[w12_start:i+1])
-            hDep = (H12 - L12) / H12 * 100.0 if H12 > 0 else 999
-            inTop = L12 >= cupMid * 0.85
-            depOk_h = 2.0 <= hDep <= 25.0
-            if inTop and depOk_h and H12 < bTop * 1.02:
-                isCupH = True
-                cupHandlePivot = H12
-
-        # Double Bottom
-        dbMaxBars = 75
-        if isBase and bDepPct is not None and 15.0 <= bDepPct <= 40.0 and len(aHP_list) >= 2 and len(aLP_list) >= 2:
-            for hp_i in range(min(5, len(aHP_list) - 1)):
-                for hp_j in range(hp_i + 1, min(len(aHP_list), hp_i + 5)):
-                    sH_t, sH = aHP_list[hp_i]
-                    fH_t, fH = aHP_list[hp_j]
-                    if fH_t < i - dbMaxBars:
-                        continue
-                    l1 = [p for p in aLP_list if fH_t < p[0] < sH_t]
-                    l2 = [p for p in aLP_list if sH_t < p[0] <= i]
-                    if l1 and l2:
-                        fLt, fL = l1[0]
-                        sLt, sL = l2[0]
-                        peak = max(fH, sH)
-                        cA = sL <= fL * 1.03 and sL >= fL * 0.85
-                        cB = sL >= (1 - bdF) * peak
-                        cC = sL <= peak * 0.95
-                        cD = sH >= sL + (peak - sL) * 0.20
-                        cTA = fH_t < fLt < sH_t < sLt
-                        cTB = sLt - fH_t <= dbMaxBars
-                        cTC = sLt - fH_t >= 5
-                        if cA and cB and cC and cD and cTA and cTB and cTC:
-                            isDB = True
-                            dbMiddlePivot = sH
-                            break
-                if isDB:
-                    break
-
-        # Consolidation
-        isConsolidation = isBase and bCount > 200 and not isCup and not isCupH
-
-        # Assign pattern name
-        if isFlat: pattern_name = 'Flat Base'
-        elif isDB: pattern_name = 'Dbl Bottom'
-        elif isCupH: pattern_name = 'Cup+Handle'
-        elif isCup: pattern_name = 'Cup'
-        elif isConsolidation: pattern_name = 'Consolidation'
-        elif isBase and bDepPct and bDepPct > 18: pattern_name = 'Deep Base'
-
-        # Breakout detection
-        active_pivot = dbMiddlePivot if (isDB and dbMiddlePivot is not None) else (
-            cupHandlePivot if (isCupH and cupHandlePivot is not None) else bTop)
-
-        if isBase and active_pivot is not None and highs[i] > active_pivot:
-            bases_found.append({
-                'start_bar': bStart,
-                'end_bar': i,
-                'bTop': bTop,
-                'bLow': bLow,
-                'bDepPct': bDepPct,
-                'bCount': bCount,
-                'pattern_name': pattern_name,
-                'break_bar': i,
-                'pivot_price': active_pivot,
-                'rs_count': rsCount,
-            })
-            isBase = False
-            bTop = bLow = bStart = None
-            bCount = 0
-            aHP_list.clear()
-            aLP_list.clear()
-
-        if isBase:
-            if rs_nh_any[i]:
-                rsCount += 1
-            if newBase:
-                rsCount = 0
-
-    return bases_found, highs, lows, closes, opens, volumes, ema10, ema20, sma50, sma20_vol, atr14, rs_raw
+    sig = ticker_signals(df, spy_close_series)
+    if sig is None:
+        return bases, None, None
+    return bases, (highs, lows, closes, opens, volumes, ema10, ema20,
+                   sig["sma50"], sma20_vol, atr14, rs_raw), sig
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Buy signal detection
 # ══════════════════════════════════════════════════════════════════════════════
 
-def detect_buy_signals(highs, lows, closes, opens, volumes,
-                       ema10, ema20, sma50, sma20_vol, atr14,
-                       pivot_price, bLow, search_start, search_end, rs_raw=None):
-    """Detect all buy strategies within a base window."""
-    signals = {}
-
-    # 1. Pivot Breakout
-    for i in range(search_start, search_end + 1):
-        if i < len(highs) and highs[i] > pivot_price:
-            signals['Pivot Breakout'] = (i, pivot_price)
-            break
-
-    # 2. Upside Reversal
-    for i in range(search_start, search_end + 1):
-        if i < 1 or i >= len(closes) or i >= len(atr14):
-            continue
-        bar_range = highs[i] - lows[i]
-        if bar_range <= 0 or atr14[i] <= 0 or bar_range < atr14[i] * 0.8:
-            continue
-        if closes[i] <= (highs[i] + lows[i]) / 2.0 or closes[i] < opens[i]:
-            continue
-        if closes[i] < bLow or closes[i] > pivot_price:
-            continue
-        signals['Upside Reversal'] = (i, closes[i])
-        break
-
-    # 3. Shakeout
-    ema3 = pd.Series(closes).ewm(span=3, adjust=False).mean().values
-    pl, _ = find_pivots(highs, lows, 3, 3)
-    swing_lows = [(b, p) for b, p in pl.items()
-                  if search_start - 10 <= b <= search_end]
-    for sl_bar, sl_price in swing_lows:
-        for i in range(sl_bar + 1, min(sl_bar + 6, search_end + 1, len(lows))):
-            if lows[i] < sl_price:
-                for j in range(i, min(i + 4, search_end + 1, len(closes))):
-                    if closes[j] > ema3[j] and ema3[j] > 0:
-                        if pivot_price * 0.85 <= closes[j] <= pivot_price:
-                            signals['Shakeout'] = (j, closes[j])
-                            break
-                break
-
-    # 4. Volume Dry-Up
-    for i in range(search_start, search_end + 1):
-        if i >= len(volumes) or i >= len(sma20_vol) or sma20_vol[i] <= 0:
-            continue
-        if volumes[i] >= sma20_vol[i] * 0.55:
-            continue
-        if closes[i] < pivot_price * 0.95 or closes[i] > pivot_price * 1.01 or closes[i] < bLow:
-            continue
-        signals['Volume Dry-Up'] = (i, closes[i])
-        break
-
-    # 5. MA Touch
-    for i in range(search_start, search_end + 1):
-        if i >= len(closes):
-            continue
-        if closes[i] < pivot_price * 0.80 or closes[i] > pivot_price or closes[i] < bLow:
-            continue
-        touched = any([
-            ema10[i] > 0 and lows[i] <= ema10[i] * 1.025 and highs[i] >= ema10[i] * 0.975,
-            ema20[i] > 0 and lows[i] <= ema20[i] * 1.025 and highs[i] >= ema20[i] * 0.975,
-            not np.isnan(sma50[i]) and sma50[i] > 0 and lows[i] <= sma50[i] * 1.025 and highs[i] >= sma50[i] * 0.975,
-        ])
-        if touched:
-            signals['MA Touch'] = (i, closes[i])
-            break
-
-    # 6. Pocket Pivot
-    down_vols = np.where(pd.Series(closes).diff() < 0, volumes, 0.0)
-    for i in range(search_start, search_end + 1):
-        if i < 10 or i >= len(closes) or i >= len(volumes):
-            continue
-        if closes[i] <= closes[i - 1]:
-            continue
-        if i >= len(sma20_vol) or sma20_vol[i] <= 0 or volumes[i] <= sma20_vol[i]:
-            continue
-        max_dn_vol = 0.0
-        for j in range(i - 10, i):
-            if j > 0 and closes[j] < closes[j - 1]:
-                max_dn_vol = max(max_dn_vol, volumes[j])
-        if max_dn_vol <= 0 or volumes[i] <= max_dn_vol:
-            continue
-        if closes[i] < pivot_price * 0.90 or closes[i] > pivot_price * 1.01 or closes[i] < bLow:
-            continue
-        signals['Pocket Pivot'] = (i, closes[i])
-        break
-
-    # 7. RS New High
-    if rs_raw is not None and len(rs_raw) > 0:
-        n_rs = len(rs_raw)
-        for i in range(search_start, search_end + 1):
-            if i < 63 or i >= n_rs:
-                continue
-            nh = (rs_raw[i] > np.max(rs_raw[max(0, i - 252):i]) or
-                  rs_raw[i] > np.max(rs_raw[max(0, i - 126):i]) or
-                  rs_raw[i] > np.max(rs_raw[max(0, i - 63):i]))
-            if not nh:
-                continue
-            if closes[i] < pivot_price * 0.85 or closes[i] > pivot_price * 1.01 or closes[i] < bLow:
-                continue
-            signals['RS New High'] = (i, closes[i])
-            break
-
-    # 8. SMA50 Bounce
-    for i in range(search_start, search_end + 1):
-        if i < 2 or i >= len(closes) or i >= len(sma50):
-            continue
-        if np.isnan(sma50[i]) or sma50[i] <= 0:
-            continue
-        prev_tested = (lows[i - 1] <= sma50[i - 1] * 1.02
-                       if not np.isnan(sma50[i - 1]) and sma50[i - 1] > 0 else False)
-        if not prev_tested or closes[i] <= sma50[i]:
-            continue
-        if i < len(opens) and closes[i] < opens[i]:
-            continue
-        if closes[i] < pivot_price * 0.80 or closes[i] > pivot_price or closes[i] < bLow:
-            continue
-        signals['SMA50 Bounce'] = (i, closes[i])
-        break
-
-    # 9. Any Signal (first chronologically)
-    if signals:
-        first = min(signals.keys(), key=lambda s: signals[s][0])
-        signals['Any Signal'] = signals[first]
-
-    return signals
+def detect_buy_signals(sig, highs, lows, closes, opens, pivot_price, bLow,
+                       search_start, search_end, bo_bar):
+    """Detect all buy strategies within a base window — OUR engine's signal book
+    (the same 8-strategy definitions the scanner_universe backtest uses)."""
+    return _engine_detect_buy_signals(sig, highs, lows, closes, opens, pivot_price,
+                                      bLow, search_start, search_end, bo_bar)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -549,8 +265,12 @@ def pos_size(quality):
 # Main backtest
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_full_backtest():
+def run_full_backtest(args=None):
     start_time = time.time()
+
+    spy_regime = getattr(args, "spy_regime", "all")
+    max_price = getattr(args, "max_price", 0.0)
+    max_tickers = getattr(args, "max_tickers", 0)
 
     # Load SPY
     spy_path = TICKER_CACHE_DIR / "SPY_1d.parquet"
@@ -583,8 +303,15 @@ def run_full_backtest():
                 qualified.append((ticker, f, last_close, avg_vol))
         except Exception:
             continue
+    if max_tickers:
+        qualified = qualified[:max_tickers]
 
     print(f"✅ {len(qualified)} tickers pass filters (price > ${MIN_PRICE}, vol > {MIN_AVG_VOL_50:,})")
+    print(f"   Scanner: tv_pattern_scanner.py (our drw_pattern.pine port, via tv_engine)")
+    if spy_regime != "all":
+        print(f"   Market regime: {spy_regime} only")
+    if max_price > 0:
+        print(f"   Max pivot price: ${max_price:,.0f}")
 
     all_trades = []
     bases_total = 0
@@ -595,11 +322,11 @@ def run_full_backtest():
             df = pd.read_parquet(fpath)
             if df.empty:
                 continue
-            bases, highs, lows, closes, opens, volumes, ema10, ema20, sma50, sma20_vol, atr14, rs_raw = \
-                scan_ticker_for_bases(df, spy_close)
-
-            if not bases:
+            bases, arrays, sig = scan_ticker_for_bases(df, spy_close, ticker, fpath)
+            if not bases or arrays is None or sig is None:
                 continue
+            highs, lows, closes, opens, volumes, ema10, ema20, sma50, sma20_vol, atr14, rs_raw = arrays
+            reg = regime_arrays(spy_close, df)
 
             bases_total += len(bases)
             tickers_processed += 1
@@ -607,19 +334,55 @@ def run_full_backtest():
             for base in bases:
                 bq = calc_base_quality(base['bDepPct'], base['bCount'])
                 ps = pos_size(bq)
+                ctx = {
+                    "pattern": base['pattern_name'], "raw_pattern": base['raw_pattern'],
+                    "shape": base.get('shape') or "",
+                    "pat_groups": "|".join(sorted(pat_groups({
+                        "pattern": base['pattern_name'], "raw_pattern": base['raw_pattern'],
+                        "bDepPct": base['bDepPct'],
+                    }))),
+                    "acc_ratio": (round(base['acc_days'] / base['bCount'], 3)
+                                   if base['bCount'] else None),
+                    "dis_ratio": (round(base['dis_days'] / base['bCount'], 3)
+                                   if base['bCount'] else None),
+                    "neu_ratio": (round(base['neu_days'] / base['bCount'], 3)
+                                   if base['bCount'] else None),
+                }
 
                 # Search window: from base start to break bar + 5
                 search_start = max(0, base['start_bar'])
                 search_end = min(base['break_bar'] + 5, len(closes) - 1)
 
                 buy_signals = detect_buy_signals(
-                    highs, lows, closes, opens, volumes,
-                    ema10, ema20, sma50, sma20_vol, atr14,
+                    sig, highs, lows, closes, opens,
                     base['pivot_price'], base['bLow'],
-                    search_start, search_end, rs_raw)
+                    search_start, search_end, base['break_bar'])
 
                 if not buy_signals:
                     continue
+
+                def _ctx_cols(entry_bar, entry_price):
+                    cols = {
+                        "shape": ctx["shape"], "raw_pattern": ctx["raw_pattern"],
+                        "acc_ratio": ctx["acc_ratio"], "dis_ratio": ctx["dis_ratio"],
+                        "neu_ratio": ctx["neu_ratio"], "pat_groups": ctx["pat_groups"],
+                        "price_bucket": price_bucket(entry_price),
+                    }
+                    if reg is not None and entry_bar < len(reg["above200"]):
+                        ab = bool(reg["above200"][entry_bar])
+                        bl = bool(reg["bull"][entry_bar])
+                        s200 = reg["s200"][entry_bar]
+                        spy = reg["spy"][entry_bar]
+                        cols["spy_regime"] = regime_label(ab, bl)
+                        cols["spy_above200"] = ab
+                        cols["spy_bull"] = bl
+                        cols["spy_vs_200_pct"] = (
+                            round((spy / s200 - 1.0) * 100, 1)
+                            if (np.isfinite(s200) and s200 > 0) else None)
+                    else:
+                        cols.update({"spy_regime": "unknown", "spy_above200": None,
+                                     "spy_bull": None, "spy_vs_200_pct": None})
+                    return cols
 
                 # Composite Score
                 sig_names_real = {k: v for k, v in buy_signals.items()
@@ -664,6 +427,7 @@ def run_full_backtest():
                             'win': ret > 0,
                             'last_close': lc,
                             'avg_vol_50d': av,
+                            **_ctx_cols(sig_bar, entry_price),
                         })
 
                 # Generate ALL combinations (pairs through all-N).
@@ -696,6 +460,7 @@ def run_full_backtest():
                                 'base_quality': bq, 'pos_size': ps,
                                 'risk_amount': risk, 'rr_ratio': rr, 'win': ret > 0,
                                 'last_close': lc, 'avg_vol_50d': av,
+                                **_ctx_cols(bars[ei], prices[ei]),
                             })
 
         except Exception:
@@ -707,6 +472,23 @@ def run_full_backtest():
 
     df = pd.DataFrame(all_trades)
     elapsed = time.time() - start_time
+
+    # ── Findings filters (tv_pattern_history_backtest.py): market regime + price cap ──
+    if spy_regime == "above200":
+        before = len(df)
+        df = df[df["spy_above200"].fillna(True)]
+        print(f"   SPY regime 'above200': kept {len(df):,} of {before:,} trades")
+    elif spy_regime == "bull":
+        before = len(df)
+        df = df[df["spy_bull"].fillna(True)]
+        print(f"   SPY regime 'bull': kept {len(df):,} of {before:,} trades")
+    if max_price > 0:
+        before = len(df)
+        df = df[df["pivot_price"] <= max_price]
+        print(f"   Max pivot price ${max_price:,.0f}: kept {len(df):,} of {before:,} trades")
+    if df.empty:
+        print("❌ No trades after filters")
+        return
 
     print(f"\n{'='*100}")
     print(f"📊 FULL BACKTEST COMPLETE — {elapsed:.0f}s")
@@ -755,8 +537,33 @@ def run_full_backtest():
 
     print(f"\n💾 Summary saved to {summary_path} ({len(summary_df)} rows)")
 
+    # ── Findings breakdowns (tv_pattern_history_backtest.py) ──
+    if "spy_regime" in df.columns:
+        print("\n📈 BY MARKET REGIME AT ENTRY")
+        for rl in ["Bull", "Mixed", "Bear", "unknown"]:
+            s = df[df["spy_regime"] == rl]
+            if len(s) >= 5:
+                print(f"   {rl:<8s}: {len(s):>8,} trades  win {(s['win'].mean() * 100):>5.1f}%  "
+                      f"avg {s['ret'].mean():>+6.2f}%")
+    if "price_bucket" in df.columns:
+        print("\n💰 BY PRICE BUCKET")
+        order = ["<$10", "$10-25", "$25-50", "$50-100", "$100-250", "$250+"]
+        for bk in [b for b in order if b in set(df["price_bucket"])]:
+            s = df[df["price_bucket"] == bk]
+            if len(s) >= 5:
+                print(f"   {bk:<9s}: {len(s):>8,} trades  win {(s['win'].mean() * 100):>5.1f}%  "
+                      f"avg {s['ret'].mean():>+6.2f}%")
+
     return df, summary_df
 
 
 if __name__ == "__main__":
-    run_full_backtest()
+    import argparse
+    ap = argparse.ArgumentParser(description="Full backtest on our TV pattern engine")
+    ap.add_argument("--max-tickers", type=int, default=0)
+    ap.add_argument("--spy-regime", choices=["all", "above200", "bull"], default="all",
+                    help="keep only trades entered while SPY held its 200-day (above200) or "
+                         "both 50 & 200-day (bull); all = no filter")
+    ap.add_argument("--max-price", type=float, default=0.0,
+                    help="drop trades whose pivot price is above this (0 = no cap)")
+    run_full_backtest(ap.parse_args())

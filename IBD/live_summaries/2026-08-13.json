@@ -1,0 +1,219 @@
+{
+  "date": "2026-08-13",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-13.md",
+  "market_summary": "Overall Sentiment: Constructive, with a bias toward a new leg higher. Justin Nielsen described the action as \"very constructive\" and has increased exposure to the 90%+ range. Ed Carson likes the market, noting that the sideways pause has provided buying opportunities for those who were underinvested. The key question is whether the indexes can hold today's breakout above the recent range; a close back inside would be a warning sign.",
+  "tickers": [
+    "APH",
+    "ERO",
+    "NVDA",
+    "FIVE",
+    "HPE",
+    "DELL",
+    "MRX",
+    "NTAP",
+    "TEVA",
+    "OMDA",
+    "MU",
+    "AVGO",
+    "TSM",
+    "STX",
+    "SNDK",
+    "CRDO",
+    "BNS",
+    "TD",
+    "MT",
+    "RBRK",
+    "FTNT",
+    "ENVA",
+    "LLY",
+    "BE",
+    "DDOG",
+    "CART",
+    "ATRO",
+    "CRWD",
+    "PLTR",
+    "MDB",
+    "MDY",
+    "WSM",
+    "EME",
+    "ARXS",
+    "HOOD",
+    "SBUX",
+    "TXRH",
+    "CAKE",
+    "EAT",
+    "MSGS",
+    "SPHR",
+    "LQDA",
+    "AMAT",
+    "CSCO",
+    "COHR",
+    "CBRS",
+    "LNVGY",
+    "HPQ",
+    "TPR",
+    "GO",
+    "PAAS",
+    "CRS",
+    "DDS",
+    "YETI",
+    "LUNR",
+    "RKLB",
+    "IREN",
+    "DT",
+    "FCX",
+    "SCCO",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "RSP",
+    "QQQE",
+    "SMH",
+    "IGV",
+    "MAGS",
+    "TNX",
+    "USO"
+  ],
+  "ticker_details": {
+    "APH": {
+      "actionability": "Actionable (add on handle breakout)",
+      "technical_action": "Pulled back after a brief breakout attempt, forming a potential handle. Justin started a small position with a tight stop.",
+      "story": "Electronic connectors / AI data center buildout. Composite 96, EPS 99."
+    },
+    "ERO": {
+      "actionability": "Watchlist",
+      "technical_action": "Breaking out of a volatile base, holding a short-term uptrend. Recent Leaderboard addition.",
+      "story": "Copper/gold miner. Small-cap play on long-term copper demand for data centers."
+    },
+    "NVDA": {
+      "actionability": "Actionable",
+      "technical_action": "Improving, above the 50-day line, trying to clear short-term resistance. Justin adding.",
+      "story": "AI kingpin. Relative strength improving after being a laggard."
+    },
+    "FIVE": {
+      "actionability": "Actionable",
+      "technical_action": "Moving above a short handle, sixth straight up week. Strong earnings acceleration (158% growth).",
+      "story": "Discount retailer. A leader in a recovering retail space."
+    },
+    "HPE": {
+      "actionability": "Actionable",
+      "technical_action": "Held above 50-day through shakeouts, now at recent highs. Justin has position.",
+      "story": "AI server/edge. A more stable alternative to Dell."
+    },
+    "DELL": {
+      "actionability": "Watchlist",
+      "technical_action": "Choppy, wide and loose, but trying to hold above 469.47. Justin re-bought.",
+      "story": "AI server leader. Volatile; only for those with high risk tolerance."
+    },
+    "MRX": {
+      "actionability": "Watchlist (pullback)",
+      "technical_action": "Gap-up on huge earnings beat, now extended. Dave would wait for a pullback to 50-day/10-week.",
+      "story": "Financial services (market-making). 61% EPS growth."
+    },
+    "NTAP": {
+      "actionability": "Extended",
+      "technical_action": "Broke out, undercut intraday to 180.10, then reversed and closed high. Now extended at $207.",
+      "story": "AI storage. Lesson in giving a stock room when fundamentals are strong."
+    },
+    "TEVA": {
+      "actionability": "Watchlist",
+      "technical_action": "Clearing a resistance area from a long base. Justin says second tier.",
+      "story": "Pharmaceuticals. Fundamentals improving but RS not strong."
+    },
+    "OMDA": {
+      "actionability": "Actionable (small size)",
+      "technical_action": "Cup-with-high-handle, in buy zone. 44% sales growth.",
+      "story": "Medical services small-cap. High ATR (6%), so manage size."
+    },
+    "MU": {
+      "actionability": "Watchlist (wait for breakout)",
+      "technical_action": "Up 5%, hitting resistance at the 50-day line. High ATR; risk of sharp reversal.",
+      "story": "AI memory leader. Needs to clear 50-day and $1,011.77 to improve."
+    },
+    "AVGO": {
+      "actionability": "Watchlist",
+      "technical_action": "Improving, holding support around prior high; still basing.",
+      "story": "Broadcom. Needs more time or a handle to be actionable."
+    },
+    "TSM": {
+      "actionability": "Watchlist",
+      "technical_action": "At the 50-day line, geopolitical risk. Dave would use 50-day entry with stop at 21-day, or wait for handle.",
+      "story": "Taiwan Semi. Long-term leader, but headline risk."
+    },
+    "STX": {
+      "actionability": "Watchlist",
+      "technical_action": "Above 50-day, in the same memory group. Ed says still needs to clear 936.",
+      "story": "Seagate. A better chart than MU/SNDK but not a buy yet."
+    },
+    "SNDK": {
+      "actionability": "Avoid",
+      "technical_action": "Just reclaimed 21-day line for first time in weeks. Still below 50-day.",
+      "story": "SanDisk. A long way from being a buy."
+    },
+    "CRDO": {
+      "actionability": "Watchlist",
+      "technical_action": "Above 50-day and short-term highs, but 15-16% above 50-day, 10% ATR. Ed wants a handle.",
+      "story": "AI connectivity. Volatile; yesterday was the better entry."
+    },
+    "BNS": {
+      "actionability": "Watchlist",
+      "technical_action": "Breaking out above 90.47, but long-term RS disappointing. Dave prefers TD.",
+      "story": "Bank of Nova Scotia. Financial sector leadership, but not the strongest name."
+    },
+    "TD": {
+      "actionability": "Actionable (on pullback)",
+      "technical_action": "In Leaderboard since April, slow steady gain, tested 50-day once.",
+      "story": "Toronto-Dominion. A better Canadian bank play."
+    },
+    "MT": {
+      "actionability": "Actionable",
+      "technical_action": "At new highs, still in buy range. ArcelorMittal.",
+      "story": "Global steel. No US tariff benefit but performing well."
+    },
+    "RBRK": {
+      "actionability": "Watchlist",
+      "technical_action": "Extended, moving above $100. Ed sees cybersecurity momentum but wants a pause.",
+      "story": "Rubrik. Fundamentals improving; not actionable here."
+    },
+    "FTNT": {
+      "actionability": "Actionable",
+      "technical_action": "Tight action near highs, around flat base. Ed sees it as the cybersecurity leader that triggered the move.",
+      "story": "Fortinet."
+    },
+    "ENVA": {
+      "actionability": "Watchlist",
+      "technical_action": "Strong move after earnings, now extended. Justin says buy point was the pullback after ants.",
+      "story": "Consumer finance. Needs consolidation."
+    },
+    "LLY": {
+      "actionability": "Watchlist",
+      "technical_action": "Not at a buy. Dave would watch for breakout above 1249.45.",
+      "story": "Eli Lilly. Chopping sideways; 800-lb gorilla in biotech."
+    },
+    "BE": {
+      "actionability": "Avoid",
+      "technical_action": "At 50-day resistance, 13% ATR. Justin says no thank you unless it clears 50-day and you can manage risk.",
+      "story": "Bloom Energy. Too volatile."
+    },
+    "DDOG": {
+      "actionability": "Watchlist",
+      "technical_action": "Clinging to 50-day after disappointing earnings. Needs new base.",
+      "story": "Datadog."
+    },
+    "CART": {
+      "actionability": "Actionable",
+      "technical_action": "Pop on earnings, pullback, retaking buy point. Justin's final pick, actionable but no room.",
+      "story": "Instacart."
+    },
+    "ATRO": {
+      "actionability": "Watchlist",
+      "technical_action": "Strong move yesterday, holding below buy point. Ed's final pick.",
+      "story": "Aerospace. Massive growth (2093%)."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": [],
+  "source": "",
+  "kind": "live"
+}

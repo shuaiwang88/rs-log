@@ -600,8 +600,9 @@ STRATEGIES = {
                                      "rsiEntry": True, "rsiLongThresh": 50, "rsiShortThresh": 50,
                                      "fractional": True, "targets": (3.0, 6.0, 9.0)},
     # Same Donchian core as Baseline, but only allowed to enter while the ticker is
-    # concurrently inside a real IBD base per the production scanner (python/ibd_pattern_scanner.py).
-    # Tests whether gating trend-following entries by pattern quality beats the ungated baseline.
+    # concurrently inside one of OUR scanner's bases (python/tv_pattern_scanner.py, the
+    # drw_pattern.pine port). Tests whether gating trend-following entries by pattern
+    # quality beats the ungated baseline.
     "alt48_pattern_gated": {**BASE, "patternGate": True},
 }
 
@@ -622,24 +623,25 @@ def _init_worker(spy_above_200, cfg):
 
 
 def _pattern_gate_for(ticker, fpath, n_bars):
-    """Bool array (len n_bars) True where the ticker is inside a real IBD base, per the
-    production scanner. Loaded lazily/once per worker process to avoid paying the cost
-    for strategies that don't use it."""
+    """Bool array (len n_bars) True where the ticker was inside one of OUR scanner's
+    bases (drw_pattern.pine port), rebuilt from its ended-base history + live status.
+    Loaded lazily/once per worker process to avoid paying the cost for strategies that
+    don't use it."""
     global _G_SCAN_FN
     if _G_SCAN_FN is None:
-        from scanner_universe_backtest import load_patched_scanner
-        _G_SCAN_FN, _ = load_patched_scanner()
+        from tv_engine import base_gate, prepare_frame, scan_record
+        _G_SCAN_FN = (prepare_frame, scan_record, base_gate)
     gate = np.zeros(n_bars, dtype=bool)
     try:
-        res = _G_SCAN_FN(ticker, str(fpath))
-        hist = res.get("history") if res else None
-        if hist:
-            m = len(hist)
-            offset = n_bars - m
-            if offset >= 0:
-                for k, st in enumerate(hist):
-                    if st.get("pOn") and st.get("pCode", 0) > 0:
-                        gate[offset + k] = True
+        _prepare, _scan, _gate = _G_SCAN_FN
+        raw = pd.read_parquet(fpath)
+        df = _prepare(raw)
+        if df is None:
+            return gate
+        rec, _ = _scan(ticker, str(fpath), None, df)
+        if rec is None:
+            return gate
+        gate = _gate(rec, len(df), n_bars, df.index, raw.index)
     except Exception:
         pass
     return gate

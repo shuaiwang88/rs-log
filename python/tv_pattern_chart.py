@@ -42,6 +42,12 @@ TIGHT_C = "#00BCD4"     # color.aqua - Tight Closes Detector boxes
 ENTRY_C = "#007AFF"     # color.rgb(0, 122, 255, 95)
 STOP_C = "#FF3B30"      # color.rgb(255, 59, 48, 95)
 TARGET_C = "#34C759"    # color.rgb(52, 199, 89, 95)
+VCP_C = "#8E24AA"       # drw_vcp.pine's colStruct is #26a69a too, but that collides visually
+                        # with HTF_C above since VCP can be live at the same time as an HTF -
+                        # purple keeps the two readable on the same chart.
+VCP_PIVOT_C = "#2962FF"  # drw_vcp.pine colPiv
+VCP_BRK_C = "#00C853"    # drw_vcp.pine colBrk
+DB_C = "#FFEB3B"        # double bottom W - yellow, distinct from every other overlay here
 UP, DOWN = "#26a69a", "#ef5350"
 
 
@@ -226,6 +232,64 @@ def build_tv_pattern_figure(ticker: str, df: pd.DataFrame, result: Dict[str, Any
             for key, col in (("entry", ENTRY_C), ("stop", STOP_C), ("target", TARGET_C)):
                 lo, hi = (bx.get(key) or [None, None])[:2]
                 rect(X(s), lo, X(e), hi, col, 0.16, width=0)
+
+    # ── Double bottom: the detector's own 4 corner points (drw_pattern.pine) ─────────────
+    # Independent of pattern_name/base_shape - a double bottom can be live at the same time as
+    # a Cup/Base/Cup+Handle, so like VCP below this is not gated on `pname`. Only the 3
+    # segments the detector actually gives coordinates for are drawn (fH->fL->sH->sL); nothing
+    # is inferred beyond that (see the module note on why re-derived geometry draws a different
+    # W than the one that was matched).
+    db = result.get("double_bottom")
+    if db:
+        fh, fl = _pos(idx, db.get("first_high_date")), _pos(idx, db.get("first_low_date"))
+        sh, sl = _pos(idx, db.get("second_high_date")), _pos(idx, db.get("second_low_date"))
+        pts = [(fh, db.get("first_high")), (fl, db.get("first_low")),
+               (sh, db.get("second_high")), (sl, db.get("second_low"))]
+        if all(p is not None and y is not None for p, y in pts):
+            for (p0, y0), (p1, y1) in zip(pts[:-1], pts[1:]):
+                line(X(p0), y0, X(p1), y1, DB_C, 2)
+            annos.append(dict(
+                x=X(sl), y=db.get("second_low"), xref="x", yref="y", showarrow=False,
+                xanchor="left", yanchor="top", font=dict(color=DB_C, size=10),
+                text=" Double Bottom"))
+
+    # ── VCP: Volatility Contraction Pattern (pine/drw_vcp.pine) ──────────────────────────
+    # A separate indicator with its own state and trend filter that never reads or writes the
+    # base/cup/handle/HTF state above, so it can be live at the same time as any of them - this
+    # section is deliberately not gated on `pname`/`shape_name`.
+    vcp = result.get("vcp")
+    if vcp:
+        leg_pts = []
+        for leg in (vcp.get("legs") or []):
+            hp, lp = _pos(idx, leg.get("high_date")), _pos(idx, leg.get("low_date"))
+            if hp is None or lp is None:
+                continue
+            line(X(hp), leg.get("high"), X(lp), leg.get("low"), VCP_C, 2)
+            leg_pts.append((hp, leg.get("high")))
+
+        pivot = vcp.get("pivot")
+        legs = vcp.get("legs") or []
+        if pivot and legs:
+            piv_bar = _pos(idx, legs[-1].get("high_date"))
+            if piv_bar is not None:
+                line(X(piv_bar), pivot, X(n - 1), pivot, VCP_PIVOT_C, 2, "dot")
+
+        if vcp.get("breakout"):
+            fig.add_trace(go.Scatter(
+                x=[X(n - 1)], y=[df["Low"].iloc[-1] * 0.98], mode="markers",
+                marker=dict(symbol="triangle-up", size=12, color=VCP_BRK_C),
+                showlegend=False, hoverinfo="skip", name="VCP Breakout"))
+
+        if leg_pts:
+            last_x, last_y = leg_pts[-1]
+            _n_legs = vcp.get("contractions") or 0
+            _depth_txt = (f" · last {vcp['last_depth_pct']:.1f}%"
+                         if vcp.get("last_depth_pct") is not None else "")
+            annos.append(dict(
+                x=X(last_x), y=last_y, xref="x", yref="y", showarrow=False, xanchor="right",
+                yanchor="bottom", font=dict(color=VCP_C, size=10),
+                text=f" VCP {vcp.get('status')} · {_n_legs} contraction{'s' if _n_legs != 1 else ''}"
+                     f"{_depth_txt}"))
 
     # The buy point is deliberately NOT drawn. It is the base top, which the highLine above
     # already marks, and a full-width rule across the chart competed with the shape it was

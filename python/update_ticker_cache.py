@@ -6,9 +6,13 @@ Automates updating and maintaining max daily OHLCV historical parquet files in `
 - For new tickers: Fetches full max daily historical data via yfinance.
 - For existing tickers: Fetches latest bars (period='5d'), merges incrementally, and updates parquets.
 - Maintains `<TICKER>_1d.parquet` (full history).
+
+`--run-screener` chains `build_daily_screener.py` after the price pass (app.py's
+Price Cache button passes it), so output/daily_screener.csv reflects the fresh bars.
 """
 
 import sys
+import subprocess
 import time
 from pathlib import Path
 import pandas as pd
@@ -321,6 +325,12 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
     print(f"🔄 Starting ticker_cache update for {len(tickers):,} tickers (Target earliest date: {target_min_date})...")
     start_time = time.time()
 
+    # yfinance is the ONLY price source: defeatbeta-api's snapshot lags the live
+    # session (verified 2026-08-10 - its last bar was the prior Friday while
+    # yfinance carried the current day), so it is no longer used for OHLCV.
+    # It remains the first-choice source for financial statements (see
+    # fetch_fundamentals.py / defeatbeta_source.py).
+
     # Determine which tickers need full initial fetch vs incremental 5d update
     need_full = []
     need_incremental = []
@@ -547,6 +557,77 @@ def update_ticker_cache_batch(tickers=None, batch_size=100, delay_between_batche
     elapsed = time.time() - start_time
     print(f"✅ Ticker cache update finished in {elapsed:.2f} seconds.")
 
+def run_daily_screener():
+    """Rebuild output/daily_screener.csv from the freshly updated ticker_cache.
+
+    Runs `python/build_daily_screener.py` (~15-20s) as a subprocess so the daily
+    screener always reflects the bars this run just fetched. Called from __main__
+    when --run-screener is passed (the app.py Price Cache button chains it after
+    the OHLCV pass). Failure here is non-fatal - the cache update already succeeded.
+    """
+    script = REPO_DIR / "python" / "build_daily_screener.py"
+    if not script.exists():
+        print("  ⚠ daily screener: build_daily_screener.py not found - skipped.")
+        return
+    print("  📋 Rebuilding daily screener from ticker_cache (build_daily_screener.py)...")
+    t0 = time.time()
+    try:
+        res = subprocess.run([sys.executable, str(script)],
+                             cwd=str(REPO_DIR),
+                             capture_output=True, text=True, timeout=900)
+        tail = (res.stdout or "").strip().splitlines()[-6:]
+        if res.returncode == 0:
+            print(f"  ✓ daily screener rebuilt in {time.time() - t0:.1f}s")
+            for ln in tail:
+                print(f"      {ln}")
+        else:
+            print(f"  ✗ daily screener failed (rc={res.returncode}) in "
+                  f"{time.time() - t0:.1f}s")
+            for ln in ((res.stderr or "").strip().splitlines()[-6:]):
+                print(f"      {ln}")
+    except subprocess.TimeoutExpired:
+        print("  ✗ daily screener timed out after 15 min")
+    except Exception as e:
+        print(f"  ✗ daily screener error: {e}")
+
+
+def run_ratings_scanner():
+    """Run the IBD-Style Ratings Scanner over the freshly updated ticker_cache.
+
+    Runs `python/run_ratings_scanner.py` (~10s for the full universe - it is
+    OHLCV-only, no fundamentals fetch) as a subprocess so output/ratings_scan.csv
+    reflects the bars this run just fetched. Called from
+    __main__ when --run-ratings-scan is passed (the app.py Price Cache button
+    chains it after the OHLCV pass, alongside --run-screener). Failure here is
+    non-fatal - the cache update already succeeded.
+    """
+    script = REPO_DIR / "python" / "run_ratings_scanner.py"
+    if not script.exists():
+        print("  ⚠ ratings scanner: run_ratings_scanner.py not found - skipped.")
+        return
+    print("  📊 Running IBD-Style Ratings Scanner over ticker_cache "
+          "(run_ratings_scanner.py)...")
+    t0 = time.time()
+    try:
+        res = subprocess.run([sys.executable, str(script)],
+                             cwd=str(REPO_DIR),
+                             capture_output=True, text=True, timeout=900)
+        tail = (res.stdout or "").strip().splitlines()[-6:]
+        if res.returncode == 0:
+            print(f"  ✓ ratings scanner finished in {time.time() - t0:.1f}s")
+            for ln in tail:
+                print(f"      {ln}")
+        else:
+            print(f"  ✗ ratings scanner failed (rc={res.returncode}) in "
+                  f"{time.time() - t0:.1f}s")
+            for ln in ((res.stderr or "").strip().splitlines()[-6:]):
+                print(f"      {ln}")
+    except subprocess.TimeoutExpired:
+        print("  ✗ ratings scanner timed out after 15 min")
+    except Exception as e:
+        print(f"  ✗ ratings scanner error: {e}")
+
+
 def update_fundamentals_cache(tickers, max_age_days=7, delay=0.3, workers=1,
                               timeout=None):
     """Fetch and cache EPS/ROE fundamentals from yfinance for the given tickers.
@@ -632,4 +713,8 @@ if __name__ == "__main__":
                                       workers=_arg("--fund-workers", 1, int),
                                       timeout=_arg("--fund-timeout", None,
                                                    lambda s: None if str(s).lower() in ("0", "none", "") else int(float(s) * 60)))
+        if "--run-screener" in sys.argv:
+            run_daily_screener()
+        if "--run-ratings-scan" in sys.argv:
+            run_ratings_scanner()
 

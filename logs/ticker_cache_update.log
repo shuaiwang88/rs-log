@@ -14998,3 +14998,1443 @@ $TSE: possibly delisted; no timezone found
   ✓ Created/Backfilled 586 / 674 ticker parquets.
 ✅ Ticker cache update finished in 127.80 seconds.
 🧹 prune: removed 87 of 3,923 tickers (<$10 or <300,000 avg vol), 7 MB
+
+============================================================
+2026-08-10T16:06:20.510768 [OHLCV only]
+🔄 Starting ticker_cache update for 4,013 tickers (Target earliest date: 2024-06-04)...
+  defeatbeta-api: 3,774/3,989 tickers refreshed directly (215 left for yfinance)
+  • 214 tickers with complete cache (incremental 5d update)
+  • 25 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 3: Processed 214 / 214 tickers (213 saved successfully)...
+  ✓ Updated 213 / 214 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 1: Processed 25 / 25 tickers (20 saved successfully)...
+  ✓ Created/Backfilled 20 / 25 ticker parquets.
+✅ Ticker cache update finished in 202.05 seconds.
+🧹 prune: removed 141 of 4,002 tickers (<$10 or <300,000 avg vol), 11 MB
+
+============================================================
+2026-08-10T16:49:25.779805 [OHLCV only]
+$ACLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['ACLX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: ALEX"}}}
+$APLS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$ALEX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['APLS', 'ALEX', 'AL']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AVNS: possibly delisted; no price data found  (period=5d)
+$ASGN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+['ASGN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BLD: possibly delisted; no price data found  (period=5d)
+$BLFY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['BLD']: possibly delisted; no price data found  (period=5d)
+['BLFY', 'BK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$CFLT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['CFLT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CTLP: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CNTA: possibly delisted; no price data found  (period=5d)
+$CSGS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CPRX: possibly delisted; no price data found  (period=5d)
+$CTRA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['CTLP', 'CSGS', 'CTRA']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['CNTA', 'CPRX']: possibly delisted; no price data found  (period=5d)
+$CWAN: possibly delisted; no price data found  (period=5d)
+$CVGW: possibly delisted; no price data found  (period=5d)
+$CUK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$DAWN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+4 Failed downloads:
+['CWAN', 'CVGW']: possibly delisted; no price data found  (period=5d)
+['CUK', 'DAWN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$EHAB: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['EHAB']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FIHL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$EXAS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['FIHL', 'EXAS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FOLD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FOLD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GTLS: possibly delisted; no price data found  (period=5d)
+$GLDD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['GTLS']: possibly delisted; no price data found  (period=5d)
+['GLDD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HOLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HTBK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['HOLX', 'HTBK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$IAS: possibly delisted; no price data found  (period=5d)
+$IAC: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['IAS']: possibly delisted; no price data found  (period=5d)
+['IAC']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$KALV: possibly delisted; no price data found  (period=5d)
+$JHG: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['KALV', 'JHG']: possibly delisted; no price data found  (period=5d)
+$KW: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['KW']: possibly delisted; no price data found  (period=5d)
+$MASI: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['MASI']: possibly delisted; no price data found  (period=5d)
+$MEG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MEG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$NSA: possibly delisted; no price data found  (period=5d)
+$NFBK: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['NSA', 'NFBK']: possibly delisted; no price data found  (period=5d)
+$NUVL: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['NUVL']: possibly delisted; no price data found  (period=5d)
+$PRA: possibly delisted; no price data found  (period=5d)
+$PKST: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['PRA']: possibly delisted; no price data found  (period=5d)
+['PKST']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$PSTG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$RAPT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['PSTG', 'RAPT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SATS: possibly delisted; no price data found  (period=5d)
+$RNAM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['SATS']: possibly delisted; no price data found  (period=5d)
+['RNAM']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SCVL: possibly delisted; no price data found  (period=5d)
+$SEMR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SLNO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEM: possibly delisted; no price data found  (period=5d)
+$SEE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['SCVL', 'SEM']: possibly delisted; no price data found  (period=5d)
+['SEMR', 'SLNO', 'SEE']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$STEL: possibly delisted; no price data found  (period=5d)
+$SNCY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['STEL']: possibly delisted; no price data found  (period=5d)
+['SNCY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TERN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TGNA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['TERN', 'TGNA']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TMHC: possibly delisted; no price data found  (period=5d)
+$TPH: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$THR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+['TPH', 'THR']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VYNE: possibly delisted; no price data found  (period=5d)
+$VRNT: possibly delisted; no price data found  (period=5d)
+$VRE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VSCO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VTYX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['VYNE', 'VRNT']: possibly delisted; no price data found  (period=5d)
+['VRE', 'VSCO', 'VTYX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AGAE: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+$BITF: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+
+6 Failed downloads:
+['AGAE', 'BHAT', 'AHH', 'ATON', 'BITF', 'ALTS']: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+$EM: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$EB: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+$EWCZ: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+
+11 Failed downloads:
+['EKSO', 'EM', 'CHAC', 'DTCK', 'EXPI', 'EB', 'DVS', 'CMBM', 'EWCZ', 'ETHZ']: possibly delisted; no timezone found
+['CGCT']: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+$IDIAU: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+$FFWM: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+$IINN: possibly delisted; no timezone found
+$IMG: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+$KLTO: possibly delisted; no timezone found
+$ITRM: possibly delisted; no timezone found
+
+8 Failed downloads:
+['IDIAU']: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+['FFWM', 'JFBR', 'IINN', 'IMG', 'IOBT', 'KLTO', 'ITRM']: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+$MYNZ: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$LITM: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+
+5 Failed downloads:
+['NBY', 'MYNZ', 'ONTF', 'LITM', 'NGD']: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+$SGMO: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+$SGN: possibly delisted; no timezone found
+$PELI: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$RVYL: possibly delisted; no timezone found
+
+9 Failed downloads:
+['QIPT', 'SGN', 'PELI', 'OS', 'STKL', 'QVCGP', 'SAVA', 'RVYL']: possibly delisted; no timezone found
+['SGMO']: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+$ULY: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$TIRX: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+$TIVC: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+$TICKER: possibly delisted; no timezone found
+$UDMY: possibly delisted; no timezone found
+$TSE: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+
+12 Failed downloads:
+['ULY', 'XWIN', 'TIRX', 'UHG', 'UOKA', 'VVPR', 'TIVC', 'TICKER', 'UDMY', 'TSE', 'XTKG']: possibly delisted; no timezone found
+['SVAC']: possibly delisted; no price data found  (1d 1927-09-04 -> 2026-08-10)
+🔄 Starting ticker_cache update for 4,005 tickers (Target earliest date: 2024-06-04)...
+  • 3,411 tickers with complete cache (incremental 5d update)
+  • 594 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,411 tickers (491 saved successfully)...
+    Batch 10: Processed 1,000 / 3,411 tickers (980 saved successfully)...
+    Batch 15: Processed 1,500 / 3,411 tickers (1,472 saved successfully)...
+    Batch 20: Processed 2,000 / 3,411 tickers (1,965 saved successfully)...
+    Batch 25: Processed 2,500 / 3,411 tickers (2,460 saved successfully)...
+    Batch 30: Processed 3,000 / 3,411 tickers (2,947 saved successfully)...
+    Batch 35: Processed 3,411 / 3,411 tickers (3,350 saved successfully)...
+  ✓ Updated 3,350 / 3,411 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+  ! SHAZ: price discontinuity (merge seam) - refetching full history
+    Batch 5: Processed 500 / 594 tickers (461 saved successfully)...
+    Batch 6: Processed 594 / 594 tickers (543 saved successfully)...
+  ✓ Created/Backfilled 543 / 594 ticker parquets.
+✅ Ticker cache update finished in 142.55 seconds.
+🧹 prune: removed 97 of 3,949 tickers (<$10 or <300,000 avg vol), 8 MB
+
+============================================================
+2026-08-10T20:39:02.948852 [fundamentals only]
+📊 Fetching fundamentals (EPS/ROE) for 3,977 tickers (cached if < 7d old, 4 worker(s), 3600s cap)...
+  fundamentals: 100/3977 tickers...
+  fundamentals: 200/3977 tickers...
+  fundamentals: 300/3977 tickers...
+  fundamentals: 400/3977 tickers...
+  fundamentals: 500/3977 tickers...
+  fundamentals: 600/3977 tickers...
+  fundamentals: 700/3977 tickers...
+  fundamentals: 800/3977 tickers...
+  fundamentals: 900/3977 tickers...
+  fundamentals: 1000/3977 tickers...
+  fundamentals: 1100/3977 tickers...
+  fundamentals: 1200/3977 tickers...
+  fundamentals: 1300/3977 tickers...
+  fundamentals: 1400/3977 tickers...
+  fundamentals: 1500/3977 tickers...
+  fundamentals: 1600/3977 tickers...
+  fundamentals: 1700/3977 tickers...
+  fundamentals: 1800/3977 tickers...
+  fundamentals: 1900/3977 tickers...
+  fundamentals: 2000/3977 tickers...
+  fundamentals: 2100/3977 tickers...
+  fundamentals: 2200/3977 tickers...
+  fundamentals: 2300/3977 tickers...
+  fundamentals: 2400/3977 tickers...
+  fundamentals: 2500/3977 tickers...
+  fundamentals: 2600/3977 tickers...
+  fundamentals: 2700/3977 tickers...
+  fundamentals: 2800/3977 tickers...
+  fundamentals: 2900/3977 tickers...
+  fundamentals: 3000/3977 tickers...
+  fundamentals: 3100/3977 tickers...
+  fundamentals: 3200/3977 tickers...
+  fundamentals: 3300/3977 tickers...
+  fundamentals: 3400/3977 tickers...
+  fundamentals: 3500/3977 tickers...
+  fundamentals: 3600/3977 tickers...
+  fundamentals: 3700/3977 tickers...
+  fundamentals: 3800/3977 tickers...
+  fundamentals: 3900/3977 tickers...
+  fundamentals: 3977/3977 tickers...
+  fundamentals: 3,977 ok, 0 errors in 5.5s
+
+============================================================
+2026-08-11T17:01:25.696970 [OHLCV only + screener + ratings scan]
+$ACLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['ACLX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: AL"}}}
+$APLS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$ALEX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['APLS', 'AL', 'ALEX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$ASGN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['ASGN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$BLD: possibly delisted; no price data found  (period=5d)
+$BLFY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['BLD']: possibly delisted; no price data found  (period=5d)
+['BLFY', 'BK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$CFLT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['CFLT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CPRX: possibly delisted; no price data found  (period=5d)
+$CNTA: possibly delisted; no price data found  (period=5d)
+$CTRA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CSGS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CTLP: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['CPRX', 'CNTA']: possibly delisted; no price data found  (period=5d)
+['CTRA', 'CSGS', 'CTLP']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$DAWN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CWAN: possibly delisted; no price data found  (period=5d)
+$CVGW: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CUK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+4 Failed downloads:
+['DAWN', 'CVGW', 'CUK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['CWAN']: possibly delisted; no price data found  (period=5d)
+$EHAB: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['EHAB']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FIHL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$EXAS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['FIHL', 'EXAS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FOLD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FOLD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GTLS: possibly delisted; no price data found  (period=5d)
+$GLDD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['GTLS']: possibly delisted; no price data found  (period=5d)
+['GLDD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HTBK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HOLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['HTBK', 'HOLX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$IAS: possibly delisted; no price data found  (period=5d)
+$IAC: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['IAS']: possibly delisted; no price data found  (period=5d)
+['IAC']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$KALV: possibly delisted; no price data found  (period=5d)
+$JHG: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['KALV', 'JHG']: possibly delisted; no price data found  (period=5d)
+$KW: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['KW']: possibly delisted; no price data found  (period=5d)
+$MASI: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['MASI']: possibly delisted; no price data found  (period=5d)
+$MEG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MEG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$NFBK: possibly delisted; no price data found  (period=5d)
+$NUVL: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+3 Failed downloads:
+['NFBK', 'NUVL', 'NSA']: possibly delisted; no price data found  (period=5d)
+$PRA: possibly delisted; no price data found  (period=5d)
+$PSTG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$PKST: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['PRA']: possibly delisted; no price data found  (period=5d)
+['PSTG', 'PKST']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$RAPT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['RAPT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SATS: possibly delisted; no price data found  (period=5d)
+$RNAM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['SATS']: possibly delisted; no price data found  (period=5d)
+['RNAM']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SCVL: possibly delisted; no price data found  (period=5d)
+$SEE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SLNO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEM: possibly delisted; no price data found  (period=5d)
+$SEMR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['SCVL', 'SEM']: possibly delisted; no price data found  (period=5d)
+['SEE', 'SLNO', 'SEMR']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$STEL: possibly delisted; no price data found  (period=5d)
+$SNCY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['STEL']: possibly delisted; no price data found  (period=5d)
+['SNCY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$THR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TGNA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TERN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['THR', 'TGNA', 'TERN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TMHC: possibly delisted; no price data found  (period=5d)
+$TPH: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+['TPH']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VRE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VTYX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VSCO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VRNT: possibly delisted; no price data found  (period=5d)
+$VYNE: possibly delisted; no price data found  (period=5d)
+
+5 Failed downloads:
+['VRE', 'VTYX', 'VSCO']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['VRNT', 'VYNE']: possibly delisted; no price data found  (period=5d)
+$BITF: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+$AGAE: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+$ABVE: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$ATON: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+
+7 Failed downloads:
+['BITF', 'AHH', 'AGAE', 'ALTS', 'ATON', 'BHAT']: possibly delisted; no timezone found
+['ABVE']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$CMBM: possibly delisted; no timezone found
+$CAPT: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$EM: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$EB: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$EWCZ: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$ETHZ: possibly delisted; no timezone found
+
+12 Failed downloads:
+['CMBM', 'EM', 'EXPI', 'EB', 'EKSO', 'CHAC', 'DTCK', 'EWCZ', 'DVS', 'ETHZ']: possibly delisted; no timezone found
+['CAPT', 'CGCT']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$HOTH: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$FFIC: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$IINN: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+$IDIAU: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11)
+$ITRM: possibly delisted; no timezone found
+$IMG: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+
+9 Failed downloads:
+['HOTH', 'FFIC']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+['IINN', 'FFWM', 'IOBT', 'ITRM', 'IMG', 'JFBR']: possibly delisted; no timezone found
+['IDIAU']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11)
+$MYNZ: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+$KLTO: possibly delisted; no timezone found
+$MCW: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$LITM: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+
+6 Failed downloads:
+['MYNZ', 'NGD', 'KLTO', 'LITM', 'NBY']: possibly delisted; no timezone found
+['MCW']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$SGMO: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11)
+$PELI: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$SOPA: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$RVYL: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+
+10 Failed downloads:
+['SGMO']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11)
+['PELI', 'OS', 'ONTF', 'SAVA', 'QVCGP', 'RVYL', 'SGN', 'QIPT']: possibly delisted; no timezone found
+['SOPA']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$TSE: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+$SUUN: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$USEG: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$ULY: possibly delisted; no timezone found
+$TICKER: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11)
+$UDMY: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$STSS: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+$TIRX: possibly delisted; no timezone found
+$TIVC: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+
+16 Failed downloads:
+['TSE', 'STKL', 'ULY', 'TICKER', 'UOKA', 'XWIN', 'XTKG', 'UDMY', 'UHG', 'TIRX', 'TIVC', 'VVPR']: possibly delisted; no timezone found
+['SUUN', 'USEG', 'STSS']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11) (Yahoo error = "No data found, symbol may be delisted")
+['SVAC']: possibly delisted; no price data found  (1d 1927-09-05 -> 2026-08-11)
+🔄 Starting ticker_cache update for 4,001 tickers (Target earliest date: 2024-06-04)...
+  • 3,401 tickers with complete cache (incremental 5d update)
+  • 600 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,401 tickers (491 saved successfully)...
+    Batch 10: Processed 1,000 / 3,401 tickers (980 saved successfully)...
+    Batch 15: Processed 1,500 / 3,401 tickers (1,472 saved successfully)...
+  ! MNST: price discontinuity (merge seam) - refetching full history
+    Batch 20: Processed 2,000 / 3,401 tickers (1,965 saved successfully)...
+    Batch 25: Processed 2,500 / 3,401 tickers (2,459 saved successfully)...
+    Batch 30: Processed 3,000 / 3,401 tickers (2,946 saved successfully)...
+    Batch 35: Processed 3,401 / 3,401 tickers (3,340 saved successfully)...
+  ✓ Updated 3,340 / 3,401 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 600 tickers (456 saved successfully)...
+    Batch 6: Processed 600 / 600 tickers (540 saved successfully)...
+  ✓ Created/Backfilled 540 / 600 ticker parquets.
+✅ Ticker cache update finished in 141.88 seconds.
+🧹 prune: removed 88 of 3,937 tickers (<$10 or <300,000 avg vol), 8 MB
+  📋 Rebuilding daily screener from ticker_cache (build_daily_screener.py)...
+  ✓ daily screener rebuilt in 38.5s
+      
+      ✓ Built 6,374 rows (3,737 with cached price data, 2,637 emitted blank) as of 2026-08-11
+        RS Rating filled: 3,464 | EPS Rating filled: 2,949 | Market Cap filled: 4,548
+        saved /Users/sw/Desktop/stock/rs-log/output/daily_screener.csv
+        saved /Users/sw/Desktop/stock/rs-log/output/daily_screener_2026-08-11.csv
+        removed stale snapshot daily_screener_2026-08-10.csv
+  📊 Running IBD-Style Ratings Scanner over ticker_cache (run_ratings_scanner.py)...
+  ✓ ratings scanner finished in 18.3s
+          scanned 3,250/3,849 tickers...
+          scanned 3,500/3,849 tickers...
+          scanned 3,750/3,849 tickers...
+          scanned 3,849/3,849 tickers...
+        ✓ Scanned 3,791 tickers (3,609 with RS Rating) in 17.7s
+        saved /Users/sw/Desktop/stock/rs-log/output/ratings_scan.csv
+
+============================================================
+2026-08-12T17:33:32.028586 [OHLCV only + screener + ratings scan]
+$ACLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['ACLX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: ALEX"}}}
+$APLS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$ALEX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['AL', 'APLS', 'ALEX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$ASGN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AVNS: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['ASGN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['AVNS']: possibly delisted; no price data found  (period=5d)
+$BLD: possibly delisted; no price data found  (period=5d)
+$BK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BLFY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['BLD']: possibly delisted; no price data found  (period=5d)
+['BK', 'BLFY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$CFLT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['CFLT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CPRX: possibly delisted; no price data found  (period=5d)
+$CNTA: possibly delisted; no price data found  (period=5d)
+$CTLP: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CSGS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CTRA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['CPRX', 'CNTA']: possibly delisted; no price data found  (period=5d)
+['CTLP', 'CSGS', 'CTRA']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CWAN: possibly delisted; no price data found  (period=5d)
+$DAWN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CVGW: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CUK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+4 Failed downloads:
+['CWAN']: possibly delisted; no price data found  (period=5d)
+['DAWN', 'CVGW', 'CUK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$EHAB: possibly delisted; no price data found  (period=5d)
+$EXAS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['EHAB']: possibly delisted; no price data found  (period=5d)
+['EXAS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FIHL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FIHL']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FOLD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FOLD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GLDD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GTLS: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['GLDD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['GTLS']: possibly delisted; no price data found  (period=5d)
+$HOLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HTBK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['HOLX', 'HTBK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$IAS: possibly delisted; no price data found  (period=5d)
+$IAC: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['IAS']: possibly delisted; no price data found  (period=5d)
+['IAC']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$KALV: possibly delisted; no price data found  (period=5d)
+$JHG: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['KALV', 'JHG']: possibly delisted; no price data found  (period=5d)
+$KW: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['KW']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$MASI: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MASI']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$MEG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MEG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$NFBK: possibly delisted; no price data found  (period=5d)
+$NUVL: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+3 Failed downloads:
+['NFBK', 'NUVL', 'NSA']: possibly delisted; no price data found  (period=5d)
+$PRA: possibly delisted; no price data found  (period=5d)
+$PKST: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$PSTG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['PRA']: possibly delisted; no price data found  (period=5d)
+['PKST', 'PSTG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$RAPT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['RAPT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SATS: possibly delisted; no price data found  (period=5d)
+$RNAM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['SATS']: possibly delisted; no price data found  (period=5d)
+['RNAM']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEMR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SLNO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SCVL: possibly delisted; no price data found  (period=5d)
+
+5 Failed downloads:
+['SEM', 'SEE', 'SEMR', 'SLNO']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['SCVL']: possibly delisted; no price data found  (period=5d)
+$STEL: possibly delisted; no price data found  (period=5d)
+$SNCY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['STEL']: possibly delisted; no price data found  (period=5d)
+['SNCY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TGNA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$THR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TERN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['TGNA', 'THR', 'TERN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TMHC: possibly delisted; no price data found  (period=5d)
+$TPH: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+['TPH']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VSCO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VTYX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VYNE: possibly delisted; no price data found  (period=5d)
+$VRNT: possibly delisted; no price data found  (period=5d)
+$VRE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['VSCO', 'VTYX', 'VRE']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['VYNE', 'VRNT']: possibly delisted; no price data found  (period=5d)
+$AHH: possibly delisted; no timezone found
+$BITF: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+$ABVE: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$AGAE: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+
+7 Failed downloads:
+['AHH', 'BITF', 'ATON', 'ALTS', 'AGAE', 'BHAT']: possibly delisted; no timezone found
+['ABVE']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$EB: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$CAPT: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$EWCZ: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$EM: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+
+12 Failed downloads:
+['EB', 'CHAC', 'EWCZ', 'DVS', 'DTCK', 'EM', 'EXPI', 'EKSO', 'ETHZ', 'CMBM']: possibly delisted; no timezone found
+['CAPT', 'CGCT']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$IDIAU: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+$FFIC: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$IMG: possibly delisted; no timezone found
+$HOTH: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$IINN: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+$ITRM: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+
+9 Failed downloads:
+['IDIAU']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+['FFIC', 'HOTH']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+['IMG', 'IINN', 'IOBT', 'ITRM', 'JFBR', 'FFWM']: possibly delisted; no timezone found
+$NGD: possibly delisted; no timezone found
+$NOTV: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+$MCW: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$MYNZ: possibly delisted; no timezone found
+$LITM: possibly delisted; no timezone found
+$KLTO: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+
+7 Failed downloads:
+['NGD', 'MYNZ', 'LITM', 'KLTO', 'NBY']: possibly delisted; no timezone found
+['NOTV']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+['MCW']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$SGMO: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+$OS: possibly delisted; no timezone found
+$SOPA: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$ONTF: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$PELI: possibly delisted; no timezone found
+$RVYL: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+
+10 Failed downloads:
+['SGMO']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+['OS', 'ONTF', 'SGN', 'QVCGP', 'PELI', 'RVYL', 'SAVA', 'QIPT']: possibly delisted; no timezone found
+['SOPA']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$STSS: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$TICKER: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$UDMY: possibly delisted; no timezone found
+$TIVC: possibly delisted; no timezone found
+$ULY: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+$SUUN: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$TSE: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+$USEG: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+$TIRX: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+
+16 Failed downloads:
+['STSS', 'SUUN', 'USEG']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12) (Yahoo error = "No data found, symbol may be delisted")
+['TICKER', 'XWIN', 'UDMY', 'TIVC', 'ULY', 'TSE', 'VVPR', 'STKL', 'TIRX', 'XTKG', 'UHG', 'UOKA']: possibly delisted; no timezone found
+['SVAC']: possibly delisted; no price data found  (1d 1927-09-06 -> 2026-08-12)
+🔄 Starting ticker_cache update for 4,001 tickers (Target earliest date: 2024-06-04)...
+  • 3,398 tickers with complete cache (incremental 5d update)
+  • 603 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,398 tickers (491 saved successfully)...
+    Batch 10: Processed 1,000 / 3,398 tickers (980 saved successfully)...
+    Batch 15: Processed 1,500 / 3,398 tickers (1,472 saved successfully)...
+  ! MNST: price discontinuity (merge seam) - refetching full history
+    Batch 20: Processed 2,000 / 3,398 tickers (1,965 saved successfully)...
+    Batch 25: Processed 2,500 / 3,398 tickers (2,459 saved successfully)...
+    Batch 30: Processed 3,000 / 3,398 tickers (2,946 saved successfully)...
+    Batch 34: Processed 3,398 / 3,398 tickers (3,337 saved successfully)...
+  ✓ Updated 3,337 / 3,398 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 603 tickers (455 saved successfully)...
+    Batch 7: Processed 603 / 603 tickers (542 saved successfully)...
+  ✓ Created/Backfilled 542 / 603 ticker parquets.
+✅ Ticker cache update finished in 119.94 seconds.
+🧹 prune: removed 89 of 3,936 tickers (<$10 or <300,000 avg vol), 8 MB
+  📋 Rebuilding daily screener from ticker_cache (build_daily_screener.py)...
+  ✓ daily screener rebuilt in 31.2s
+      
+      ✓ Built 6,374 rows (3,735 with cached price data, 2,639 emitted blank) as of 2026-08-12
+        RS Rating filled: 3,462 | EPS Rating filled: 2,946 | Market Cap filled: 4,548
+        saved /Users/sw/Desktop/stock/rs-log/output/daily_screener.csv
+        saved /Users/sw/Desktop/stock/rs-log/output/daily_screener_2026-08-12.csv
+        removed stale snapshot daily_screener_2026-08-11.csv
+  📊 Running IBD-Style Ratings Scanner over ticker_cache (run_ratings_scanner.py)...
+  ✓ ratings scanner finished in 9.6s
+          scanned 3,250/3,847 tickers...
+          scanned 3,500/3,847 tickers...
+          scanned 3,750/3,847 tickers...
+          scanned 3,847/3,847 tickers...
+        ✓ Scanned 3,791 tickers (3,607 with RS Rating) in 9.3s
+        saved /Users/sw/Desktop/stock/rs-log/output/ratings_scan.csv
+
+============================================================
+2026-08-13T21:18:03.661458 [OHLCV only + screener + ratings scan]
+$ACLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['ACLX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: AL"}}}
+$ALEX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$APLS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['ALEX', 'AL', 'APLS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AVNS: possibly delisted; no price data found  (period=5d)
+$ASGN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+['ASGN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BLD: possibly delisted; no price data found  (period=5d)
+$BK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BLFY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['BLD']: possibly delisted; no price data found  (period=5d)
+['BK', 'BLFY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$CFLT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['CFLT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CTRA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CSGS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CNTA: possibly delisted; no price data found  (period=5d)
+$CPRX: possibly delisted; no price data found  (period=5d)
+$CTLP: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['CTRA', 'CSGS', 'CTLP']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['CNTA', 'CPRX']: possibly delisted; no price data found  (period=5d)
+$CWAN: possibly delisted; no price data found  (period=5d)
+$CVGW: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CUK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$DAWN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+4 Failed downloads:
+['CWAN']: possibly delisted; no price data found  (period=5d)
+['CVGW', 'CUK', 'DAWN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$EHAB: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['EHAB']: possibly delisted; no price data found  (period=5d)
+$EXAS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['EXAS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FIHL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FIHL']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FOLD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FOLD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GLDD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GTLS: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['GLDD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['GTLS']: possibly delisted; no price data found  (period=5d)
+$HOLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HTBK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['HOLX', 'HTBK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$IAC: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$IAS: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['IAC']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['IAS']: possibly delisted; no price data found  (period=5d)
+$KALV: possibly delisted; no price data found  (period=5d)
+$JHG: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['KALV', 'JHG']: possibly delisted; no price data found  (period=5d)
+$KW: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['KW']: possibly delisted; no price data found  (period=5d)
+$MASI: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MASI']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$MEG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MEG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$NUVL: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+$NFBK: possibly delisted; no price data found  (period=5d)
+
+3 Failed downloads:
+['NUVL', 'NSA', 'NFBK']: possibly delisted; no price data found  (period=5d)
+$PSTG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$PRA: possibly delisted; no price data found  (period=5d)
+$PKST: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['PSTG', 'PKST']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['PRA']: possibly delisted; no price data found  (period=5d)
+$RAPT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['RAPT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SATS: possibly delisted; no price data found  (period=5d)
+$RNAM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['SATS']: possibly delisted; no price data found  (period=5d)
+['RNAM']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEMR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SCVL: possibly delisted; no price data found  (period=5d)
+$SLNO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['SEMR', 'SEM', 'SLNO', 'SEE']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['SCVL']: possibly delisted; no price data found  (period=5d)
+$STEL: possibly delisted; no price data found  (period=5d)
+$SNCY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['STEL']: possibly delisted; no price data found  (period=5d)
+['SNCY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TGNA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TERN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$THR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['TGNA', 'TERN', 'THR']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TMHC: possibly delisted; no price data found  (period=5d)
+$TPH: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+['TPH']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VSCO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VYNE: possibly delisted; no price data found  (period=5d)
+$VRNT: possibly delisted; no price data found  (period=5d)
+$VRE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VTYX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['VSCO', 'VRE', 'VTYX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['VYNE', 'VRNT']: possibly delisted; no price data found  (period=5d)
+$BITF: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+$AHH: possibly delisted; no timezone found
+$AGAE: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+$BHAT: possibly delisted; no timezone found
+$ABVE: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+
+7 Failed downloads:
+['BITF', 'ATON', 'AHH', 'AGAE', 'ALTS', 'BHAT']: possibly delisted; no timezone found
+['ABVE']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$EB: possibly delisted; no timezone found
+$EM: possibly delisted; no timezone found
+$CAPT: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$EXPI: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$DVS: possibly delisted; no timezone found
+$EWCZ: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$CHAC: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+
+12 Failed downloads:
+['EB', 'EM', 'EXPI', 'EKSO', 'DTCK', 'DVS', 'EWCZ', 'ETHZ', 'CHAC', 'CMBM']: possibly delisted; no timezone found
+['CAPT', 'CGCT']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$IDIAU: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13)
+$FFWM: possibly delisted; no timezone found
+$HOTH: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$IMG: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+$FFIC: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$IOBT: possibly delisted; no timezone found
+$ITRM: possibly delisted; no timezone found
+$IINN: possibly delisted; no timezone found
+
+9 Failed downloads:
+['IDIAU']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13)
+['FFWM', 'IMG', 'JFBR', 'IOBT', 'ITRM', 'IINN']: possibly delisted; no timezone found
+['HOTH', 'FFIC']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$LITM: possibly delisted; no timezone found
+$KLTO: possibly delisted; no timezone found
+$NOTV: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$MCW: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$NGD: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+$MYNZ: possibly delisted; no timezone found
+
+7 Failed downloads:
+['LITM', 'KLTO', 'NGD', 'NBY', 'MYNZ']: possibly delisted; no timezone found
+['NOTV', 'MCW']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$SGMO: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13)
+$PELI: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$RVYL: possibly delisted; no timezone found
+$OS: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$QIPT: possibly delisted; no timezone found
+
+9 Failed downloads:
+['SGMO']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13)
+['PELI', 'SAVA', 'QVCGP', 'SGN', 'RVYL', 'OS', 'ONTF', 'QIPT']: possibly delisted; no timezone found
+$TSE: possibly delisted; no timezone found
+$VVPR: possibly delisted; no timezone found
+$TIRX: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+$USEG: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$SUUN: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$TIVC: possibly delisted; no timezone found
+$XWIN: possibly delisted; no timezone found
+$ULY: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$TICKER: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13)
+$UDMY: possibly delisted; no timezone found
+$STSS: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$SOPA: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+$UOKA: possibly delisted; no timezone found
+
+17 Failed downloads:
+['TSE', 'VVPR', 'TIRX', 'STKL', 'TIVC', 'XWIN', 'ULY', 'XTKG', 'TICKER', 'UHG', 'UDMY', 'UOKA']: possibly delisted; no timezone found
+['USEG', 'SUUN', 'STSS', 'SOPA']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13) (Yahoo error = "No data found, symbol may be delisted")
+['SVAC']: possibly delisted; no price data found  (1d 1927-09-07 -> 2026-08-13)
+🔄 Starting ticker_cache update for 4,000 tickers (Target earliest date: 2024-06-04)...
+  • 3,396 tickers with complete cache (incremental 5d update)
+  • 604 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,396 tickers (491 saved successfully)...
+    Batch 10: Processed 1,000 / 3,396 tickers (979 saved successfully)...
+    Batch 15: Processed 1,500 / 3,396 tickers (1,472 saved successfully)...
+  ! MNST: price discontinuity (history 2026-08-06 x1.99) - refetching full history
+    Batch 20: Processed 2,000 / 3,396 tickers (1,965 saved successfully)...
+    Batch 25: Processed 2,500 / 3,396 tickers (2,459 saved successfully)...
+    Batch 30: Processed 3,000 / 3,396 tickers (2,946 saved successfully)...
+    Batch 34: Processed 3,396 / 3,396 tickers (3,335 saved successfully)...
+  split repairs: 0 resolved, 1 still discontinuous after refetch (recorded, will not retry)
+  ✓ Updated 3,335 / 3,396 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 604 tickers (456 saved successfully)...
+    Batch 7: Processed 604 / 604 tickers (543 saved successfully)...
+  ✓ Created/Backfilled 543 / 604 ticker parquets.
+✅ Ticker cache update finished in 130.53 seconds.
+🧹 prune: removed 82 of 3,935 tickers (<$10 or <300,000 avg vol), 7 MB
+  📋 Rebuilding daily screener from ticker_cache (build_daily_screener.py)...
+  ✓ daily screener rebuilt in 55.7s
+        processed 6,000/6,374 (3,544 with price data)
+        processed 6,374/6,374 (3,741 with price data)
+      
+      ✓ Built 6,374 rows (3,741 with cached price data, 2,633 emitted blank) as of 2026-08-13
+        RS Rating filled: 3,469 | EPS Rating filled: 3,033 | Market Cap filled: 4,548
+        saved /Users/sw/Desktop/stock/rs-log/output/daily_screener.csv
+  📊 Running IBD-Style Ratings Scanner over ticker_cache (run_ratings_scanner.py)...
+  ✓ ratings scanner finished in 10.3s
+          scanned 3,250/3,853 tickers...
+          scanned 3,500/3,853 tickers...
+          scanned 3,750/3,853 tickers...
+          scanned 3,853/3,853 tickers...
+        ✓ Scanned 3,797 tickers (3,613 with RS Rating) in 9.9s
+        saved /Users/sw/Desktop/stock/rs-log/output/ratings_scan.csv
+
+2026-08-14T00:04:06-04:00 [MANUAL REFRESH - NBIS 8/13 backfill] ==================
+$ACLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['ACLX']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: APLS"}}}
+$APLS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$ALEX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['APLS', 'ALEX', 'AL']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$AVNS: possibly delisted; no price data found  (period=5d)
+$ASGN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['AVNS']: possibly delisted; no price data found  (period=5d)
+['ASGN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BLFY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BLD: possibly delisted; no price data found  (period=5d)
+
+3 Failed downloads:
+['BK', 'BLFY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['BLD']: possibly delisted; no price data found  (period=5d)
+$CCRN: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['CCRN']: possibly delisted; no price data found  (period=5d)
+$CFLT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['CFLT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CTLP: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CPRX: possibly delisted; no price data found  (period=5d)
+$CTRA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CNTA: possibly delisted; no price data found  (period=5d)
+$CSGS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['CTLP', 'CTRA', 'CSGS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['CPRX', 'CNTA']: possibly delisted; no price data found  (period=5d)
+$CUK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CVGW: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$CWAN: possibly delisted; no price data found  (period=5d)
+$DAWN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+4 Failed downloads:
+['CUK', 'CVGW', 'DAWN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['CWAN']: possibly delisted; no price data found  (period=5d)
+$EHAB: possibly delisted; no price data found  (period=5d)
+$EXAS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['EHAB']: possibly delisted; no price data found  (period=5d)
+['EXAS']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FIHL: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FIHL']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$FOLD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['FOLD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GLDD: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$GTLS: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['GLDD']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+['GTLS']: possibly delisted; no price data found  (period=5d)
+$HOLX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$HTBK: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['HOLX', 'HTBK']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$IAS: possibly delisted; no price data found  (period=5d)
+$IAC: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['IAS']: possibly delisted; no price data found  (period=5d)
+['IAC']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$KALV: possibly delisted; no price data found  (period=5d)
+$JHG: possibly delisted; no price data found  (period=5d)
+
+2 Failed downloads:
+['KALV', 'JHG']: possibly delisted; no price data found  (period=5d)
+$KW: possibly delisted; no price data found  (period=5d)
+
+1 Failed download:
+['KW']: possibly delisted; no price data found  (period=5d)
+$MASI: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MASI']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$MEG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['MEG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$NUVL: possibly delisted; no price data found  (period=5d)
+$NFBK: possibly delisted; no price data found  (period=5d)
+$NSA: possibly delisted; no price data found  (period=5d)
+
+3 Failed downloads:
+['NUVL', 'NFBK', 'NSA']: possibly delisted; no price data found  (period=5d)
+$PRA: possibly delisted; no price data found  (period=5d)
+$PKST: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$PSTG: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['PRA']: possibly delisted; no price data found  (period=5d)
+['PKST', 'PSTG']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$RAPT: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+1 Failed download:
+['RAPT']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SATS: possibly delisted; no price data found  (period=5d)
+$RNAM: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['SATS']: possibly delisted; no price data found  (period=5d)
+['RNAM']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SCVL: possibly delisted; no price data found  (period=5d)
+$SLNO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEMR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$SEM: possibly delisted; no price data found  (period=5d)
+
+5 Failed downloads:
+['SCVL', 'SEM']: possibly delisted; no price data found  (period=5d)
+['SLNO', 'SEMR', 'SEE']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$STEL: possibly delisted; no price data found  (period=5d)
+$SNCY: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['STEL']: possibly delisted; no price data found  (period=5d)
+['SNCY']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TGNA: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$THR: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TERN: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+3 Failed downloads:
+['TGNA', 'THR', 'TERN']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$TMHC: possibly delisted; no price data found  (period=5d)
+$TPH: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+2 Failed downloads:
+['TMHC']: possibly delisted; no price data found  (period=5d)
+['TPH']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VRNT: possibly delisted; no price data found  (period=5d)
+$VSCO: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VTYX: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$VYNE: possibly delisted; no price data found  (period=5d)
+$VRE: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+
+5 Failed downloads:
+['VRNT', 'VYNE']: possibly delisted; no price data found  (period=5d)
+['VSCO', 'VTYX', 'VRE']: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+$BHAT: possibly delisted; no timezone found
+$ABVE: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$AHH: possibly delisted; no timezone found
+$AGAE: possibly delisted; no timezone found
+$ALTS: possibly delisted; no timezone found
+$BITF: possibly delisted; no timezone found
+$ATON: possibly delisted; no timezone found
+
+7 Failed downloads:
+['BHAT', 'AHH', 'AGAE', 'ALTS', 'BITF', 'ATON']: possibly delisted; no timezone found
+['ABVE']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$EB: possibly delisted; no timezone found
+$DTCK: possibly delisted; no timezone found
+$CAPT: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$EWCZ: possibly delisted; no timezone found
+$CMBM: possibly delisted; no timezone found
+$CHAC: possibly delisted; no timezone found
+$EKSO: possibly delisted; no timezone found
+$EM: possibly delisted; no timezone found
+$CGCT: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$DVS: possibly delisted; no timezone found
+$EXPI: possibly delisted; no timezone found
+$ETHZ: possibly delisted; no timezone found
+
+12 Failed downloads:
+['EB', 'DTCK', 'EWCZ', 'CMBM', 'CHAC', 'EKSO', 'EM', 'DVS', 'EXPI', 'ETHZ']: possibly delisted; no timezone found
+['CAPT', 'CGCT']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$HOTH: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$IDIAU: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14)
+$ITRM: possibly delisted; no timezone found
+$JFBR: possibly delisted; no timezone found
+$IINN: possibly delisted; no timezone found
+$FFWM: possibly delisted; no timezone found
+$IMG: possibly delisted; no timezone found
+$IOBT: possibly delisted; no timezone found
+$FFIC: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+
+9 Failed downloads:
+['HOTH', 'FFIC']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+['IDIAU']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14)
+['ITRM', 'JFBR', 'IINN', 'FFWM', 'IMG', 'IOBT']: possibly delisted; no timezone found
+$MYNZ: possibly delisted; no timezone found
+$NOTV: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$NGD: possibly delisted; no timezone found
+$LITM: possibly delisted; no timezone found
+$NBY: possibly delisted; no timezone found
+$MCW: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$KLTO: possibly delisted; no timezone found
+
+7 Failed downloads:
+['MYNZ', 'NGD', 'LITM', 'NBY', 'KLTO']: possibly delisted; no timezone found
+['NOTV', 'MCW']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$QIPT: possibly delisted; no timezone found
+$SAVA: possibly delisted; no timezone found
+$SOPA: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$OS: possibly delisted; no timezone found
+$SGN: possibly delisted; no timezone found
+$QVCGP: possibly delisted; no timezone found
+$SGMO: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14)
+$PELI: possibly delisted; no timezone found
+$ONTF: possibly delisted; no timezone found
+$RVYL: possibly delisted; no timezone found
+
+10 Failed downloads:
+['QIPT', 'SAVA', 'OS', 'SGN', 'QVCGP', 'PELI', 'ONTF', 'RVYL']: possibly delisted; no timezone found
+['SOPA']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+['SGMO']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14)
+$SUUN: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$VVPR: possibly delisted; no timezone found
+$USEG: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$TICKER: possibly delisted; no timezone found
+$TIRX: possibly delisted; no timezone found
+$TSE: possibly delisted; no timezone found
+$UOKA: possibly delisted; no timezone found
+$UDMY: possibly delisted; no timezone found
+$ULY: possibly delisted; no timezone found
+$UHG: possibly delisted; no timezone found
+$SVAC: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14)
+$XWIN: possibly delisted; no timezone found
+$STSS: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+$TIVC: possibly delisted; no timezone found
+$XTKG: possibly delisted; no timezone found
+$STKL: possibly delisted; no timezone found
+
+16 Failed downloads:
+['SUUN', 'USEG', 'STSS']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14) (Yahoo error = "No data found, symbol may be delisted")
+['VVPR', 'TICKER', 'TIRX', 'TSE', 'UOKA', 'UDMY', 'ULY', 'UHG', 'XWIN', 'TIVC', 'XTKG', 'STKL']: possibly delisted; no timezone found
+['SVAC']: possibly delisted; no price data found  (1d 1927-09-08 -> 2026-08-14)
+🔄 Starting ticker_cache update for 3,999 tickers (Target earliest date: 2024-06-04)...
+  • 3,401 tickers with complete cache (incremental 5d update)
+  • 598 tickers missing or lacking pre-2024-06-04 history (full max backfill)
+  Updating existing complete ticker cache files...
+    Batch 5: Processed 500 / 3,401 tickers (491 saved successfully)...
+    Batch 10: Processed 1,000 / 3,401 tickers (980 saved successfully)...
+    Batch 15: Processed 1,500 / 3,401 tickers (1,472 saved successfully)...
+    Batch 20: Processed 2,000 / 3,401 tickers (1,965 saved successfully)...
+    Batch 25: Processed 2,500 / 3,401 tickers (2,459 saved successfully)...
+    Batch 30: Processed 3,000 / 3,401 tickers (2,946 saved successfully)...
+    Batch 35: Processed 3,401 / 3,401 tickers (3,340 saved successfully)...
+  ✓ Updated 3,340 / 3,401 existing ticker parquets.
+  Fetching full history for missing/incomplete tickers (max period)...
+    Batch 5: Processed 500 / 598 tickers (455 saved successfully)...
+    Batch 6: Processed 598 / 598 tickers (537 saved successfully)...
+  ✓ Created/Backfilled 537 / 598 ticker parquets.
+✅ Ticker cache update finished in 116.24 seconds.
+🧹 prune: removed 79 of 3,935 tickers (<$10 or <300,000 avg vol), 7 MB
+  📋 Rebuilding daily screener from ticker_cache (build_daily_screener.py)...
+  ✓ daily screener rebuilt in 41.5s
+        processed 6,000/6,374 (3,549 with price data)
+        processed 6,374/6,374 (3,745 with price data)
+      
+      ✓ Built 6,374 rows (3,745 with cached price data, 2,629 emitted blank) as of 2026-08-13
+        RS Rating filled: 3,475 | EPS Rating filled: 3,034 | Market Cap filled: 4,548
+        saved /Users/sw/Desktop/stock/rs-log/output/daily_screener.csv
+  📊 Running IBD-Style Ratings Scanner over ticker_cache (run_ratings_scanner.py)...
+  ✓ ratings scanner finished in 10.1s
+          scanned 3,250/3,856 tickers...
+          scanned 3,500/3,856 tickers...
+          scanned 3,750/3,856 tickers...
+          scanned 3,856/3,856 tickers...
+        ✓ Scanned 3,801 tickers (3,621 with RS Rating) in 9.7s
+        saved /Users/sw/Desktop/stock/rs-log/output/ratings_scan.csv

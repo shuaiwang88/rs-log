@@ -78,6 +78,19 @@ def find_summary_files():
         yield date_str, summary_path, transcript_path
 
 
+def _folder_time_slug(folder):
+    """Recording time from a Zoom folder name ('2026-07-30 10.18.28 IBD Live' ->
+    '10_18_28'), or '' when the name has no time. Used to give later recordings of the
+    same date their own source slot instead of overwriting the primary one."""
+    m = re.search(r"(\d{2})\.(\d{2})\.(\d{2})", folder.name)
+    if m:
+        return f"{m.group(1)}_{m.group(2)}_{m.group(3)}"
+    m = re.search(r"(\d{2})\.(\d{2})", folder.name)
+    if m:
+        return f"{m.group(1)}_{m.group(2)}"
+    return ""
+
+
 def parse_section(lines, keywords):
     """Return the lines belonging to the first section whose heading contains any of
     keywords (lowercase, matched after stripping a '3.'-style number prefix), up to
@@ -207,25 +220,42 @@ def build_sidecar(date_str, summary_path, transcript_path):
 def sync_ibd_live_summaries(verbose=False):
     """Copy/parse any new-or-updated Zoom summaries into IBD/live_summaries.
 
+    Folders are grouped by date: the first (earliest) recording of a date keeps the
+    primary slot (<date>.md/.json), and any later recordings of the same date become
+    named sources (<date>__<recording-time>.md/.json) so they never overwrite each
+    other — mirroring the multi-source layout the app's ingest box uses.
+
     Safe to call on every app launch: skipped entries are just an mtime check per
-    folder, so a no-op run is cheap. Returns (synced_count, skipped_count, synced_dates).
+    file, so a no-op run is cheap. Returns (synced_count, skipped_count, synced_dates).
     """
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     synced, skipped, synced_dates = 0, 0, []
+    by_date = {}
     for date_str, summary_path, transcript_path in find_summary_files():
-        dest_md = OUT_DIR / f"{date_str}.md"
-        dest_json = OUT_DIR / f"{date_str}.json"
-        if dest_md.exists() and dest_md.stat().st_mtime >= summary_path.stat().st_mtime and dest_json.exists():
-            skipped += 1
-            continue
-        shutil.copyfile(summary_path, dest_md)
-        sidecar = build_sidecar(date_str, summary_path, transcript_path)
-        with open(dest_json, "w", encoding="utf-8") as f:
-            json.dump(sidecar, f, indent=2)
-        synced += 1
-        synced_dates.append(date_str)
-        if verbose:
-            print(f"synced {date_str}  ({len(sidecar['tickers'])} tickers)")
+        by_date.setdefault(date_str, []).append((summary_path, transcript_path))
+    for date_str in sorted(by_date):
+        for i, (summary_path, transcript_path) in enumerate(by_date[date_str]):
+            if i == 0:
+                suffix = ""
+            else:
+                slug = _folder_time_slug(summary_path.parent)
+                suffix = "__" + (slug or f"recording_{i + 1}")
+            dest_md = OUT_DIR / f"{date_str}{suffix}.md"
+            dest_json = OUT_DIR / f"{date_str}{suffix}.json"
+            if dest_md.exists() and dest_md.stat().st_mtime >= summary_path.stat().st_mtime and dest_json.exists():
+                skipped += 1
+                continue
+            shutil.copyfile(summary_path, dest_md)
+            sidecar = build_sidecar(date_str, summary_path, transcript_path)
+            sidecar["source"] = suffix[2:] if suffix else ""
+            sidecar["kind"] = "live"
+            with open(dest_json, "w", encoding="utf-8") as f:
+                json.dump(sidecar, f, indent=2)
+            synced += 1
+            if date_str not in synced_dates:
+                synced_dates.append(date_str)  # one entry per date, even with several sources
+            if verbose:
+                print(f"synced {date_str}{suffix or ''}  ({len(sidecar['tickers'])} tickers)")
     if verbose:
         print(f"\nDone. {synced} synced, {skipped} already up to date. Output: {OUT_DIR}")
     return synced, skipped, synced_dates

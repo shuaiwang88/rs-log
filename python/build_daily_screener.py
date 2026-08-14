@@ -18,9 +18,13 @@ forward estimates) plus price/volume extras computed from the parquet (RSI 14,
 5/10/20-day returns, raw moving averages, relative volume, 52-wk position,
 volatility).
 
-Data-dependent gaps (not bugs): the fund cache only carries ~4 fiscal years of
-EPS, so "EPS % Growth 5 Yr" (and its Pct Rnk) reports the longest span available
-(4-yr CAGR when only 4 years of history exist) rather than a true 5-yr figure;
+Data-dependent gaps (not bugs): fiscal EPS history is sourced from IBD
+MarketSurge's NON-GAAP (adjusted) figures (up to 7 years) rather than the GAAP
+"Diluted EPS" income-statement line, so adjusted-profitable / GAAP-loss names
+like ZETA are not understated (GAAP -0.13 vs adjusted +0.73 in FY2025); where
+IBD has no usable history the GAAP extraction is the fallback. "EPS % Growth 5
+Yr" (and its Pct Rnk) still reports the longest span available (a 4-yr CAGR when
+only 4 years of history exist) rather than a guaranteed true 5-yr figure;
 "Capital Expenditure (mil)" depends on yfinance info populating
 capitalExpenditures, which it often does not.
 
@@ -42,8 +46,7 @@ survey fields, 5-yr P/E history, S&P 500 P/E, 2-periods-ago short interest, shor
 volume) is left blank rather than guessed.
 
 Outputs (one row per ticker, values as of the latest common trading day):
-  output/daily_screener_<YYYY-MM-DD>.csv   dated snapshot
-  output/daily_screener.csv                latest snapshot (same content)
+  output/daily_screener.csv                the single, always-overwritten screener file
 
 Usage:
   python python/build_daily_screener.py                # full build
@@ -194,6 +197,8 @@ EXTRA_COLUMNS = [
     "RSI 14", "% Chg 5 Days", "% Chg 10 Days", "% Chg 20 Days",
     "50-Day Avg Price", "200-Day Avg Price", "10-Day Avg Vol (1000s)",
     "Relative Volume", "52-Week Position %", "Volatility 30D %",
+    "RS Line New High (3-Month)", "RS Line New High (6-Month)", "10D Pocket Pivot",
+    "2/3 Pocket Pivot", "RS New High Before Price", "HVY", "HVE",
     # listing-age proxy (first cached date, not a verified true IPO date)
     "First Cached Date", "Years Since First Cached",
 ]
@@ -210,6 +215,43 @@ def _num(v):
         return f if np.isfinite(f) else None
     except (TypeError, ValueError):
         return None
+
+
+# Non-GAAP (IBD-adjusted) fiscal EPS columns in MarketSurge, most recent first.
+# The GAAP "Diluted EPS" income-statement line understates earnings for names with
+# heavy stock comp / intangible amortization, so the screener prefers these when
+# building the fiscal-EPS history (see load_non_gaap_fy_eps).
+FISCAL_EPS_COLUMNS = (
+    "Fiscal EPS Lst Yr", "Fiscal EPS 1 Yr Ago", "Fiscal EPS 2 Yrs Ago",
+    "Fiscal EPS 3 Yrs Ago", "Fiscal EPS 4 Yrs Ago", "Fiscal EPS 5 Yrs Ago",
+    "Fiscal EPS 6 Yrs Ago",
+)
+
+
+def load_non_gaap_fy_eps(ms):
+    """Symbol -> most-recent-first list of IBD's non-GAAP (adjusted) fiscal EPS.
+
+    MarketSurge reports adjusted EPS rather than the GAAP income-statement
+    "Diluted EPS" that yfinance/defeatbeta-api carry. For a GAAP-loss / adjusted-
+    profit name like ZETA (GAAP -0.13 vs adjusted +0.73 in FY2025) the two diverge
+    hard, so the screener overrides the annual EPS series with these values when
+    present. Blank years are kept as None to preserve calendar alignment (matching
+    extract_eps_from_fundamentals()); trailing blanks beyond a young company's
+    history are trimmed. Tickers with no usable value are absent from the map, and
+    the caller falls back to the GAAP extraction.
+    """
+    out = {}
+    cols = [c for c in FISCAL_EPS_COLUMNS if c in ms.columns]
+    for _, r in ms.iterrows():
+        sym = str(r["Symbol"]).strip()
+        if not sym:
+            continue
+        vals = [_num(r.get(c)) for c in cols]
+        while vals and vals[-1] is None:
+            vals.pop()
+        if any(v is not None for v in vals):
+            out[sym] = vals
+    return out
 
 
 def _pct_round(v, nd=1):
@@ -360,6 +402,22 @@ def compute_technical_metrics(df, spy_close):
     m["52-Wk High"] = round(float(w52["High"].max()), 2)
     m["% Off High"] = _pct_round(calc_pct_off_52w_high_snapshot(df), 2)
 
+    # ── HVY / HVE (pine/drw_volume.pine's if_hvy / if_hve): Yes/No flags for
+    # whether TODAY is the highest-volume day of the window, not the volume value
+    # itself - matches the Pine script's `volume == highVolYear` / `volume == hve`
+    # (today's volume is already part of that max, so "==" collapses to "did today
+    # set/tie it"). HVE's window is capped at 5 years (not true all-time) because
+    # ticker_cache's Volume is split-adjusted: an old stock with several splits
+    # since would let some ancient pre-split day's inflated volume permanently
+    # dominate a true all-time max (e.g. AAPL 2000-09-29 reads ~7.4B shares, which
+    # is that crash day's real ~66M volume inflated by AAPL's 112x cumulative split
+    # factor since) - there's no splits calendar in fund.json to un-adjust it
+    # properly, so bounding the window is the practical fix. Falls back to
+    # whatever's cached for tickers with under 5 years of history. ──
+    w5y = df.tail(1260)
+    m["HVY"] = _yes_no(float(volume.iloc[-1]) >= float(w52["Volume"].max()))
+    m["HVE"] = _yes_no(float(volume.iloc[-1]) >= float(w5y["Volume"].max()))
+
     # ── previous-week high ──
     weeks = df.index.to_period("W")
     cur_week = weeks[-1]
@@ -460,6 +518,7 @@ def compute_technical_metrics(df, spy_close):
     # ── beta / alpha vs SPY ──
     rs = close / spy_close
     r_line = rs.astype(float)
+    rs_nh = {}  # window (bars) -> bool, reused below for "RS New High Before Price"
     if n >= 2 and np.isfinite(r_line.iloc[-1]):
         w252 = r_line.tail(252)
         cur_line = float(r_line.iloc[-1])
@@ -469,9 +528,53 @@ def compute_technical_metrics(df, spy_close):
             p_max, p_min = float(prev.max()), float(prev.min())
             # "New high/low" means today's RS line exceeds every one of the prior 251
             # values (not just that it equals the window max).
-            m["RS Line New High"] = _yes_no(cur_line > p_max and np.isfinite(p_max))
+            rs_nh[252] = cur_line > p_max and np.isfinite(p_max)
+            m["RS Line New High"] = _yes_no(rs_nh[252])
             m["RS Line New Low"] = _yes_no(cur_line < p_min and np.isfinite(p_min))
             m["RS Line Within 5% of New High"] = _yes_no(cur_line >= 0.95 * mx)
+
+        # shorter-window versions of the same "new high" test above (63D/126D vs the
+        # 252D one) - earlier-stage relative-strength breakouts, same definition
+        for days, tag in ((63, "3-Month"), (126, "6-Month")):
+            wN = r_line.tail(days)
+            if len(wN) >= 2:
+                prevN = wN.iloc[:-1]
+                pN_max = float(prevN.max())
+                rs_nh[days] = cur_line > pN_max and np.isfinite(pN_max)
+                m[f"RS Line New High ({tag})"] = _yes_no(rs_nh[days])
+
+    # ── RS new high before price (pine/drw_relative_strength_all.pine's "leads
+    # price" signal, col_nhLP): RS hits a new high - checked 12-Month first, else
+    # 6-Month, else 3-Month, same priority the indicator uses so only the longest
+    # qualifying window is tested - while price's OWN day-High over that SAME
+    # window hasn't confirmed a matching new high yet. Uses High (not Close), same
+    # as the reference's price_nh1Y/6M/3M. "No" (not blank) whenever RS itself
+    # isn't making a new high today - there's nothing to lead in that case. ──
+    period = 252 if rs_nh.get(252) else 126 if rs_nh.get(126) else 63 if rs_nh.get(63) else None
+    leads_price = False
+    if period is not None:
+        wH = high.tail(period)
+        if len(wH) >= 2:
+            prevH_max = float(wH.iloc[:-1].max())
+            if np.isfinite(prevH_max):
+                leads_price = not (float(high.iloc[-1]) > prevH_max)
+    m["RS New High Before Price"] = _yes_no(leads_price)
+
+    # ── pocket pivots (O'Neil/Morales-Kacher), matching pine/drw_volume.pine's
+    # pocketpivot / pocketpivot5 / pp2of3 exactly: an up day whose volume exceeds
+    # the heaviest down-day volume in the trailing 10 (or 5) sessions. 2/3 Pocket
+    # Pivot fires when at least 2 of the last 3 days satisfy either window (pp_any) -
+    # same "2-of-3" signal as the Pine indicator's alert. ──
+    if n >= 11:
+        is_up = close.diff() > 0
+        down_vol = volume.where(close.diff() < 0, 0.0)
+        h10 = down_vol.shift(1).rolling(10).max()
+        h5 = down_vol.shift(1).rolling(5).max()
+        pocket_pivot = is_up & (h10 > 0) & (volume > h10)
+        pocket_pivot5 = is_up & (h5 > 0) & (volume > h5)
+        pp_any = pocket_pivot | pocket_pivot5
+        m["10D Pocket Pivot"] = _yes_no(bool(pocket_pivot.iloc[-1]))
+        m["2/3 Pocket Pivot"] = _yes_no(int(pp_any.iloc[-3:].sum()) >= 2)
 
     ret_s = close.pct_change().dropna()
     ret_m = spy_close.pct_change().dropna()
@@ -631,12 +734,16 @@ def compute_fundamental_metrics(fund, close_price=None, fy_eps=None, fq_eps=None
     # ── EPS growth (annual) ──
     # NOTE: with annual-only EPS in the cache, "EPS % Growth 1 Yr" and
     # "EPS % Chg Lst Yr" both resolve to last fiscal year's change.
+    # Growth is (new - old) / |old|, NOT new/old - 1: the latter flips the sign
+    # and magnitude across a loss year (e.g. 0.59 after -1.20 is +149%, not -149%)
+    # - same convention IBD and calc_eps_rating() use.
     if fy_eps:
         if len(fy_eps) >= 2 and fy_eps[0] is not None and fy_eps[1]:
-            m["EPS % Growth 1 Yr"] = _pct_round((fy_eps[0] / fy_eps[1] - 1) * 100, 1)
-            m["EPS % Chg Lst Yr"] = _pct_round((fy_eps[0] / fy_eps[1] - 1) * 100, 1)
+            g = (fy_eps[0] - fy_eps[1]) / abs(fy_eps[1]) * 100
+            m["EPS % Growth 1 Yr"] = _pct_round(g, 1)
+            m["EPS % Chg Lst Yr"] = _pct_round(g, 1)
         if len(fy_eps) >= 3 and fy_eps[1] is not None and fy_eps[2]:
-            m["EPS % Chg 1 Yr Ago"] = _pct_round((fy_eps[1] / fy_eps[2] - 1) * 100, 1)
+            m["EPS % Chg 1 Yr Ago"] = _pct_round((fy_eps[1] - fy_eps[2]) / abs(fy_eps[2]) * 100, 1)
         g3 = _cagr(fy_eps, 3)
         # 5-yr growth uses the longest span available (the fund cache only holds
         # ~4 fiscal years, so with 4 years the 5-yr column reports the 4-yr CAGR
@@ -1069,6 +1176,10 @@ def build_screener(limit=None, with_ratings=True):
     if limit:
         ms = ms.head(limit)
 
+    # Non-GAAP (IBD-adjusted) fiscal EPS, preferred over the GAAP income-statement
+    # series when building fiscal-EPS columns / growth / EPS Rating (see below).
+    non_gaap_fy_eps = load_non_gaap_fy_eps(ms)
+
     print("Reading IBD_data.txt ...")
     ibd = pd.read_csv(REPO_DIR / "IBD_data.txt", encoding="utf-8-sig", low_memory=False)
     ibd["Symbol"] = ibd["Symbol"].astype(str).str.strip()
@@ -1130,6 +1241,15 @@ def build_screener(limit=None, with_ratings=True):
         if fund and not fund.get("error"):
             fy_eps, fq_eps, _ = extract_eps_from_fundamentals(fund)
             roe = _roe_percent(fund)
+
+        # Prefer IBD's non-GAAP (adjusted) fiscal EPS over the GAAP income-statement
+        # series: adjusted EPS backs out stock comp / intangible amortization / one-time
+        # charges, so names like ZETA that are GAAP-loss but adjusted-profitable report
+        # their true earnings instead of being understated. Requires >=2 years so the
+        # growth/rating math still has a base; otherwise the GAAP extraction stands.
+        ng = non_gaap_fy_eps.get(sym)
+        if ng and sum(1 for v in ng if v is not None) >= 2:
+            fy_eps = ng
 
         try:
             if fp is not None:
@@ -1242,6 +1362,8 @@ def build_screener(limit=None, with_ratings=True):
                     "Current day's Volume greater than previous 5 days' Volume",
                     "50-Day > 150-Day > 200-Day", "10 Day > 21 Day > 50 Day",
                     "RS Line New Low", "RS Line New High", "RS Line Within 5% of New High",
+                    "RS Line New High (3-Month)", "RS Line New High (6-Month)", "10D Pocket Pivot",
+                    "2/3 Pocket Pivot", "RS New High Before Price", "HVY", "HVE",
                     "A/D Rating", "A/D Rating - Pr Wk", "SMR Rating", "Expected X Dividend Amount",
                     "First Cached Date")
     numeric_cols = [c for c in (MS_COLUMNS + EXTRA_COLUMNS)
@@ -1274,10 +1396,6 @@ def main():
     latest = OUTPUT_DIR / "daily_screener.csv"
     out.to_csv(latest, index=False)
     print(f"  saved {latest}")
-    if asof:
-        dated = OUTPUT_DIR / f"daily_screener_{asof}.csv"
-        out.to_csv(dated, index=False)
-        print(f"  saved {dated}")
 
 
 if __name__ == "__main__":

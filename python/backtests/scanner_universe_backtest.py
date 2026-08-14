@@ -2,24 +2,35 @@
 """
 scanner_universe_backtest.py
 ============================
-Full-universe backtest driven by the REAL python/ibd_pattern_scanner.py.
+Full-universe backtest driven by OUR pattern engine (python/tv_pattern_scanner.py, the
+faithful port of pine/drw_pattern.pine) — the same patterns the 📐 TV Pattern tab scans.
 
-Unlike full_backtest.py (which re-implements a lightweight scanner), this script loads
-the production scanner source, patches ONLY its final "latest bar must be in a pattern"
-guard so the per-bar history is always returned, and then walks that history to extract
-every base + breakout event. Buy signals come straight from the scanner's own per-bar
-flags (volDryUp, ppAny, touchedMA, shakeoutEntry, upsideReversal, rsNH) plus pivot
+The IBD pattern scanner (drw_pattern_scanner.pine port) is no longer the source: this
+script runs `scan_ticker` per ticker and consumes its ended-base history (geometry +
+outcome + acc/dis days) plus its per-bar signal arrays (vol dry-up, upside reversal, MA
+touch, pocket pivot, RS new high, shakeout), recomputed with the scanner's own
+parameters via tv_engine. Buy signals come straight from those arrays plus pivot
 breakout / composite-score rules. Every buy strategy is combined with every exit rule
 (stop-loss, ATR trails, time stops, R:R targets) and every pattern group.
+
+New in this round (findings from tv_pattern_history_backtest.py):
+  * each trade carries its SPY regime (Bull / Mixed / Bear), % vs SPY 200-day, price
+    bucket, base shape and acc/dis/neu ratios;
+  * `--spy-regime above200|bull` drops trades whose entry happened on a tape below the
+    SPY 200-day (or below both 50 & 200) — the regime the profile backtest measured as
+    a -5.3pp drag;
+  * `--max-price` trims the $250+ bucket the profile backtest found weakest.
 
 Usage:
     python3 python/backtests/scanner_universe_backtest.py
     python3 python/backtests/scanner_universe_backtest.py --max-tickers 300 --workers 12
     python3 python/backtests/scanner_universe_backtest.py --min-price 20 --min-vol 1e6
+    python3 python/backtests/scanner_universe_backtest.py --spy-regime bull --max-price 250
 
 Outputs (in python/backtests/):
     scanner_universe_trades.csv     every simulated trade
     scanner_universe_summary.csv    buy-strategy x exit-rule aggregates
+    scanner_universe_pattern_summary.csv  pattern x strategy x exit rollups
     scanner_universe_report.html    browsable HTML report
 """
 import argparse
@@ -41,7 +52,11 @@ warnings.filterwarnings("ignore")
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 TICKER_CACHE_DIR = ROOT_DIR / "ticker_cache"
 OUTPUT_DIR = Path(__file__).resolve().parent
-SCANNER_PATH = ROOT_DIR / "python" / "ibd_pattern_scanner.py"
+
+from tv_engine import (                    # our pattern engine (drw_pattern.pine port)
+    PATTERN_GROUPS, detect_buy_signals, extract_bases, pat_groups, price_bucket,
+    regime_arrays, regime_label, scan_record, ticker_signals,
+)
 
 # ── Default filters (match full_backtest.py convention) ──
 DEFAULT_MIN_PRICE = 12.0
@@ -68,27 +83,7 @@ EXIT_RULES = ["stop_loss", "trail_2atr", "trail_3atr", "time_20", "time_40",
               "ibd_stop6_tp15", "ibd_stop6_tp20", "ibd_stop8_tp15", "ibd_stop8_tp20",
               "rs_quicksand_exit", "rs_breakdown_exit", "scale_ma_1_3"]
 
-# Pattern groups used for slicing the summary
-PATTERN_GROUPS = {
-    "Cup+Handle": {"Cup+Handle"},
-    "Cup": {"Cup"},
-    "Flat Base": {"Flat Base", "6-Wk Flat"},
-    "Double Bottom": {"Dbl Bottom"},
-    "Consolidation": {"Consolidation"},
-    "Deep Base": {"Base", "Deep Base"},
-    "VCP-ready": {"Cup+Handle", "Cup", "Flat Base", "Consolidation", "6-Wk Flat"},
-}
-
-
-def load_patched_scanner():
-    """Load the production scanner with its final guard patched so history is always returned."""
-    src = SCANNER_PATH.read_text()
-    guard = "if latest['pOn'] and (latest['pCode'] > 0):"
-    assert guard in src, "scanner guard anchor not found"
-    patched = src.replace(guard, "if True:  # patched by scanner_universe_backtest: always return history", 1)
-    ns = {"__file__": str(SCANNER_PATH)}
-    exec(compile(patched, "ibd_pattern_scanner_patched", "exec"), ns)
-    return ns["scan_single_ticker"], ns["calculate_atr"]
+# Pattern groups (mapped onto our pattern/shape vocabulary in tv_engine.PATTERN_GROUPS)
 
 
 def calculate_atr(highs, lows, closes, length=14):
@@ -105,21 +100,6 @@ def calculate_atr(highs, lows, closes, length=14):
     for i in range(1, n):
         atr[i] = alpha * tr[i] + (1 - alpha) * atr[i - 1]
     return atr
-
-
-def sma50_series(closes):
-    return pd.Series(closes).rolling(50, min_periods=10).mean().values
-
-
-def find_pivots(highs, lows, left=5, right=5):
-    n = len(highs)
-    ph, pl = {}, {}
-    for i in range(left, n - right):
-        if all(highs[j] < highs[i] for j in range(i - left, i + right + 1) if j != i):
-            ph[i] = highs[i]
-        if all(lows[j] > lows[i] for j in range(i - left, i + right + 1) if j != i):
-            pl[i] = lows[i]
-    return ph, pl
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -403,8 +383,42 @@ def pos_size(quality):
 # Per-ticker processing
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _mk_trade(ticker, base, ctx, bq, ps, composite, strategy, exit_rule,
+              entry_bar, entry_price, ex, ret, ret_raw, risk, rr, reg, ref_price):
+    """One trade row with the history-backtest context columns (SPY regime at entry,
+    % vs SPY 200-day, price bucket, base shape, acc/dis/neu ratios) so the summary can
+    slice by every finding the profile backtest measured."""
+    if reg is not None and entry_bar < len(reg["above200"]):
+        ab = bool(reg["above200"][entry_bar])
+        bl = bool(reg["bull"][entry_bar])
+        s200 = reg["s200"][entry_bar]
+        spy = reg["spy"][entry_bar]
+        regime_lbl = regime_label(ab, bl)
+        vs200 = (spy / s200 - 1.0) * 100.0 if (np.isfinite(s200) and s200 > 0) else None
+    else:
+        regime_lbl, vs200, ab, bl = "unknown", None, None, None
+    return {
+        "ticker": ticker, "pattern": ctx["pattern"],
+        "raw_pattern": ctx["raw_pattern"], "shape": ctx["shape"],
+        "depth": base["bDepPct"], "length": base["bCount"],
+        "pivot_price": base["pivot"], "base_low": base["bLow"],
+        "acc_ratio": ctx["acc_ratio"], "dis_ratio": ctx["dis_ratio"],
+        "neu_ratio": ctx["neu_ratio"], "pat_groups": ctx["pat_groups"],
+        "strategy": strategy, "exit_rule": exit_rule,
+        "entry_bar": entry_bar, "entry_price": entry_price,
+        "exit_bar": ex["exit_bar"], "exit_price": ex["exit_price"],
+        "ret": ret, "ret_raw": ret_raw,
+        "base_quality": bq, "pos_size": ps,
+        "risk_amount": risk, "rr_ratio": rr, "win": ret > 0,
+        "composite_score": composite,
+        "spy_regime": regime_lbl, "spy_above200": ab, "spy_bull": bl,
+        "spy_vs_200_pct": round(vs200, 1) if vs200 is not None else None,
+        "price_bucket": price_bucket(ref_price),
+    }
+
+
 def process_ticker(args):
-    """Scan one ticker with the real scanner and simulate every strategy x exit combo."""
+    """Run OUR scanner on one ticker and simulate every strategy x exit combo."""
     ticker, fpath = args
     try:
         df = pd.read_parquet(fpath)
@@ -413,23 +427,24 @@ def process_ticker(args):
         if df["Close"].iloc[-1] < _MIN_PRICE or df["Volume"].tail(50).mean() < _MIN_VOL:
             return []
 
-        res = _scan(ticker, str(fpath))
-        if not res or not res.get("history"):
+        rec, df = scan_record(ticker, str(fpath), _SPY_CLOSE, df)
+        if rec is None or not rec.get("history"):
             return []
 
-        hist = res["history"]
-        n = len(hist)
-        if n < 60:
+        bases = extract_bases(rec, len(df))
+        sig = ticker_signals(df, _SPY_CLOSE)
+        if not bases or sig is None:
             return []
 
-        highs = df["High"].values[-n:]
-        lows = df["Low"].values[-n:]
-        closes = df["Close"].values[-n:]
-        opens = df["Open"].values[-n:]
-        volumes = df["Volume"].values[-n:]
+        n = len(df)
+        highs = df["High"].to_numpy(dtype=float)
+        lows = df["Low"].to_numpy(dtype=float)
+        closes = df["Close"].to_numpy(dtype=float)
+        opens = df["Open"].to_numpy(dtype=float)
+        volumes = df["Volume"].to_numpy(dtype=float)
         atr14 = calculate_atr(highs, lows, closes, 14)
         sar = parabolic_sar(highs, lows)
-        sma50 = sma50_series(closes)
+        sma50 = sig["sma50"]
         sma200 = pd.Series(closes).rolling(200, min_periods=50).mean().values
         ema10 = pd.Series(closes).ewm(span=10, adjust=False).mean().values
         ema20 = pd.Series(closes).ewm(span=20, adjust=False).mean().values
@@ -440,72 +455,15 @@ def process_ticker(args):
         # quickLen/quickSandLen/gdLen (lines 156-158).
         rs_line = rs_ema21 = rs_ema34 = rs_ema50 = None
         if _SPY_CLOSE is not None:
-            spy_aligned = _SPY_CLOSE.reindex(df.index[-n:]).ffill().bfill().values
+            spy_aligned = _SPY_CLOSE.reindex(df.index).ffill().bfill().values
             if not np.any(np.isnan(spy_aligned)) and np.all(spy_aligned > 0):
                 rs_line = closes / spy_aligned
                 rs_ema21 = ema(rs_line, 21)
                 rs_ema34 = ema(rs_line, 34)
                 rs_ema50 = ema(rs_line, 50)
 
-        # ── Segment history into base runs ──
-        bases = []  # dicts with start/end/pattern/pivot/bLow/boBar etc.
-        i = 0
-        while i < n:
-            st = hist[i]
-            if st.get("pOn") and st.get("pCode", 0) > 0:
-                run_start = i
-                # Find breakout bar inside the run (first bar where boBar == bar)
-                bo_bar = None
-                for j in range(i, n):
-                    sj = hist[j]
-                    if not (sj.get("pOn") and sj.get("pCode", 0) > 0) and j > i:
-                        break
-                    if sj.get("boBar") is not None and sj.get("boBar") == j:
-                        bo_bar = j
-                        break
-                run_end = i
-                for j in range(i, n):
-                    if not (hist[j].get("pOn") and hist[j].get("pCode", 0) > 0) and j > i:
-                        break
-                    run_end = j
-                if run_end >= i:
-                    pivot = None
-                    bLow = None
-                    bTop = None
-                    bDepPct = None
-                    bCount = None
-                    pat_name = None
-                    for j in range(run_start, run_end + 1):
-                        sj = hist[j]
-                        if sj.get("pName"):
-                            pat_name = sj.get("pName")
-                        if sj.get("boPivot") is not None:
-                            pivot = sj.get("boPivot")
-                        if sj.get("bLow") is not None:
-                            bLow = sj.get("bLow")
-                        if sj.get("bTop") is not None:
-                            bTop = sj.get("bTop")
-                        if sj.get("bDepPct") is not None:
-                            bDepPct = sj.get("bDepPct")
-                        if sj.get("bCount") is not None:
-                            bCount = sj.get("bCount")
-                    if pivot is None:
-                        pivot = bTop
-                    bases.append({
-                        "start": run_start, "end": run_end,
-                        "bo_bar": bo_bar, "pivot": pivot, "bLow": bLow,
-                        "bTop": bTop, "bDepPct": bDepPct, "bCount": bCount,
-                        "pattern": pat_name or "Base",
-                    })
-                    i = run_end + 1
-                    continue
-            i += 1
-
-        if not bases:
-            return []
-
+        reg = regime_arrays(_SPY_CLOSE, df)
         trades = []
-        rs_raw = closes.copy()  # fallback when SPY absent (scanner already computed internally)
 
         for base in bases:
             pivot = base["pivot"]
@@ -513,51 +471,25 @@ def process_ticker(args):
             if pivot is None or pivot <= 0 or bLow is None or bLow <= 0:
                 continue
             search_start = max(0, base["start"])
-            search_end = min(len(closes) - 1, (base["bo_bar"] if base["bo_bar"] is not None else base["end"]) + 5)
+            search_end = min(len(closes) - 1,
+                             (base["bo_bar"] if base["bo_bar"] is not None else base["end"]) + 5)
 
             bq = calc_base_quality(base["bDepPct"], base["bCount"])
             ps = pos_size(bq)
+            ctx = {
+                "pattern": base["pattern"], "raw_pattern": base["raw_pattern"],
+                "shape": base["shape"] or "",
+                "pat_groups": "|".join(sorted(pat_groups(base))),
+                "acc_ratio": (round(base["acc_days"] / base["bCount"], 3)
+                               if base["bCount"] else None),
+                "dis_ratio": (round(base["dis_days"] / base["bCount"], 3)
+                               if base["bCount"] else None),
+                "neu_ratio": (round(base["neu_days"] / base["bCount"], 3)
+                               if base["bCount"] else None),
+            }
 
-            # Build signal book from scanner's own flags
-            signals = {}
-
-            # 1. Pivot Breakout — the bar the scanner marked as breakout
-            if base["bo_bar"] is not None and base["bo_bar"] <= len(closes) - 1:
-                bo = base["bo_bar"]
-                entry = max(pivot, closes[bo]) if closes[bo] > pivot else pivot
-                signals["Pivot Breakout"] = (bo, entry)
-
-            for j in range(search_start, search_end + 1):
-                st = hist[j]
-                c = closes[j]
-                if c < bLow or c > pivot * 1.05:
-                    pass  # still allow near-pivot checks below
-                # 2. Upside Reversal
-                if st.get("upsideReversal") and bLow <= c <= pivot * 1.01 and "Upside Reversal" not in signals:
-                    signals["Upside Reversal"] = (j, c)
-                # 3. Shakeout
-                if st.get("shakeoutEntry") and pivot * 0.85 <= c <= pivot and "Shakeout" not in signals:
-                    signals["Shakeout"] = (j, c)
-                # 4. Volume Dry-Up
-                if st.get("volDryUp") and pivot * 0.95 <= c <= pivot * 1.01 and "Volume Dry-Up" not in signals:
-                    signals["Volume Dry-Up"] = (j, c)
-                # 5. MA Touch
-                if st.get("touchedMA") and c >= bLow and c <= pivot and "MA Touch" not in signals:
-                    signals["MA Touch"] = (j, c)
-                # 6. Pocket Pivot
-                if st.get("ppAny") and pivot * 0.90 <= c <= pivot * 1.01 and "Pocket Pivot" not in signals:
-                    signals["Pocket Pivot"] = (j, c)
-                # 7. RS New High
-                if st.get("rsNH") and pivot * 0.85 <= c <= pivot * 1.01 and "RS New High" not in signals:
-                    signals["RS New High"] = (j, c)
-                # 8. SMA50 Bounce (dip to SMA50 then reclaim)
-                if j >= 2 and not np.isnan(sma50[j]) and sma50[j] > 0:
-                    prev_tested = (lows[j - 1] <= sma50[j - 1] * 1.02
-                                   if not np.isnan(sma50[j - 1]) and sma50[j - 1] > 0 else False)
-                    if (prev_tested and c >= opens[j]
-                            and bLow <= c <= pivot and "SMA50 Bounce" not in signals):
-                        signals["SMA50 Bounce"] = (j, c)
-
+            signals = detect_buy_signals(sig, highs, lows, closes, opens, pivot, bLow,
+                                         search_start, search_end, base["bo_bar"])
             if not signals:
                 continue
 
@@ -579,18 +511,9 @@ def process_ticker(args):
                     ret = ret_raw * ps
                     risk = entry_price - bLow
                     rr = abs(ret_raw / (risk / entry_price * 100)) if risk > 0 else 0
-                    trades.append({
-                        "ticker": ticker, "pattern": base["pattern"],
-                        "depth": base["bDepPct"], "length": base["bCount"],
-                        "pivot_price": pivot, "base_low": bLow,
-                        "strategy": strategy, "exit_rule": exit_rule,
-                        "entry_bar": sig_bar, "entry_price": entry_price,
-                        "exit_bar": ex["exit_bar"], "exit_price": ex["exit_price"],
-                        "ret": ret, "ret_raw": ret_raw,
-                        "base_quality": bq, "pos_size": ps,
-                        "risk_amount": risk, "rr_ratio": rr, "win": ret > 0,
-                        "composite_score": composite,
-                    })
+                    trades.append(_mk_trade(ticker, base, ctx, bq, ps, composite,
+                                            strategy, exit_rule, sig_bar, entry_price, ex,
+                                            ret, ret_raw, risk, rr, reg, entry_price))
 
             # Pair / triple signal combos (earliest signal of the combo)
             real_sig_names = sorted(k for k in signals if k not in ("Any Signal", "Composite Score"))
@@ -607,44 +530,31 @@ def process_ticker(args):
                     ret = ret_raw * ps
                     risk = prices[ei] - bLow
                     rr = abs(ret_raw / (risk / prices[ei] * 100)) if risk > 0 else 0
-                    trades.append({
-                        "ticker": ticker, "pattern": base["pattern"],
-                        "depth": base["bDepPct"], "length": base["bCount"],
-                        "pivot_price": pivot, "base_low": bLow,
-                        "strategy": combo_name, "exit_rule": exit_rule,
-                        "entry_bar": bars[ei], "entry_price": prices[ei],
-                        "exit_bar": ex["exit_bar"], "exit_price": ex["exit_price"],
-                        "ret": ret, "ret_raw": ret_raw,
-                        "base_quality": bq, "pos_size": ps,
-                        "risk_amount": risk, "rr_ratio": rr, "win": ret > 0,
-                        "composite_score": composite,
-                    })
+                    trades.append(_mk_trade(ticker, base, ctx, bq, ps, composite,
+                                            combo_name, exit_rule, bars[ei], prices[ei], ex,
+                                            ret, ret_raw, risk, rr, reg, prices[ei]))
         return trades
     except Exception:
         return []
 
 
 # Module-level bindings for worker processes
-_scan = None
 _MIN_PRICE = DEFAULT_MIN_PRICE
 _MIN_VOL = DEFAULT_MIN_VOL_50
-_SPY_CLOSE = None  # Series, Date-indexed; used to build the RS line (close / SPY close)
+_SPY_CLOSE = None  # Series, Date-indexed; used to build the RS line + regime arrays
 
 
 def _init_worker(min_price, min_vol, spy_close):
-    """Each worker loads its own copy of the patched scanner. scan_single_ticker is
-    created via exec() at runtime, so it has no importable __module__/__qualname__ and
-    cannot be pickled through ProcessPoolExecutor's initargs (fails under the 'spawn'
-    start method, e.g. on macOS) — loading it locally in the worker avoids that."""
-    global _scan, _MIN_PRICE, _MIN_VOL, _SPY_CLOSE
-    _scan, _ = load_patched_scanner()
+    """Each worker gets the universe filters + SPY. Our scanner (tv_engine) is a normal
+    importable module, so the worker functions pickle by reference — no exec needed."""
+    global _MIN_PRICE, _MIN_VOL, _SPY_CLOSE
     _MIN_PRICE = min_price
     _MIN_VOL = min_vol
     _SPY_CLOSE = spy_close
 
 
 def run_universe_backtest(args):
-    global _scan, _MIN_PRICE, _MIN_VOL
+    global _MIN_PRICE, _MIN_VOL
     _MIN_PRICE = args.min_price
     _MIN_VOL = args.min_vol
 
@@ -671,8 +581,12 @@ def run_universe_backtest(args):
         tasks = tasks[: args.max_tickers]
 
     print(f"🔍 Full-universe scanner backtest over {len(tasks)} tickers ({TICKER_CACHE_DIR})")
-    print(f"   Scanner: {SCANNER_PATH.name} (real production scanner, history-driven)")
+    print(f"   Scanner: tv_pattern_scanner.py (our drw_pattern.pine port, via tv_engine)")
     print(f"   Filters: price ≥ ${args.min_price}, 50d vol ≥ {args.min_vol:,.0f}")
+    if args.spy_regime != "all":
+        print(f"   Market regime: {args.spy_regime} only (SPY {args.spy_regime} its MAs at entry)")
+    if args.max_price > 0:
+        print(f"   Max pivot price: ${args.max_price:,.0f}")
 
     all_trades = []
     workers = args.workers if args.workers > 0 else None
@@ -705,6 +619,25 @@ def run_universe_backtest(args):
     df.to_csv(trades_path, index=False)
     print(f"💾 Trades saved to {trades_path} ({trades_path.stat().st_size:,} bytes)")
 
+    # ── Findings filters (tv_pattern_history_backtest.py): market regime + price cap ──
+    if args.spy_regime == "above200":
+        before = len(df)
+        df = df[df["spy_above200"].fillna(True)]
+        print(f"   SPY regime 'above200' (SPY held its 200-day at entry): "
+              f"kept {len(df):,} of {before:,} trades")
+    elif args.spy_regime == "bull":
+        before = len(df)
+        df = df[df["spy_bull"].fillna(True)]
+        print(f"   SPY regime 'bull' (SPY above 50 & 200-day at entry): "
+              f"kept {len(df):,} of {before:,} trades")
+    if args.max_price > 0:
+        before = len(df)
+        df = df[df["pivot_price"] <= args.max_price]
+        print(f"   Max pivot price ${args.max_price:,.0f}: kept {len(df):,} of {before:,} trades")
+    if df.empty:
+        print("❌ No trades after filters")
+        return
+
     # ── Summary: buy strategy x exit rule ──
     summary_rows = []
     for buy_s in sorted(df["strategy"].unique()):
@@ -728,10 +661,11 @@ def run_universe_backtest(args):
     summary_df.to_csv(summary_path, index=False)
     print(f"💾 Summary saved to {summary_path}")
 
-    # ── Pattern x strategy x exit rollups ──
+    # ── Pattern x strategy x exit rollups (groups resolved via the pat_groups column,
+    #    mapped onto our pattern/shape vocabulary in tv_engine) ──
     pattern_rows = []
-    for pat, names in PATTERN_GROUPS.items():
-        pdf = df[df["pattern"].isin(names)]
+    for pat in PATTERN_GROUPS:
+        pdf = df[df["pat_groups"].apply(lambda g: pat in str(g).split("|"))]
         for buy_s in sorted(df["strategy"].unique()):
             sdf = pdf[pdf["strategy"] == buy_s]
             if len(sdf) < 5:
@@ -760,6 +694,30 @@ def run_universe_backtest(args):
     for _, r in top.iterrows():
         print(f"{r['buy_strategy']:<40} {r['exit_rule']:<10} {int(r['trades']):>8,} {r['win_pct']:>6.1f}% {r['avg_ret']:>7.2f}% {r['sharpe']:>7.2f}")
 
+    # ── Findings breakdowns (tv_pattern_history_backtest.py): regime, price bucket, shape ──
+    if "spy_regime" in df.columns:
+        print("\n📈 BY MARKET REGIME AT ENTRY (all simulated trades)")
+        for rl in ["Bull", "Mixed", "Bear", "unknown"]:
+            s = df[df["spy_regime"] == rl]
+            if len(s) >= 5:
+                print(f"   {rl:<8s}: {len(s):>8,} trades  win {(s['win'].mean() * 100):>5.1f}%  "
+                      f"avg {s['ret'].mean():>+6.2f}%  sharpe "
+                      f"{(s['ret'].mean() / s['ret'].std() if s['ret'].std() > 0 else 0):>5.2f}")
+    if "price_bucket" in df.columns:
+        print("\n💰 BY PRICE BUCKET")
+        order = ["<$10", "$10-25", "$25-50", "$50-100", "$100-250", "$250+"]
+        for bk in [b for b in order if b in set(df["price_bucket"])]:
+            s = df[df["price_bucket"] == bk]
+            if len(s) >= 5:
+                print(f"   {bk:<9s}: {len(s):>8,} trades  win {(s['win'].mean() * 100):>5.1f}%  "
+                      f"avg {s['ret'].mean():>+6.2f}%")
+    if "shape" in df.columns and df["shape"].notna().any():
+        print("\n📐 BY BASE SHAPE")
+        for sh, s in df.groupby("shape"):
+            if sh and len(s) >= 5:
+                print(f"   {sh:<14s}: {len(s):>8,} trades  win {(s['win'].mean() * 100):>5.1f}%  "
+                      f"avg {s['ret'].mean():>+6.2f}%")
+
     return df, summary_df
 
 
@@ -769,5 +727,10 @@ if __name__ == "__main__":
     ap.add_argument("--max-tickers", type=int, default=0)
     ap.add_argument("--min-price", type=float, default=DEFAULT_MIN_PRICE)
     ap.add_argument("--min-vol", type=float, default=DEFAULT_MIN_VOL_50)
+    ap.add_argument("--spy-regime", choices=["all", "above200", "bull"], default="all",
+                    help="keep only trades entered while SPY held its 200-day (above200) or "
+                         "both 50 & 200-day (bull); all = no regime filter (default)")
+    ap.add_argument("--max-price", type=float, default=0.0,
+                    help="drop trades whose pivot price is above this (0 = no cap)")
     args = ap.parse_args()
     run_universe_backtest(args)

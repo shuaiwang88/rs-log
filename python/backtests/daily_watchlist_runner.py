@@ -112,3 +112,23 @@ print(f"\n📋 {today.isoformat()}: {len(all_today)} total | {len(golden_today)}
       f"{len(new_golden)} new-golden | {len(left_golden)} left-golden | "
       f"{len(new_entrants)} new | {len(removals)} removed")
 print(f"{'='*80}\n")
+
+# ── Step 6: Live breakout picks (TV pattern model) ──
+# recommend_live_breakouts.py appends its own dated picks block to this same
+# watchlist_history.log, so the daily cron log gets both watchlist and picks.
+RECOMMEND_SCRIPT = BACKTESTS / "recommend_live_breakouts.py"
+print(f"{'='*80}")
+print("🚀 RUNNING LIVE BREAKOUT PICKS...")
+print(f"{'='*80}")
+if RECOMMEND_SCRIPT.exists():
+    r2 = subprocess.run([sys.executable, str(RECOMMEND_SCRIPT), "--top", "10"],
+                        capture_output=True, text=True, cwd=str(ROOT), timeout=300)
+    if r2.returncode != 0:
+        print(f"❌ Breakout picks crashed:\n{r2.stderr[-1500:]}")
+    else:
+        picks_lines = r2.stdout.strip().split('\n')
+        print(picks_lines[-2] if len(picks_lines) >= 2 else "Done")
+        print("(full picks block appended to watchlist_history.log by the script)")
+else:
+    print("⚠️  recommend_live_breakouts.py not found — skipping")
+print(f"{'='*80}\n")

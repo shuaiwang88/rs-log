@@ -1,0 +1,158 @@
+{
+  "date": "2026-08-12",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-12.md",
+  "market_summary": "Overall Sentiment: Cautiously optimistic, with the focus on whether the gap-up can hold. Webby's checklist for an uptrend resumption has been satisfied on the S&P 500, which is building a \"webby shelf\" and could resume its power trend within days. However, the Nasdaq is still below its prior highs and needs to clear overhead resistance. The market is at a fork: either the gap-up leads to a new leg higher, or the fade extends the sideways chop.",
+  "tickers": [
+    "DELL",
+    "IWM",
+    "QQQ",
+    "SPY",
+    "SMH",
+    "IGV",
+    "CRWV",
+    "SMCI",
+    "NBIS",
+    "LITE",
+    "AEHR",
+    "MRX",
+    "EAT",
+    "LQDA",
+    "KAVA",
+    "QNT",
+    "WYFI",
+    "AADX",
+    "DCO",
+    "ATRO",
+    "MSGE",
+    "SPH",
+    "CBRS",
+    "COHR",
+    "NVDA",
+    "BE",
+    "TER",
+    "CRDO",
+    "MRVL",
+    "SPCX",
+    "ARKK",
+    "GLD",
+    "GDX",
+    "SLV",
+    "AVT",
+    "HNGE",
+    "TVTX",
+    "LLY",
+    "TWLO",
+    "ATEYY",
+    "PLTR",
+    "SOXX",
+    "AMZN",
+    "VLO",
+    "MPWR"
+  ],
+  "ticker_details": {
+    "DELL": {
+      "actionability": "Watch (position)",
+      "technical_action": "Wide and loose daily action; high-tight flag on weekly. Holding above 50-day. Webby and Ali have positions.",
+      "story": "AI server leader with strong earnings/sales growth. Positive divergence vs. AI peers (SNDK, MU, NBIS)."
+    },
+    "IWM": {
+      "actionability": "Actionable (options)",
+      "technical_action": "Bull put spread sold (295/290, 49 DTE). Harold's options trade; betting on support at the 21-day.",
+      "story": "Small-cap ETF. A catalyst for broad risk-on if it can hold its range."
+    },
+    "MRX": {
+      "actionability": "Actionable",
+      "technical_action": "Breakout on huge earnings beat, clearing trendline, bouncing off 50-day. Ken may take a position.",
+      "story": "Financial services (market-making). 61% EPS growth, big revenue beat."
+    },
+    "AEHR": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 10% on earnings, back at highs. ATR ~16%. Harold: wait for pullback to pivot ($126).",
+      "story": "Chip equipment. Strong earnings but extended after a run from $100 to $130."
+    },
+    "CRDO": {
+      "actionability": "Watchlist",
+      "technical_action": "Clearing a small pivot, showing relative strength. Ken watching.",
+      "story": "AI connectivity. Competes with ALAB."
+    },
+    "TER": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 6%, on the cusp of a breakout but wide and loose. Ken watching.",
+      "story": "Chip testing and robotics. Strong fundamentals, Amazon relationship."
+    },
+    "SPH": {
+      "actionability": "Actionable (tight stop)",
+      "technical_action": "Webby added to SwingTrader; looking to raise stop to breakeven. Needs to clear $174.60.",
+      "story": "Entertainment/Sphere. Short-squeeze potential; market combo play."
+    },
+    "MSGE": {
+      "actionability": "Watchlist",
+      "technical_action": "Breakout on earnings, holding gap. Harold watching intraday.",
+      "story": "Entertainment (Madison Square Garden)."
+    },
+    "NVDA": {
+      "actionability": "Actionable",
+      "technical_action": "Webby's final pick: viable here with stop at yesterday's low. Earnings building.",
+      "story": "AI kingpin. Fundamentally strong, relative to peers."
+    },
+    "SPCX": {
+      "actionability": "Watchlist",
+      "technical_action": "Webby has long-term position; chart horrible, but positive story. Wait for >$160 for normal entry.",
+      "story": "SpaceX/AI. High overhead, early."
+    },
+    "CBRS": {
+      "actionability": "Watchlist",
+      "technical_action": "Earnings tonight. Webby: \"crapshooter,\" wants higher but risky.",
+      "story": "Cerebras. AI chip."
+    },
+    "BE": {
+      "actionability": "Avoid / Short candidate",
+      "technical_action": "Wedge-like rally to declining 50-day, failing. Ken: still downtrend. Webby: classic short setup if you short.",
+      "story": "Energy/fuel cells. Weak technicals; ATR 13%."
+    },
+    "LITE": {
+      "actionability": "Watchlist",
+      "technical_action": "Gap up on strong guidance, near 50-day. Will it hold?",
+      "story": "Optical networking. 600% 12-month run."
+    },
+    "NBIS": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 17% on earnings, gapping to 50-day, resistance.",
+      "story": "NeoCloud. Michael Burry short disclosed."
+    },
+    "CRWV": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 20% on backlog and new commitments.",
+      "story": "NeoCloud. Backlog $104B."
+    },
+    "SMCI": {
+      "actionability": "Avoid",
+      "technical_action": "Up 8% on full-year guidance beat despite revenue miss.",
+      "story": "AI server. Legal issues overhang."
+    },
+    "ATRO": {
+      "actionability": "Watchlist",
+      "technical_action": "Breakout on earnings, pulling back intraday. Harold: watch 5-min chart.",
+      "story": "Aerospace/defense."
+    },
+    "DCO": {
+      "actionability": "Actionable",
+      "technical_action": "Ducommun: in buy zone, liquid, good ATR. Harold likes.",
+      "story": "Aerospace components."
+    },
+    "QNT": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 15% on earnings, but still downtrend.",
+      "story": "Quantum computing. Not actionable."
+    },
+    "WYFI": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 16% on earnings, similar setup.",
+      "story": "NeoCloud. Not actionable."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": [],
+  "source": "",
+  "kind": "live"
+}

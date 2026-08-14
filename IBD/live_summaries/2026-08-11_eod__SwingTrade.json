@@ -1,0 +1,76 @@
+{
+  "date": "2026-08-11",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-11_eod__SwingTrade.md",
+  "market_summary": "Overall Sentiment: Cautiously optimistic, with a bias toward a new leg higher. The checklist for an uptrend resumption has been completed (close above 21/50-day, low above it, three days closing above), and the S&P 500 is days away from a power trend. The low of the August 4th follow-through day is the line in the sand on a closing basis. \"The market right now looks set up like it's just starting another leg higher\" (Webby).",
+  "tickers": [
+    "SNDK",
+    "MU",
+    "DELL",
+    "LLY",
+    "SOXX",
+    "SOXL",
+    "AMZN",
+    "UPRO",
+    "TQQQ",
+    "TNA",
+    "VLO",
+    "CAKE",
+    "BROS",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "RSP",
+    "NVDA"
+  ],
+  "ticker_details": {
+    "SNDK": {
+      "actionability": "Watch (Study)",
+      "technical_action": "Bouncing off lows but still down 46% from highs. Massive post-earnings volatility.",
+      "story": "Poster child for AI memory. Blowout earnings (13,434% EPS growth) couldn\u2019t stop the crash. Likely needs months of base-building."
+    },
+    "MU": {
+      "actionability": "Watch",
+      "technical_action": "Held up better than SNDK (down 30% from highs). RS line is stabilizing but still damaged.",
+      "story": "AI memory leader. Fundamentally spectacular, but technically broken. Needs time to repair."
+    },
+    "DELL": {
+      "actionability": "Avoid / Exited",
+      "technical_action": "High-tight flag breakout attempt failed again. Wide and loose, 100-point swings. Exited on a downside reversal.",
+      "story": "AI server. A frustrating stock; every breakout attempt has been chopped. Will keep watching."
+    },
+    "LLY": {
+      "actionability": "Watchlist",
+      "technical_action": "Multiple failed breakouts, unable to hold gains. Consistently gets worn out and stopped out.",
+      "story": "Weight-loss drug giant. A rotation play that \u201cjust has not been working\u201d with tight swing-trading stops."
+    },
+    "SOXX": {
+      "actionability": "Exited",
+      "technical_action": "Sold on July 1st, avoiding a massive drawdown. A good sell, but the prior whip was costly.",
+      "story": "Chip ETF. Symbolic of the sector's damaging volatility in early July."
+    },
+    "UPRO": {
+      "actionability": "Core Hold",
+      "technical_action": "Core position, acting as ballast. ATR of 3.27%, very manageable.",
+      "story": "3x Leveraged S&P 500 ETF. The primary vehicle for the \"market call.\""
+    },
+    "TQQQ": {
+      "actionability": "Core Hold",
+      "technical_action": "Core position. Provides broad tech exposure without single-stock risk.",
+      "story": "3x Leveraged Nasdaq 100 ETF. Part of the \"ballast\" for tech exposure."
+    },
+    "VLO": {
+      "actionability": "Actionable (with risk awareness)",
+      "technical_action": "Webby bought personally; looks great but subject to headline risk on oil/geopolitics.",
+      "story": "Oil refiner. A strong chart in a strong group, but one tweet away from a shakeout."
+    },
+    "CAKE": {
+      "actionability": "Missed (Extended)",
+      "technical_action": "Broke out perfectly on June 5th, the worst day for the rest of the portfolio. Extended quickly.",
+      "story": "Restaurant/leisure. A missed opportunity; Webby regrets not buying due to being on the defensive."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": [],
+  "source": "SwingTrade",
+  "kind": "eod"
+}

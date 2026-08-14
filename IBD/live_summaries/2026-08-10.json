@@ -1,0 +1,175 @@
+{
+  "date": "2026-08-10",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-10.md",
+  "market_summary": "Overall Sentiment: Bullish, but with a healthy respect for the recent chop. Webby believes the market hasn't even started its next leg higher yet and sees echoes of the 1998 bottom. Ken Shreve noted the post-follow-through day action has been \"picture perfect\" with heavy volume up days and light volume pullbacks. Scott, however, is struggling to translate index strength into portfolio gains and is keeping net exposure around 50% long, with hedges in place.",
+  "tickers": [
+    "PLTR",
+    "COHR",
+    "DELL",
+    "HPE",
+    "NUE",
+    "AVT",
+    "NTAP",
+    "MDB",
+    "TWLO",
+    "LNVGY",
+    "AEHR",
+    "SITM",
+    "FSLY",
+    "CIBR",
+    "HACK",
+    "CRWD",
+    "FTNT",
+    "PANW",
+    "OKTA",
+    "AAOI",
+    "LITE",
+    "OII",
+    "NESR",
+    "AEM",
+    "MP",
+    "TSEM",
+    "LLY",
+    "VRTX",
+    "TENB",
+    "SCCO",
+    "DXCM",
+    "TEAM",
+    "FTI",
+    "SPHR",
+    "DCO",
+    "LFST",
+    "SPCX",
+    "ARKQ",
+    "CLMT",
+    "GOOGL",
+    "VIK",
+    "HNGE",
+    "KRYS",
+    "XBI",
+    "RVMD",
+    "SEZL",
+    "DAVE",
+    "BRKB",
+    "ACHR",
+    "VRSK",
+    "RKLB",
+    "CRWV",
+    "CBRS",
+    "INTC",
+    "AAPL",
+    "META",
+    "EWY",
+    "KORU",
+    "KSPI",
+    "TDW",
+    "CNQ",
+    "TQQQ",
+    "UPRO",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "RSP",
+    "TNX",
+    "USO"
+  ],
+  "ticker_details": {
+    "PLTR": {
+      "actionability": "Actionable (wait for pullback)",
+      "technical_action": "Multi-week breakout above the 200-day line. Short-squeeze; shorts failed to break it back down. Volume dried up on the test. Webby bought.",
+      "story": "AI data analytics. Earnings and revenue growth accelerating (93% rev). A potential major character change from short to new leader."
+    },
+    "COHR": {
+      "actionability": "Avoid / Sell",
+      "technical_action": "Big post-earnings pop, then a violent fade. Scott was in but got stopped out. Option market pricing a 10% swing.",
+      "story": "Optical/networking. High volatility; earnings reaction has been \"sell the news.\" Risk of a throwback rally failing."
+    },
+    "DELL": {
+      "actionability": "Actionable (tight stop at Friday's low)",
+      "technical_action": "Choppy, volatile, but bounced off the 50-day on Friday. Ken started a quarter position. Webby holds but warns of whip.",
+      "story": "AI server. \"Costanza stock\"\u2014the opposite of what you think happens. The group (HPE, LNVGY, NTAP) is strong, but Dell is the trickiest to hold."
+    },
+    "HPE": {
+      "actionability": "Actionable",
+      "technical_action": "Upgraded by Morgan Stanley, breaking out of a 2-day consolidation. Blue dot on weekly.",
+      "story": "AI server/edge. The \"better Dell\" in terms of holding gains; a leader in a strong group."
+    },
+    "NUE": {
+      "actionability": "Actionable (Add)",
+      "technical_action": "Strong breakout, holding in buy zone. Ken's favorite for an add today.",
+      "story": "Steel/infrastructure. Non-tech leader with solid fundamentals; follow-through day breakout."
+    },
+    "NTAP": {
+      "actionability": "Actionable",
+      "technical_action": "Breakout from a short handle, 10-day bounce. Strong group.",
+      "story": "Data storage/hardware. A cleaner chart than Dell, actionable but near the top of the buy zone."
+    },
+    "MDB": {
+      "actionability": "Actionable",
+      "technical_action": "Clearing a pivot at $420. RS line at new highs.",
+      "story": "Enterprise software (NoSQL database). Fundamental standout; setup day was Friday."
+    },
+    "TWLO": {
+      "actionability": "Watchlist",
+      "technical_action": "Big earnings gap-up, now holding tight with an inside day. Webby watching for sideways consolidation.",
+      "story": "Cloud communications software. Historically gaps up and works; wait for a tighter entry."
+    },
+    "LNVGY": {
+      "actionability": "Watchlist (earnings risk)",
+      "technical_action": "Blue dot breakout, \"looks exactly like Dell, but better.\"",
+      "story": "Lenovo (AI servers). Earnings in 3 days, so risk is elevated."
+    },
+    "AEHR": {
+      "actionability": "Avoid",
+      "technical_action": "High-tight flag-like move, but ATR is 15%. Scott passed: \"I can't get position sized.\"",
+      "story": "Chip testing/EV. Too volatile to manage risk for most traders."
+    },
+    "SITM": {
+      "actionability": "Watchlist",
+      "technical_action": "Holding well after an earnings gap. On Leaderboard watchlist.",
+      "story": "Timing chips. Waiting for a handle or pullback to add."
+    },
+    "FASTLY": {
+      "actionability": "Watchlist",
+      "technical_action": "Recovering from a massive gap-down. Webby wants to see it work through overhead before buying.",
+      "story": "Edge computing/software. The bad break left too much overhead supply."
+    },
+    "CIBR": {
+      "actionability": "Actionable (on pullback)",
+      "technical_action": "The entire cybersecurity group is extended. Webby suggests spreading exposure across ETF and 2-3 leaders.",
+      "story": "Cybersecurity. Money is clearly rotating here; buy on pullbacks."
+    },
+    "AAOI": {
+      "actionability": "Avoid",
+      "technical_action": "Trying to bounce with the group, but Scott wants to see more strength. Earnings for LITE tomorrow could swing the sector.",
+      "story": "Optical components. A binary, high-risk group trade ahead of earnings."
+    },
+    "OII": {
+      "actionability": "Actionable",
+      "technical_action": "Earnings gap, strong fundamentals, acting well.",
+      "story": "Oil field services. The institutional quality play in a politically volatile sector."
+    },
+    "NESR": {
+      "actionability": "Watchlist",
+      "technical_action": "Breakaway gap on triple-digit growth. Small cap.",
+      "story": "Oil field services. Put on a watchlist; wait for an alternate entry."
+    },
+    "AEM": {
+      "actionability": "Actionable",
+      "technical_action": "Gold miners perking up \"out of nowhere.\" Scott owns it.",
+      "story": "Gold/precious metals. A sector nobody is talking about, which is part of the appeal."
+    },
+    "TSEM": {
+      "actionability": "Watchlist",
+      "technical_action": "Reclaiming 50-day, strong RS. Ken says it needs more time to build the right side of the base.",
+      "story": "Chip foundry. A solid name, but not a buy after 3 powerful up days."
+    },
+    "LLY": {
+      "actionability": "Watchlist (above 1200)",
+      "technical_action": "Forming a flat, double-bottom-ish base above the 50-day. Webby is watching the marked high.",
+      "story": "Weight-loss drug giant. Hasn't broken down; a base-on-base could form."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": []
+}

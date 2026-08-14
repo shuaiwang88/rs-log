@@ -1,0 +1,60 @@
+{
+  "date": "2026-08-10",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-10_eod.md",
+  "market_summary": "Overall Sentiment: \"I think it looks very constructive.\" The action is what you want to see after a big run, with major indexes either at highs or consolidating tightly. The Nasdaq's follow-through day low, the 50-day line, and the 26,000 level are the primary downside reference points.",
+  "tickers": [
+    "AMZN",
+    "TWLO",
+    "COHR",
+    "SMH",
+    "XLE",
+    "IGV",
+    "JETS",
+    "QQQ",
+    "SPY",
+    "DIA",
+    "IWM",
+    "RSP",
+    "USO",
+    "LITE"
+  ],
+  "ticker_details": {
+    "AMZN": {
+      "actionability": "Actionable (add on breakout above today's high)",
+      "technical_action": "High handle forming after a powerful earnings gap-up. Clearance of today's high would be an add-on or initiation spot.",
+      "story": "Mega-cap e-commerce/AWS. Accelerating earnings/revenue growth. The AI spending \"vibe shift\" started here."
+    },
+    "TWLO": {
+      "actionability": "Actionable (in buy zone)",
+      "technical_action": "Breakaway gap on earnings Friday, clearing the top of a base. Followed through with additional gains today. RS line just turned up sharply.",
+      "story": "AI-driven communications software. History of being a game-changer earnings mover."
+    },
+    "COHR": {
+      "actionability": "Watchlist (earnings risk)",
+      "technical_action": "Surged 42-44% last week, getting decisively above the 50-day. Gave back 14% today with violent selling at the open. Still above the 50-day but facing earnings imminently.",
+      "story": "Optical networking/AI hardware. High ATR, high risk. The massive run-up before earnings creates a \"sprinter before the race\" problem."
+    },
+    "SMH": {
+      "actionability": "Watchlist (wait for decisive move above 50-day)",
+      "technical_action": "Down -2.3% today. Stuck below the 50-day line. Many AI stocks are at the 50-day, creating a binary event.",
+      "story": "Semiconductor ETF. Ed's rule: \"Don't cheat just below a buy point.\" Wait for a decisive move above the 50-day."
+    },
+    "XLE": {
+      "actionability": "Watchlist (headline risk)",
+      "technical_action": "Up nearly 5% on surging oil prices. Technically actionable.",
+      "story": "Energy sector ETF. Directly tied to volatile oil headlines; high headline risk."
+    },
+    "IGV": {
+      "actionability": "Watchlist (extended, wait for pullback)",
+      "technical_action": "Up 2.3%, continuing to show money rotation into software. Cleared a handle area, now extended.",
+      "story": "Software ETF. The \"in vogue\" sector right now. Cybersecurity is a leading subsector."
+    },
+    "JETS": {
+      "actionability": "Avoid (headwind)",
+      "technical_action": "Down -3.4% on the rise in oil prices.",
+      "story": "Airline ETF. Ed advises buying only early entries and managing like a swing trade due to geopolitical sensitivity."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": []
+}

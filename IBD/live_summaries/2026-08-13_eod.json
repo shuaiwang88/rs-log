@@ -1,0 +1,79 @@
+{
+  "date": "2026-08-13",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-13_eod.md",
+  "market_summary": "Overall Sentiment: Bullish. The sideways action over the last week has resolved to the upside. The Nasdaq is now less than 1% away from the 27,000 round number and new high territory. The S&P 500 and equal-weight indexes are already at new highs. The market is optimistic despite geopolitical and economic headwinds, which is a sign of strength. The advice: continue to follow the price/volume action and focus on individual leaders.",
+  "tickers": [
+    "ASML",
+    "APMD",
+    "FDX",
+    "IGV",
+    "SMH",
+    "AMAT",
+    "LRCX",
+    "KLAC",
+    "AEHR",
+    "TER",
+    "CRM",
+    "ADBE",
+    "WDAY",
+    "SPY",
+    "QQQ",
+    "DIA",
+    "IWM",
+    "RSP",
+    "QQQE",
+    "TNX",
+    "USO"
+  ],
+  "ticker_details": {
+    "ASML": {
+      "actionability": "Actionable",
+      "technical_action": "Reclaimed the 50-day line, now forming the right side of a base, less than 8% from all-time highs. RS line improving.",
+      "story": "Institutional-quality chip equipment leader (EUV lithography). The strongest looking of the mega-cap chip equipment names."
+    },
+    "IGV": {
+      "actionability": "Actionable",
+      "technical_action": "Breakout on a 3% gain, making a clear upward move.",
+      "story": "Software ETF. The sector is now outperforming after lagging yesterday; a broad technology move."
+    },
+    "APMD": {
+      "actionability": "Watchlist (speculative)",
+      "technical_action": "Recent July 31st IPO, up only two days since going public. Forming a high, tight IPO base. Reversed higher today.",
+      "story": "Speculative biotech. A first-of-its-kind pill for sleep apnea. FDA approval (NDA) expected decision February 2027. No revenue yet."
+    },
+    "FDX": {
+      "actionability": "Actionable (near breakout)",
+      "technical_action": "Carving the right side of a cup base, moved up 4% today, near the $340 breakout level. Volume increasing.",
+      "story": "Blue-chip logistics leader. Executing on multi-billion dollar cost-cutting campaign, with improvements in earnings and revenue."
+    },
+    "AEHR": {
+      "actionability": "Watchlist",
+      "technical_action": "Explosive two-week rally, then a 4% pullback today. This is a \"bullish 4% decline\" after such a strong move. Still near highs.",
+      "story": "Chip equipment (burn-in testing). A leader in the group that's held up well."
+    },
+    "AMAT": {
+      "actionability": "Avoid / Watchlist",
+      "technical_action": "Down 3.5% after earnings. Has been hitting resistance at the 50-day line for several weeks and is struggling to break above it.",
+      "story": "Applied Materials. An 800-lb gorilla in chip equipment that is lagging the recovery; earnings reaction failed."
+    },
+    "LRCX": {
+      "actionability": "Watchlist",
+      "technical_action": "Similar to AMAT, trying to reclaim the 50-day line but hasn't decisively cleared it.",
+      "story": "Lam Research. Another mega-cap chip equipment laggard; improving but not a leader."
+    },
+    "KLAC": {
+      "actionability": "Avoid",
+      "technical_action": "Similar to AMAT, has not even reached the 50-day line yet.",
+      "story": "KLA Corp. Another widely held chip equipment name that is underperforming."
+    },
+    "TER": {
+      "actionability": "Watchlist",
+      "technical_action": "Ken noted as another name with an opportunity to lead in the chip equipment group.",
+      "story": "Teradyne. A stronger technical chart than the older mega-cap equipment names."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": [],
+  "source": "",
+  "kind": "eod"
+}

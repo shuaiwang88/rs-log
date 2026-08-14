@@ -58,6 +58,15 @@ except ImportError:
         def report(self, *a): pass
     yfrl = _FakeRL()
 
+# defeatbeta-api first choice for the 6 financial statements (deeper quarterly
+# history, no rate limit); yfinance stays the only source for everything else
+# in this file (info, estimates, holders, insider, calendar, ESG - fields
+# defeatbeta-api doesn't have).
+try:
+    import defeatbeta_source as dbsrc
+except ImportError:
+    dbsrc = None
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _df_to_dict(df):
@@ -225,23 +234,26 @@ def fetch_all_fundamentals(ticker, delay=0.3):
             result['info'] = None
 
         # ── Financial statements (full history) ──
-        # Note: yfinance fetches these via separate HTTP requests.
-        # A small delay between calls avoids rate limits.
-        # Financial statements — each is a separate HTTP request to the metadata
-        # endpoint, which is the one known to 429 aggressively. A small stagger
-        # avoids every call colliding at once. The rate limiter will still catch
-        # any that do hit 429, but staggering means fewer retries overall.
-        result['income_q'] = _df_to_dict(_safe_get(lambda: t.quarterly_financials, ticker, 'income_q'))
-        time.sleep(delay)
-        result['income_a'] = _df_to_dict(_safe_get(lambda: t.financials, ticker, 'income_a'))
-        time.sleep(delay)
-        result['balance_q'] = _df_to_dict(_safe_get(lambda: t.quarterly_balance_sheet, ticker, 'balance_q'))
-        time.sleep(delay)
-        result['balance_a'] = _df_to_dict(_safe_get(lambda: t.balance_sheet, ticker, 'balance_a'))
-        time.sleep(delay)
-        result['cashflow_q'] = _df_to_dict(_safe_get(lambda: t.quarterly_cashflow, ticker, 'cashflow_q'))
-        time.sleep(delay)
-        result['cashflow_a'] = _df_to_dict(_safe_get(lambda: t.cashflow, ticker, 'cashflow_a'))
+        # defeatbeta-api first (no rate limit, deeper quarterly history); yfinance
+        # is a per-statement fallback, only hit (and only then throttled with
+        # `delay`) when defeatbeta-api has nothing for this ticker (ETFs, some ADRs).
+        def _statement(kind, yf_fn):
+            if dbsrc is not None:
+                try:
+                    data = dbsrc.get_statement(ticker, kind)
+                except Exception:
+                    data = None
+                if data is not None:
+                    return data
+            time.sleep(delay)
+            return _df_to_dict(_safe_get(yf_fn, ticker, kind))
+
+        result['income_q'] = _statement('income_q', lambda: t.quarterly_financials)
+        result['income_a'] = _statement('income_a', lambda: t.financials)
+        result['balance_q'] = _statement('balance_q', lambda: t.quarterly_balance_sheet)
+        result['balance_a'] = _statement('balance_a', lambda: t.balance_sheet)
+        result['cashflow_q'] = _statement('cashflow_q', lambda: t.quarterly_cashflow)
+        result['cashflow_a'] = _statement('cashflow_a', lambda: t.cashflow)
 
         # ── Earnings history ──
         qe = _safe_get(lambda: t.quarterly_earnings, ticker, 'earnings')

@@ -13,9 +13,11 @@ Pine executes it, so that what the scan reports is what the chart draws:
     pivots  ->  baseCond/isBase  ->  [double bottom]  ->  cup  ->  handle  ->  HTF flag
             ->  line/box mutation block (base low updates, invalidation, breakout, boxes)
 
-The double-bottom stage is switched off - see DETECT_DOUBLE_BOTTOM. Its code is left in place
-so the port still maps to the Pine line for line, but detection is gated at the source, so the
-machine runs the Pine's own no-DB path and no record can come back labelled one.
+The double-bottom stage is on by default (DETECT_DOUBLE_BOTTOM) and independent of the main
+pattern_name/base_shape classification - a double bottom can be live at the same time as any
+other pattern, reported through its own `double_bottom` output key rather than competing for
+`pattern_name`. See DETECT_DOUBLE_BOTTOM's own comment for the two state bugs that were fixed
+before this got turned back on.
 
 Every block below cites the `drw_pattern.pine` line numbers it came from. Pine semantics that
 matter and are reproduced here rather than approximated:
@@ -106,6 +108,37 @@ I_HTF_PB               = 40       # line 515
 I_HTF_PBMIN            = 5        # line 516
 I_HTF_VOL              = 1.1      # line 517
 
+# ── Pine inputs, verbatim (drw_vcp.pine:17-36) - a separate indicator, own pivot length ───
+I_VCP_PIVOT            = 5        # line 17  (NOT I_PIVOT - drw_vcp.pine's own swing length)
+I_VCP_MIN_LEGS         = 2        # line 18
+I_VCP_MAX_LEGS         = 5        # line 19
+I_VCP_MIN_LEG_BARS     = 5        # line 20
+I_VCP_MAX_FIRST_DEPTH  = 35.0     # line 23
+I_VCP_MAX_FINAL_DEPTH  = 10.0     # line 24
+I_VCP_SHRINK_PCT       = 110.0    # line 25
+I_VCP_USE_TREND        = True     # line 28
+I_VCP_TREND_BARS       = 60       # line 29
+I_VCP_TREND_GAIN       = 20.0     # line 30
+I_VCP_HI_BUF_PCT       = 5.0      # line 33
+I_VCP_MAX_BASE_BARS    = 300      # line 34
+I_VCP_HI_RESET_BARS    = 150      # line 35
+I_VCP_BRK_ON_CLOSE     = True     # line 36
+
+# ── Pine inputs, verbatim (drw_pattern_scanner.pine) - the "Two-Part Score System" and its
+# sub-signal components. This is a THIRD Pine script (yet another indicator, not drw_pattern.pine
+# or drw_vcp.pine), scored independently of pattern_name/base_shape/double_bottom/vcp - it reuses
+# this file's own is_base/high_line_y/breakout tracking for "in base"/"near pivot"/"bars since BO"
+# rather than re-deriving drw_pattern_scanner.pine's own (separate, only mostly-identical) base
+# detection engine a second time. ── (line refs are drw_pattern_scanner.pine's own numbering)
+I_SCORE_PRE_PIVOT_PCT  = 20.0     # line 145 - Before-BO score only accumulates within this % of pivot
+I_SCORE_POST_BARS      = 20       # line 149 - Post-BO score window, bars
+I_VDU_LENGTH           = 50       # line 137 - volume SMA length for the dry-up test
+I_DRY_UP_REQ           = 45       # line 140 - dry-up = volume < (100 - this)% of average
+I_MA_TOUCH_THRESH      = 0.5      # line 132 - touch tolerance %
+I_MA_LEN1, I_MA_LEN2, I_MA_LEN3 = 10, 21, 34   # lines 117,122,127 - all EMA per the defaults
+I_SHAKE_TREND_LEN      = 50       # line 157
+I_SHAKE_LR             = 3        # line 158
+
 # ── Where drw_pattern.pine contradicts itself ────────────────────────────────────────────
 #
 # Lines 519-522 rescale four inputs in place (35 -> 0.35, 65 weeks -> 325 bars ...). Three
@@ -125,9 +158,13 @@ I_HTF_VOL              = 1.1      # line 517
 #
 #   db_undercut_literal     line 661: with i_dbRequireUndercut on, the test is `sL < fL * 1.05`,
 #       so the second bottom may sit up to 5% ABOVE the first - the opposite of the input's own
-#       tooltip, "2nd bottom low must undercut (be strictly lower than) 1st bottom low". LOGI
-#       passed with a second low 4.5% above the first (91.32 vs 87.38, against a 91.75 limit).
-#       Default False = the tooltip's `sL < fL`. Set True for the literal 1.05.
+#       tooltip, "2nd bottom low must undercut (be strictly lower than) 1st bottom low". Neither
+#       reading is actually right for a real W: strict undercut (`sL < fL`) rejects a second low
+#       that ties or barely exceeds the first, which is still a valid double bottom, while the
+#       literal 1.05 lets the second low sit meaningfully ABOVE the first and still call it a W.
+#       Default False = the corrected rule: the second low just needs to be close to the first,
+#       within 2% either direction (`0.98*fL <= sL <= 1.02*fL`), no undercut required. Set True
+#       for the literal Pine (`sL < fL * 1.05`).
 #
 #   cup_ratio_int_division  lines 733/738/750: `numberOfValidCl1 / baseTier >= 0.3` divides
 #       two ints. If Pine truncates that to an int, the test becomes "count >= tier", i.e.
@@ -140,21 +177,20 @@ PINE_QUIRKS = {
     "cup_ratio_int_division":  False,
 }
 
-# ── Double bottoms are switched off (user request, 2026-08-03) ────────────────────────────
+# ── Double bottoms: re-enabled 2026-08-08 (user request) ──────────────────────────────────
 #
-# The three db_* quirks above are kept because they document what the Pine says, but nothing
-# reads them while this is False. Gating `detectDB` at its source is what makes the removal
-# total rather than cosmetic: `isDoubleBottom` seeds False and is only ever set from detectDB,
-# so with detection off every downstream branch that tests it is inert, and the state machine
-# is exactly the Pine's own non-DB path. That is not just tidier, it closes both DB-gated
-# state holes found on 2026-08-03 - the expiry branch (lines 1092-1099) that deleted the base
-# lines with no replacement and left the base un-invalidatable, and line 1119's
-# `not isDoubleBottom[1]` guard that let AU carry a 35.2% base past the 35% cap. Bases that
-# used to be reported as "Dbl Bottom" now report as whatever they are without the W: a Cup, or
-# a Base priced off the base top, which is the higher and more conservative buy point.
+# Switched off 2026-08-03 over two DB-gated state holes found in the Pine's own logic: the
+# expiry branch (lines 1092-1099) that deleted the base lines with no replacement and left the
+# base un-invalidatable, and line 1119's `not isDoubleBottom[1]` guard that let AU carry a
+# 35.2% base with no depth cap at all. Both are fixed at their call sites now (search
+# "Fixed 2026-08-08" above) rather than routed around, along with the separate undercut-rule
+# fix (see PINE_QUIRKS.db_undercut_literal) - so this switches the state machine back onto the
+# Pine's own DB path, not just back onto its old bugs.
 #
-# Set True to bring them back; nothing else needs changing.
-DETECT_DOUBLE_BOTTOM = False
+# Double bottom is independent of the main pattern_name/base_shape classification and can be
+# live at the same time as a Cup/Base/Cup+Handle - see the `double_bottom` output key and
+# tv_pattern_chart.py's W-shape drawing, neither of which existed while this was off.
+DETECT_DOUBLE_BOTTOM = True
 
 # ── And one that is not switchable, because it is structural, not a constant ──────────────
 #
@@ -445,6 +481,108 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
     rmq_low = _RangeExtreme(low, "min")
     ph_flags = _pivot_flags(high, I_PIVOT, I_PIVOT, "high")
     pl_flags = _pivot_flags(low, I_PIVOT, I_PIVOT, "low")
+    vcp_ph_flags = _pivot_flags(high, I_VCP_PIVOT, I_VCP_PIVOT, "high")   # drw_vcp.pine line 162
+    vcp_pl_flags = _pivot_flags(low, I_VCP_PIVOT, I_VCP_PIVOT, "low")     # drw_vcp.pine line 163
+
+    # ── Two-part score system sub-signals (drw_pattern_scanner.pine) - all full-series arrays,
+    # computed once and indexed by `t` inside the main loop below. ───────────────────────────
+
+    # Volume dry-up (line 674-678): volume < (100 - I_DRY_UP_REQ)% of its own 50-bar average.
+    vol_sma_vdu = s_vol.rolling(I_VDU_LENGTH).mean().to_numpy()
+    with np.errstate(divide="ignore", invalid="ignore"):
+        vol_ratio_pct = np.where(vol_sma_vdu > 0, volume / vol_sma_vdu * 100.0, np.nan)
+    vol_dry_up = vol_ratio_pct < (100 - I_DRY_UP_REQ)   # NaN comparisons are already False
+
+    # Upside reversal (line 820-821): bar range beats its own 14-bar ATR (Wilder RMA of true
+    # range - ewm(alpha=1/14) is the closed-form equivalent), close in the upper half of range.
+    _prev_close = np.concatenate([[close[0]], close[:-1]])
+    _tr = np.maximum.reduce([high - low, np.abs(high - _prev_close), np.abs(low - _prev_close)])
+    atr14 = pd.Series(_tr).ewm(alpha=1.0 / 14, adjust=False).mean().to_numpy()
+    upside_reversal = (high - low > atr14) & (close > (high + low) / 2.0)
+
+    # MA touch (lines 731-749): touches any of 3 EMAs (10/21/34) within I_MA_TOUCH_THRESH %.
+    def _ema(length):
+        return pd.Series(close).ewm(span=length, adjust=False).mean().to_numpy()
+
+    def _touches(ma_val):
+        upper = ma_val * (1.0 + I_MA_TOUCH_THRESH / 100.0)
+        lower = ma_val * (1.0 - I_MA_TOUCH_THRESH / 100.0)
+        return (ma_val > 0) & (low <= upper) & (high >= lower)
+
+    touched_ma = _touches(_ema(I_MA_LEN1)) | _touches(_ema(I_MA_LEN2)) | _touches(_ema(I_MA_LEN3))
+
+    # Pocket pivot, general form (lines 684-700): unlike VCP's own pivot-based pocket pivot
+    # above, this one is a plain 10-bar/5-bar down-volume max, EXCLUDING today (Pine's loops run
+    # i=1..10 / i=1..5, not 0..N) - same shift(1).rolling(N) pattern used for VCP/build_daily_
+    # screener.py's pocket pivot, just without the extra "must exceed 0" guard Pine omits here.
+    _price_diff = np.diff(close, prepend=close[0])
+    _is_up_day = _price_diff > 0
+    _down_vol_general = np.where(_price_diff < 0, volume, 0.0)
+    _h10 = pd.Series(_down_vol_general).shift(1).rolling(10).max().to_numpy()
+    _h5 = pd.Series(_down_vol_general).shift(1).rolling(5).max().to_numpy()
+    pp_any = (_is_up_day & (volume > _h10) & ~np.isnan(_h10)) | (_is_up_day & (volume > _h5) & ~np.isnan(_h5))
+
+    # RS new high, any of 1Y/6M/3M (lines 203-213) - moved up from its old post-loop-only spot
+    # (search "nh_any" below) so the score system can index it every bar, not just the last one.
+    nh_any = np.zeros(n, dtype=bool)
+    nh1y = nh6m = nh3m = None
+    _spy = None
+    if spy_close is not None and len(spy_close):
+        try:
+            _spy = spy_close.reindex(idx).ffill().bfill().to_numpy(dtype=float)
+            if len(_spy) == n and np.all(np.isfinite(_spy)) and np.all(_spy > 0):
+                _rs_curve = close / _spy
+                _s_rs = pd.Series(_rs_curve)
+                _h1y = _s_rs.shift(1).rolling(250, min_periods=30).max().to_numpy()
+                _h6m = _s_rs.shift(1).rolling(126, min_periods=20).max().to_numpy()
+                _h3m = _s_rs.shift(1).rolling(63, min_periods=10).max().to_numpy()
+                nh1y = _rs_curve > _h1y
+                nh6m = (_rs_curve > _h6m) & ~nh1y
+                nh3m = (_rs_curve > _h3m) & ~nh1y & ~nh6m
+                nh_any = nh1y | nh6m | nh3m
+        except Exception:
+            pass
+
+    # Shakeout entry (lines 771-808): undercut the last confirmed swing low (only while
+    # close > its own 50-bar trend EMA) -> reclaim close > 3-EMA within 3 bars -> entry when a
+    # later high clears the reclaim bar's high. Inherently sequential (each stage depends on
+    # the last), so it gets its own small pre-pass loop rather than a vectorized formula.
+    shake_ema3 = pd.Series(close).ewm(span=3, adjust=False).mean().to_numpy()
+    shake_trend_ema = pd.Series(close).ewm(span=I_SHAKE_TREND_LEN, adjust=False).mean().to_numpy()
+    shake_pl_flags = _pivot_flags(low, I_SHAKE_LR, I_SHAKE_LR, "low")
+    shakeout_entry = np.zeros(n, dtype=bool)
+    _shake_last_swing_low = NAN
+    _shake_undercut_bar = None
+    _shake_reclaim_bar = None
+    _shake_reclaim_high = NAN
+    _shake_setup_active = False
+    for _k in range(n):
+        _kb = _k - I_SHAKE_LR
+        if _kb >= 0 and shake_pl_flags[_kb]:
+            _shake_last_swing_low = low[_kb]
+        _shake_uptrend = close[_k] > shake_trend_ema[_k]
+        _shake_undercut = (not math.isnan(_shake_last_swing_low) and low[_k] < _shake_last_swing_low
+                           and _shake_uptrend)
+        if _shake_undercut and not _shake_setup_active:
+            _shake_undercut_bar = _k
+            _shake_setup_active = True
+            _shake_reclaim_bar = None
+            _shake_reclaim_high = NAN
+        _shake_valid_window = (_shake_setup_active and _shake_undercut_bar is not None
+                               and _k > _shake_undercut_bar and _k - _shake_undercut_bar <= 3)
+        if (_shake_valid_window and close[_k] > shake_ema3[_k] and _shake_reclaim_bar is None
+                and _shake_uptrend):
+            _shake_reclaim_bar = _k
+            _shake_reclaim_high = high[_k]
+        if (_shake_setup_active and _shake_reclaim_bar is not None and _k > _shake_reclaim_bar
+                and high[_k] > _shake_reclaim_high and _shake_uptrend):
+            shakeout_entry[_k] = True
+        if shakeout_entry[_k] or (_shake_setup_active and _shake_undercut_bar is not None
+                                  and _k - _shake_undercut_bar > 3):
+            _shake_setup_active = False
+            _shake_undercut_bar = None
+            _shake_reclaim_bar = None
+            _shake_reclaim_high = NAN
 
     quirk_db_depth = PINE_QUIRKS["db_depth_double_scaled"]
     quirk_db_len = PINE_QUIRKS["db_length_double_scaled"]
@@ -557,7 +695,125 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
     handle_peak_bar = 0
     vol_avg_handle = NAN
 
+    # ── VCP (drw_vcp.pine) state - a separate indicator, fully independent of the base/DB/
+    # cup/handle state above (own pivots, own trend filter, never reads or writes it) ───────
+    VCP_IDLE, VCP_SEEK_LOW, VCP_SEEK_HIGH = 0, 1, 2
+    vcp_hi_buf = 1.0 + I_VCP_HI_BUF_PCT / 100.0
+    vcp_shrink = I_VCP_SHRINK_PCT / 100.0
+    vcp_eff_max_legs = max(I_VCP_MIN_LEGS, I_VCP_MAX_LEGS)
+
+    def _vcp_clear():
+        """Logical half of VcpState.resetState() - Pine's keepDrawings flag only changes what
+        happens to the chart objects, not this state, so one reset covers every call site."""
+        return VCP_IDLE, None, NAN, None, NAN, False, [], [], [], [], []
+
+    (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot, vcp_ready,
+     vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+    vcp_breakout_sig = False
+    vcp_formed_sig = False
+
+    # ── Two-part score system state (drw_pattern_scanner.pine) - score_bo_bar is its OWN
+    # breakout-bar tracker, separate from `breakout_bar` above: that one is a "most recent ever"
+    # marker that Post-BO status/pattern display carries forward indefinitely, while Pine's own
+    # `boBar` (and this) resets to na on every new base, matching how bars-since-BO is supposed
+    # to behave across multiple breakout cycles in one ticker's history. ──────────────────────
+    score_bo_bar = None
+    (score_pp_pre, score_shake_pre, score_touch_pre,
+     score_vdu_pre, score_rs_pre, score_uprev_pre) = (False,) * 6
+    (score_pp_post, score_shake_post, score_touch_post,
+     score_vdu_post, score_rs_post, score_uprev_post) = (False,) * 6
+    before_bo_score = 0
+    post_bo_score = 0
+
     for t in range(n):
+        # ── VCP (drw_vcp.pine) per-bar update - see the module-level state comment above ───
+        vcp_pb = t - I_VCP_PIVOT
+        vcp_ph = high[vcp_pb] if (vcp_pb >= 0 and vcp_ph_flags[vcp_pb]) else NAN
+        vcp_pl = low[vcp_pb] if (vcp_pb >= 0 and vcp_pl_flags[vcp_pb]) else NAN
+
+        vcp_hist_ok = t > I_VCP_PIVOT + I_VCP_TREND_BARS
+        vcp_trend_ok = True
+        if I_VCP_USE_TREND:
+            vcp_trend_ok = False
+            if vcp_hist_ok:
+                _i1, _i2 = t - I_VCP_PIVOT, t - I_VCP_PIVOT - I_VCP_TREND_BARS
+                if _i2 >= 0 and close[_i2] > 0:
+                    vcp_trend_ok = (close[_i1] / close[_i2] - 1.0) * 100.0 >= I_VCP_TREND_GAIN
+
+        vcp_formed_sig = False
+        vcp_breakout_sig = False
+
+        # real-time invalidation: undercut, excessive depth, stale base (lines 172-183)
+        if vcp_phase != VCP_IDLE:
+            vcp_undercut = bool(vcp_ls) and low[t] < vcp_ls[-1]
+            vcp_too_deep = False
+            if vcp_phase == VCP_SEEK_LOW and not math.isnan(vcp_act_high):
+                vcp_cur_depth = (vcp_act_high - low[t]) / vcp_act_high * 100.0
+                vcp_allowed = I_VCP_MAX_FIRST_DEPTH if not vcp_hs else vcp_depths[-1] * vcp_shrink
+                vcp_too_deep = vcp_cur_depth > vcp_allowed
+            vcp_stale = vcp_base_start_bar is not None and (t - vcp_base_start_bar) > I_VCP_MAX_BASE_BARS
+            vcp_stale_high = vcp_act_high_bar is not None and (t - vcp_act_high_bar) > I_VCP_HI_RESET_BARS
+            if vcp_undercut or vcp_too_deep or vcp_stale or vcp_stale_high:
+                (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot,
+                 vcp_ready, vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+
+        # confirmed swing HIGH (lines 186-213)
+        if not math.isnan(vcp_ph):
+            if vcp_phase == VCP_IDLE:
+                if vcp_trend_ok:
+                    vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_phase = vcp_pb, vcp_ph, vcp_pb, VCP_SEEK_LOW
+            elif vcp_phase == VCP_SEEK_LOW:
+                if vcp_hs and vcp_ph > vcp_hs[0] * vcp_hi_buf:
+                    (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot,
+                     vcp_ready, vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+                    if vcp_trend_ok:
+                        vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_phase = vcp_pb, vcp_ph, vcp_pb, VCP_SEEK_LOW
+                elif vcp_ph > vcp_act_high:
+                    vcp_act_high, vcp_act_high_bar = vcp_ph, vcp_pb
+                    if not vcp_hs:
+                        vcp_base_start_bar = vcp_pb
+            else:  # VCP_SEEK_HIGH
+                if vcp_hs and vcp_ph > vcp_hs[0] * vcp_hi_buf:
+                    (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot,
+                     vcp_ready, vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+                    if vcp_trend_ok:
+                        vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_phase = vcp_pb, vcp_ph, vcp_pb, VCP_SEEK_LOW
+                elif len(vcp_hs) >= vcp_eff_max_legs:
+                    (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot,
+                     vcp_ready, vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+                else:
+                    vcp_act_high, vcp_act_high_bar, vcp_phase = vcp_ph, vcp_pb, VCP_SEEK_LOW
+
+        # confirmed swing LOW -> try to record a contraction leg (lines 216-249)
+        if not math.isnan(vcp_pl) and vcp_phase == VCP_SEEK_LOW and not math.isnan(vcp_act_high):
+            vcp_leg_bars = vcp_pb - vcp_act_high_bar
+            vcp_d = (vcp_act_high - vcp_pl) / vcp_act_high * 100.0
+            vcp_allowed2 = I_VCP_MAX_FIRST_DEPTH if not vcp_hs else vcp_depths[-1] * vcp_shrink
+            vcp_hl_ok = (not vcp_ls) or vcp_pl > vcp_ls[-1]
+            if vcp_d > 0 and vcp_leg_bars >= I_VCP_MIN_LEG_BARS:
+                if vcp_d <= vcp_allowed2 and vcp_hl_ok:
+                    vcp_hs.append(vcp_act_high)
+                    vcp_h_bars.append(vcp_act_high_bar)
+                    vcp_ls.append(vcp_pl)
+                    vcp_l_bars.append(vcp_pb)
+                    vcp_depths.append(vcp_d)
+                    vcp_phase = VCP_SEEK_HIGH
+                    vcp_pivot = vcp_hs[-1]
+                    _was_ready = vcp_ready
+                    vcp_ready = len(vcp_hs) >= I_VCP_MIN_LEGS and vcp_d <= I_VCP_MAX_FINAL_DEPTH
+                    vcp_formed_sig = vcp_ready and not _was_ready
+                else:
+                    (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot,
+                     vcp_ready, vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+            # legs shorter than I_VCP_MIN_LEG_BARS (or non-declines) are ignored as noise
+
+        # breakout: price clears the pivot while the pattern is qualified (lines 253-258)
+        vcp_brk_src = close[t] if I_VCP_BRK_ON_CLOSE else high[t]
+        if vcp_ready and not math.isnan(vcp_pivot) and vcp_brk_src > vcp_pivot:
+            vcp_breakout_sig = True
+            (vcp_phase, vcp_base_start_bar, vcp_act_high, vcp_act_high_bar, vcp_pivot,
+             vcp_ready, vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths) = _vcp_clear()
+
         # ── pivots: registered i_pivot bars late (lines 548-556) ─────────────────────────
         pb = t - I_PIVOT
         if pb >= I_PIVOT:
@@ -677,7 +933,7 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
                         else:
                             cond_prices_h = True
                         if I_DB_REQUIRE_UNDERCUT:
-                            cond_prices_a = (sL < fL * 1.05) if quirk_undercut else (sL < fL)
+                            cond_prices_a = (sL < fL * 1.05) if quirk_undercut else (fL * 0.98 <= sL <= fL * 1.02)
                         else:
                             cond_prices_a = (sL <= fL * 1.05 or sL >= fL * 0.80)
                         cond_prices_b = sL >= db_floor * peak
@@ -958,8 +1214,14 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
 
         if is_double_bottom and (t - top_db_bar) > I_DB_LENGTH:          # lines 1092-1099
             is_double_bottom = False
-            high_line_y = NAN            # the Pine deletes both lines and draws no replacement
-            low_line_y = NAN
+            # Restored from the underlying base's own high/low instead of the Pine's literal
+            # "delete both lines, draw no replacement" (fixed 2026-08-08 alongside re-enabling
+            # DETECT_DOUBLE_BOTTOM) - NaN-ing both left the base permanently un-invalidatable:
+            # broke_down and broke_out both require a real high_line_y, so a base that simply
+            # aged out of its double-bottom window would freeze in this state forever instead
+            # of resuming as a normal base.
+            high_line_y = start_base_price[0] if start_base_price else NAN
+            low_line_y = low_base_price[0] if low_base_price else NAN
             db_line1_x1 = db_line2_x2 = NAN
 
         if is_double_bottom and not math.isnan(db_line1_x1) and not math.isnan(db_line2_x2):
@@ -976,9 +1238,17 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
             if low_base_price:
                 low_base_price.insert(0, low[t])
 
-        broke_down = ((not math.isnan(high_line_y)) and low[t] < high_line_y * (1 - I_BASE_DEPTH)) \
+        # A double-bottom-flagged base checks depth against db_floor (I_DB_DEPTH, 40%) instead
+        # of the regular I_BASE_DEPTH (35%) - consistent with the allowance it was DETECTED
+        # under (cond_prices_b uses the same db_floor), so a base correctly recognised as a
+        # double bottom at, say, 38% deep is not killed on the very next bar by a cap it was
+        # never held to. Fixed 2026-08-08: the Pine's literal `not isDoubleBottom[1]` skipped
+        # this check ENTIRELY for DB-flagged bases rather than widening it, so one could carry
+        # arbitrarily deep with no cap at all (observed: AU past 35% with the guard in place).
+        _depth_floor = db_floor if is_db_prev else (1.0 - I_BASE_DEPTH)
+        broke_down = ((not math.isnan(high_line_y)) and low[t] < high_line_y * _depth_floor) \
             or base_count > I_BASE_LENGTH
-        if broke_down and is_base_prev and not is_db_prev:               # lines 1119-1128
+        if broke_down and is_base_prev:                                  # lines 1119-1128
             # Recorded before the lines are nulled - after this point the top is unrecoverable.
             _record(t, "Breakdown",
                     "Cup+Handle" if handle_forming else
@@ -1053,6 +1323,64 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
             box_over = False
             box_end_bar = t
 
+        # ── Two-part score system (drw_pattern_scanner.pine lines 831-911) - reuses this
+        # file's own is_base/high_line_y/broke_out/base_cond (computed above for the main
+        # pattern state machine) rather than re-deriving a second, separate base detector just
+        # for the score. Must read is_base_prev BEFORE it is overwritten below. ─────────────
+        score_new_base = base_cond and not is_base_prev
+        if score_new_base:
+            score_bo_bar = None
+        if broke_out:
+            score_bo_bar = t
+
+        score_in_base = is_base or is_double_bottom or is_htf
+        score_dist = ((close[t] - high_line_y) / high_line_y * 100.0
+                      if (score_in_base and not math.isnan(high_line_y) and high_line_y > 0)
+                      else NAN)
+        score_bars_sbo = (t - score_bo_bar) if score_bo_bar is not None else None
+
+        near_pivot_score = (score_in_base and not math.isnan(score_dist)
+                            and abs(score_dist) <= I_SCORE_PRE_PIVOT_PCT)
+        if score_new_base:
+            (score_pp_pre, score_shake_pre, score_touch_pre,
+             score_vdu_pre, score_rs_pre, score_uprev_pre) = (False,) * 6
+        elif near_pivot_score:
+            if pp_any[t]:
+                score_pp_pre = True
+            if shakeout_entry[t]:
+                score_shake_pre = True
+            if touched_ma[t]:
+                score_touch_pre = True
+            if vol_dry_up[t]:
+                score_vdu_pre = True
+            if nh_any[t]:
+                score_rs_pre = True
+            if upside_reversal[t]:
+                score_uprev_pre = True
+        before_bo_score = (int(score_pp_pre) + int(score_shake_pre) + int(score_touch_pre)
+                           + int(score_vdu_pre) + int(score_rs_pre) + int(score_uprev_pre))
+
+        post_bo_window_score = (not score_in_base and score_bars_sbo is not None
+                                and score_bars_sbo <= I_SCORE_POST_BARS)
+        if score_new_base or score_in_base:
+            (score_pp_post, score_shake_post, score_touch_post,
+             score_vdu_post, score_rs_post, score_uprev_post) = (False,) * 6
+        elif post_bo_window_score:
+            if pp_any[t]:
+                score_pp_post = True
+            if shakeout_entry[t]:
+                score_shake_post = True
+            if touched_ma[t]:
+                score_touch_post = True
+            if vol_dry_up[t]:
+                score_vdu_post = True
+            if nh_any[t]:
+                score_rs_post = True
+            if upside_reversal[t]:
+                score_uprev_post = True
+        post_bo_score = (int(score_pp_post) + int(score_shake_post) + int(score_touch_post)
+                         + int(score_vdu_post) + int(score_rs_post) + int(score_uprev_post))
+
         # ── end of bar: everything [1] and [25] will read next ───────────────────────────
         is_base_hist[t] = is_base
         is_base_prev = is_base
@@ -1121,12 +1449,13 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
             pattern = "Cup"                        # see CUP_LATCH note below
         else:
             pattern = "Base"
-        # A base could outlive its own lines while double bottoms were on: the DB expiry branch
-        # (lines 1092-1099) deleted highLine and lowLine and drew no replacement, so every
-        # later test - the 35% breakdown, the breakout, the base-low update - read
-        # `line.get_y1()` as na and the base stopped being invalidatable. With
-        # DETECT_DOUBLE_BOTTOM off that branch is unreachable and this should now always be
-        # True; it is still reported so the claim is checkable rather than assumed.
+        # A base could outlive its own lines when double bottoms were live: the DB expiry branch
+        # (lines 1092-1099) used to delete highLine and lowLine with no replacement, so every
+        # later test - the depth-cap breakdown, the breakout, the base-low update - read
+        # `line.get_y1()` as na and the base stopped being invalidatable. Fixed 2026-08-08 (that
+        # branch now restores the base's own high/low instead of nulling them), so this should
+        # always be True regardless of DETECT_DOUBLE_BOTTOM; still reported so the claim is
+        # checkable rather than assumed.
         lines_live = not math.isnan(high_line_y)
         base_top = high_line_y if lines_live else (
             start_base_price[0] if start_base_price else NAN)
@@ -1184,42 +1513,29 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
     high_52w = float(np.nanmax(high[-win52:]))
     pct_off_52w = (high_52w - last_close) / high_52w * 100.0 if high_52w > 0 else NAN
 
+    # nh_any/nh1y/nh6m/nh3m computed once near the top of the function now (the score system
+    # needs them every bar); reused here for the final-bar-only fields instead of redoing the
+    # same rolling-window computation a second time.
     rs_score = None
-    rs_nh = False
+    rs_nh = bool(nh_any[t])
     rs_nh_period = None
     rs_leads_price = False
-    rs_nh_count = 0
-    if spy_close is not None and len(spy_close):
-        try:
-            spy = spy_close.reindex(idx).ffill().bfill().to_numpy(dtype=float)
-            if len(spy) == n and np.all(np.isfinite(spy)) and np.all(spy > 0):
-                rs_curve = close / spy
-                s_rs = pd.Series(rs_curve)
-                h1y = s_rs.shift(1).rolling(250, min_periods=30).max().to_numpy()
-                h6m = s_rs.shift(1).rolling(126, min_periods=20).max().to_numpy()
-                h3m = s_rs.shift(1).rolling(63, min_periods=10).max().to_numpy()
-                nh1y = rs_curve > h1y
-                nh6m = (rs_curve > h6m) & ~nh1y
-                nh3m = (rs_curve > h3m) & ~nh1y & ~nh6m
-                nh_any = nh1y | nh6m | nh3m
-                rs_nh = bool(nh_any[t])
-                rs_nh_count = int(np.count_nonzero(nh_any[-50:]))
-                if rs_nh:
-                    rs_nh_period = "1Y" if nh1y[t] else ("6M" if nh6m[t] else "3M")
-                    lb = 250 if nh1y[t] else (126 if nh6m[t] else 63)
-                    prior_high = float(np.nanmax(high[max(0, t - lb):t])) if t > 0 else NAN
-                    rs_leads_price = bool(not (high[t] > prior_high))
-                # totalRsScore (lines 281-294): 0.4/0.2/0.2/0.2 over 63/126/189/252 bars.
-                def _perf(a, k):
-                    return a[t] / a[t - min(k, t)] if a[t - min(k, t)] > 0 else NAN
-                stock = (0.4 * _perf(close, 63) + 0.2 * _perf(close, 126)
-                         + 0.2 * _perf(close, 189) + 0.2 * _perf(close, 252))
-                ref = (0.4 * _perf(spy, 63) + 0.2 * _perf(spy, 126)
-                       + 0.2 * _perf(spy, 189) + 0.2 * _perf(spy, 252))
-                if ref and np.isfinite(ref) and ref != 0:
-                    rs_score = float(stock / ref * 100.0)
-        except Exception:
-            pass
+    rs_nh_count = int(np.count_nonzero(nh_any[-50:]))
+    if rs_nh and nh1y is not None:
+        rs_nh_period = "1Y" if nh1y[t] else ("6M" if nh6m[t] else "3M")
+        lb = 250 if nh1y[t] else (126 if nh6m[t] else 63)
+        prior_high = float(np.nanmax(high[max(0, t - lb):t])) if t > 0 else NAN
+        rs_leads_price = bool(not (high[t] > prior_high))
+    if _spy is not None and len(_spy) == n and np.all(np.isfinite(_spy)) and np.all(_spy > 0):
+        # totalRsScore (lines 281-294): 0.4/0.2/0.2/0.2 over 63/126/189/252 bars.
+        def _perf(a, k):
+            return a[t] / a[t - min(k, t)] if a[t - min(k, t)] > 0 else NAN
+        stock = (0.4 * _perf(close, 63) + 0.2 * _perf(close, 126)
+                 + 0.2 * _perf(close, 189) + 0.2 * _perf(close, 252))
+        ref = (0.4 * _perf(_spy, 63) + 0.2 * _perf(_spy, 126)
+               + 0.2 * _perf(_spy, 189) + 0.2 * _perf(_spy, 252))
+        if ref and np.isfinite(ref) and ref != 0:
+            rs_score = float(stock / ref * 100.0)
 
     # ── base_shape: what the channel the Pine draws actually looks like ──────────────────
     #
@@ -1369,6 +1685,16 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
             if (vol_ma_handle[t] and not math.isnan(vol_avg_handle)) else None,
             "cup_ok": bool(require_cup_ok),
         } if status == "In Base" else None,
+        # Independent of pattern_name/base_shape - a double bottom can be live at the same time
+        # as a Cup/Base/Cup+Handle, so it is its own key rather than a pattern_name value (the
+        # W's own 4 corner points, straight from the detector - see tv_pattern_chart.py's note
+        # on why these are drawn as-is rather than re-derived from bar data).
+        "double_bottom": {
+            "first_high": _f(db_fH), "first_high_date": _iso(idx, db_fHt) if db_fHt >= 0 else None,
+            "first_low": _f(db_fL), "first_low_date": _iso(idx, db_fLt) if db_fLt >= 0 else None,
+            "second_high": _f(db_sH), "second_high_date": _iso(idx, db_sHt) if db_sHt >= 0 else None,
+            "second_low": _f(db_sL), "second_low_date": _iso(idx, db_sLt) if db_sLt >= 0 else None,
+        } if is_double_bottom else None,
         "cup_bars_in_base": int(cup_bars_in_base),
         "cup_last_bars_ago": int(t - cup_last_bar) if cup_last_bar is not None else None,
         "is_cup_latched": bool(is_cup_sticky),
@@ -1378,6 +1704,48 @@ def scan_ticker(ticker: str, file_path: str, spy_close: pd.Series = None, debug:
         "rs_nh_period": rs_nh_period,
         "rs_leads_price": bool(rs_leads_price),
         "rs_nh_count": int(rs_nh_count),
+        # Two-part score system (drw_pattern_scanner.pine) - always present (0/0 is itself
+        # meaningful, same as the Pine's own always-on plots), unlike double_bottom/vcp which
+        # are None when nothing has ever happened for that signal specifically.
+        "score": {
+            "before_bo": int(before_bo_score),
+            "post_bo": int(post_bo_score),
+            "composite": int(before_bo_score + post_bo_score),
+            "before_bo_detail": {
+                "pocket_pivot": bool(score_pp_pre), "shakeout": bool(score_shake_pre),
+                "ma_touch": bool(score_touch_pre), "vol_dry_up": bool(score_vdu_pre),
+                "rs_new_high": bool(score_rs_pre), "upside_reversal": bool(score_uprev_pre),
+            },
+            "post_bo_detail": {
+                "pocket_pivot": bool(score_pp_post), "shakeout": bool(score_shake_post),
+                "ma_touch": bool(score_touch_post), "vol_dry_up": bool(score_vdu_post),
+                "rs_new_high": bool(score_rs_post), "upside_reversal": bool(score_uprev_post),
+            },
+        },
+        "vcp": {
+            "status": "Ready" if vcp_ready else ("Tracking" if vcp_phase != VCP_IDLE else "Idle"),
+            "contractions": len(vcp_hs),
+            "last_depth_pct": _f(vcp_depths[-1]) if vcp_depths else None,
+            "pivot": _f(vcp_pivot) if vcp_ready else None,
+            "ready": bool(vcp_ready),
+            "breakout": bool(vcp_breakout_sig),
+            "formed": bool(vcp_formed_sig),
+            "base_start_date": _iso(idx, vcp_base_start_bar) if vcp_base_start_bar is not None else None,
+            # Confirmed contraction legs (high -> low), oldest first - drawn the same way
+            # drw_vcp.pine's showLegs option connects each recorded high to its low.
+            "legs": [
+                {"high": _f(h), "high_date": _iso(idx, hb), "low": _f(l), "low_date": _iso(idx, lb),
+                 "depth_pct": _f(d)}
+                for h, hb, l, lb, d in zip(vcp_hs, vcp_h_bars, vcp_ls, vcp_l_bars, vcp_depths)
+            ],
+        # Surfaced once the 1st contraction is confirmed and the base is actively progressing
+        # into (or past) the 2nd. `phase != IDLE` alone would also include a bare anchored high
+        # with zero completed legs, which is too early to mean anything - and a first attempt at
+        # this also kept every ticker with a breakout ANYWHERE in its ~6-year history even once
+        # back to idle with nothing currently happening, which turned out to be most of them
+        # (795 of 1066 on the first full rescan) and buried the tickers actually worth looking
+        # at. Current-state only, full stop.
+        } if (vcp_phase != VCP_IDLE and len(vcp_hs) >= 1) else None,
         "htf_context": htf_ctx,
         "overlay": overlay,
         # Split out into tv_pattern_history.json by run_scan, so the live file stays small.

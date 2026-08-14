@@ -12,7 +12,8 @@ NOW WITH BOTH ENGINE'S TOP COMBOS:
   scanner_universe (breakout): Pivot Breakout+SMA50 Bounce,
     MA Touch+Pivot Breakout+Upside Reversal, Pivot Breakout
 
-Uses the real ibd_pattern_scanner.py (patched to return full history).
+Pattern source: OUR scanner (python/tv_pattern_scanner.py, the drw_pattern.pine port)
+— the same engine the 📐 TV Pattern tab scans with. Output columns are unchanged.
 
 Output:
   1. Console table ranked by composite score
@@ -32,7 +33,8 @@ warnings.filterwarnings("ignore")
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 TICKER_CACHE_DIR = ROOT_DIR / "ticker_cache"
 OUTPUT_DIR = Path(__file__).resolve().parent
-SCANNER_PATH = ROOT_DIR / "python" / "ibd_pattern_scanner.py"
+
+from tv_engine import prepare_frame, scan_ticker
 
 MIN_PRICE = 12.0
 MIN_VOL_50 = 500_000
@@ -63,17 +65,6 @@ COMBO_WEIGHTS = {
     'MA Touch+PB+Upside Reversal': 1.5,        # 0.34 sharpe
     'Pivot Breakout': 1.2,                     # baseline breakout
 }
-
-
-def load_patched_scanner():
-    src = SCANNER_PATH.read_text()
-    guard = "if latest['pOn'] and (latest['pCode'] > 0):"
-    if guard not in src:
-        raise RuntimeError("Scanner guard anchor not found")
-    patched = src.replace(guard, "if True:  # patched: always return history", 1)
-    ns = {"__file__": str(SCANNER_PATH)}
-    exec(compile(patched, "ibd_pattern_scanner_patched", "exec"), ns)
-    return ns["scan_single_ticker"]
 
 
 def ema(series, span):
@@ -252,12 +243,14 @@ def compute_combo_score(combos):
 
 def main(args):
     t0 = time.time()
-    scan_fn = load_patched_scanner()
 
     files = sorted(glob.glob(str(TICKER_CACHE_DIR / "*_1d.parquet")))
+    if args.max_tickers:
+        files = files[:args.max_tickers]
     print(f"🔍 Scanning {len(files)} tickers for triple-signal watchlist...")
-    print(f"   IBD: Flat Base / Consolidation, depth {args.min_depth}-{args.max_depth}%, "
-          f"length {args.min_length}-{args.max_length} days")
+    print(f"   TV: Flat Base / Consolidation (drw_pattern.pine), depth "
+          f"{args.min_depth}-{args.max_depth}%, length "
+          f"{args.min_length}-{args.max_length} days")
     print(f"   TF:  SMA200+EMA10>EMA20+near 52W high+RSI>50")
     print(f"   BUY: Mid-base (SMA50+Shake, UpRev) + Breakout (PB+SMA50, MA+PB+UpRev)")
 
@@ -275,24 +268,23 @@ def main(args):
             if df["Close"].iloc[-1] < MIN_PRICE or df["Volume"].tail(50).mean() < MIN_VOL_50:
                 continue
 
-            # ── IBD Pattern Check ──
-            res = scan_fn(ticker, str(f))
-            if not res or not res.get("history"):
+            # ── Pattern Check — OUR scanner (drw_pattern.pine port) ──
+            df = prepare_frame(df)
+            if df is None:
+                continue
+            res = scan_ticker(ticker, str(f), None, df=df)
+            if not res or res.get("status") != "In Base":
                 continue
 
-            hist = res["history"]
-            latest = hist[-1]
-
-            p_on = latest.get("pOn", False)
-            p_name = latest.get("pName", "")
-            if not p_on or p_name not in ("Flat Base", "Consolidation"):
+            p_name = res.get("base_shape") or res.get("pattern_name")
+            if p_name not in ("Flat Base", "Consolidation"):
                 continue
 
-            b_depth = latest.get("bDepPct")
-            b_length = latest.get("bCount")
-            b_top = latest.get("bTop")
-            b_low = latest.get("bLow")
-            pivot = latest.get("boPivot") or b_top
+            b_depth = res.get("base_depth_pct")
+            b_length = res.get("days_in_base")
+            b_top = res.get("base_top")
+            b_low = res.get("base_low")
+            pivot = res.get("pivot") or b_top
 
             if b_depth is None or b_length is None:
                 continue
@@ -329,6 +321,10 @@ def main(args):
             combo_score = compute_combo_score(combos)
             combo_count = sum(1 for c in COMBO_WEIGHTS if combos.get(c))
             sig_count = sum(1 for k in raw_sigs if k in ('SMA50 Bounce', 'Shakeout', 'Upside Reversal'))
+
+            # 21-day ATR% (IBD-style volatility) — used by the Scans & Leads tab's
+            # Min 21D ATR% filter (default 2.5%).
+            atr21 = atr21_pct(highs, lows, closes)
 
             # ── Composite scoring ──
             ibd_score = 0.0
@@ -375,6 +371,7 @@ def main(args):
                 "combo_PB": combos.get("Pivot Breakout", False),
                 "combo_count": combo_count,
                 "sig_count": sig_count,
+                "atr21_pct": atr21,
                 "quality_filter": (b_depth is not None and b_depth <= 25 and b_length is not None and b_length <= 150),
             })
 
@@ -448,6 +445,9 @@ def main(args):
     print(f"   Breakout combos: {n_pb}  |  Best (PB+SMA50): {(df_out['combo_PB_SMA50']).sum()}")
     print(f"   Both engines firing: {((df_out['combo_SMA50_Shakeout'] | df_out['combo_SMA50'] | df_out['combo_Shakeout_Upside'] | df_out['combo_Upside']) & (df_out['combo_PB_SMA50'] | df_out['combo_MA_PB_UpRev'] | df_out['combo_PB'])).sum()}")
     print(f"   Quality filter (depth≤25% & len≤150d): {n_quality}  |  Golden+Quality: {(df_out['combo_SMA50_Shakeout'] & (df_out['tf_flags_on'] >= 3) & df_out['quality_filter']).sum()}")
+    if 'atr21_pct' in df_out.columns:
+        print(f"   21D ATR% > 2.5: {(df_out['atr21_pct'].fillna(0) > 2.5).sum()}  |  "
+              f"median {df_out['atr21_pct'].median():.1f}%")
     print(f"   SMA200+EMA+RISING (triple TF): {(df_out['above_sma200'] & df_out['ema_bullish'] & df_out['near_52w_high']).sum()}")
 
 
@@ -462,11 +462,29 @@ def _calc_atr(highs, lows, closes, length=14):
     return atr
 
 
+def atr21_pct(highs, lows, closes):
+    """21-day ATR% using the same convention as build_daily_screener.py's
+    '21 Day ATR %' column (simple mean of the last 21 true ranges / close * 100),
+    so the watchlist numbers match the IBD-style screener."""
+    n = len(closes)
+    if n < 22:
+        return None
+    prev_close = np.roll(closes, 1)
+    prev_close[0] = closes[0]
+    tr = np.maximum(highs - lows,
+                    np.maximum(np.abs(highs - prev_close), np.abs(lows - prev_close)))
+    atr21 = float(np.mean(tr[-21:]))
+    c = float(closes[-1])
+    return round(atr21 / c * 100.0, 2) if c > 0 else None
+
+
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Unified IBD+TF+BuyCombo watchlist")
+    ap = argparse.ArgumentParser(description="Unified IBD+TF+BuyCombo watchlist (our TV pattern engine)")
     ap.add_argument("--min-depth", type=float, default=OPT_DEPTH_MIN)
     ap.add_argument("--max-depth", type=float, default=OPT_DEPTH_MAX)
     ap.add_argument("--min-length", type=int, default=OPT_LEN_MIN)
     ap.add_argument("--max-length", type=int, default=OPT_LEN_MAX)
+    ap.add_argument("--max-tickers", type=int, default=0,
+                    help="only scan the first N tickers (0 = all)")
     args = ap.parse_args()
     main(args)

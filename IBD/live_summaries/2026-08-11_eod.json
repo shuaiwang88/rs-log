@@ -1,0 +1,72 @@
+{
+  "date": "2026-08-11",
+  "source_file": "/Users/sw/Desktop/stock/rs-log/IBD/live_summaries/2026-08-11_eod.md",
+  "market_summary": "Overall Sentiment: Constructive, not alarming. \"Right now this is in some ways you could say it's a shakeout\" (Ed). The key level to watch is the low of Tuesday's session; an undercut of that level would be more worrisome. Otherwise, the pause is healthy, allowing stocks to form handles and bases.",
+  "tickers": [
+    "GEO",
+    "TSM",
+    "NVT",
+    "LITE",
+    "SMCI",
+    "CRWV",
+    "ATRO",
+    "COHR",
+    "F5",
+    "NBIS",
+    "DELL",
+    "HPE",
+    "GOOGL",
+    "AMZN",
+    "SPCE",
+    "SPY",
+    "QQQ",
+    "IWM",
+    "DIA",
+    "RSP",
+    "ITA",
+    "QQQE",
+    "USO",
+    "TNX"
+  ],
+  "ticker_details": {
+    "GEO": {
+      "actionability": "Actionable (watch $32 resistance)",
+      "technical_action": "Attempted breakout on strong volume, RS blue dot. Very tight action, seven-weeks-tight pattern. Support at 10-week/50-day.",
+      "story": "Private prison/immigration detention. Government contracts, strong growth. Non-tech diversification."
+    },
+    "TSM": {
+      "actionability": "Watchlist (wait for decisive move above 50-day)",
+      "technical_action": "Stuck under a flat 50-day line; second test of that resistance. ATR is relatively manageable.",
+      "story": "AI chip manufacturing giant. A decisive move above the 50-day could be a buy; failure could set up a short. RS line has faded."
+    },
+    "NVT": {
+      "actionability": "Watchlist",
+      "technical_action": "Above the 50-day line, right at short-term highs. Pulled back slightly from intraday high. RS line has fallen but growth is strong.",
+      "story": "Electrical power/AI data center play. Similar to TSM but slightly stronger; could be actionable on a break higher."
+    },
+    "LITE": {
+      "actionability": "Watchlist (post-earnings)",
+      "technical_action": "After-hours: beat views and guided above Q3 expectations. High ATR (~11%).",
+      "story": "Optical networking. Post-earnings reaction will be key; likely a big mover tomorrow."
+    },
+    "SMCI": {
+      "actionability": "Avoid (group sentiment read)",
+      "technical_action": "Popping after-hours on positive earnings. Still plagued by legal/accounting issues; wide and loose action.",
+      "story": "AI server/competitor to Dell and HPE. Not institutional quality."
+    },
+    "CRWV": {
+      "actionability": "Watchlist",
+      "technical_action": "Up 8-10% after-hours on earnings. Lagging NeoCloud play with overhead resistance.",
+      "story": "AI cloud/NeoCloud. A pop, but needs a base to become actionable; better names exist in the group."
+    },
+    "ATRO": {
+      "actionability": "Watchlist",
+      "technical_action": "Up ~8% after-hours, forming a pseudo-handle.",
+      "story": "Aerospace components."
+    }
+  },
+  "sector_leaders": [],
+  "sector_laggards": [],
+  "source": "",
+  "kind": "eod"
+}

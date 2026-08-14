@@ -61,92 +61,194 @@ def save_markers(ticker, markers, chart_type="daily"):
 # ---------------------- IBD Live Summary Helpers ----------------------
 IBD_LIVE_SUMMARY_DIR = Path(__file__).resolve().parent / "IBD" / "live_summaries"
 
+# Filename layout for IBD Live summaries:
+#   <date>.md/.json                       primary intraday/live summary (legacy slot)
+#   <date>_eod.md/.json                   primary end-of-day summary (legacy slot)
+#   <date>__<source>.md/.json             intraday summary from a named source
+#   <date>_eod__<source>.md/.json         end-of-day summary from a named source
+# A date can hold many sources of each kind; saving to an existing (date, kind, source)
+# slot is refused so different sources never overwrite each other.
+_IBD_LIVE_FILE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})(_eod)?(__[^/]+)?$")
+
+
+def parse_ibd_live_stem(stem):
+    """'2026-08-10', '2026-08-10_eod', '2026-08-10__zoom', '2026-08-10_eod__zoom' ->
+    (date_str, kind, source) with kind in ('live', 'eod'); '' source = the primary/legacy
+    slot. Returns None for unrelated files (summary_*, non-date stems)."""
+    m = _IBD_LIVE_FILE_RE.match(stem or "")
+    if not m:
+        return None
+    source = (m.group(3) or "")[2:]  # strip the leading '__'
+    return m.group(1), ("eod" if m.group(2) else "live"), source
+
+
+def _iter_all_ibd_live_sidecars():
+    """Yield (date_str, kind, source, sidecar) for every <date>*.json, ordered so that within
+    each date live-primary comes first, then other live sources alphabetically, then EOD."""
+    if not IBD_LIVE_SUMMARY_DIR.exists():
+        return
+    entries = []
+    for p in IBD_LIVE_SUMMARY_DIR.glob("*.json"):
+        parsed = parse_ibd_live_stem(p.stem)
+        if not parsed:
+            continue
+        date_str, kind, source = parsed
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                sidecar = json.load(f)
+        except Exception:
+            continue
+        entries.append((date_str, kind, source, sidecar))
+    entries.sort(key=lambda e: (e[0], e[1] != "live", bool(e[2]), e[2].lower()))
+    yield from entries
+
+
+def _ibd_live_dir_signature():
+    """Fingerprint of IBD/live_summaries: sorted (name, mtime_ns, size) tuples for every
+    .md/.json file. Passed as an extra arg to the cached loaders below so summary files
+    added or edited OUTSIDE the app (dropped in by hand, by sync_ibd_live_summaries.py,
+    or by a script) invalidate their st.cache_data entries immediately — without it, a
+    cached snapshot can keep a brand-new source like <date>_eod__SwingTrade.json invisible
+    for the full ttl=300 window. Cheap: a handful of stat calls per rerun.
+
+    The loaders' extra param is named `dir_sig` (NOT `_dir_sig`): Streamlit deliberately
+    excludes leading-underscore args from cache keys, which would silently neuter this."""
+    if not IBD_LIVE_SUMMARY_DIR.exists():
+        return ()
+    sig = []
+    try:
+        for p in sorted(IBD_LIVE_SUMMARY_DIR.glob("*.md")) + \
+                 sorted(IBD_LIVE_SUMMARY_DIR.glob("*.json")):
+            try:
+                st_ = p.stat()
+            except OSError:
+                continue
+            sig.append((p.name, st_.st_mtime_ns, st_.st_size))
+    except OSError:
+        return ()
+    return tuple(sorted(sig))
+
+
 @st.cache_data(ttl=300)
-def load_ibd_live_summary_dates():
+def load_ibd_live_sources_for_date(date_str, dir_sig):
+    """Every summary saved for a date: list of {kind, source, md_text, sidecar}, live before
+    eod, primary (source '') first, then alphabetical by source."""
+    out = []
+    if not IBD_LIVE_SUMMARY_DIR.exists():
+        return out
+    for jp in IBD_LIVE_SUMMARY_DIR.glob(f"{date_str}*.json"):
+        parsed = parse_ibd_live_stem(jp.stem)
+        if not parsed or parsed[0] != date_str:
+            continue
+        _, kind, source = parsed
+        md_path = jp.with_suffix(".md")
+        md_text = md_path.read_text(encoding="utf-8", errors="replace") if md_path.exists() else None
+        sidecar = None
+        try:
+            with open(jp, "r", encoding="utf-8") as f:
+                sidecar = json.load(f)
+        except Exception:
+            sidecar = None
+        out.append({"kind": kind, "source": source, "md_text": md_text, "sidecar": sidecar})
+    out.sort(key=lambda s: (s["kind"] != "live", bool(s["source"]), s["source"].lower()))
+    return out
+
+
+@st.cache_data(ttl=300)
+def load_ibd_live_summary_dates(dir_sig):
     """Return sorted list of date strings (YYYY-MM-DD) that have a summary (live and/or EOD) + json pair."""
     if not IBD_LIVE_SUMMARY_DIR.exists():
         return []
     dates = set()
     for p in IBD_LIVE_SUMMARY_DIR.glob("*.json"):
-        stem = p.stem
-        if stem.endswith("_eod"):
-            stem = stem[:-4]
-        dates.add(stem)
-    return sorted(d for d in dates if len(d) == 10 and d[4] == "-" and d[7] == "-")
+        parsed = parse_ibd_live_stem(p.stem)
+        if parsed:
+            dates.add(parsed[0])
+    return sorted(dates)
+
 
 @st.cache_data(ttl=300)
-def load_ibd_live_summary(date_str):
-    """Load the (markdown_text, json_dict) pair for a given date string. Returns (None, None) if missing."""
-    md_path = IBD_LIVE_SUMMARY_DIR / f"{date_str}.md"
-    json_path = IBD_LIVE_SUMMARY_DIR / f"{date_str}.json"
-    md_text = md_path.read_text(encoding="utf-8") if md_path.exists() else None
-    data = None
-    if json_path.exists():
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception:
-            data = None
-    return md_text, data
-
-@st.cache_data(ttl=300)
-def load_ibd_live_summary_headlines():
-    """Map date_str -> market_summary headline, for calendar tooltips, without loading full markdown."""
+def load_ibd_live_summary_headlines(dir_sig):
+    """Map date_str -> market_summary headline, for calendar tooltips, without loading full
+    markdown. When a date has several sources, the highest-priority source that has a
+    headline wins (live primary, then other live, then EOD)."""
     headlines = {}
-    if not IBD_LIVE_SUMMARY_DIR.exists():
-        return headlines
-    for p in IBD_LIVE_SUMMARY_DIR.glob("*.json"):
-        try:
-            with open(p, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            headlines[p.stem] = data.get("market_summary", "")
-        except Exception:
-            continue
+    for date_str, _kind, _source, sidecar in _iter_all_ibd_live_sidecars():
+        h = sidecar.get("market_summary", "") or ""
+        if date_str not in headlines:
+            headlines[date_str] = h
+        elif not headlines[date_str] and h:
+            headlines[date_str] = h
     return headlines
 
+
 @st.cache_data(ttl=300)
-def load_all_ibd_live_sidecars():
-    """Load every <date>.json sidecar. Returns dict date_str -> sidecar dict, sorted by date desc.
-    Legacy summary_<date>.json files are skipped — every one of those dates now has a canonical
-    <date>.json (with richer ticker_details), so including both would double-count shows."""
-    sidecars = {}
-    if not IBD_LIVE_SUMMARY_DIR.exists():
-        return sidecars
-    for p in IBD_LIVE_SUMMARY_DIR.glob("*.json"):
-        if p.stem.startswith("summary_"):
-            continue
-        try:
-            with open(p, "r", encoding="utf-8") as f:
-                sidecars[p.stem] = json.load(f)
-        except Exception:
-            continue
-    return dict(sorted(sidecars.items(), reverse=True))
+def load_all_ibd_live_sidecars(dir_sig):
+    """Every date's sidecar merged across all of its sources (live + eod): tickers unioned,
+    ticker_details merged (EOD/later sources win on collisions), market_summary from the
+    highest-priority source that has one. Returns dict date_str -> merged sidecar, sorted
+    by date desc. Legacy summary_<date>.json files are skipped via parse_ibd_live_stem."""
+    merged = {}
+    for date_str, _kind, _source, sidecar in _iter_all_ibd_live_sidecars():
+        m = merged.setdefault(date_str, {"date": date_str, "tickers": [],
+                                         "ticker_details": {}, "market_summary": ""})
+        for t in sidecar.get("tickers", []):
+            t = (t or "").strip().upper()
+            if t and t not in m["tickers"]:
+                m["tickers"].append(t)
+        m["ticker_details"].update(sidecar.get("ticker_details", {}))
+        if not m["market_summary"] and sidecar.get("market_summary"):
+            m["market_summary"] = sidecar["market_summary"]
+    return dict(sorted(merged.items(), reverse=True))
+
+@st.cache_data(ttl=300)
+def load_all_ibd_live_source_sidecars(dir_sig):
+    """Every summary file as (date_str, kind, source, sidecar). Per-source, so a ticker
+    mentioned in several summaries of one day yields one row per summary (no winner-takes-all
+    merging). Cache-busted by the same directory signature as the other loaders."""
+    return list(_iter_all_ibd_live_sidecars())
+
+
+def _ibd_live_source_label(kind, source):
+    """'live','' -> '☀️ Live'; 'eod','SwingTrade' -> '🌙 SwingTrade'. Short badge used in the
+    comments timeline cards and the Tickers & Chart Source column."""
+    if kind == "eod":
+        return f"🌙 {source or 'EOD'}"
+    return f"☀️ {source or 'Live'}"
+
 
 def get_ticker_transcript_mentions(ticker):
-    """All (date, actionability, technical_action, story) rows across every show that mentioned
-    ticker, newest first. Also includes shows where the ticker only appears in the consolidated
-    ticker list (listed_only=True, no detail row) so recent appearances are never missed."""
+    """All (date, kind, source, actionability, technical_action, story) rows across every
+    show/summary that mentioned ticker, newest first — ONE row per (date, source), so a ticker
+    discussed in both the Live summary and the SwingTrade EOD of the same day yields two
+    labeled rows instead of one merged row. Also includes shows where the ticker only appears
+    in the consolidated ticker list (listed_only=True, no detail row)."""
     ticker = (ticker or "").strip().upper()
     mentions = []
-    for date_str, sidecar in load_all_ibd_live_sidecars().items():
+    for date_str, kind, source, sidecar in load_all_ibd_live_source_sidecars(
+            _ibd_live_dir_signature()):
         detail = (sidecar.get("ticker_details") or {}).get(ticker)
         if detail:
-            mentions.append({"date": date_str, **detail, "listed_only": False})
+            mentions.append({"date": date_str, "kind": kind, "source": source,
+                             **detail, "listed_only": False})
         elif ticker in (sidecar.get("tickers") or []):
             mentions.append({
                 "date": date_str,
+                "kind": kind,
+                "source": source,
                 "actionability": "",
                 "technical_action": "",
                 "story": "",
                 "listed_only": True,
                 "market_summary": sidecar.get("market_summary", ""),
             })
+    mentions.sort(key=lambda m: m["date"], reverse=True)
     return mentions
 
 def get_all_ibd_live_tickers():
     """Union of every ticker mentioned across all synced IBD Live shows, alphabetically sorted."""
     tickers = set()
-    for sidecar in load_all_ibd_live_sidecars().values():
+    for sidecar in load_all_ibd_live_sidecars(_ibd_live_dir_signature()).values():
         tickers.update(t.upper() for t in sidecar.get("tickers", []) if t)
     return sorted(tickers)
 
@@ -162,9 +264,9 @@ def sync_ibd_live_summaries_once():
         synced, skipped, synced_dates = sync_ibd_live_summaries(verbose=False)
         if synced:
             load_ibd_live_summary_dates.clear()
-            load_ibd_live_summary.clear()
             load_ibd_live_summary_headlines.clear()
             load_all_ibd_live_sidecars.clear()
+            load_ibd_live_sources_for_date.clear()
         st.session_state._ibd_live_sync_result = (synced, skipped, synced_dates)
     except Exception as e:
         st.session_state._ibd_live_sync_result = (0, 0, [])
@@ -173,11 +275,31 @@ def sync_ibd_live_summaries_once():
 sync_ibd_live_summaries_once()
 
 # ---------------------- IBD Live Ingest / End-of-Day Helpers ----------------------
-def save_ibd_live_summary_from_text(date_str, md_text, suffix=""):
+def _slugify_ibd_source(source):
+    """'Zoom / Segment 2' -> 'Zoom_Segment_2'. Keeps '' as the primary slot."""
+    return re.sub(r"[^A-Za-z0-9]+", "_", (source or "").strip()).strip("_")[:40]
+
+
+def _ibd_live_stem(date_str, suffix="", source=""):
+    """Filename stem for a summary slot: <date>{suffix} or <date>{suffix}__<source>.
+    Shared by save / load / delete so the layout can't drift between them."""
+    source = _slugify_ibd_source(source)
+    stem = f"{date_str}{suffix}"
+    if source:
+        stem += f"__{source}"
+    return stem
+
+
+def save_ibd_live_summary_from_text(date_str, md_text, suffix="", source="", overwrite=False):
     """Write a pasted markdown summary to IBD/live_summaries and derive its JSON sidecar
     using the same parser as python/sync_ibd_live_summaries.py.
 
     suffix: '' for the intraday/live summary, '_eod' for the end-of-day summary.
+    source: optional label for where the summary came from (e.g. 'Zoom', 'Segment 2').
+      A named source is written as <date>{suffix}__<source>.md/.json; an empty source
+      writes to the primary/legacy slot <date>{suffix}.md/.json. Saving to an existing
+      (date, kind, source) slot is REFUSED so different sources never overwrite each other
+      unless overwrite=True is passed explicitly.
     Returns (ok, message, sidecar).
     """
     md_text = (md_text or "").strip()
@@ -185,32 +307,53 @@ def save_ibd_live_summary_from_text(date_str, md_text, suffix=""):
         return False, "Summary text is empty — nothing saved.", None
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_str or ""):
         return False, "Invalid date; expected YYYY-MM-DD.", None
+    source = _slugify_ibd_source(source)
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent / "python"))
         from sync_ibd_live_summaries import build_sidecar
     except Exception as e:
         return False, f"Could not load parser from sync_ibd_live_summaries.py: {e}", None
     IBD_LIVE_SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
-    md_path = IBD_LIVE_SUMMARY_DIR / f"{date_str}{suffix}.md"
-    json_path = IBD_LIVE_SUMMARY_DIR / f"{date_str}{suffix}.json"
+    stem = _ibd_live_stem(date_str, suffix, source)
+    md_path = IBD_LIVE_SUMMARY_DIR / f"{stem}.md"
+    json_path = IBD_LIVE_SUMMARY_DIR / f"{stem}.json"
+    if not overwrite and (md_path.exists() or json_path.exists()):
+        kind = "End of Day" if suffix == "_eod" else "Live"
+        label = f"'{source}'" if source else "primary (no source)"
+        return False, (f"A {kind} summary for {date_str} with source {label} already exists — "
+                       f"it was NOT overwritten. Pick a different source name or date, or "
+                       f"tick the overwrite box to replace it deliberately."), None
     try:
         md_path.write_text(md_text + "\n", encoding="utf-8")
         sidecar = build_sidecar(date_str, md_path, None)
+        sidecar["source"] = source
+        sidecar["kind"] = "eod" if suffix == "_eod" else "live"
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(sidecar, f, indent=2)
     except Exception as e:
+        # Clean up any half-written files so the slot isn't blocked for re-saves.
+        for p in (md_path, json_path):
+            try:
+                if p.exists():
+                    p.unlink()
+            except Exception:
+                pass
         return False, f"Failed to write/reformat summary: {e}", None
     load_ibd_live_summary_dates.clear()
-    load_ibd_live_summary.clear()
     load_ibd_live_summary_headlines.clear()
     load_all_ibd_live_sidecars.clear()
+    load_ibd_live_sources_for_date.clear()
     kind = "End of Day" if suffix == "_eod" else "Live"
-    return True, f"{kind} summary for {date_str} saved & reformatted ({len(sidecar.get('tickers', []))} tickers).", sidecar
+    label = f" (source '{source}')" if source else ""
+    return True, f"{kind} summary for {date_str}{label} saved & reformatted ({len(sidecar.get('tickers', []))} tickers).", sidecar
 
-def load_ibd_live_eod_summary(date_str):
-    """Load the end-of-day summary pair for a date. Returns (md_text, sidecar) or (None, None)."""
-    md_path = IBD_LIVE_SUMMARY_DIR / f"{date_str}_eod.md"
-    json_path = IBD_LIVE_SUMMARY_DIR / f"{date_str}_eod.json"
+def load_ibd_live_eod_summary(date_str, source=""):
+    """Load an end-of-day summary pair. source='' is the primary/legacy slot
+    (<date>_eod.md/.json); a named source reads <date>_eod__<source>.md/.json.
+    Returns (md_text, sidecar) or (None, None)."""
+    stem = _ibd_live_stem(date_str, "_eod", source)
+    md_path = IBD_LIVE_SUMMARY_DIR / f"{stem}.md"
+    json_path = IBD_LIVE_SUMMARY_DIR / f"{stem}.json"
     md_text = md_path.read_text(encoding="utf-8") if md_path.exists() else None
     data = None
     if json_path.exists():
@@ -222,25 +365,62 @@ def load_ibd_live_eod_summary(date_str):
     return md_text, data
 
 def load_ibd_live_combined_sidecar(date_str):
-    """Merge the intraday (<date>.json) and end-of-day (<date>_eod.json) sidecars for a date.
-    EOD tickers are appended (de-duplicated) to the intraday ticker list so the plot view
-    shows both; EOD ticker details win on key collisions."""
-    md_text, sidecar = load_ibd_live_summary(date_str)
-    eod_md, eod_sidecar = load_ibd_live_eod_summary(date_str)
-    combined = dict(sidecar or {})
-    if eod_sidecar:
-        tickers = list(combined.get("tickers", []))
-        for t in eod_sidecar.get("tickers", []):
+    """Merge every intraday + end-of-day source saved for a date into one view: tickers are
+    unioned, ticker_details merged (later/EOD sources win on collisions), and market_summary
+    comes from the highest-priority source that has one.
+
+    Returns (primary_live_md, combined_sidecar, primary_eod_md, eod_sidecar) so existing
+    callers keep working while all sources feed the ticker list & plot view."""
+    sources = load_ibd_live_sources_for_date(date_str, _ibd_live_dir_signature())
+    live = [s for s in sources if s["kind"] == "live"]
+    eod = [s for s in sources if s["kind"] == "eod"]
+    combined = {"date": date_str, "tickers": [], "ticker_details": {}, "market_summary": ""}
+    for s in live + eod:
+        sc = s["sidecar"] or {}
+        for t in sc.get("tickers", []):
             t = (t or "").strip().upper()
-            if t and t not in tickers:
-                tickers.append(t)
-        combined["tickers"] = tickers
-        details = dict(combined.get("ticker_details", {}))
-        details.update(eod_sidecar.get("ticker_details", {}))
-        combined["ticker_details"] = details
-        if not combined.get("market_summary") and eod_sidecar.get("market_summary"):
-            combined["market_summary"] = eod_sidecar["market_summary"]
-    return md_text, combined, eod_md, eod_sidecar
+            if t and t not in combined["tickers"]:
+                combined["tickers"].append(t)
+        combined["ticker_details"].update(sc.get("ticker_details", {}))
+        if not combined.get("market_summary") and sc.get("market_summary"):
+            combined["market_summary"] = sc["market_summary"]
+    primary_live = live[0] if live else {}
+    primary_eod = eod[0] if eod else {}
+    return (primary_live.get("md_text"), combined,
+            primary_eod.get("md_text"), primary_eod.get("sidecar"))
+
+def delete_ibd_live_summary(date_str, kind="live", source=""):
+    """Permanently delete the summary pair for a (date, kind, source) slot.
+    kind: 'live' or 'eod'; source '' = the primary/legacy slot.
+    Returns (ok, message)."""
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_str or ""):
+        return False, "Invalid date; expected YYYY-MM-DD."
+    if kind not in ("live", "eod"):
+        return False, f"Invalid kind: {kind!r} — expected 'live' or 'eod'."
+    source = _slugify_ibd_source(source)
+    stem = _ibd_live_stem(date_str, "_eod" if kind == "eod" else "", source)
+    md_path = IBD_LIVE_SUMMARY_DIR / f"{stem}.md"
+    json_path = IBD_LIVE_SUMMARY_DIR / f"{stem}.json"
+    if not md_path.exists() and not json_path.exists():
+        label = f"'{source}'" if source else "primary (no source)"
+        return False, f"No {kind} summary exists for {date_str} with source {label} — nothing to delete."
+    removed, failed = [], []
+    for p in (md_path, json_path):
+        try:
+            if p.exists():
+                p.unlink()
+                removed.append(p.name)
+        except Exception as e:
+            failed.append(f"{p.name} ({e})")
+    if failed:
+        return False, (f"Partially deleted {kind} summary for {date_str}: removed {', '.join(removed) or 'nothing'}, "
+                       f"failed on {', '.join(failed)}.")
+    load_ibd_live_summary_dates.clear()
+    load_ibd_live_summary_headlines.clear()
+    load_all_ibd_live_sidecars.clear()
+    load_ibd_live_sources_for_date.clear()
+    label = f" (source '{source}')" if source else " (primary)"
+    return True, f"Deleted {kind} summary for {date_str}{label} — {', '.join(removed)}."
 
 def focus_ibd_live_date(date_str):
     """Point the whole IBD Live tab at date_str — calendar month, selected day, ticker
@@ -285,6 +465,9 @@ def save_ticker_comment(ticker, date_str, text):
     try:
         with open(IBD_COMMENTS_PATH, "w", encoding="utf-8") as f:
             json.dump(all_comments, f, indent=2)
+        # The timeline is cached per (ticker, dir_sig), but comments.json lives outside the
+        # summary dir the signature covers — clear so a fresh comment shows immediately.
+        get_ticker_comment_timeline.clear()
         return True
     except Exception:
         return False
@@ -299,6 +482,7 @@ def delete_ticker_comment(ticker, index):
         all_comments[ticker] = entries
         with open(IBD_COMMENTS_PATH, "w", encoding="utf-8") as f:
             json.dump(all_comments, f, indent=2)
+        get_ticker_comment_timeline.clear()
         return True
     return False
 
@@ -323,14 +507,18 @@ def is_boilerplate_mention(entry):
     return sum(1 for m in markers if m in blob) >= 2
 
 @st.cache_data(ttl=300, show_spinner=False)
-def get_ticker_comment_timeline(ticker):
-    """Merge transcript mentions + user comments for ticker into one newest-first timeline."""
+def get_ticker_comment_timeline(ticker, dir_sig):
+    """Merge transcript mentions + user comments for ticker into one newest-first timeline.
+    Transcript rows are per (date, source) and carry the source label; dir_sig busts the cache
+    so a freshly ingested summary's mentions show up immediately."""
     ticker = (ticker or "").strip().upper()
     timeline = []
     for m in get_ticker_transcript_mentions(ticker):
         timeline.append({
             "date": m["date"],
             "source": "Transcript",
+            "kind": m.get("kind", ""),
+            "src_label": _ibd_live_source_label(m.get("kind"), m.get("source")),
             "text": f"[{m.get('actionability', '')}] {m.get('technical_action', '')} — {m.get('story', '')}".strip(" —"),
             "actionability": m.get("actionability", ""),
             "technical_action": m.get("technical_action", ""),
@@ -383,6 +571,7 @@ def render_comment_timeline(timeline, comment_ticker, latest_show_date=None):
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
                     <span style="font-size:12px; font-weight:700; color:#6c757d;">📅 {html.escape(entry['date'])}</span>
                     <span style="font-size:11px; font-weight:700; color:#1f77b4; text-transform:uppercase; letter-spacing:0.5px;">🎙️ Transcript</span>
+                    <span style="font-size:11px; font-weight:700; color:#8a6d3b; text-transform:uppercase; letter-spacing:0.5px;">{html.escape(entry.get('src_label', ''))}</span>
                     <span style="background:{pill_color}; color:#fff; font-size:11px; font-weight:700; padding:1px 10px; border-radius:20px;">{html.escape(act) if act else '—'}</span>
                 </div>
                 <div style="font-size:14px; font-weight:700; color:#0a1f3d;">{html.escape(entry.get('technical_action', ''))}</div>
@@ -402,6 +591,7 @@ def render_comment_timeline(timeline, comment_ticker, latest_show_date=None):
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:2px;">
                         <span style="font-size:12px; font-weight:700; color:#6c757d;">📅 {html.escape(entry['date'])}</span>
                         <span style="font-size:11px; font-weight:700; color:#5a7186; text-transform:uppercase; letter-spacing:0.5px;">🎙️ Transcript</span>
+                        <span style="font-size:11px; font-weight:700; color:#8a6d3b; text-transform:uppercase; letter-spacing:0.5px;">{html.escape(entry.get('src_label', ''))}</span>
                         <span style="font-size:11px; font-weight:600; color:#5a7186;">Mentioned in the show's ticker list</span>
                     </div>
                     <div style="font-size:12px; color:#5a7186; line-height:1.4;">{html.escape(entry.get('market_summary', '')) or ''}</div>
@@ -410,12 +600,17 @@ def render_comment_timeline(timeline, comment_ticker, latest_show_date=None):
                 unsafe_allow_html=True,
             )
         with cols[1]:
-            if st.button("View show", key=f"ibd_live_view_show_{comment_ticker}_{entry['date']}",
+            # Per-source rows can repeat a date (e.g. DELL listed-only in the Live AND
+            # SwingTrade summaries of one day), so the key must include kind+source or
+            # Streamlit raises a duplicate-widget-key error.
+            if st.button("View show",
+                         key=f"ibd_live_view_show_{comment_ticker}_{entry['date']}_"
+                             f"{entry.get('kind', '')}_{entry.get('source', '')}",
                          help=f"Jump to the {entry['date']} show"):
                 st.session_state.ibd_live_list_date = entry["date"]
                 rerun_app()
     if boilerplate:
-        bp_dates = ", ".join(e["date"] for e in boilerplate)
+        bp_dates = ", ".join(dict.fromkeys(e["date"] for e in boilerplate))
         st.markdown(
             f"""
             <div style="background:#fbf6ee; border:1px solid #efe2c8; border-left:4px solid #e1a200;
@@ -924,12 +1119,23 @@ def generate_ticker_png_chart(ticker: str, date_str: str) -> str:
     
     return str(output_png)
 
-def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
+@st.cache_data(ttl=3600, show_spinner=False)
+def build_tradingview_ticker_fig(ticker, max_days=190, height=750):
+    """Build the 'TradingView' daily chart in IBD cross-bar style (tradeviZion's 'IBD Style
+    Candles' Pine look: vertical wick + close tick, blue/pink by up/down) with 10/21/50-day
+    moving averages, volume with dry-up coloring and RS-vs-SPY — plus the IBD banner metrics,
+    split out of render_tradingview_ticker_chart so other tabs (e.g. the IBD Live Tickers &
+    Chart) can render just the chart. Cached per (ticker, max_days, height) so ticker
+    switching is instant once a chart has been built.
+
+    Returns (fig, err, meta): fig is None when data is missing; meta is a dict of the banner
+    strings (price, ratings, sector, description) for renderers that show them.
+    """
     tk = ticker.strip().upper()
+    tk_norm = tk.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
     df_daily = load_or_fetch_ticker(tk)
     if df_daily is None or df_daily.empty:
-        st.warning(f"Could not load market data for ticker {tk}.")
-        return
+        return None, f"Could not load market data for ticker {tk}.", {}
 
     # Trim to 9 months daily worth of data (~190 trading days)
     if len(df_daily) > max_days:
@@ -939,13 +1145,13 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
 
     # Look up IBD Industry Group / Sector
     ibd_map = load_ibd_ticker_industry_mapping()
-    ibd_sector = ibd_map.get(tk) or ibd_map.get(tk.replace(".", "").replace("-", "").replace("/", ""))
-    
+    ibd_sector = ibd_map.get(tk) or ibd_map.get(tk_norm)
+
     # Look up RS Rating & Company metrics from main dataset if available
     rs_rating_str = "N/A"
     sector_str = ibd_sector or ""
     latest_price = df_daily['Close'].iloc[-1] if not df_daily.empty else 0.0
-    
+
     try:
         main_df = globals().get('df') if 'df' in globals() else globals().get('filtered_df')
         if main_df is not None and not main_df.empty and 'Ticker' in main_df.columns:
@@ -975,7 +1181,7 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
     ibd_last_qtr_sales = "N/A"
     ibd_curr_qtr_est = "N/A"
     ibd_curr_yr_est = "N/A"
-    
+
     ibd_full_map = load_ibd_data_tables_full()
     ibd_info = ibd_full_map.get(tk) or ibd_full_map.get(tk_norm)
     if ibd_info:
@@ -1006,48 +1212,18 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
         if pd.notna(ibd_info.get('Curr Yr EPS Est. % Chg.')):
             ibd_curr_yr_est = f"{ibd_info['Curr Yr EPS Est. % Chg.']}%"
 
-    # Display RS metrics header banner
-    m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
-    with m_col1:
-        st.metric("Ticker", tk)
-    with m_col2:
-        st.metric("Latest Price", f"${latest_price:.2f}")
-    with m_col3:
-        st.metric("IBD Comp Rating", f"{ibd_comp} / 99")
-    with m_col4:
-        st.metric("RS Rating", f"{ibd_rs} / 99")
-    with m_col5:
-        st.metric("Ind Grp Rank", f"{ibd_ind_rank} / 197")
-    with m_col6:
-        st.metric("IBD Industry / Sector", sector_str or "N/A")
-
-    e_col1, e_col2, e_col3, e_col4, e_col5, e_col6 = st.columns(6)
-    with e_col1:
-        st.metric("EPS Rating", f"{ibd_eps_rating} / 99")
-    with e_col2:
-        st.metric("SMR Rating", ibd_smr_rating)
-    with e_col3:
-        st.metric("Last Qtr EPS Chg", ibd_last_qtr_eps)
-    with e_col4:
-        st.metric("Last Qtr Sales Chg", ibd_last_qtr_sales)
-    with e_col5:
-        st.metric("Curr Qtr EPS Est", ibd_curr_qtr_est)
-    with e_col6:
-        st.metric("Curr Yr EPS Est", ibd_curr_yr_est)
-
     # Look up Company Description from IBD
     desc_map = load_company_descriptions()
-    tk_norm = tk.replace(".", "").replace("-", "").replace("/", "").replace(" ", "").upper()
     comp_desc = desc_map.get(tk) or desc_map.get(tk_norm)
-    if comp_desc and comp_desc != 'nan':
-        st.markdown(
-            f"""
-            <div style="background-color: #f0f2f6; border-left: 5px solid #1f77b4; padding: 12px 16px; border-radius: 4px; margin-bottom: 12px;">
-                <span style="font-size: 16px; color: #000000; line-height: 1.5; display: inline-block;">{comp_desc}</span>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+
+    meta = {
+        "ticker": tk, "latest_price": latest_price, "rs_rating_str": rs_rating_str,
+        "sector_str": sector_str, "ibd_comp": ibd_comp, "ibd_rs": ibd_rs,
+        "ibd_ind_rank": ibd_ind_rank, "ibd_eps_rating": ibd_eps_rating,
+        "ibd_smr_rating": ibd_smr_rating, "ibd_last_qtr_eps": ibd_last_qtr_eps,
+        "ibd_last_qtr_sales": ibd_last_qtr_sales, "ibd_curr_qtr_est": ibd_curr_qtr_est,
+        "ibd_curr_yr_est": ibd_curr_yr_est, "comp_desc": comp_desc,
+    }
 
     # Load SPY for RS calculation
     spy_df = load_or_fetch_ticker("SPY")
@@ -1064,7 +1240,6 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
     ema10 = df_daily['Close'].ewm(span=10, adjust=False).mean()
     ema21 = df_daily['Close'].ewm(span=21, adjust=False).mean()
     sma50 = df_daily['Close'].rolling(50).mean()
-    sma200 = df_daily['Close'].rolling(200).mean()
 
     vol = df_daily['Volume'].astype(float)
     close = df_daily['Close'].astype(float)
@@ -1089,17 +1264,40 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
         row_heights=[0.5, 0.2, 0.3]
     )
 
-    # Row 1: IBD OHLC Bars & Moving Averages
-    for trace in make_ibd_ohlc_traces(
-        df_daily.index, df_daily['Open'], df_daily['High'], df_daily['Low'], df_daily['Close'],
-        name='Price', showlegend=False,
-    ):
-        fig.add_trace(trace, row=1, col=1)
+    # Row 1: IBD-style cross bars (tradeviZion 'IBD Style Candles' Pine script, its
+    # 'PLOT CROSS BARS' section): each day is a vertical wick from low to high with a
+    # horizontal tick at the close, colored blue (#2736e9) when close >= open and pink
+    # (#de32ae) on down days — the script's plotbar(open=close, high, low, close=close)
+    # with its default up/down colors (usePrevClose off, i.e. close >= open = up).
+    _open = df_daily['Open'].astype(float).fillna(close)  # NaN opens -> neutral up-day color
+    _high = df_daily['High'].astype(float)
+    _low = df_daily['Low'].astype(float)
+    _x = df_daily.index
+    # Tick width from the MEDIAN adjacent-day gap, so a halted ticker or fresh IPO with a
+    # long drought doesn't stretch the close ticks into overlapping bars.
+    _adj = pd.Series(_x).diff().dropna()
+    _tick_half = 0.35 * (_adj.median() if len(_adj) else pd.Timedelta(days=1))
+    _up_mask = (close >= _open)
+    for _mask, _bar_color in ((_up_mask, '#2736e9'), (~_up_mask, '#de32ae')):
+        _xs, _ys = [], []
+        for _i in np.where(_mask.values)[0]:
+            _xi = _x[_i]
+            _xs += [_xi, _xi, None, _xi - _tick_half, _xi + _tick_half, None]
+            _ys += [_low.iloc[_i], _high.iloc[_i], None,
+                    close.iloc[_i], close.iloc[_i], None]
+        if _xs:
+            fig.add_trace(go.Scatter(x=_xs, y=_ys, mode='lines', name='IBD Bars',
+                                     line=dict(color=_bar_color, width=1.8),
+                                     showlegend=False, hoverinfo='skip'), row=1, col=1)
 
-    fig.add_trace(go.Scatter(x=df_daily.index, y=ema10, mode='lines', name='EMA(10)', line=dict(color='#FF9800', width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df_daily.index, y=ema21, mode='lines', name='EMA(21)', line=dict(color='#2196F3', width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df_daily.index, y=sma50, mode='lines', name='SMA(50)', line=dict(color='#4CAF50', width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df_daily.index, y=sma200, mode='lines', name='SMA(200)', line=dict(color='#E91E63', width=1.5)), row=1, col=1)
+    # Moving averages as configured in the script's daily group: 10/21 EMA + 50 SMA with
+    # the script's colors (the 200-day MA is hidden there by default, so it is not plotted).
+    fig.add_trace(go.Scatter(x=_x, y=ema10, mode='lines', name='10-Day Moving Average',
+                             line=dict(color='#F08DF0', width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=_x, y=ema21, mode='lines', name='21-Day Moving Average',
+                             line=dict(color='#44BA4C', width=1.5)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=_x, y=sma50, mode='lines', name='50-Day Moving Average',
+                             line=dict(color='#FF2121', width=1.5)), row=1, col=1)
 
     # Row 2: Volume Bars & SMA50
     fig.add_trace(go.Bar(x=df_daily.index, y=df_daily['Volume'], marker=dict(color=vol_colors), name='Volume', showlegend=False), row=2, col=1)
@@ -1120,7 +1318,59 @@ def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
         template="plotly_dark"
     )
 
+    return fig, None, meta
+
+
+def render_tradingview_ticker_chart(ticker, max_days=190, height=750):
+    """Render the classic Company Details / Chart Gallery view: IBD metric banners, company
+    description, then the 'TradingView' daily chart (built by build_tradingview_ticker_fig)."""
+    fig, err, meta = build_tradingview_ticker_fig(ticker, max_days=max_days, height=height)
+    if err:
+        st.warning(err)
+        return
+
+    # Display RS metrics header banner
+    m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
+    with m_col1:
+        st.metric("Ticker", meta["ticker"])
+    with m_col2:
+        st.metric("Latest Price", f"${meta['latest_price']:.2f}")
+    with m_col3:
+        st.metric("IBD Comp Rating", f"{meta['ibd_comp']} / 99")
+    with m_col4:
+        st.metric("RS Rating", f"{meta['ibd_rs']} / 99")
+    with m_col5:
+        st.metric("Ind Grp Rank", f"{meta['ibd_ind_rank']} / 197")
+    with m_col6:
+        st.metric("IBD Industry / Sector", meta["sector_str"] or "N/A")
+
+    e_col1, e_col2, e_col3, e_col4, e_col5, e_col6 = st.columns(6)
+    with e_col1:
+        st.metric("EPS Rating", f"{meta['ibd_eps_rating']} / 99")
+    with e_col2:
+        st.metric("SMR Rating", meta["ibd_smr_rating"])
+    with e_col3:
+        st.metric("Last Qtr EPS Chg", meta["ibd_last_qtr_eps"])
+    with e_col4:
+        st.metric("Last Qtr Sales Chg", meta["ibd_last_qtr_sales"])
+    with e_col5:
+        st.metric("Curr Qtr EPS Est", meta["ibd_curr_qtr_est"])
+    with e_col6:
+        st.metric("Curr Yr EPS Est", meta["ibd_curr_yr_est"])
+
+    comp_desc = meta.get("comp_desc")
+    if comp_desc and comp_desc != 'nan':
+        st.markdown(
+            f"""
+            <div style="background-color: #f0f2f6; border-left: 5px solid #1f77b4; padding: 12px 16px; border-radius: 4px; margin-bottom: 12px;">
+                <span style="font-size: 16px; color: #000000; line-height: 1.5; display: inline-block;">{comp_desc}</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
     st.plotly_chart(fig, use_container_width=True)
+
 
 def load_daily_notes(date_obj):
     ensure_daily_dirs()
@@ -1510,6 +1760,238 @@ def create_lightweight_ohlc_html(df, title="", height=600, markers=None, rs_labe
     </script>
     """
     return html
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def create_tradingview_price_volume_html(df, height=560, ticker="", rs_label=None,
+                                          volume_data=None, volume_sma50=None):
+    """Minimal 2-pane TradingView (Lightweight Charts) HTML: tradeviZion 'IBD Style Candles'
+    cross bars (vertical wick + close tick, blue/pink by close vs open) with the script's
+    10/21/50-day moving-average colors, volume below. No RS pane — the IBD
+    Live 'Tickers & Chart' view drops the relative-strength indicator so the chart is taller
+    and the most recent bars stay in view (a rightOffset is applied so the last bar isn't
+    clipped against the right edge)."""
+    if df is None or df.empty:
+        return "<div style='padding:20px; color:#999;'>No data available</div>"
+
+    # tradeviZion 'IBD Style Candles': cross bars — a vertical wick from low to high with a
+    # horizontal tick at the close, blue (#2736e9) when close >= open and pink (#de32ae) on
+    # down days. Reproduced as a candlestick series whose open == close (a flat doji body
+    # = the close tick) with per-bar wick/border colors.
+    candles = []
+    open_lookup = {}
+    for idx, row in df.iterrows():
+        try:
+            ts = int(idx.timestamp())
+            close_value = float(row['Close'])
+            bar_color = IBD_BAR_UP_COLOR if close_value >= float(row['Open']) else IBD_BAR_DOWN_COLOR
+            candles.append({
+                'time': ts,
+                'open': close_value,   # flat body -> close tick (cross-bar look)
+                'high': float(row['High']),
+                'low': float(row['Low']),
+                'close': close_value,
+                'color': bar_color,
+                'borderColor': bar_color,
+                'wickColor': bar_color,
+            })
+            open_lookup[str(ts)] = float(row['Open'])
+        except Exception:
+            continue
+    if not candles:
+        return "<div style='padding:20px; color:#999;'>No valid candle data</div>"
+    open_lookup_json = json.dumps(open_lookup)
+
+    # The script's daily group: 10/21 EMA + 50 SMA (the 200-day MA is hidden by default).
+    df_clean = df[['Close']].copy()
+    df_clean['MA10'] = df_clean['Close'].ewm(span=10, adjust=False).mean()
+    df_clean['MA21'] = df_clean['Close'].ewm(span=21, adjust=False).mean()
+    df_clean['MA50'] = df_clean['Close'].rolling(50).mean()
+    ma10_data, ma21_data, ma50_data = [], [], []
+    for idx, row in df_clean.iterrows():
+        ts = int(idx.timestamp())
+        if not pd.isna(row['MA10']):
+            ma10_data.append({'time': ts, 'value': float(row['MA10'])})
+        if not pd.isna(row['MA21']):
+            ma21_data.append({'time': ts, 'value': float(row['MA21'])})
+        if not pd.isna(row['MA50']):
+            ma50_data.append({'time': ts, 'value': float(row['MA50'])})
+
+    price_markers = []
+    if rs_label is not None and candles:
+        price_markers.append({
+            'time': candles[-1]['time'], 'position': 'aboveBar',
+            'color': '#636efa', 'shape': 'circle', 'text': str(rs_label),
+        })
+    price_markers_json = json.dumps(price_markers)
+
+    volume_colored    = volume_data  if volume_data  else []
+    volume_sma50_data = volume_sma50 if volume_sma50 else []
+
+    price_id  = f"price_{uuid.uuid4().hex[:8]}"
+    volume_id = f"vol_{uuid.uuid4().hex[:8]}"
+    price_h   = int(height * 0.78)
+    volume_h  = height - price_h
+
+    html = f"""
+    <div style="width:100%; font-family: system-ui, sans-serif;">
+        <div id="{price_id}"  style="height:{price_h}px;  border:1px solid #ddd; border-bottom:none; border-radius:4px 4px 0 0;"></div>
+        <div id="{volume_id}" style="height:{volume_h}px; border:1px solid #ddd; border-top:none; border-radius:0 0 4px 4px;"></div>
+    </div>
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script>
+    (function() {{
+        const priceDiv  = document.getElementById('{price_id}');
+        const volumeDiv = document.getElementById('{volume_id}');
+
+        const priceChart = LightweightCharts.createChart(priceDiv, {{
+            width: priceDiv.clientWidth, height: {price_h},
+            layout: {{ backgroundColor: '#fff', textColor: '#333' }},
+            timeScale: {{ timeVisible: true, secondsVisible: false, rightOffset: 4 }}
+        }});
+        const volumeChart = LightweightCharts.createChart(volumeDiv, {{
+            width: volumeDiv.clientWidth, height: {volume_h},
+            layout: {{ backgroundColor: '#fff', textColor: '#333' }},
+            timeScale: {{ timeVisible: false, rightOffset: 4 }}
+        }});
+
+        const masterScale = priceChart.timeScale();
+        volumeChart.timeScale().subscribeVisibleLogicalRangeChange(r => masterScale.setVisibleLogicalRange(r));
+        masterScale.subscribeVisibleLogicalRangeChange(r => {{
+            volumeChart.timeScale().setVisibleLogicalRange(r);
+        }});
+
+        // tradeviZion 'IBD Style Candles' cross bars: flat doji bodies (= close tick) + wicks,
+        // colored blue when close >= open and pink otherwise (per-bar overrides).
+        const barSeries = priceChart.addCandlestickSeries({{
+            upColor: '{IBD_BAR_UP_COLOR}', downColor: '{IBD_BAR_DOWN_COLOR}',
+            borderUpColor: '{IBD_BAR_UP_COLOR}', borderDownColor: '{IBD_BAR_DOWN_COLOR}',
+            wickUpColor: '{IBD_BAR_UP_COLOR}', wickDownColor: '{IBD_BAR_DOWN_COLOR}',
+            borderVisible: true, wickVisible: true
+        }});
+        barSeries.setData({json.dumps(candles)});
+
+        // Moving Averages (script colors): 10-day #F08DF0, 21-day #44BA4C, 50-day #FF2121.
+        const ma10 = priceChart.addLineSeries({{ color: '#F08DF0', lineWidth: 2,
+            crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false }});
+        const ma21 = priceChart.addLineSeries({{ color: '#44BA4C', lineWidth: 2,
+            crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false }});
+        const ma50 = priceChart.addLineSeries({{ color: '#FF2121', lineWidth: 2,
+            crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false }});
+        if ({json.dumps(ma10_data)}.length) ma10.setData({json.dumps(ma10_data)});
+        if ({json.dumps(ma21_data)}.length) ma21.setData({json.dumps(ma21_data)});
+        if ({json.dumps(ma50_data)}.length) ma50.setData({json.dumps(ma50_data)});
+
+        const priceMarkers = {price_markers_json};
+        if (priceMarkers.length) barSeries.setMarkers(priceMarkers);
+
+        // Volume
+        const volumeSeries = volumeChart.addHistogramSeries({{
+            priceFormat: {{ type: 'volume' }},
+            priceScaleId: 'right'
+        }});
+        volumeSeries.setData({json.dumps(volume_colored)});
+
+        if ({json.dumps(volume_sma50_data)}.length) {{
+            const volSma = volumeChart.addLineSeries({{
+                color: 'orange', lineWidth: 1.5,
+                crosshairMarkerVisible: false, priceLineVisible: false, lastValueVisible: false
+            }});
+            volSma.setData({json.dumps(volume_sma50_data)});
+        }}
+
+        masterScale.fitContent();
+
+        // OHLC tooltip (real open comes from open_lookup since the cross bars set open == close)
+        const tooltip = document.createElement('div');
+        tooltip.style.cssText = 'position:absolute; background:rgba(0,0,0,0.8); color:#fff; padding:6px 10px; border-radius:6px; font-size:12px; pointer-events:none; z-index:1000; display:none;';
+        priceDiv.parentElement.style.position = 'relative';
+        priceDiv.parentElement.appendChild(tooltip);
+        const realOpen = {open_lookup_json};
+        priceChart.subscribeCrosshairMove(function(param) {{
+            if (!param.time || !param.point) {{ tooltip.style.display = 'none'; return; }}
+            const data = param.seriesData.get(barSeries);
+            if (data && data.close !== undefined) {{
+                const o = realOpen[String(param.time)] !== undefined ? realOpen[String(param.time)] : data.close;
+                tooltip.innerHTML = '<b>OHLC</b><br>O: $' + o.toFixed(2) + '<br>H: $' + data.high.toFixed(2) + '<br>L: $' + data.low.toFixed(2) + '<br>C: $' + data.close.toFixed(2);
+                tooltip.style.display = 'block';
+                tooltip.style.left = param.point.x + 15 + 'px';
+                tooltip.style.top  = param.point.y - 30 + 'px';
+            }} else {{ tooltip.style.display = 'none'; }}
+        }});
+        priceDiv.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+
+        window.addEventListener('resize', function() {{
+            if (priceDiv.clientWidth) {{
+                priceChart.applyOptions({{ width: priceDiv.clientWidth }});
+                volumeChart.applyOptions({{ width: volumeDiv.clientWidth }});
+            }}
+        }});
+    }})();
+    </script>
+    """
+    return html
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def build_tradingview_html_chart(ticker, max_days=190, height=560):
+    """Build the REAL TradingView chart for a ticker: a Lightweight Charts HTML pane
+    (TradingView's own HTML5 charting library) in tradeviZion's 'IBD Style Candles' look —
+    cross bars + the script's 10/21/50-day moving-average colors, and volume (with dry-up
+    coloring). The relative-strength indicator is intentionally omitted from this view.
+    Returns (html_chart, err, meta), cached per (ticker, max_days, height)."""
+    tk = (ticker or "").strip().upper()
+    df_daily = load_or_fetch_ticker(tk)
+    if df_daily is None or df_daily.empty:
+        return None, f"Could not load market data for ticker {tk}.", {}
+
+    if len(df_daily) > max_days:
+        df_daily = df_daily.tail(max_days).copy()
+    else:
+        df_daily = df_daily.copy()
+
+    # RS rating label (Percentile from the main dataset) — kept only as a small marker.
+    rs_rating_str = "N/A"
+    try:
+        main_df = globals().get('df') if 'df' in globals() else globals().get('filtered_df')
+        if main_df is not None and not main_df.empty and 'Ticker' in main_df.columns:
+            m_rows = main_df[main_df['Ticker'] == tk]
+            if not m_rows.empty:
+                r_row = m_rows.iloc[-1]
+                p_val = r_row.get('Percentile') if 'Percentile' in r_row else r_row.get('Relative Strength')
+                if pd.notna(p_val):
+                    try:
+                        rs_rating_str = f"{int(round(float(p_val)))}"
+                    except Exception:
+                        rs_rating_str = str(p_val)
+    except Exception:
+        pass
+
+    # Volume with dry-up coloring (mirrors the Company Details Lightweight chart).
+    vol = df_daily['Volume'].astype(float)
+    avg_vol = vol.rolling(50, min_periods=1).mean().replace(0, np.nan)
+    vol_ratio = (vol / avg_vol * 100).fillna(0)
+    dry_lvl2 = (vol_ratio < 30)
+    dry_lvl1 = (vol_ratio < 50)
+    up_day = (df_daily['Close'] > df_daily['Close'].shift(1))
+    vol_colored = []
+    for idx in df_daily.index:
+        vol_colored.append({
+            'time': int(idx.timestamp()),
+            'value': float(vol.loc[idx]),
+            'color': ('rgba(247,153,2,0.7)' if dry_lvl2.loc[idx]
+                      else 'rgba(225,181,69,0.6)' if dry_lvl1.loc[idx]
+                      else '#26a69a' if up_day.loc[idx] else '#ef5350'),
+        })
+    volume_sma50_data = [{'time': int(idx.timestamp()), 'value': float(v)}
+                         for idx, v in df_daily['Volume'].rolling(50).mean().items()
+                         if pd.notna(v)]
+
+    html_chart = create_tradingview_price_volume_html(
+        df_daily, height=height, ticker=tk, rs_label=rs_rating_str,
+        volume_data=vol_colored, volume_sma50=volume_sma50_data,
+    )
+    return html_chart, None, {"ticker": tk, "rs_label": rs_rating_str}
 
 # ---------------------- EquiCharts (Equivolume) Helper ----------------------
 def create_equicharts_html(df, height=650, title="", ticker="", rs_label=None):
@@ -1906,7 +2388,12 @@ def is_ticker_cache_updater_running():
 def start_ticker_cache_update(mode="price"):
     """Launch update_ticker_cache.py in the background. Returns (ok, message).
 
-    mode: "price"         — OHLCV price bars only
+    mode: "price"         — OHLCV price bars only; then rebuilds the daily
+                            screener (build_daily_screener.py, ~36s) and runs the
+                            IBD-Style Ratings Scanner (run_ratings_scanner.py,
+                            ~10s) so daily_screener.csv / ratings_scan.csv
+                            reflect the fresh bars (chained via --run-screener /
+                            --run-ratings-scan inside the same background process)
           "price+fund"    — OHLCV bars + EPS/ROE fundamentals (CLI-only now;
                             no UI button uses it since the two are separate buttons)
           "fundamentals"  — EPS/ROE fundamentals only (fast, skips the price pass)
@@ -1929,10 +2416,17 @@ def start_ticker_cache_update(mode="price"):
                     "--fund-workers", "4",
                     "--fund-delay", "0.2",
                     "--fund-timeout", "60"]
-        labels = {"price": "[OHLCV only]",
-                  "price+fund": "[OHLCV + fundamentals]",
+        # Price modes chain the daily screener rebuild + ratings scanner after the
+        # OHLCV pass, so daily_screener.csv and ratings_scan.csv always reflect the
+        # bars this run just fetched. Fundamentals-only skips both: no new prices,
+        # so recomputing would just waste minutes.
+        if mode in ("price", "price+fund"):
+            cmd.append("--run-screener")
+            cmd.append("--run-ratings-scan")
+        labels = {"price": "[OHLCV only + screener + ratings scan]",
+                  "price+fund": "[OHLCV + fundamentals + screener + ratings scan]",
                   "fundamentals": "[fundamentals only]"}
-        label = labels.get(mode, "[OHLCV only]")
+        label = labels.get(mode, "[OHLCV only + screener + ratings scan]")
         with open(TICKER_CACHE_UPDATE_LOG, "a", encoding="utf-8") as lf:
             lf.write(f"\n{'='*60}\n{datetime.now().isoformat()} {label}\n")
             proc = subprocess.Popen(
@@ -1998,7 +2492,9 @@ with col3:
     b1, b2 = st.columns(2)
     with b1:
         if st.button("▶️ Price Cache", key="run_ticker_cache_update",
-                     help="Fetch the latest daily OHLCV bars for every ticker (yfinance)"):
+                     help="Fetch the latest daily OHLCV bars for every ticker (yfinance), "
+                          "then rebuild the daily screener AND run the IBD-Style Ratings "
+                          "Scanner from the fresh cache (~45s extra)"):
             ok, msg = start_ticker_cache_update(mode="price")
             if ok:
                 st.success(msg)
@@ -2007,7 +2503,8 @@ with col3:
                 st.warning(msg)
     with b2:
         if st.button("📊 Fundamentals", key="run_fundamentals_update",
-                     help="Fetch EPS/ROE fundamentals for every ticker (yfinance)"):
+                     help="Fetch EPS/ROE fundamentals for every ticker "
+                          "(defeatbeta-api first for statements, yfinance for the rest)"):
             ok, msg = start_ticker_cache_update(mode="fundamentals")
             if ok:
                 st.success(msg)
@@ -2756,6 +3253,8 @@ annotations=[dict(x=1, y=1.02, xref='paper', yref='paper', xanchor='right', show
             }
             for name, stats in top_strats.items():
                 st.markdown(f"- **{name}**: {stats}")
+            st.caption("Numbers are from the earlier IBD-pattern-engine backtests — the engines "
+                       "now run on our TV pattern scanner (drw_pattern.pine). Re-run to refresh.")
 
             st.markdown("---")
             st.markdown("**🔑 Quality Filter**")
@@ -5344,6 +5843,27 @@ with tab_tv_pattern:
                     except Exception as _e:
                         st.caption(f"Trend metrics unavailable ({_e}); trend filters disabled.")
 
+                    # Ratings from output/daily_screener.csv (calc_ibd_ratings.py's own pipeline) -
+                    # a different, newer source than the 'Percentile'/'Relative Strength' merge
+                    # above, merged by Symbol so all of them can be filtered on below.
+                    _sc_path = Path(__file__).resolve().parent / "output" / "daily_screener.csv"
+                    if _sc_path.exists():
+                        @st.cache_data(ttl=600, show_spinner=False)
+                        def _tv_load_screener_ratings(mtime: float):
+                            _rating_cols = ['Symbol', 'EPS Rating', 'RS Rating',
+                                            'RS 3-Month Rating', 'RS 6-Month Rating',
+                                            'SMR Rating', 'A/D Rating', 'Comp Rating',
+                                            'Ind Group RS', '21 Day ATR %']
+                            return pd.read_csv(_sc_path, usecols=lambda c: c in _rating_cols,
+                                               low_memory=False)
+                        try:
+                            _ratings = _tv_load_screener_ratings(_sc_path.stat().st_mtime)
+                            df_tv = df_tv.merge(_ratings, left_on='ticker', right_on='Symbol',
+                                                how='left')
+                        except Exception as _e:
+                            st.caption(f"daily_screener.csv ratings unavailable ({_e}); "
+                                       f"rating filters disabled.")
+
                     for c in ('Percentile', 'AvgVol30'):
                         if c in df_tv.columns:
                             df_tv[c] = pd.to_numeric(df_tv[c], errors='coerce')
@@ -5360,7 +5880,7 @@ with tab_tv_pattern:
                     st.divider()
 
                     with st.expander("🎛️ Filter & Refine", expanded=False):
-                        g1, g2, g3, g4 = st.columns(4)
+                        g1, g2, g3, g4, g5 = st.columns(5)
                         with g1:
                             avail_pat = [p for p in TV_PATTERN_ORDER
                                          if p in set(df_tv['pattern_name'])]
@@ -5384,9 +5904,18 @@ with tab_tv_pattern:
                             tv_min_vol50 = st.number_input("Min 50D Avg Vol", value=400000,
                                                            step=50000, key="tv_min_vol50")
                         with g3:
-                            tv_max_dist = st.number_input("Max |distance to pivot| %", value=100.0,
-                                                          key="tv_max_dist")
-                            tv_max_52w = st.number_input("Max % Off 52W High", value=100.0,
+                            tv_max_dist = st.number_input(
+                                "Max |distance to pivot| % (In Base)", value=20.0,
+                                key="tv_max_dist",
+                                help="Only constrains In Base rows - a Post-BO stock is judged "
+                                     "by the bars-since-BO filter below instead, since its "
+                                     "distance to pivot only grows the longer it runs.")
+                            tv_max_bars_bo = st.number_input(
+                                "Max bars since BO (Post-BO)", value=25, step=5,
+                                key="tv_max_bars_bo",
+                                help="Only constrains Post-BO rows, so a breakout stays visible "
+                                     "while fresh and drops off once it is this many bars old.")
+                            tv_max_52w = st.number_input("Max % Off 52W High", value=25.0,
                                                          key="tv_max_52w")
                             tv_depth = st.slider("Base depth % range", 0, 60, (0, 60),
                                                  key="tv_depth_rng")
@@ -5408,6 +5937,45 @@ with tab_tv_pattern:
                                                    key="tv_min_cup",
                                                    help="Bars of this base that passed the cup "
                                                         "test. Raise it to drop marginal cups.")
+                            # Both are independent of pattern_name/base_shape - a double bottom
+                            # or a VCP can be live at the same time as any Cup/Base/Cup+Handle,
+                            # so they need their own filters rather than living under "Pattern".
+                            tv_has_db = st.checkbox("Double bottom active", value=False,
+                                                    key="tv_has_db")
+                            tv_has_vcp = st.checkbox("VCP active (2nd contraction+)", value=False,
+                                                     key="tv_has_vcp")
+                        with g5:
+                            # output/daily_screener.csv ratings (calc_ibd_ratings.py) - a
+                            # different, newer source than tv_min_rs/'Percentile' in g2 above.
+                            # 70 default matches the user's own real trading universe (Comp
+                            # Rating >= 70), not an arbitrary screener cutoff.
+                            tv_min_comp = st.slider("Min Comp Rating", 0, 99, 70, key="tv_min_comp")
+                            tv_min_rs_sc = st.slider("Min RS Rating (screener)", 0, 99, 70,
+                                                     key="tv_min_rs_sc")
+                            tv_min_eps = st.slider("Min EPS Rating", 0, 99, 0, key="tv_min_eps")
+                            tv_min_rs3m = st.slider("Min RS 3-Month Rating", 0, 99, 70,
+                                                    key="tv_min_rs3m")
+                            tv_min_rs6m = st.slider("Min RS 6-Month Rating", 0, 99, 70,
+                                                    key="tv_min_rs6m")
+                            tv_min_grouprs = st.slider("Min Ind Group RS", 0, 99, 0,
+                                                       key="tv_min_grouprs")
+                            # Same volatility floor as the 🔍 Scans & Leads tab (default 2.5).
+                            tv_min_atr = st.slider("Min 21-Day ATR %", 0.0, 10.0, 2.5, 0.25,
+                                                   key="tv_min_atr",
+                                                   help="Only keep tickers whose 21-day ATR% "
+                                                        "(IBD-style '21 Day ATR %' column) is at/above "
+                                                        "this — same floor as Scans & Leads.")
+                            _ad_order = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-",
+                                        "D+", "D", "D-", "E"]
+                            _avail_ad = [g for g in _ad_order if 'A/D Rating' in df_tv.columns
+                                        and g in set(df_tv['A/D Rating'].dropna())]
+                            tv_ad_grades = st.multiselect("A/D Rating", _avail_ad,
+                                                          default=_avail_ad, key="tv_ad_grades")
+                            _smr_order = ["A", "B", "C", "D", "E"]
+                            _avail_smr = [g for g in _smr_order if 'SMR Rating' in df_tv.columns
+                                         and g in set(df_tv['SMR Rating'].dropna())]
+                            tv_smr_grades = st.multiselect("SMR Rating", _avail_smr,
+                                                           default=_avail_smr, key="tv_smr_grades")
 
                     f_tv = df_tv.copy()
                     if tv_search:
@@ -5430,7 +5998,11 @@ with tab_tv_pattern:
                     if 'avg_vol50' in f_tv.columns and tv_min_vol50 > 0:
                         f_tv = f_tv[f_tv['avg_vol50'].fillna(0) >= tv_min_vol50]
                     if tv_max_dist < 100.0:
-                        f_tv = f_tv[f_tv['dist_pct'].abs().fillna(999.0) <= tv_max_dist]
+                        f_tv = f_tv[(f_tv['status'] != 'In Base')
+                                    | (f_tv['dist_pct'].abs().fillna(999.0) <= tv_max_dist)]
+                    if 'bars_sbo' in f_tv.columns and tv_max_bars_bo < 999:
+                        f_tv = f_tv[(f_tv['status'] != 'Post-BO')
+                                    | (f_tv['bars_sbo'].fillna(9999) <= tv_max_bars_bo)]
                     if tv_max_52w < 100.0:
                         f_tv = f_tv[f_tv['pct_off_52w_high'].fillna(999.0) <= tv_max_52w]
                     if tv_depth != (0, 60):
@@ -5452,6 +6024,33 @@ with tab_tv_pattern:
                     if tv_min_cup > 0 and 'cup_bars_in_base' in f_tv.columns:
                         f_tv = f_tv[(f_tv['pattern_name'] != 'Cup')
                                     | (f_tv['cup_bars_in_base'].fillna(0) >= tv_min_cup)]
+                    if tv_has_db and 'double_bottom' in f_tv.columns:
+                        f_tv = f_tv[f_tv['double_bottom'].notna()]
+                    if tv_has_vcp and 'vcp' in f_tv.columns:
+                        f_tv = f_tv[f_tv['vcp'].notna()]
+                    # daily_screener.csv ratings - numeric ones follow the same fillna(0)
+                    # convention as tv_min_rs/tv_min_vol50 above (missing data does not pass a
+                    # positive threshold); the two letter grades follow tv_shapes' convention
+                    # instead (unselected-from-default is a no-op, not a de-facto NaN drop).
+                    if 'Comp Rating' in f_tv.columns and tv_min_comp > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['Comp Rating'], errors='coerce').fillna(0) >= tv_min_comp]
+                    if 'RS Rating' in f_tv.columns and tv_min_rs_sc > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['RS Rating'], errors='coerce').fillna(0) >= tv_min_rs_sc]
+                    if 'EPS Rating' in f_tv.columns and tv_min_eps > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['EPS Rating'], errors='coerce').fillna(0) >= tv_min_eps]
+                    if 'RS 3-Month Rating' in f_tv.columns and tv_min_rs3m > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['RS 3-Month Rating'], errors='coerce').fillna(0) >= tv_min_rs3m]
+                    if 'RS 6-Month Rating' in f_tv.columns and tv_min_rs6m > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['RS 6-Month Rating'], errors='coerce').fillna(0) >= tv_min_rs6m]
+                    if 'Ind Group RS' in f_tv.columns and tv_min_grouprs > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['Ind Group RS'], errors='coerce').fillna(0) >= tv_min_grouprs]
+                    if '21 Day ATR %' in f_tv.columns and tv_min_atr > 0:
+                        f_tv = f_tv[pd.to_numeric(f_tv['21 Day ATR %'], errors='coerce')
+                                    .fillna(0) >= tv_min_atr]
+                    if 'A/D Rating' in f_tv.columns and tv_ad_grades and set(tv_ad_grades) != set(_avail_ad):
+                        f_tv = f_tv[f_tv['A/D Rating'].isna() | f_tv['A/D Rating'].isin(tv_ad_grades)]
+                    if 'SMR Rating' in f_tv.columns and tv_smr_grades and set(tv_smr_grades) != set(_avail_smr):
+                        f_tv = f_tv[f_tv['SMR Rating'].isna() | f_tv['SMR Rating'].isin(tv_smr_grades)]
 
                     tv_chart_tab, tv_cat_tab, tv_hist_tab, tv_tbl_tab, tv_exp_tab = st.tabs(
                         ["📈 Chart", "📂 By Pattern", "🕘 History", "📋 Data Table", "📤 Export"])
@@ -5530,6 +6129,31 @@ with tab_tv_pattern:
                                             f"volume {_hg.get('vol_pct_of_ma')}% of the 50-day MA"
                                             + (f" · fails: {', '.join(_fail)}" if _fail
                                                else " · passes every gate"))
+
+                                    # Both independent of pattern_name (see the drw_pattern.pine
+                                    # / drw_vcp.pine note above the filter checkboxes) - shown as
+                                    # text too, not just the drawn overlay, since they are easy
+                                    # to miss on a chart already showing a base/cup/handle.
+                                    _db = _row.get('double_bottom')
+                                    if isinstance(_db, dict) and _db:
+                                        st.caption(
+                                            f"**Double bottom** — {_db.get('first_high')} → "
+                                            f"{_db.get('first_low')} → {_db.get('second_high')} → "
+                                            f"{_db.get('second_low')} "
+                                            f"({_db.get('first_high_date')} to {_db.get('second_low_date')})")
+
+                                    _vcp = _row.get('vcp')
+                                    if isinstance(_vcp, dict) and _vcp:
+                                        _vcp_txt = (f"**VCP** — {_vcp.get('status')} · "
+                                                    f"{_vcp.get('contractions')} contraction"
+                                                    f"{'s' if _vcp.get('contractions') != 1 else ''}")
+                                        if _vcp.get('last_depth_pct') is not None:
+                                            _vcp_txt += f" · last {_vcp['last_depth_pct']:.1f}% deep"
+                                        if _vcp.get('ready') and _vcp.get('pivot'):
+                                            _vcp_txt += f" · pivot {_vcp['pivot']:,.2f}"
+                                        if _vcp.get('breakout'):
+                                            _vcp_txt += " · **BREAKOUT**"
+                                        st.caption(_vcp_txt)
                             except Exception as _ce:
                                 st.error(f"Could not draw the chart: {_ce}")
 
@@ -5805,8 +6429,9 @@ with tab_tv_pattern:
                         cols = ['ticker', 'pattern_name', 'base_shape', 'status', 'Percentile', 'rs_score',
                                 'close', 'pivot', 'dist_pct', 'base_top', 'base_low',
                                 'base_depth_pct', 'days_in_base', 'bars_sbo', 'acc_days',
-                                'dis_days', 'neu_days', 'pct_off_52w_high', 'cup_bars_in_base',
-                                'rs_nh', 'rs_nh_period', 'AvgVol30', 'Sector', 'Industry']
+                                'dis_days', 'neu_days', 'pct_off_52w_high', '21 Day ATR %',
+                                'cup_bars_in_base', 'rs_nh', 'rs_nh_period', 'AvgVol30',
+                                'Sector', 'Industry']
                         cols = [c for c in cols if c in f_tv.columns]
                         st.dataframe(
                             f_tv[cols].rename(columns={
@@ -6385,6 +7010,249 @@ with tab_ms:
                 st.divider()
                 render_tradingview_ticker_chart(ticker)
 
+def render_ibd_live_ticker_comments():
+    """Ticker Comments panel. Rendered from inside the Tickers & Chart fragment so it
+    re-runs (and re-syncs to the chart's active ticker) whenever a table row is clicked
+    or Space advances to the next ticker — no separate full-app rerun needed."""
+    all_known_tickers = get_all_commented_or_mentioned_tickers()
+    if not all_known_tickers:
+        st.caption("No tickers with comments or transcript mentions yet.")
+        return
+
+    # Follow the chart's ticker. A widget key outranks index= on every rerun, so the
+    # value has to be written here, before the selectbox is created — and only when the
+    # active ticker actually changed, or picking a ticker from this dropdown would be
+    # yanked straight back to the chart's.
+    active_tk = st.session_state.get("ibd_live_active_ticker")
+    if active_tk in all_known_tickers and active_tk != st.session_state.get("_ibd_live_comment_synced_to"):
+        st.session_state.ibd_live_comment_ticker_select = active_tk
+        st.session_state._ibd_live_comment_synced_to = active_tk
+    elif st.session_state.get("ibd_live_comment_ticker_select") not in all_known_tickers:
+        st.session_state.pop("ibd_live_comment_ticker_select", None)
+
+    default_ticker = active_tk if active_tk in all_known_tickers else all_known_tickers[0]
+    default_idx = all_known_tickers.index(default_ticker)
+    comment_ticker = st.selectbox("Select a ticker",
+                                  all_known_tickers, index=default_idx,
+                                  key="ibd_live_comment_ticker_select",
+                                  help="Every ticker you commented on or the show mentioned.")
+    if comment_ticker != st.session_state.get("ibd_live_active_ticker"):
+        st.session_state.ibd_live_active_ticker = comment_ticker
+        st.session_state._ibd_live_comment_synced_to = comment_ticker
+
+    timeline = get_ticker_comment_timeline(comment_ticker, _ibd_live_dir_signature())
+    summary_dates = load_ibd_live_summary_dates(_ibd_live_dir_signature())
+    latest_show_date = summary_dates[-1] if summary_dates else None
+    n_trans, n_you, _, n_boilerplate = render_comment_timeline(timeline, comment_ticker, latest_show_date)
+    if n_trans or n_you:
+        st.markdown(
+            f"""
+            <div style="display:flex; gap:12px; margin:2px 0 8px 0; flex-wrap:wrap;">
+                <span style="background:#1f77b4; color:#fff; font-size:12px; font-weight:700; padding:3px 12px; border-radius:20px;">🎙️ {n_trans} show mention{'s' if n_trans != 1 else ''}</span>
+                <span style="background:#ff6b1a; color:#fff; font-size:12px; font-weight:700; padding:3px 12px; border-radius:20px;">✍️ {n_you} comment{'s' if n_you != 1 else ''}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.caption("No comments or transcript mentions yet for this ticker.")
+
+    with st.form(key="ibd_live_add_comment_form", clear_on_submit=True):
+        st.markdown(f"**➕ Add a comment for {comment_ticker}**")
+        c_date, c_text = st.columns([1, 3])
+        with c_date:
+            comment_date = st.date_input("Date", value=datetime.now().date(), key="ibd_live_comment_date")
+        with c_text:
+            comment_text = st.text_area("Comment", key="ibd_live_comment_text", height=80,
+                                        placeholder="Why is this ticker worth watching? What's the setup?")
+        if st.form_submit_button("💾 Save Comment"):
+            if comment_text.strip():
+                save_ticker_comment(comment_ticker, comment_date.isoformat(), comment_text)
+                get_ticker_comment_timeline.clear()
+                st.success(f"Saved comment for {comment_ticker}.")
+                rerun_app()
+            else:
+                st.warning("Comment text can't be empty.")
+
+
+@st.fragment
+def render_ibd_live_tickers_chart():
+    """Tickers table + per-ticker chart for the IBD Live tab.
+
+    Kept inside an st.fragment so clicking a table row (or pressing Space) only
+    re-runs THIS block — both chart builders (TradingView + Advanced) are already cached per
+    ticker, so switching tickers no longer rebuilds the whole app (calendar, SPY day picker,
+    summaries, and every other tab all stay untouched and stop flickering).
+    """
+    selected_date = st.session_state.get("ibd_live_selected_date")
+    if not selected_date:
+        return
+    _, sidecar, _, _ = load_ibd_live_combined_sidecar(selected_date)
+    day_tickers = (sidecar or {}).get("tickers", [])
+    ticker_details = (sidecar or {}).get("ticker_details", {})
+    # Per-ticker source attribution: which summaries of the day mention each ticker, so the
+    # merged union table still shows where every row came from (e.g. '☀️ Live, 🌙 SwingTrade').
+    _tk_sources = {}
+    for _s in load_ibd_live_sources_for_date(selected_date, _ibd_live_dir_signature()):
+        _lab = _ibd_live_source_label(_s["kind"], _s["source"])
+        for _t in ((_s["sidecar"] or {}).get("tickers") or []):
+            _t = (_t or "").strip().upper()
+            if _t:
+                _tk_sources.setdefault(_t, []).append(_lab)
+    if not day_tickers:
+        st.info("No tickers were captured for this date.")
+        st.divider()
+        st.subheader("💬 Ticker Comments")
+        render_ibd_live_ticker_comments()
+        return
+
+    tbl_key = "ibd_live_ticker_table"
+
+    def _clear_table_selection():
+        # Keep the highlighted row honest when the ticker is advanced some other way
+        # (Next button / Space / date change) so a stale selection can't fight it.
+        try:
+            if tbl_key in st.session_state:
+                st.session_state[tbl_key]["selection"]["rows"] = []
+        except Exception:
+            pass
+
+    # Re-seed when the date changed (full-app rerun) so the view starts on the
+    # first ticker of the new day.
+    if st.session_state.get("ibd_live_list_date") != selected_date:
+        st.session_state.ibd_live_ticker_idx = 0
+        st.session_state.ibd_live_list_date = selected_date
+        st.session_state.ibd_live_active_ticker = day_tickers[0]
+        _clear_table_selection()
+
+    active_ticker = st.session_state.get("ibd_live_active_ticker", day_tickers[0])
+    if active_ticker not in day_tickers:
+        active_ticker = day_tickers[0]
+        st.session_state.ibd_live_active_ticker = active_ticker
+
+    list_col, chart_col = st.columns([1, 3])
+    with list_col:
+        st.caption("Click a row to load its chart · **Space** = next ticker.")
+
+        def _handle_table_select():
+            # Selection callback: runs BEFORE the fragment re-renders, so the table's
+            # ▶ marker and the chart both reflect the clicked ticker in the same run.
+            sel = (st.session_state.get(tbl_key) or {}).get("selection") or {}
+            sel_rows = sel.get("rows") or []
+            if not sel_rows:
+                return
+            i = int(sel_rows[0])
+            if 0 <= i < len(day_tickers):
+                tk = day_tickers[i]
+                if tk != st.session_state.get("ibd_live_active_ticker"):
+                    st.session_state.ibd_live_ticker_idx = i
+                    st.session_state.ibd_live_active_ticker = tk
+                    # Keep the 💬 Ticker Comments block below in sync (its selectbox
+                    # follows the chart ticker) even though it only re-renders on a
+                    # full rerun.
+                    st.session_state.ibd_live_comment_ticker_select = tk
+                    st.session_state._ibd_live_comment_synced_to = tk
+
+        # Next button is handled BEFORE the table renders (widget handlers execute in
+        # render order) so the ▶ marker below is accurate in the same run.
+        if st.button("⏭️ Next Ticker (Space)", key="ibd_live_next_ticker_btn",
+                     use_container_width=True):
+            idx = (st.session_state.get("ibd_live_ticker_idx", 0) + 1) % len(day_tickers)
+            st.session_state.ibd_live_ticker_idx = idx
+            st.session_state.ibd_live_active_ticker = day_tickers[idx]
+            st.session_state.ibd_live_comment_ticker_select = day_tickers[idx]
+            st.session_state._ibd_live_comment_synced_to = day_tickers[idx]
+            _clear_table_selection()
+
+        active_ticker = st.session_state.get("ibd_live_active_ticker", active_ticker)
+        rows = []
+        for tk in day_tickers:
+            d = ticker_details.get(tk) or {}
+            story = (d.get("story") or "").strip()
+            # "▶" marks the loaded ticker even after advancing with Space/Next,
+            # where the row-highlight can't track it (the selection is cleared).
+            rows.append({
+                "Ticker": ("▶ " + tk) if tk == active_ticker else tk,
+                "Action": d.get("actionability") or "",
+                "Setup": d.get("technical_action") or "",
+                "Note": (story[:72] + "…") if len(story) > 72 else story,
+                "Source": ", ".join(_tk_sources.get(tk, [])),
+            })
+        st.dataframe(
+            pd.DataFrame(rows),
+            on_select=_handle_table_select,
+            selection_mode="single-row",
+            key=tbl_key,
+            width="stretch",
+            height=430,
+            hide_index=True,
+        )
+
+        st_html("""
+        <script>
+        (function() {
+            var doc = window.parent.document;
+            function findNextButton() {
+                var buttons = doc.querySelectorAll('button');
+                for (var i = 0; i < buttons.length; i++) {
+                    if (buttons[i].innerText.trim() === '⏭️ Next Ticker (Space)') return buttons[i];
+                }
+                return null;
+            }
+            if (window.parent.__ibdLiveSpaceHandler) {
+                doc.removeEventListener('keydown', window.parent.__ibdLiveSpaceHandler, true);
+            }
+            window.parent.__ibdLiveSpaceHandler = function(e) {
+                var active = doc.activeElement;
+                var tag = active ? active.tagName.toLowerCase() : '';
+                if (tag === 'input' || tag === 'textarea' || (active && active.isContentEditable)) return;
+                if (e.code === 'Space' || e.key === ' ') {
+                    var btn = findNextButton();
+                    if (btn) { e.preventDefault(); btn.click(); }
+                }
+            };
+            doc.addEventListener('keydown', window.parent.__ibdLiveSpaceHandler, true);
+        })();
+        </script>
+        """, height=1)
+
+    with chart_col:
+        detail = ticker_details.get(active_ticker)
+        if detail:
+            actionability = detail.get('actionability', '')
+            tech_action = detail.get('technical_action', '')
+            story = detail.get('story', '')
+            pill_color = ('#1f9d55' if actionability == 'Actionable'
+                          else '#1f77b4' if actionability == 'Watchlist' else '#6c757d')
+            st.markdown(
+                f"""
+                <div style="background:#ffffff; border:1px solid #e2e7ee; border-left:5px solid #ff6b1a;
+                            border-radius:8px; padding:14px 18px; margin-bottom:10px;
+                            font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                        <span style="font-size:22px; font-weight:800; color:#0a1f3d;">{html.escape(active_ticker)}</span>
+                        <span style="background:{pill_color}; color:#ffffff; font-size:12px; font-weight:700;
+                                     padding:3px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">{html.escape(actionability)}</span>
+                        <span style="font-size:16px; font-weight:700; color:#143a63;">{html.escape(tech_action)}</span>
+                    </div>
+                    <div style="font-size:16px; color:#1c2733; line-height:1.55;">{html.escape(story)}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with st.spinner(f"Loading chart for {active_ticker}..."):
+            html_chart, err, _meta = build_tradingview_html_chart(active_ticker, height=560)
+        if err:
+            st.warning(err)
+        elif html_chart:
+            st_html(html_chart, height=620)
+
+    # ---- Ticker Comments (inside the fragment so it re-renders & syncs on ticker change) ----
+    st.divider()
+    st.subheader("💬 Ticker Comments")
+    render_ibd_live_ticker_comments()
+
+
 # ---------- TAB 11: IBD Live Summary ----------
 with tab_ibd_live:
     st.header("🎙️ IBD Live Summary")
@@ -6402,6 +7270,23 @@ with tab_ibd_live:
         with in_col1:
             ingest_date = st.date_input("Date", value=datetime.now().date(), key="ibd_live_ingest_date")
             ingest_kind = st.radio("Type", ["Live / Intraday", "End of Day"], horizontal=True, key="ibd_live_ingest_kind")
+            ingest_source = st.text_input(
+                "Source (optional)", key="ibd_live_ingest_source",
+                placeholder="e.g. Zoom, Segment 2, CNBC",
+                help="A label for where this summary came from. Different sources for the same "
+                     "date & type are saved side-by-side (<date>__<source>) and never overwrite "
+                     "each other; blank saves to the primary slot.")
+            ingest_overwrite = st.checkbox(
+                "Overwrite existing (same date/type/source)", value=False,
+                key="ibd_live_ingest_overwrite",
+                help="Off by default so a second source never clobbers an existing summary. "
+                     "Tick this only to deliberately replace a summary you already saved.")
+            _existing_srcs = load_ibd_live_sources_for_date(ingest_date.isoformat(),
+                                                            _ibd_live_dir_signature())
+            if _existing_srcs:
+                _desc = ", ".join(_ibd_live_source_label(s["kind"], s["source"])
+                                  for s in _existing_srcs)
+                st.caption(f"Already saved for {ingest_date.isoformat()}: {_desc}")
         with in_col2:
             ingest_text = st.text_area(
                 "Markdown summary",
@@ -6411,9 +7296,21 @@ with tab_ibd_live:
         if st.button("💾 Save & Reformat", type="primary", key="ibd_live_ingest_save"):
             date_str = ingest_date.isoformat()
             suffix = "_eod" if ingest_kind == "End of Day" else ""
-            ok, msg, sc = save_ibd_live_summary_from_text(date_str, ingest_text, suffix=suffix)
+            ok, msg, sc = save_ibd_live_summary_from_text(date_str, ingest_text, suffix=suffix,
+                                                          source=ingest_source,
+                                                          overwrite=ingest_overwrite)
             if ok:
                 focus_ibd_live_date(date_str)
+                # Auto-select the just-saved source in the summary dropdown below so the
+                # freshly saved report (not the primary slot) is the one shown on screen.
+                _s_kind = "eod" if suffix == "_eod" else "live"
+                _s_same = [s for s in load_ibd_live_sources_for_date(date_str,
+                                                                    _ibd_live_dir_signature())
+                           if s["kind"] == _s_kind]
+                _s_idx = next((i for i, s in enumerate(_s_same)
+                               if s["source"] == _slugify_ibd_source(ingest_source)), None)
+                if _s_idx is not None and len(_s_same) > 1:
+                    st.session_state[f"ibd_live_src_{_s_kind}_{date_str}"] = _s_idx
                 n_tickers = len((sc or {}).get("tickers") or [])
                 # The message has to survive the rerun that repaints the tab below.
                 st.session_state.ibd_live_ingest_msg = (
@@ -6426,11 +7323,64 @@ with tab_ibd_live:
             else:
                 st.error(msg)
 
-    available_dates = load_ibd_live_summary_dates()
+        st.divider()
+        st.markdown("**🗑️ Delete a summary**")
+        del_c1, del_c2 = st.columns(2)
+        with del_c1:
+            del_date = st.date_input("Date to delete", value=datetime.now().date(),
+                                     key="ibd_live_del_date")
+            del_kind = st.radio("Type to delete", ["Live / Intraday", "End of Day"],
+                                horizontal=True, key="ibd_live_del_kind")
+        with del_c2:
+            _del_k = "eod" if del_kind == "End of Day" else "live"
+            _del_sources = [s for s in load_ibd_live_sources_for_date(del_date.isoformat(),
+                                                                     _ibd_live_dir_signature())
+                            if s["kind"] == _del_k]
+            if _del_sources:
+                del_source = st.selectbox(
+                    "Source to delete",
+                    [s["source"] or "Primary (no source)" for s in _del_sources],
+                    key="ibd_live_del_source",
+                    help="Only sources already saved for this date & type are listed.")
+            else:
+                del_source = None
+                st.caption(f"No {del_kind.lower()} summary exists for "
+                           f"{del_date.isoformat()} — nothing to delete.")
+        if del_source is not None:
+            del_key = (del_date.isoformat(), _del_k, del_source)
+            if st.session_state.get("ibd_live_del_armed") == del_key:
+                st.warning(f"This permanently deletes the {del_kind.lower()} summary for "
+                           f"{del_date.isoformat()} with source "
+                           f"{'primary (no source)' if del_source == 'Primary (no source)' else repr(del_source)}.")
+                dc1, dc2 = st.columns(2)
+                if dc1.button("⚠️ Confirm delete", type="primary", key="ibd_live_del_confirm"):
+                    _src = "" if del_source == "Primary (no source)" else del_source
+                    ok, msg = delete_ibd_live_summary(del_date.isoformat(), kind=_del_k, source=_src)
+                    st.session_state.pop("ibd_live_del_armed", None)
+                    if ok and not load_ibd_live_sources_for_date(del_date.isoformat(),
+                                                                 _ibd_live_dir_signature()):
+                        # That was the date's last summary — re-point the tab at the newest
+                        # remaining date so the calendar/plot don't sit on an empty day.
+                        _remaining = load_ibd_live_summary_dates(_ibd_live_dir_signature())
+                        if _remaining:
+                            focus_ibd_live_date(_remaining[-1])
+                        else:
+                            st.session_state.ibd_live_selected_date = None
+                            st.session_state.ibd_live_active_ticker = None
+                    st.session_state.ibd_live_ingest_msg = (("success" if ok else "error"), msg)
+                    rerun_app()
+                if dc2.button("Cancel", key="ibd_live_del_cancel"):
+                    st.session_state.pop("ibd_live_del_armed", None)
+                    rerun_app()
+            elif st.button("🗑️ Delete summary", type="secondary", key="ibd_live_del_arm"):
+                st.session_state.ibd_live_del_armed = del_key
+                rerun_app()
+
+    available_dates = load_ibd_live_summary_dates(_ibd_live_dir_signature())
     if not available_dates:
         st.info("No IBD Live summaries found yet. Run `python/sync_ibd_live_summaries.py` to pull them in from ~/Documents/Zoom.")
     else:
-        headlines = load_ibd_live_summary_headlines()
+        headlines = load_ibd_live_summary_headlines(_ibd_live_dir_signature())
         available_set = set(available_dates)
 
         if "ibd_live_selected_date" not in st.session_state:
@@ -6507,187 +7457,61 @@ with tab_ibd_live:
 
             # ---- Summary for selected date ----
             st.subheader(f"📋 Summary — {selected_date}")
-            md_text, sidecar, eod_md, eod_sidecar = load_ibd_live_combined_sidecar(selected_date)
-            if md_text:
-                report_html = render_ibd_live_report(md_text, date_str=selected_date,
-                                                     market_summary=(sidecar or {}).get("market_summary", ""))
-                with st.expander("📄 Full Market Report", expanded=True):
-                    st.markdown(report_html, unsafe_allow_html=True)
+            # The tickers & chart section below is self-contained in
+            # render_ibd_live_tickers_chart() (an st.fragment), which loads its own
+            # combined sidecar; the summary blocks above only need the source lists.
+            date_sources = load_ibd_live_sources_for_date(selected_date,
+                                                          _ibd_live_dir_signature())
+            live_sources = [s for s in date_sources if s["kind"] == "live"]
+            eod_sources = [s for s in date_sources if s["kind"] == "eod"]
+            if date_sources:
+                _src_desc = ", ".join(_ibd_live_source_label(s["kind"], s["source"])
+                                      for s in date_sources)
+                st.caption(f"Sources on file for {selected_date}: {_src_desc}")
+
+            if live_sources:
+                if len(live_sources) > 1:
+                    _live_labs = [s["source"] or "Primary" for s in live_sources]
+                    _live_idx = st.selectbox("Intraday source", range(len(live_sources)),
+                                             format_func=lambda i: _live_labs[i],
+                                             key=f"ibd_live_src_live_{selected_date}")
+                    _live = live_sources[_live_idx]
+                else:
+                    _live = live_sources[0]
+                if _live["md_text"]:
+                    report_html = render_ibd_live_report(
+                        _live["md_text"], date_str=selected_date,
+                        market_summary=(_live["sidecar"] or {}).get("market_summary", ""))
+                    _title = "📄 Full Market Report" + (f" — {_live['source']}" if _live['source'] else "")
+                    with st.expander(_title, expanded=True):
+                        st.markdown(report_html, unsafe_allow_html=True)
             else:
                 st.warning("No markdown summary found for this date.")
 
-            if eod_md:
-                st.subheader(f"🌙 End of Day Summary — {selected_date}")
-                eod_html = render_ibd_live_report(eod_md, date_str=selected_date,
-                                                  market_summary=(eod_sidecar or {}).get("market_summary", ""),
-                                                  report_title="END OF DAY REPORT")
-                with st.expander("📄 End of Day Market Report", expanded=True):
-                    st.markdown(eod_html, unsafe_allow_html=True)
+            if eod_sources:
+                if len(eod_sources) > 1:
+                    _eod_labs = [s["source"] or "Primary" for s in eod_sources]
+                    _eod_idx = st.selectbox("End of Day source", range(len(eod_sources)),
+                                            format_func=lambda i: _eod_labs[i],
+                                            key=f"ibd_live_src_eod_{selected_date}")
+                    _eod = eod_sources[_eod_idx]
+                else:
+                    _eod = eod_sources[0]
+                if _eod["md_text"]:
+                    st.subheader(f"🌙 End of Day Summary — {selected_date}")
+                    eod_html = render_ibd_live_report(
+                        _eod["md_text"], date_str=selected_date,
+                        market_summary=(_eod["sidecar"] or {}).get("market_summary", ""),
+                        report_title="END OF DAY REPORT")
+                    _etitle = "📄 End of Day Market Report" + (f" — {_eod['source']}" if _eod['source'] else "")
+                    with st.expander(_etitle, expanded=True):
+                        st.markdown(eod_html, unsafe_allow_html=True)
             else:
                 st.info("No End of Day summary yet for this date — use the **Create / Ingest Summary** box above and pick **End of Day**.")
 
-            day_tickers = (sidecar or {}).get("tickers", [])
-            ticker_details = (sidecar or {}).get("ticker_details", {})
-
             st.divider()
             st.subheader("📈 Tickers & Chart")
-
-            if not day_tickers:
-                st.info("No tickers were captured for this date.")
-            else:
-                if (st.session_state.get("ibd_live_list_date") != selected_date):
-                    st.session_state.ibd_live_ticker_idx = 0
-                    st.session_state.ibd_live_list_date = selected_date
-                    st.session_state.ibd_live_active_ticker = day_tickers[0]
-
-                list_col, chart_col = st.columns([1, 3])
-                with list_col:
-                    st.caption("Click a ticker, or press **Space** to advance.")
-                    for i, tk in enumerate(day_tickers):
-                        is_active = (tk == st.session_state.get("ibd_live_active_ticker"))
-                        if st.button(tk, key=f"ibd_live_ticker_btn_{selected_date}_{tk}",
-                                     type="primary" if is_active else "secondary",
-                                     use_container_width=True):
-                            st.session_state.ibd_live_ticker_idx = i
-                            st.session_state.ibd_live_active_ticker = tk
-                            rerun_app()
-
-                    next_clicked = st.button("⏭️ Next Ticker (Space)", key="ibd_live_next_ticker_btn", use_container_width=True)
-                    if next_clicked:
-                        idx = (st.session_state.get("ibd_live_ticker_idx", 0) + 1) % len(day_tickers)
-                        st.session_state.ibd_live_ticker_idx = idx
-                        st.session_state.ibd_live_active_ticker = day_tickers[idx]
-                        rerun_app()
-
-                    st_html("""
-                    <script>
-                    (function() {
-                        var doc = window.parent.document;
-                        function findNextButton() {
-                            var buttons = doc.querySelectorAll('button');
-                            for (var i = 0; i < buttons.length; i++) {
-                                if (buttons[i].innerText.trim() === '⏭️ Next Ticker (Space)') return buttons[i];
-                            }
-                            return null;
-                        }
-                        if (window.parent.__ibdLiveSpaceHandler) {
-                            doc.removeEventListener('keydown', window.parent.__ibdLiveSpaceHandler, true);
-                        }
-                        window.parent.__ibdLiveSpaceHandler = function(e) {
-                            var active = doc.activeElement;
-                            var tag = active ? active.tagName.toLowerCase() : '';
-                            if (tag === 'input' || tag === 'textarea' || (active && active.isContentEditable)) return;
-                            if (e.code === 'Space' || e.key === ' ') {
-                                var btn = findNextButton();
-                                if (btn) { e.preventDefault(); btn.click(); }
-                            }
-                        };
-                        doc.addEventListener('keydown', window.parent.__ibdLiveSpaceHandler, true);
-                    })();
-                    </script>
-                    """, height=1)
-
-                with chart_col:
-                    active_ticker = st.session_state.get("ibd_live_active_ticker", day_tickers[0])
-                    detail = ticker_details.get(active_ticker)
-                    if detail:
-                        actionability = detail.get('actionability', '')
-                        tech_action = detail.get('technical_action', '')
-                        story = detail.get('story', '')
-                        pill_color = ('#1f9d55' if actionability == 'Actionable'
-                                      else '#1f77b4' if actionability == 'Watchlist' else '#6c757d')
-                        st.markdown(
-                            f"""
-                            <div style="background:#ffffff; border:1px solid #e2e7ee; border-left:5px solid #ff6b1a;
-                                        border-radius:8px; padding:14px 18px; margin-bottom:10px;
-                                        font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-                                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
-                                    <span style="font-size:22px; font-weight:800; color:#0a1f3d;">{html.escape(active_ticker)}</span>
-                                    <span style="background:{pill_color}; color:#ffffff; font-size:12px; font-weight:700;
-                                                 padding:3px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px;">{html.escape(actionability)}</span>
-                                    <span style="font-size:16px; font-weight:700; color:#143a63;">{html.escape(tech_action)}</span>
-                                </div>
-                                <div style="font-size:16px; color:#1c2733; line-height:1.55;">{html.escape(story)}</div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                    with st.spinner(f"Loading chart for {active_ticker}..."):
-                        percentile = None
-                        if 'Ticker' in filtered_df.columns:
-                            trows = filtered_df[filtered_df['Ticker'] == active_ticker]
-                            if not trows.empty:
-                                trow = trows.sort_values('date').iloc[-1] if 'date' in trows.columns else trows.iloc[0]
-                                pctl = trow.get('Percentile')
-                                if pctl is not None and not pd.isna(pctl):
-                                    percentile = float(pctl)
-                        fig, err = build_ticker_price_chart(active_ticker, percentile=percentile)
-                    if err:
-                        st.warning(err)
-                    elif fig:
-                        st.plotly_chart(fig, use_container_width=True, key=f"ibd_live_chart_{active_ticker}")
-
-            # ---- Ticker Comments ----
-            st.divider()
-            st.subheader("💬 Ticker Comments")
-            all_known_tickers = get_all_commented_or_mentioned_tickers()
-            if all_known_tickers:
-                # Follow the chart's ticker. A widget key outranks index= on every rerun,
-                # so the value has to be written here, before the selectbox is created —
-                # and only when the active ticker actually changed, or picking a ticker
-                # from this dropdown would be yanked straight back to the chart's.
-                active_tk = st.session_state.get("ibd_live_active_ticker")
-                if active_tk in all_known_tickers and active_tk != st.session_state.get("_ibd_live_comment_synced_to"):
-                    st.session_state.ibd_live_comment_ticker_select = active_tk
-                    st.session_state._ibd_live_comment_synced_to = active_tk
-                elif st.session_state.get("ibd_live_comment_ticker_select") not in all_known_tickers:
-                    st.session_state.pop("ibd_live_comment_ticker_select", None)
-
-                default_ticker = active_tk if active_tk in all_known_tickers else all_known_tickers[0]
-                default_idx = all_known_tickers.index(default_ticker)
-                comment_ticker = st.selectbox("Select a ticker",
-                                              all_known_tickers, index=default_idx,
-                                              key="ibd_live_comment_ticker_select",
-                                              help="Every ticker you commented on or the show mentioned.")
-                if comment_ticker != st.session_state.get("ibd_live_active_ticker"):
-                    st.session_state.ibd_live_active_ticker = comment_ticker
-                    st.session_state._ibd_live_comment_synced_to = comment_ticker
-
-                timeline = get_ticker_comment_timeline(comment_ticker)
-                summary_dates = load_ibd_live_summary_dates()
-                latest_show_date = summary_dates[-1] if summary_dates else None
-                n_trans, n_you, _, n_boilerplate = render_comment_timeline(timeline, comment_ticker, latest_show_date)
-                if n_trans or n_you:
-                    st.markdown(
-                        f"""
-                        <div style="display:flex; gap:12px; margin:2px 0 8px 0; flex-wrap:wrap;">
-                            <span style="background:#1f77b4; color:#fff; font-size:12px; font-weight:700; padding:3px 12px; border-radius:20px;">🎙️ {n_trans} show mention{'s' if n_trans != 1 else ''}</span>
-                            <span style="background:#ff6b1a; color:#fff; font-size:12px; font-weight:700; padding:3px 12px; border-radius:20px;">✍️ {n_you} comment{'s' if n_you != 1 else ''}</span>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.caption("No comments or transcript mentions yet for this ticker.")
-
-                with st.form(key="ibd_live_add_comment_form", clear_on_submit=True):
-                    st.markdown(f"**➕ Add a comment for {comment_ticker}**")
-                    c_date, c_text = st.columns([1, 3])
-                    with c_date:
-                        comment_date = st.date_input("Date", value=datetime.now().date(), key="ibd_live_comment_date")
-                    with c_text:
-                        comment_text = st.text_area("Comment", key="ibd_live_comment_text", height=80,
-                                                    placeholder="Why is this ticker worth watching? What's the setup?")
-                    if st.form_submit_button("💾 Save Comment"):
-                        if comment_text.strip():
-                            save_ticker_comment(comment_ticker, comment_date.isoformat(), comment_text)
-                            get_ticker_comment_timeline.clear()
-                            st.success(f"Saved comment for {comment_ticker}.")
-                            rerun_app()
-                        else:
-                            st.warning("Comment text can't be empty.")
-            else:
-                st.caption("No tickers with comments or transcript mentions yet.")
+            render_ibd_live_tickers_chart()
 
 # --- Backtests Tab ---
 with tab_backtests:
@@ -6702,13 +7526,20 @@ There are **3 backtest engines** available, each testing a different strategy cl
 
 | Script | What it tests | Time (7K tickers) |
 |---|---|---|
-| `scanner_universe_backtest.py` | All IBDB patterns + buy signal combos × 9 exit rules | ~5 min |
-| `full_backtest.py` | Every signal combination (2→N) across 13K+ bases | ~6 min |
-| `trend_following_backtest.py` | 48 Turtle/Seykota trend-following strategies | ~3 min |
+| `scanner_universe_backtest.py` | **Our TV patterns** (drw_pattern.pine) + buy signal combos × 23 exit rules | ~5 min |
+| `full_backtest.py` | Every signal combination (2→N) across our TV-pattern bases | ~6 min |
+| `trend_following_backtest.py` | 48 Turtle/Seykota trend-following strategies (alt48 gates on our patterns) | ~3 min |
 | `two_phase_backtest.py` | Phase 1 (SMA50+Shakeout) + Phase 2 (PB+SMA50 Bounce) | ~1 min |
-| `unified_watchlist.py` | Live scan — IBD+TF+Buy signals for current date | ~5 min |
+| `unified_watchlist.py` | Live scan — TV patterns + TF + Buy signals for current date | ~5 min |
 
-**Top verified strategies (by Sharpe):**
+All pattern engines now use **our scanner** (`tv_pattern_scanner.py`, the `drw_pattern.pine`
+port — the same patterns the 📐 TV Pattern tab reports), not the IBD scanner
+(`drw_pattern_scanner.pine`). Every trade also carries its SPY market regime, price bucket,
+base shape and acc/dis ratios, and `--spy-regime` / `--max-price` apply the market filters
+the history backtest found (below the SPY 200-day ≈ −5pp; $250+ is the weakest bucket).
+| `recommend_live_breakouts.py` | Score live TV-pattern breakouts with backtest lifts → picks CSV + HTML report + `watchlist_history.log` | ~5 sec |
+
+**Top verified strategies (by Sharpe)** — *from the earlier IBD-pattern-engine runs; re-run the engines now that they use our TV pattern scanner:*
 
 | Strategy | Engine | Win% | Avg Ret | Sharpe |
 |---|---|---|---|---|
@@ -6716,7 +7547,7 @@ There are **3 backtest engines** available, each testing a different strategy cl
 | **PB+SMA50 Bounce × target_5r** | scanner_universe | 66.4% | +4.92% | 0.40 |
 | **SMA50 Bounce+Shakeout × target_3r** | full_backtest | 74.8% | +7.47% | 0.54 |
 
-**Two-phase strategy:** P1=SMA50+Shakeout (½ pos, 2:1) + P2=PB+SMA50 Bounce (full, 5:1) — combined **60.3% win, +3.28% avg**
+**Two-phase strategy:** P1=SMA50+Shakeout (½ pos, 2:1) + P2=PB+SMA50 Bounce (full, 5:1) — combined **60.3% win, +3.28% avg** (prior-engine run)
 
 **Quality filter:** depth ≤ 25% AND length ≤ 150d boosts combined win rate to **86-100%**.
 
@@ -6730,16 +7561,53 @@ There are **3 backtest engines** available, each testing a different strategy cl
     with subtab_run:
         st.subheader("Run a Backtest")
         available_scripts = sorted([p.name for p in BACKTESTS_DIR.glob("*_backtest.py")])
+        _rec_script = BACKTESTS_DIR / "recommend_live_breakouts.py"
+        if _rec_script.exists() and _rec_script.name not in available_scripts:
+            available_scripts.append(_rec_script.name)
         if not available_scripts:
             st.info("No backtest scripts found in python/backtests/.")
         else:
             script = st.selectbox("Select backtest script", available_scripts, key="bt_script")
-            max_tickers = st.number_input("Max tickers (0 = all)", 0, 10000, 100, 100, key="bt_max")
-            if st.button(f"🚀 Run {script}", type="primary", key="bt_run"):
+            is_rec = script == "recommend_live_breakouts.py"
+            if is_rec:
+                max_tickers = st.number_input("Top N picks (0 = all scored)", 0, 10000, 10, 5,
+                                              key="bt_top",
+                                              help="recommend_live_breakouts.py scores the actionable "
+                                                   "pools (In Base within ±5% of pivot, Post-BO ≤ 5 "
+                                                   "bars) and recommends the top N.")
+            else:
+                max_tickers = st.number_input("Max tickers (0 = all)", 0, 10000, 100, 100, key="bt_max")
+
+            c_run, c_runall = st.columns(2)
+            with c_run:
+                run_clicked = st.button(f"🚀 Run {script}", type="primary", key="bt_run")
+            with c_runall:
+                run_all_clicked = st.button(
+                    "🔄 Rerun All Backtests", type="secondary", key="bt_run_all",
+                    help="Runs every backtest script in sequence. The engines honor a "
+                         "separate run-all Max tickers below (0 = full universe); "
+                         "recommend_live_breakouts.py always uses its own --top default. "
+                         "tv_pattern_history_backtest.py uses its own defaults.")
+            # Run-all uses its own Max tickers control, NOT the single-run input: the
+            # single-run input means 'Top N' when the recommend script is selected, so
+            # reusing it would silently shrink every engine to a tiny sample.
+            runall_max = st.number_input("Run-All Max tickers (0 = all)", 0, 10000, 0, 100,
+                                         key="bt_runall_max",
+                                         help="Applied to the engines that accept "
+                                              "--max-tickers when using 🔄 Rerun All Backtests. "
+                                              "0 (default) = the FULL ticker universe "
+                                              "(~15+ min for all scripts); set a limit to "
+                                              "smoke-test faster.")
+            if run_clicked:
+                st.session_state.pop("bt_runall_output", None)
                 cmd = ["python3", str(BACKTESTS_DIR / script)]
                 if max_tickers > 0:
-                    cmd.extend(["--max-tickers", str(max_tickers)])
-                with st.spinner(f"Running {script}... (may take several minutes)"):
+                    if is_rec:
+                        cmd.extend(["--top", str(max_tickers)])
+                    else:
+                        cmd.extend(["--max-tickers", str(max_tickers)])
+                with st.spinner(f"Running {script}... (may take several minutes)" if not is_rec
+                                else f"Scoring live patterns with {script}... (~5 sec)"):
                     try:
                         result = subprocess.run(cmd, capture_output=True, text=True, timeout=900, cwd=str(BACKTESTS_DIR.parent.parent))
                         st.session_state.bt_output = result.stdout
@@ -6749,6 +7617,42 @@ There are **3 backtest engines** available, each testing a different strategy cl
                         st.error("Backtest timed out after 15 minutes.")
                     except Exception as e:
                         st.error(f"Error: {e}")
+
+            if run_all_clicked:
+                # ── Run every backtest script in sequence, capturing each one's tail ──
+                scripts_to_run = list(available_scripts)
+                _all_out = []
+                _prog = st.progress(0.0, text="Starting...")
+                _status = st.empty()
+                for _i, _sname in enumerate(scripts_to_run):
+                    _spath = BACKTESTS_DIR / _sname
+                    _s_cmd = ["python3", str(_spath)]
+                    if _sname == "recommend_live_breakouts.py":
+                        pass                       # always its own --top default
+                    elif _sname != "tv_pattern_history_backtest.py" and runall_max > 0:
+                        _s_cmd += ["--max-tickers", str(runall_max)]
+                    _status.info(f"▶️ Running {_sname} ({_i + 1}/{len(scripts_to_run)}) ...")
+                    try:
+                        _res = subprocess.run(_s_cmd, capture_output=True, text=True,
+                                              timeout=1200, cwd=str(BACKTESTS_DIR.parent.parent))
+                        _tail = (_res.stdout or "")[-2500:]
+                        if _res.returncode != 0:
+                            _tail += "\n" + (_res.stderr or "")[-1500:]
+                        _all_out.append(f"===== {_sname} (rc={_res.returncode}) =====\n{_tail}")
+                        _status.success(f"✅ {_sname} finished (rc={_res.returncode})")
+                    except subprocess.TimeoutExpired:
+                        _all_out.append(f"===== {_sname} TIMED OUT =====\n")
+                        _status.warning(f"⏰ {_sname} timed out after 20 min")
+                    except Exception as _e:
+                        _all_out.append(f"===== {_sname} ERROR =====\n{_e}")
+                        _status.error(f"❌ {_sname}: {_e}")
+                    _prog.progress((_i + 1) / len(scripts_to_run))
+                st.session_state.bt_runall_output = "\n\n".join(_all_out)
+                _status.success("All backtests finished.")
+            if st.session_state.get("bt_runall_output"):
+                with st.expander("📋 Run-All Output", expanded=True):
+                    st.code(st.session_state.bt_runall_output[-8000:])
+
             if "bt_output" in st.session_state and st.session_state.get("bt_script") == script:
                 with st.expander("📋 Output", expanded=True):
                     st.code(st.session_state.bt_output[-5000:] if st.session_state.bt_output else "(no output)")
@@ -6796,7 +7700,15 @@ with tab_scans:
     BACKTESTS_DIR_SL = Path(__file__).resolve().parent / "python" / "backtests"
     WATCHLIST_CSV = BACKTESTS_DIR_SL / "unified_watchlist.csv"
 
-    lead_tab, scan_tab, perf_tab = st.tabs(["🎯 Potential Leads", "📊 All Scan Results", "📈 Performance"])
+    # Shared volatility floor across every list in this tab: only keep tickers whose
+    # 21-day ATR% (IBD-style "21 Day ATR %" column) is at or above the slider.
+    atr_min = st.slider("Min 21-Day ATR %", 0.0, 10.0, 2.5, 0.25, key="sl_atr_min",
+                        help="Only keep tickers whose 21-day ATR% (volatility vs price) is "
+                             "at/above this — applies to Potential Leads, All Scan Results, "
+                             "and Breakout Picks.")
+
+    lead_tab, scan_tab, perf_tab, picks_tab = st.tabs(
+        ["🎯 Potential Leads", "📊 All Scan Results", "📈 Performance", "🚀 Breakout Picks"])
 
     # ── Helper to load watchlist ──
     @st.cache_data(ttl=3600)
@@ -6806,6 +7718,12 @@ with tab_scans:
         return pd.DataFrame()
 
     wl = load_watchlist()
+    if not wl.empty and "atr21_pct" in wl.columns:
+        n_before = len(wl)
+        wl = wl[wl["atr21_pct"].fillna(0.0) >= atr_min].copy()
+        if len(wl) < n_before:
+            st.caption(f"🗜️ 21D ATR% ≥ {atr_min:.2f}% filter active: showing "
+                       f"{len(wl)} of {n_before} watchlist tickers.")
 
     with lead_tab:
         st.subheader("🎯 Golden-Tier Potential Leads")
@@ -6824,12 +7742,17 @@ with tab_scans:
 
             if len(golden) > 0:
                 show_cols = ["ticker", "pattern", "depth", "length", "dist_to_pivot",
-                             "composite", "combo_PB_SMA50", "tf_flags_on", "rsi"]
+                             "composite", "atr21_pct", "combo_PB_SMA50", "tf_flags_on", "rsi"]
                 show_cols = [c for c in show_cols if c in golden.columns]
+                _golden_fmt = {c: fmt for c, fmt in {"depth": "{:.1f}%",
+                                                     "dist_to_pivot": "{:.1f}%",
+                                                     "composite": "{:.1f}",
+                                                     "atr21_pct": "{:.1f}%"}
+                               .items() if c in golden.columns}
                 st.dataframe(
                     golden[show_cols].style
                     .background_gradient(subset=["composite"], cmap="RdYlGn")
-                    .format({"depth": "{:.1f}%", "dist_to_pivot": "{:.1f}%", "composite": "{:.1f}"}),
+                    .format(_golden_fmt),
                     use_container_width=True, height=400
                 )
 
@@ -6902,12 +7825,17 @@ with tab_scans:
             st.metric("Results", f"{len(filtered):,} tickers")
 
             display_cols = ["ticker", "pattern", "depth", "length", "dist_to_pivot",
-                           "composite", "combo_SMA50_Shakeout", "tf_flags_on", "rsi"]
+                           "composite", "atr21_pct", "combo_SMA50_Shakeout", "tf_flags_on", "rsi"]
             display_cols = [c for c in display_cols if c in filtered.columns]
+            _scan_fmt = {c: fmt for c, fmt in {"depth": "{:.1f}%",
+                                               "dist_to_pivot": "{:.1f}%",
+                                               "composite": "{:.1f}",
+                                               "atr21_pct": "{:.1f}%"}
+                         .items() if c in filtered.columns}
             st.dataframe(
                 filtered[display_cols].sort_values("composite", ascending=False)
                 .style.background_gradient(subset=["composite"], cmap="RdYlGn")
-                .format({"depth": "{:.1f}%", "dist_to_pivot": "{:.1f}%", "composite": "{:.1f}"}),
+                .format(_scan_fmt),
                 use_container_width=True, height=500
             )
 
@@ -6956,6 +7884,128 @@ with tab_scans:
                 except Exception as e:
                     st.error(f"Failed to load: {e}")
 
+    with picks_tab:
+        st.subheader("🚀 Live Breakout Picks (TV pattern model)")
+        st.markdown("Scores every **actionable** live pattern from the 📐 TV Pattern scan with the "
+                    "win-rate lifts from `tv_pattern_history_backtest.py` — **In Base** within ±5% "
+                    "of the pivot (about to break out) or **Post-BO** ≤ 5 bars (fresh breakout). "
+                    "Model = 29.6% baseline + price bucket + shape/depth/length + dis/acc ratios + "
+                    "cup bars + pre-BO signals; it **ranks** candidates, it is not a calibrated "
+                    "probability.")
+        PICKS_CSV = BACKTESTS_DIR_SL / "live_breakout_picks.csv"
+        PICKS_HTML = BACKTESTS_DIR_SL / "live_breakout_picks_report.html"
+
+        rc1, rc2, rc3 = st.columns([3, 1, 1])
+        with rc1:
+            st.caption("Generated by `python/backtests/recommend_live_breakouts.py` — results are "
+                       "also appended to `watchlist_history.log` and the summary/HTML report show "
+                       "in the 🧪 Backtests tab.")
+        with rc2:
+            if st.button("🚀 Refresh Picks", key="picks_run"):
+                with st.spinner("Scoring live patterns..."):
+                    try:
+                        _r = subprocess.run(
+                            ["python3", str(BACKTESTS_DIR_SL / "recommend_live_breakouts.py"),
+                             "--top", "10"],
+                            capture_output=True, text=True, timeout=300,
+                            cwd=str(Path(__file__).resolve().parent))
+                        st.session_state.picks_output = (_r.stdout or "")[-3000:]
+                        if _r.returncode != 0:
+                            st.error(f"Failed: {(_r.stderr or '')[-1000:]}")
+                        else:
+                            st.success("Picks refreshed.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
+        with rc3:
+            if PICKS_CSV.exists():
+                st.download_button("📥 CSV", PICKS_CSV.read_text(), "live_breakout_picks.csv",
+                                   "text/csv", key="picks_dl")
+        if "picks_output" in st.session_state:
+            with st.expander("📋 Output", expanded=False):
+                st.code(st.session_state.picks_output)
+
+        if PICKS_CSV.exists():
+            picks = pd.read_csv(PICKS_CSV)
+        else:
+            picks = pd.DataFrame()
+        if not picks.empty and "atr21_pct" in picks.columns:
+            n_before = len(picks)
+            picks = picks[picks["atr21_pct"].fillna(0.0) >= atr_min].copy()
+            if len(picks) < n_before:
+                st.caption(f"🗜️ 21D ATR% ≥ {atr_min:.2f}% filter active: showing "
+                           f"{len(picks)} of {n_before} scored candidates.")
+        if picks.empty:
+            st.info("No picks yet. Refresh the 📐 TV Pattern scan, then hit 🚀 Refresh Picks "
+                    "(or run `python3 python/backtests/recommend_live_breakouts.py`).")
+        else:
+            n_in = (picks["status"] == "In Base").sum()
+            n_pbo = (picks["status"] == "Post-BO").sum()
+            m1, m2, m3, m4 = st.columns(4)
+            with m1: st.metric("Actionable", f"{len(picks):,}")
+            with m2: st.metric("In Base (about to BO)", n_in)
+            with m3: st.metric("Post-BO (fresh)", n_pbo)
+            with m4: st.metric("Top Model Win %", f"{picks['model_win_pct'].max():.0f}%")
+
+            # Entry-zone display column (In Base = % below pivot; Post-BO = bars + extension)
+            def _entry_str(row):
+                if row["status"] == "In Base":
+                    return f"{abs(row['dist_or_sbo']):.0f}% below pivot"
+                s = f"{row['dist_or_sbo']:.0f} bar{'s' if row['dist_or_sbo'] != 1 else ''} ago"
+                if row["dist_pct"] < 0:
+                    s += f" · {abs(row['dist_pct']):.0f}% below pivot (retest)"
+                else:
+                    s += f" · {row['dist_pct']:.0f}% above pivot"
+                return s
+
+            show = picks.sort_values("model_win_pct", ascending=False).head(20).copy()
+            show["entry"] = show.apply(_entry_str, axis=1)
+            show_cols = [c for c in ["ticker", "status", "pattern", "shape", "pivot",
+                                     "entry", "days_in_base", "depth_pct", "atr21_pct",
+                                     "model_win_pct"]
+                         if c in show.columns]
+            _fmt = {c: fmt for c, fmt in {"pivot": "${:,.2f}", "days_in_base": "{:.0f}d",
+                                          "depth_pct": "{:.1f}%", "atr21_pct": "{:.1f}%",
+                                          "model_win_pct": "{:.1f}%"}
+                    .items() if c in show.columns}
+            st.dataframe(
+                show[show_cols]
+                .style.format(_fmt)
+                .background_gradient(subset=["model_win_pct"], cmap="RdYlGn"),
+                use_container_width=True, height=420
+            )
+            st.caption(f"Top 20 of {len(picks):,} scored candidates — full set (with `dist_pct` per "
+                       "candidate) in the downloadable CSV.")
+
+            # Per-ticker drill-down
+            st.markdown("**🔬 Pick Drill-Down**")
+            pick_tickers = sorted(picks["ticker"].unique())
+            chosen_pick = st.selectbox("Select ticker", pick_tickers, key="picks_ticker")
+            if chosen_pick:
+                prow = picks[picks["ticker"] == chosen_pick].iloc[0]
+                d1, d2, d3, d4 = st.columns(4)
+                with d1:
+                    st.metric("Status", prow["status"])
+                    st.metric("Pattern / Shape", f"{prow['pattern']} / {prow['shape']}")
+                with d2:
+                    st.metric("Buy Point", f"${prow['pivot']:,.2f}")
+                    st.metric("Dist to Pivot", f"{prow['dist_pct']:+.1f}%")
+                with d3:
+                    st.metric("Base", f"{prow['days_in_base']:.0f}d / {prow['depth_pct']:.1f}%")
+                    st.metric("Model Win %", f"{prow['model_win_pct']:.1f}%")
+                with d4:
+                    st.metric("Price Lift", f"{prow['price_lift']:+.1f}pp")
+                    st.metric("Struct+Signal", f"{prow['struct_sig_lift']:+.1f}pp")
+                if "atr21_pct" in prow and pd.notna(prow.get("atr21_pct")):
+                    _atr_ok = "passes" if prow['atr21_pct'] >= atr_min else "below"
+                    st.caption(f"**21D ATR%:** {prow['atr21_pct']:.1f}% — {_atr_ok} "
+                               f"the {atr_min:.2f}% floor.")
+                if "drivers" in prow and pd.notna(prow.get("drivers")):
+                    st.caption(f"**Drivers:** {prow['drivers']}")
+            if PICKS_HTML.exists():
+                st.markdown("---")
+                st.markdown("📈 The dark-themed **HTML report** (`live_breakout_picks_report.html`) "
+                            "is viewable under 🧪 Backtests → 📈 HTML Reports.")
+
 # ---------- TAB 15: Ratings Scanner ----------
 with tab15:
     st.subheader("📊 IBD-Style Ratings Scanner")
@@ -6971,6 +8021,23 @@ with tab15:
     from fetch_fundamentals import get_cached_fundamentals, fetch_and_cache_fundamentals
 
     CACHE_DIR = Path(__file__).resolve().parent / "ticker_cache"
+
+    # Preload the persisted ratings snapshot (output/ratings_scan.csv) written by the
+    # Price Cache button's chained --run-ratings-scan, so fresh results show without
+    # clicking Run. Only fills an EMPTY session (ratings_df is None) - a manual Run
+    # click sets ratings_df and therefore always wins over the file. The file is the
+    # same Quick Scan shape this tab produces, renames included.
+    _RATINGS_SCAN_CSV = Path(__file__).resolve().parent / "output" / "ratings_scan.csv"
+    if st.session_state.get("ratings_df") is None and _RATINGS_SCAN_CSV.exists():
+        try:
+            _rs_df = pd.read_csv(_RATINGS_SCAN_CSV)
+            if not _rs_df.empty and "Ticker" in _rs_df.columns:
+                st.session_state.ratings_df = _rs_df
+                st.session_state.ratings_mode = "Quick Scan (OHLCV-only ratings)"
+                st.session_state.ratings_scanned = True
+        except Exception:
+            pass
+
     _spy_rs = pd.read_parquet(CACHE_DIR / "SPY_1d.parquet", columns=["Close"])
     _spy_rs.index = pd.to_datetime(_spy_rs.index)
     _spy_perf = spy_perf_windows(_spy_rs["Close"].astype(float).sort_index())
@@ -7220,6 +8287,21 @@ with tab16:
         st.info("Snapshots land in `output/daily_screener_<date>.csv` and `output/daily_screener.csv`.")
     else:
         sdf = load_daily_screener()
+        # The volume-signal flags are strictly nested: an HVE day is automatically an HVY
+        # day and a pocket pivot (its volume beats every down-day in the lookback), so
+        # showing all four Yes/No columns for one ticker is redundant. Collapse them into a
+        # single 'Volume Signal' column that shows only the strongest flag (HVE > HVY > PP)
+        # and drop the raw columns from the picker entirely.
+        _SIG_RAW = ['10D Pocket Pivot', '2/3 Pocket Pivot', 'HVY', 'HVE']
+        _had_sig = all(c in sdf.columns for c in _SIG_RAW)
+        if _had_sig:
+            sdf['Volume Signal'] = np.where(
+                sdf['HVE'].astype(str).str.strip().eq('Yes'), 'HVE',
+                np.where(sdf['HVY'].astype(str).str.strip().eq('Yes'), 'HVY',
+                         np.where(sdf['2/3 Pocket Pivot'].astype(str).str.strip().eq('Yes') |
+                                  sdf['10D Pocket Pivot'].astype(str).str.strip().eq('Yes'),
+                                  'PP', '')))
+            sdf = sdf.drop(columns=_SIG_RAW)
         # Streamlit runs every tab block on each rerun, so a stale/missing column in the
         # screener CSV must never raise and take down the whole app.
         _need_cols = ['Symbol', 'Name', 'Current Price', 'RS Rating', 'EPS Rating', 'Comp Rating',
@@ -7240,6 +8322,10 @@ with tab16:
         c4.metric("Comp Rating ≥ 80", int((sdf['Comp Rating'] >= 80).sum()))
 
         st.divider()
+        if _had_sig:
+            st.caption("**Volume Signal** = the single strongest volume flag per ticker "
+                       "(HVE > HVY > PP). An HVE day is automatically an HVY and a pocket "
+                       "pivot, so the raw Yes/No columns are collapsed into this one.")
         st.markdown("**Filters**")
         col_p, col_t, col_s = st.columns(3)
         with col_p:
@@ -7311,7 +8397,8 @@ with tab16:
                         'RS Rating', 'EPS Rating', 'SMR Rating', 'A/D Rating', 'Comp Rating',
                         '% Off High', 'Price vs 50-Day', '% Chg 3 Months', '% Chg 12 Months',
                         '50-Day > 150-Day > 200-Day', 'Vol % Chg vs 50-Day', 'Volume (1000s)',
-                        'Market Cap (mil)', 'EPS Due Date', 'Analyst Target Mean', '% Upside to Target']
+                        'Volume Signal', 'Market Cap (mil)', 'EPS Due Date',
+                        'Analyst Target Mean', '% Upside to Target']
         avail_cols = [c for c in default_cols if c in f.columns]
         _col_options = sorted(c for c in f.columns if c != "#")
         show_cols = st.multiselect("Columns", _col_options, default=avail_cols, key="scr_cols")
